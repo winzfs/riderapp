@@ -47,11 +47,19 @@
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true"
             android:launchMode="singleTask">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.NavigationReceiverActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -94,6 +102,11 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="http" android:host="m.map.kakao.com" android:pathPrefix="/scheme/" />
                 <data android:scheme="https" android:host="m.map.kakao.com" android:pathPrefix="/scheme/" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
