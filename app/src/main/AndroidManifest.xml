@@ -4,11 +4,16 @@
     <!-- The app does not request INTERNET or location permission. Captures stay on-device. -->
     <queries>
         <package android:name="net.daum.android.map" />
+        <package android:name="com.locnall.KimGiSa" />
         <package android:name="com.skt.tmap.ku" />
         <package android:name="com.nhn.android.nmap" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="kakaonavi-sdk" />
         </intent>
     </queries>
 
@@ -43,6 +48,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="kakaomap" />
+            </intent-filter>
+
+            <!-- Kakao Navi SDK scheme. This is separate from Kakao Map. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakaonavi-sdk" />
             </intent-filter>
 
             <!-- NAVER Map custom scheme. -->
