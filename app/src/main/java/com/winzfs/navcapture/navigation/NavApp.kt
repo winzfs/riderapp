@@ -4,6 +4,7 @@ enum class NavApp(
     val label: String,
     val packageNames: List<String>,
 ) {
+    MATCH_DELIVERY_APP("배달앱 설정 자동 (권장)", emptyList()),
     PICK_EACH_TIME("매번 지도앱 선택", emptyList()),
     KAKAO_NAVI("카카오내비", listOf("com.locnall.KimGiSa")),
     KAKAO_MAP("카카오맵", listOf("net.daum.android.map")),
@@ -22,8 +23,8 @@ enum class NavApp(
 
     companion object {
         fun fromStored(value: String?): NavApp = when (value) {
-            null, "AUTO", "KAKAO" -> PICK_EACH_TIME
-            else -> entries.firstOrNull { it.name == value } ?: PICK_EACH_TIME
+            null, "AUTO", "KAKAO" -> MATCH_DELIVERY_APP
+            else -> entries.firstOrNull { it.name == value } ?: MATCH_DELIVERY_APP
         }
     }
 }
