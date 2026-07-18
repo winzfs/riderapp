@@ -11,8 +11,8 @@ android {
         applicationId = "com.winzfs.navcapture"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.5.2"
+        versionCode = 8
+        versionName = "0.5.3"
     }
 
     buildTypes {
@@ -37,4 +37,5 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
