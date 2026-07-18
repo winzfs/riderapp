@@ -1,6 +1,6 @@
 # RiderApp · 길찾기 Intent 캡처
 
-배달앱에서 **길찾기 버튼을 누르는 순간** 카카오맵·티맵·네이버지도로 전달되는 Android Intent를 받아서 아래 값을 확인하는 네이티브 Android 테스트 앱입니다.
+배달앱에서 **길찾기 버튼을 누르는 순간** 카카오내비·카카오맵·티맵·네이버지도로 전달되는 Android Intent를 받아서 아래 값을 확인하는 네이티브 Android 테스트 앱입니다.
 
 - 원본 URI
 - URI scheme / host / path
@@ -21,14 +21,15 @@
         ↓
 URI·좌표·목적지명 로컬 저장
         ↓
-카카오맵 / 티맵 / 네이버지도 실행
+카카오내비 / 카카오맵 / 티맵 / 네이버지도 실행
 ```
 
-Android가 우리 앱에 Intent를 전달하려면 배달앱이 `geo:`, `kakaomap:`, `tmap:`, `nmap:` 같은 **암시적 Intent**를 사용해야 합니다. 배달앱이 네비 앱의 package/component를 직접 지정하는 **명시적 Intent**를 사용하면 일반 앱은 중간에서 가로챌 수 없습니다.
+Android가 우리 앱에 Intent를 전달하려면 배달앱이 `geo:`, `kakaonavi-sdk:`, `kakaomap:`, `tmap:`, `nmap:` 같은 **암시적 Intent**를 사용해야 합니다. 배달앱이 네비 앱의 package/component를 직접 지정하는 **명시적 Intent**를 사용하면 일반 앱은 중간에서 가로챌 수 없습니다.
 
 ## 지원 중인 입력 형식
 
 - Android 공용 `geo:` URI
+- Kakao Navi SDK `kakaonavi-sdk://navigate?...`
 - Kakao Map `kakaomap://...`
 - TMAP `tmap://...`
 - NAVER Map `nmap://...`
@@ -38,6 +39,7 @@ Android가 우리 앱에 Intent를 전달하려면 배달앱이 `geo:`, `kakaoma
 
 ```text
 geo:35.1595454,126.8526012?q=35.1595454,126.8526012(광주광역시청)
+kakaonavi-sdk://navigate?param={"destination":{"name":"광주광역시청","x":126.8526012,"y":35.1595454},"option":{"coord_type":"wgs84"}}
 kakaomap://route?sp=35.1,126.8&ep=35.1595454,126.8526012&by=car
 tmap://route?rGoName=광주광역시청&rGoX=126.8526012&rGoY=35.1595454
 nmap://navigation?dlat=35.1595454&dlng=126.8526012&dname=광주광역시청&appname=com.example
@@ -57,20 +59,21 @@ nmap://navigation?dlat=35.1595454&dlng=126.8526012&dname=광주광역시청&appn
 
 ## 실제 배달앱 테스트 순서
 
-1. 앱을 설치하고 한 번 실행합니다.
-2. 처음에는 **수신 후 자동으로 네비 열기**를 끈 상태로 둡니다.
-3. 카카오맵·티맵·네이버지도의 기존 기본 연결 설정이 있다면 Android 설정에서 기본값을 지웁니다.
-4. 배달앱에서 가게 또는 배달지의 **길찾기**를 누릅니다.
-5. 앱 선택창에 `라이더 길찾기 캡처`가 나오면 선택합니다.
-6. 앱 화면에서 원본 URI, 좌표, 목적지명, Extras를 확인합니다.
-7. 확인이 끝나면 자동 네비 열기를 켜서 중계 동작을 시험합니다.
+1. 기존 RiderApp을 삭제하고 최신 APK를 새로 설치합니다.
+2. 앱을 한 번 실행합니다.
+3. 처음에는 **수신 후 자동으로 네비 열기**를 끈 상태로 둡니다.
+4. Android 설정에서 카카오내비의 기존 기본 연결 설정을 지웁니다.
+5. 쿠팡이츠 배달파트너 앱에서 가게 또는 배달지의 **길찾기**를 누릅니다.
+6. 앱 선택창에 `라이더 길찾기 캡처`가 나오면 선택합니다.
+7. 앱 화면에서 원본 URI, 좌표, 목적지명, Extras를 확인합니다.
+8. 확인이 끝나면 자동 네비 열기를 켜서 중계 동작을 시험합니다.
 
 ### 결과 판정
 
 | 결과 | 의미 |
 |---|---|
 | 이 앱이 선택 후보로 나타나고 URI가 기록됨 | 표준 Intent 중계 방식 사용 가능 |
-| 네비가 바로 열리고 이 앱은 전혀 나타나지 않음 | 네비 package/component 직접 지정 가능성이 큼 |
+| 카카오내비가 바로 열리고 이 앱은 전혀 나타나지 않음 | 쿠팡이츠가 카카오내비 package/component를 직접 지정했을 가능성이 큼 |
 | 앱은 열리지만 좌표가 비어 있음 | 원본 URI 또는 extras를 보고 파서를 추가해야 함 |
 
 ## 개인정보와 권한
@@ -96,5 +99,6 @@ nmap://navigation?dlat=35.1595454&dlng=126.8526012&dname=광주광역시청&appn
 
 - Android Intents and Intent Filters: https://developer.android.com/guide/components/intents-filters
 - Android common map intents: https://developer.android.com/guide/components/intents-common
+- Kakao Navi Android: https://developers.kakao.com/docs/ko/kakaonavi/android
 - Kakao Map URL Scheme: https://apis.map.kakao.com/android_v2/docs/api-guide/urlscheme/
 - NAVER Map URL Scheme: https://guide.ncloud-docs.com/docs/maps-url-scheme
