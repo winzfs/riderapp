@@ -5,9 +5,15 @@ import org.json.JSONObject
 data class AddressMemoEntry(
     val id: String,
     val placeKey: String,
+    /** Exact destination text received from the delivery app. Never rewritten by geocoding. */
+    val sourceText: String,
+    /** Optional user-defined display name. */
     val placeName: String,
+    /** Legacy/manual address field retained for backward compatibility. */
     val address: String,
+    /** Optional reference road address. Never used for navigation forwarding. */
     val roadAddress: String,
+    /** Legacy/manual detail field retained for backward compatibility. */
     val unitDetail: String,
     val roadAddressConfirmed: Boolean,
     val memo: String,
@@ -17,15 +23,18 @@ data class AddressMemoEntry(
     val updatedAt: Long,
 ) {
     val title: String
-        get() = placeName.ifBlank {
-            roadAddress.ifBlank {
-                address.ifBlank { "주소 미입력" }
+        get() = sourceText.ifBlank {
+            placeName.ifBlank {
+                roadAddress.ifBlank {
+                    address.ifBlank { "주소 미입력" }
+                }
             }
         }
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("placeKey", placeKey)
+        put("sourceText", sourceText)
         put("placeName", placeName)
         put("address", address)
         put("roadAddress", roadAddress)
@@ -39,20 +48,27 @@ data class AddressMemoEntry(
     }
 
     companion object {
-        fun fromJson(json: JSONObject): AddressMemoEntry = AddressMemoEntry(
-            id = json.optString("id"),
-            placeKey = json.optString("placeKey"),
-            placeName = json.optString("placeName"),
-            address = json.optString("address"),
-            roadAddress = json.optString("roadAddress"),
-            unitDetail = json.optString("unitDetail"),
-            roadAddressConfirmed = json.optBoolean("roadAddressConfirmed", false),
-            memo = json.optString("memo"),
-            latitude = json.optNullableDouble("latitude"),
-            longitude = json.optNullableDouble("longitude"),
-            createdAt = json.optLong("createdAt"),
-            updatedAt = json.optLong("updatedAt"),
-        )
+        fun fromJson(json: JSONObject): AddressMemoEntry {
+            val legacyPlaceName = json.optString("placeName")
+            val legacyAddress = json.optString("address")
+            return AddressMemoEntry(
+                id = json.optString("id"),
+                placeKey = json.optString("placeKey"),
+                sourceText = json.optString("sourceText").ifBlank {
+                    legacyPlaceName.ifBlank { legacyAddress }
+                },
+                placeName = legacyPlaceName,
+                address = legacyAddress,
+                roadAddress = json.optString("roadAddress"),
+                unitDetail = json.optString("unitDetail"),
+                roadAddressConfirmed = json.optBoolean("roadAddressConfirmed", false),
+                memo = json.optString("memo"),
+                latitude = json.optNullableDouble("latitude"),
+                longitude = json.optNullableDouble("longitude"),
+                createdAt = json.optLong("createdAt"),
+                updatedAt = json.optLong("updatedAt"),
+            )
+        }
 
         private fun JSONObject.optNullableDouble(key: String): Double? {
             if (!has(key) || isNull(key)) return null
