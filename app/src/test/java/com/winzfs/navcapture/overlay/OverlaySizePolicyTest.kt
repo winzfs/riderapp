@@ -23,17 +23,17 @@ class OverlaySizePolicyTest {
             maxHeightDp = 600,
         )
 
-        assertEquals(340, wider.widthDp)
+        assertEquals(330, wider.widthDp)
         assertEquals(280, wider.heightDp)
-        assertEquals(340, shorter.widthDp)
-        assertEquals(260, shorter.heightDp)
+        assertEquals(330, shorter.widthDp)
+        assertEquals(270, shorter.heightDp)
     }
 
     @Test
-    fun sizeIsClampedToPhoneAndMinimumBounds() {
+    fun sizeIsClampedToCompactMinimumAndPhoneBounds() {
         val minimum = OverlaySizePolicy.adjust(
-            currentWidthDp = 240,
-            currentHeightDp = 180,
+            currentWidthDp = 180,
+            currentHeightDp = 110,
             widthDeltaDp = -200,
             heightDeltaDp = -200,
             maxWidthDp = 360,
@@ -48,7 +48,7 @@ class OverlaySizePolicyTest {
             maxHeightDp = 700,
         )
 
-        assertEquals(OverlaySize(240, 180), minimum)
+        assertEquals(OverlaySize(180, 110), minimum)
         assertEquals(OverlaySize(360, 700), maximum)
     }
 
