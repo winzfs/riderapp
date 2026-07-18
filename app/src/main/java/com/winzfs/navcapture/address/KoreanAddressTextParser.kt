@@ -111,6 +111,7 @@ object KoreanAddressTextParser {
         .replace(ESCAPED_NEWLINE, " ")
         .replace(JSON_NOISE, " ")
         .replace(WHITESPACE, " ")
+        .replace(ROAD_SEGMENT_SPACING, "$1번길")
         .trim()
 
     private fun normalizeAddress(value: String): String = value
@@ -127,6 +128,7 @@ object KoreanAddressTextParser {
     private data class ScoredText(val value: String, val score: Int)
 
     private val WHITESPACE = Regex("\\s+")
+    private val ROAD_SEGMENT_SPACING = Regex("(\\d+)\\s*번\\s*길")
     private val ESCAPED_NEWLINE = Regex("\\\\[nrt]")
     private val JSON_NOISE = Regex("[\\[\\]{}\"']")
     private val LEADING_NOISE = Regex(
