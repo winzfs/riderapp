@@ -26,6 +26,8 @@ import com.winzfs.navcapture.model.CapturedDestination
 import com.winzfs.navcapture.navigation.NavApp
 import com.winzfs.navcapture.navigation.NavigationForwarder
 import com.winzfs.navcapture.overlay.DestinationOverlayService
+import com.winzfs.navcapture.overlay.OverlaySize
+import com.winzfs.navcapture.overlay.OverlaySizePolicy
 import com.winzfs.navcapture.parser.NavigationIntentParser
 import com.winzfs.navcapture.storage.AddressMemoStore
 import com.winzfs.navcapture.storage.CaptureStore
@@ -45,6 +47,7 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var detailText: TextView
     private lateinit var historyText: TextView
+    private lateinit var overlaySizeText: TextView
     private lateinit var autoForwardSwitch: Switch
     private lateinit var overlaySwitch: Switch
     private lateinit var overlayPermissionButton: Button
@@ -75,6 +78,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         updateOverlayPermissionUi()
+        if (::overlaySizeText.isInitialized) updateOverlaySizeText()
         currentEntry?.let { oldEntry ->
             addressMemoStore.findById(oldEntry.id)?.let { refreshed ->
                 currentEntry = refreshed
@@ -149,6 +153,44 @@ class MainActivity : Activity() {
             text = "현재 오버레이 닫기"
             isAllCaps = false
             setOnClickListener { DestinationOverlayService.hide(this@MainActivity) }
+        }, marginParams(bottom = 8))
+
+        root.addView(sectionTitle("오버레이 크기 설정"))
+        overlaySizeText = cardText("", 14f, true)
+        updateOverlaySizeText()
+        root.addView(overlaySizeText)
+        root.addView(
+            pairedButtons(
+                leftLabel = "가로 줄이기",
+                leftAction = {
+                    adjustOverlaySize(-OverlaySizePolicy.WIDTH_STEP_DP, 0)
+                },
+                rightLabel = "가로 늘리기",
+                rightAction = {
+                    adjustOverlaySize(OverlaySizePolicy.WIDTH_STEP_DP, 0)
+                },
+            ),
+            marginParams(top = 8, bottom = 4),
+        )
+        root.addView(
+            pairedButtons(
+                leftLabel = "세로 줄이기",
+                leftAction = {
+                    adjustOverlaySize(0, -OverlaySizePolicy.HEIGHT_STEP_DP)
+                },
+                rightLabel = "세로 늘리기",
+                rightAction = {
+                    adjustOverlaySize(0, OverlaySizePolicy.HEIGHT_STEP_DP)
+                },
+            ),
+            marginParams(bottom = 4),
+        )
+        root.addView(Button(this).apply {
+            text = "오버레이 기본 크기로 되돌리기"
+            isAllCaps = false
+            setOnClickListener {
+                updateOverlaySizeText(DestinationOverlayService.resetSize(this@MainActivity))
+            }
         }, marginParams(bottom = 8))
 
         root.addView(sectionTitle("지도 앱 연결"))
@@ -353,6 +395,24 @@ class MainActivity : Activity() {
         DestinationOverlayService.show(this, entry)
     }
 
+    private fun adjustOverlaySize(widthDeltaDp: Int, heightDeltaDp: Int) {
+        val size = DestinationOverlayService.adjustSize(
+            context = this,
+            widthDeltaDp = widthDeltaDp,
+            heightDeltaDp = heightDeltaDp,
+        )
+        updateOverlaySizeText(size)
+    }
+
+    private fun updateOverlaySizeText(
+        size: OverlaySize = DestinationOverlayService.currentSize(this),
+    ) {
+        overlaySizeText.text = buildString {
+            append("현재 크기  가로 ${size.widthDp}dp · 세로 ${size.heightDp}dp")
+            append("\n버튼을 누르면 떠 있는 오버레이에도 바로 적용됩니다.")
+        }
+    }
+
     private fun scheduleForward() {
         pendingForward?.let(handler::removeCallbacks)
         pendingForward = Runnable { forwardCurrentCapture() }.also {
@@ -462,6 +522,46 @@ class MainActivity : Activity() {
         setBackgroundColor(Color.WHITE)
         if (bold) setTypeface(typeface, Typeface.BOLD)
         gravity = Gravity.START
+    }
+
+    private fun pairedButtons(
+        leftLabel: String,
+        leftAction: () -> Unit,
+        rightLabel: String,
+        rightAction: () -> Unit,
+    ): LinearLayout {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        row.addView(
+            Button(this).apply {
+                text = leftLabel
+                isAllCaps = false
+                setOnClickListener { leftAction() }
+            },
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f,
+            ).apply {
+                marginEnd = dp(4)
+            },
+        )
+        row.addView(
+            Button(this).apply {
+                text = rightLabel
+                isAllCaps = false
+                setOnClickListener { rightAction() }
+            },
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f,
+            ).apply {
+                marginStart = dp(4)
+            },
+        )
+        return row
     }
 
     private fun marginParams(
