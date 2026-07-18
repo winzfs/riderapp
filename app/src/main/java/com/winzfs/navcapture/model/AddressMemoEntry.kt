@@ -7,6 +7,8 @@ data class AddressMemoEntry(
     val placeKey: String,
     /** Exact destination text received from the delivery app. Never rewritten by geocoding. */
     val sourceText: String,
+    /** Exact extras/ClipData snapshot received from the delivery app. */
+    val sourcePayloadText: String,
     /** Optional user-defined display name. */
     val placeName: String,
     /** Legacy/manual address field retained for backward compatibility. */
@@ -35,6 +37,7 @@ data class AddressMemoEntry(
         put("id", id)
         put("placeKey", placeKey)
         put("sourceText", sourceText)
+        put("sourcePayloadText", sourcePayloadText)
         put("placeName", placeName)
         put("address", address)
         put("roadAddress", roadAddress)
@@ -57,6 +60,7 @@ data class AddressMemoEntry(
                 sourceText = json.optString("sourceText").ifBlank {
                     legacyPlaceName.ifBlank { legacyAddress }
                 },
+                sourcePayloadText = json.optString("sourcePayloadText"),
                 placeName = legacyPlaceName,
                 address = legacyAddress,
                 roadAddress = json.optString("roadAddress"),
