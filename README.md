@@ -1,104 +1,85 @@
-# RiderApp · 길찾기 Intent 캡처
+# RiderApp · 배달 목적지 중계
 
-배달앱에서 **길찾기 버튼을 누르는 순간** 카카오내비·카카오맵·티맵·네이버지도로 전달되는 Android Intent를 받아서 아래 값을 확인하는 네이티브 Android 테스트 앱입니다.
+배달앱에서 **길찾기 버튼을 누르는 순간** 목적지 Intent를 받아 저장하고, 작은 오버레이로 보여준 뒤 원하는 지도 앱으로 연결하는 네이티브 Android 앱입니다.
 
-- 원본 URI
-- URI scheme / host / path
-- 목적지 위도·경도
-- 목적지명
-- Intent extras / flags / categories
-- 최근 수신 기록 50개
-- 저장 후 원래 네비 앱으로 재전달
+## 주요 기능
 
-현재 버전의 목적은 앱을 완성하는 것이 아니라, 배민커넥트·쿠팡이츠·요기요 등이 실제로 어떤 방식으로 네비를 호출하는지 확인하는 것입니다.
+- 쿠팡이츠 배달파트너 등에서 전달된 목적지명·위도·경도 수집
+- 현재 목적지를 다른 앱 위에 작은 플로팅 오버레이로 표시
+- 오버레이 드래그 이동 및 즉시 닫기
+- 카카오내비·카카오맵·티맵·네이버지도·구글지도 연결
+- 매번 사용할 지도 앱을 다시 고르는 선택창
+- 최근 수신 기록 50개 기기 내부 저장
+- 인터넷·위치·접근성 권한 없이 동작
 
-## 핵심 작동 구조
+## 작동 구조
 
 ```text
 배달앱에서 길찾기 누름
         ↓
-이 앱이 암시적 Intent 수신
+RiderApp 선택
         ↓
-URI·좌표·목적지명 로컬 저장
+목적지 URI·좌표·이름 저장
         ↓
-카카오내비 / 카카오맵 / 티맵 / 네이버지도 실행
+작은 목적지 오버레이 표시
+        ↓
+원하는 지도 앱 선택 및 실행
 ```
 
-Android가 우리 앱에 Intent를 전달하려면 배달앱이 `geo:`, `kakaonavi-sdk:`, `kakaomap:`, `tmap:`, `nmap:` 같은 **암시적 Intent**를 사용해야 합니다. 배달앱이 네비 앱의 package/component를 직접 지정하는 **명시적 Intent**를 사용하면 일반 앱은 중간에서 가로챌 수 없습니다.
+배달앱이 `geo:`, `kakaonavi-sdk:`, `kakaomap:`, `tmap:`, `nmap:` 같은 **암시적 Intent**를 사용해야 RiderApp이 연결 프로그램 후보로 나타납니다.
 
-## 지원 중인 입력 형식
+## 지원 지도 앱
 
-- Android 공용 `geo:` URI
-- Kakao Navi SDK `kakaonavi-sdk://navigate?...`
-- Kakao Map `kakaomap://...`
-- TMAP `tmap://...`
-- NAVER Map `nmap://...`
-- Kakao 모바일 웹 `m.map.kakao.com/scheme/...`
+| 앱 | 연결 방식 |
+|---|---|
+| 카카오내비 | `kakaonavi-sdk://navigate` WGS84 목적지 변환 |
+| 카카오맵 | `kakaomap://route` 및 `geo:` 대체 경로 |
+| 티맵 | 현재·구형 패키지와 두 가지 `tmap:` 호출 형식 순차 지원 |
+| 네이버지도 | `nmap://navigation` 및 자동차 경로 대체 형식 |
+| 구글지도 | `google.navigation:` 및 `geo:` 대체 경로 |
 
-파서는 다음과 같은 대표 목적지 값을 인식합니다.
+기존 버전의 `원래 네비 자동 감지` 설정은 0.3.0부터 **매번 지도앱 선택**으로 자동 변경됩니다.
 
-```text
-geo:35.1595454,126.8526012?q=35.1595454,126.8526012(광주광역시청)
-kakaonavi-sdk://navigate?param={"destination":{"name":"광주광역시청","x":126.8526012,"y":35.1595454},"option":{"coord_type":"wgs84"}}
-kakaomap://route?sp=35.1,126.8&ep=35.1595454,126.8526012&by=car
-tmap://route?rGoName=광주광역시청&rGoX=126.8526012&rGoY=35.1595454
-nmap://navigation?dlat=35.1595454&dlng=126.8526012&dname=광주광역시청&appname=com.example
-```
+## 오버레이 사용
+
+1. 최신 APK 설치 후 RiderApp을 엽니다.
+2. **오버레이 권한 허용하기**를 누릅니다.
+3. Android 설정에서 RiderApp의 `다른 앱 위에 표시`를 허용합니다.
+4. RiderApp으로 돌아와 `다른 앱 위에 현재 목적지 표시`를 켭니다.
+5. 배달앱에서 길찾기를 실행하고 RiderApp을 선택합니다.
+6. 내비 화면 위에 목적지명과 좌표가 작은 카드로 표시됩니다.
+
+오버레이는 상단 부분을 드래그해서 옮길 수 있고 `×` 버튼으로 닫을 수 있습니다. Android 12 이상에서 대상 앱이 오버레이 표시를 차단하면 그 앱 화면에서는 보이지 않을 수 있습니다.
 
 ## APK 만들기
 
-이 저장소는 컴퓨터가 없어도 GitHub Actions에서 APK를 만들도록 구성했습니다.
-
 1. 저장소의 **Actions** 탭으로 이동합니다.
 2. `Build APK` 워크플로를 엽니다.
-3. `Run workflow`를 누릅니다.
+3. `Run workflow`를 누르거나 `main` 브랜치의 자동 빌드가 끝날 때까지 기다립니다.
 4. 완료된 실행의 `Artifacts`에서 `riderapp-debug-apk`를 받습니다.
-5. ZIP 안의 `riderapp-debug.apk`를 Android 폰에 설치합니다.
+5. ZIP 안의 `riderapp-debug.apk`를 설치합니다.
 
-`main` 브랜치에 파일을 올릴 때도 자동으로 새 APK가 빌드됩니다.
+## 실제 사용 권장 설정
 
-## 실제 배달앱 테스트 순서
-
-1. 기존 RiderApp을 삭제하고 최신 APK를 새로 설치합니다.
-2. 앱을 한 번 실행합니다.
-3. 처음에는 **수신 후 자동으로 네비 열기**를 끈 상태로 둡니다.
-4. Android 설정에서 카카오내비의 기존 기본 연결 설정을 지웁니다.
-5. 쿠팡이츠 배달파트너 앱에서 가게 또는 배달지의 **길찾기**를 누릅니다.
-6. 앱 선택창에 `라이더 길찾기 캡처`가 나오면 선택합니다.
-7. 앱 화면에서 원본 URI, 좌표, 목적지명, Extras를 확인합니다.
-8. 확인이 끝나면 자동 네비 열기를 켜서 중계 동작을 시험합니다.
-
-### 결과 판정
-
-| 결과 | 의미 |
-|---|---|
-| 이 앱이 선택 후보로 나타나고 URI가 기록됨 | 표준 Intent 중계 방식 사용 가능 |
-| 카카오내비가 바로 열리고 이 앱은 전혀 나타나지 않음 | 쿠팡이츠가 카카오내비 package/component를 직접 지정했을 가능성이 큼 |
-| 앱은 열리지만 좌표가 비어 있음 | 원본 URI 또는 extras를 보고 파서를 추가해야 함 |
+- 지도 앱: **매번 지도앱 선택**
+- 목적지를 받으면 바로 지도 앱 선택/실행: 켜기
+- 다른 앱 위에 현재 목적지 표시: 켜기
+- 배달앱에서 RiderApp을 기본 연결 앱으로 고정하지 말고 우선 `한 번만`으로 시험
 
 ## 개인정보와 권한
 
 - 인터넷 권한 없음
 - 위치 권한 없음
 - 접근성 권한 없음
-- 수신 기록은 `SharedPreferences`에 기기 내부 저장
-- 주소 역지오코딩과 서버 전송은 아직 없음
-- 고객의 동·호수나 공동현관 비밀번호를 저장하도록 설계하지 않음
-
-## 다음 단계
-
-실제 배달앱에서 전달되는 원본 URI를 확보하면 다음 기능을 붙일 수 있습니다.
-
-1. 좌표를 도로명주소·건물명으로 변환
-2. 첫 번째 호출은 가게, 두 번째 호출은 배달지로 분류
-3. 건물별 진입구·주차·엘리베이터 개인 메모
-4. 네비 연결 전 0.5초 안에 자동 기록
-5. 명시적 Intent라 중계가 불가능할 경우 접근성 기반 보조 방식 별도 검토
+- `다른 앱 위에 표시` 권한은 목적지 오버레이에만 사용
+- 목적지는 기기 내부 `SharedPreferences`에 저장
+- 고객 동·호수나 공동현관 비밀번호를 별도로 수집하지 않음
 
 ## 참고 문서
 
 - Android Intents and Intent Filters: https://developer.android.com/guide/components/intents-filters
-- Android common map intents: https://developer.android.com/guide/components/intents-common
+- Android application overlays: https://developer.android.com/reference/android/view/WindowManager.LayoutParams#TYPE_APPLICATION_OVERLAY
+- Foreground service types: https://developer.android.com/develop/background-work/services/fgs/service-types
 - Kakao Navi Android: https://developers.kakao.com/docs/ko/kakaonavi/android
 - Kakao Map URL Scheme: https://apis.map.kakao.com/android_v2/docs/api-guide/urlscheme/
 - NAVER Map URL Scheme: https://guide.ncloud-docs.com/docs/maps-url-scheme
