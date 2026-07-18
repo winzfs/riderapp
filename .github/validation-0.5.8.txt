@@ -1,0 +1,1 @@
+Validate RiderApp 0.5.8 settings-screen overlay resizing and simplified overlay UI.
