@@ -1,0 +1,1 @@
+Validate RiderApp 0.5.7 live overlay width and height controls after compile fix.
