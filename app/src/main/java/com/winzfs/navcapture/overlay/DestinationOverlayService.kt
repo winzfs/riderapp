@@ -42,17 +42,16 @@ class DestinationOverlayService : Service() {
         val destinationName = intent?.getStringExtra(EXTRA_DESTINATION_NAME)
             .orEmpty()
             .ifBlank { "배달 목적지" }
-        val latitude = intent?.getDoubleExtra(EXTRA_LATITUDE, Double.NaN) ?: Double.NaN
-        val longitude = intent?.getDoubleExtra(EXTRA_LONGITUDE, Double.NaN) ?: Double.NaN
+        val memo = intent?.getStringExtra(EXTRA_MEMO).orEmpty()
 
-        startAsForeground(destinationName)
+        startAsForeground(destinationName, memo)
 
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
             return START_NOT_STICKY
         }
 
-        showOrUpdateOverlay(destinationName, latitude, longitude)
+        showOrUpdateOverlay(destinationName, memo)
         return START_NOT_STICKY
     }
 
@@ -63,14 +62,11 @@ class DestinationOverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startAsForeground(destinationName: String) {
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
+    private fun startAsForeground(destinationName: String, memo: String) {
         val openPendingIntent = PendingIntent.getActivity(
             this,
             0,
-            openIntent,
+            openAppIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stopPendingIntent = PendingIntent.getService(
@@ -82,8 +78,8 @@ class DestinationOverlayService : Service() {
 
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("현재 배달 목적지")
-            .setContentText(destinationName)
+            .setContentTitle("현재 배달 목적지 · $destinationName")
+            .setContentText(memo.ifBlank { "개인 메모 없음" })
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .addAction(
@@ -106,18 +102,19 @@ class DestinationOverlayService : Service() {
         }
     }
 
-    private fun showOrUpdateOverlay(name: String, latitude: Double, longitude: Double) {
+    private fun showOrUpdateOverlay(name: String, memo: String) {
         removeOverlayView()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(13), dp(9), dp(9), dp(8))
+            setPadding(dp(13), dp(9), dp(9), dp(9))
             background = GradientDrawable().apply {
                 setColor(Color.argb(235, 30, 34, 42))
                 cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.argb(110, 255, 255, 255))
             }
             elevation = dp(10).toFloat()
+            setOnClickListener { startActivity(openAppIntent()) }
         }
 
         val header = LinearLayout(this).apply {
@@ -145,25 +142,17 @@ class DestinationOverlayService : Service() {
         header.addView(closeText)
         root.addView(header)
 
-        val coordinateText = TextView(this).apply {
-            text = if (latitude.isFinite() && longitude.isFinite()) {
-                String.format(java.util.Locale.US, "%.6f, %.6f", latitude, longitude)
-            } else {
-                "좌표 확인 안 됨"
-            }
-            textSize = 11f
-            setTextColor(Color.rgb(185, 194, 207))
-            setPadding(0, dp(2), 0, 0)
-        }
-        root.addView(coordinateText)
-
-        root.setOnClickListener {
-            startActivity(
-                Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                },
+        val memoText = TextView(this).apply {
+            text = memo.ifBlank { "메모 없음 · 눌러서 추가" }
+            textSize = 12f
+            maxLines = 3
+            setTextColor(
+                if (memo.isBlank()) Color.rgb(165, 174, 188)
+                else Color.rgb(226, 231, 239),
             )
+            setPadding(0, dp(3), dp(5), 0)
         }
+        root.addView(memoText)
 
         val params = WindowManager.LayoutParams(
             dp(270),
@@ -181,6 +170,10 @@ class DestinationOverlayService : Service() {
         installDragHandler(header, params)
         windowManager.addView(root, params)
         overlayView = root
+    }
+
+    private fun openAppIntent(): Intent = Intent(this, MainActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
     }
 
     private fun installDragHandler(handle: View, params: WindowManager.LayoutParams) {
@@ -218,24 +211,23 @@ class DestinationOverlayService : Service() {
     }
 
     private fun removeOverlayView() {
-        overlayView?.let { view ->
-            runCatching { windowManager.removeView(view) }
-        }
+        overlayView?.let { view -> runCatching { windowManager.removeView(view) } }
         overlayView = null
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java)
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "목적지 오버레이",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "내비게이션 위에 현재 배달 목적지를 표시합니다."
-            setShowBadge(false)
-        }
-        manager.createNotificationChannel(channel)
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_ID,
+                "목적지 오버레이",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "내비게이션 위에 현재 목적지와 개인 메모를 표시합니다."
+                setShowBadge(false)
+            },
+        )
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -246,20 +238,17 @@ class DestinationOverlayService : Service() {
         private const val ACTION_SHOW = "com.winzfs.navcapture.action.SHOW_OVERLAY"
         private const val ACTION_STOP = "com.winzfs.navcapture.action.STOP_OVERLAY"
         private const val EXTRA_DESTINATION_NAME = "destination_name"
-        private const val EXTRA_LATITUDE = "latitude"
-        private const val EXTRA_LONGITUDE = "longitude"
+        private const val EXTRA_MEMO = "memo"
 
         fun show(
             context: Context,
             destinationName: String,
-            latitude: Double?,
-            longitude: Double?,
+            memo: String,
         ) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
                 action = ACTION_SHOW
                 putExtra(EXTRA_DESTINATION_NAME, destinationName)
-                putExtra(EXTRA_LATITUDE, latitude ?: Double.NaN)
-                putExtra(EXTRA_LONGITUDE, longitude ?: Double.NaN)
+                putExtra(EXTRA_MEMO, memo)
             }
             context.startForegroundService(intent)
         }
