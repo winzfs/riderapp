@@ -97,7 +97,7 @@ class NavigationForwarder(private val context: Context) {
 
         val lat = capture.latitude
         val lng = capture.longitude
-        if (lat == null || lng == null) return result.distinctBy(Uri::toString)
+        if (lat == null || lng == null) return result.distinctBy { it.toString() }
 
         val name = capture.destinationName.ifBlank { "배달 목적지" }
         when (app) {
@@ -134,7 +134,7 @@ class NavigationForwarder(private val context: Context) {
             NavApp.PICK_EACH_TIME -> Unit
         }
 
-        return result.distinctBy(Uri::toString)
+        return result.distinctBy { it.toString() }
     }
 
     private fun buildKakaoNaviUri(name: String, lat: Double, lng: Double): Uri {
