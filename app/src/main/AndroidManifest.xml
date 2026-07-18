@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- The app does not request INTERNET or location permission. Captures stay on-device. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <queries>
         <package android:name="net.daum.android.map" />
         <package android:name="com.locnall.KimGiSa" />
         <package android:name="com.skt.tmap.ku" />
+        <package android:name="com.skt.skaf.l001mtm091" />
         <package android:name="com.nhn.android.nmap" />
+        <package android:name="com.google.android.apps.maps" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />
@@ -34,7 +40,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Standard Android map URI. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -42,7 +47,6 @@
                 <data android:scheme="geo" />
             </intent-filter>
 
-            <!-- Kakao Map custom scheme. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -50,7 +54,6 @@
                 <data android:scheme="kakaomap" />
             </intent-filter>
 
-            <!-- Kakao Navi SDK scheme. This is separate from Kakao Map. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -58,7 +61,6 @@
                 <data android:scheme="kakaonavi-sdk" />
             </intent-filter>
 
-            <!-- NAVER Map custom scheme. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -66,7 +68,6 @@
                 <data android:scheme="nmap" />
             </intent-filter>
 
-            <!-- TMAP custom scheme. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -74,7 +75,6 @@
                 <data android:scheme="tmap" />
             </intent-filter>
 
-            <!-- Kakao mobile-web fallback scheme. Kept host-specific to avoid claiming every web link. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -83,5 +83,15 @@
                 <data android:scheme="https" android:host="m.map.kakao.com" android:pathPrefix="/scheme/" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".overlay.DestinationOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a user-enabled small destination overlay visible while a navigation app is open." />
+        </service>
     </application>
 </manifest>
