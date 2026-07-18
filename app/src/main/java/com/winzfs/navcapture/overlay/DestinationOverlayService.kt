@@ -30,7 +30,6 @@ class DestinationOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var overlayParams: WindowManager.LayoutParams? = null
-    private var sizeLabel: TextView? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -39,17 +38,33 @@ class DestinationOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            stopOverlay()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopOverlay()
+                return START_NOT_STICKY
+            }
+
+            ACTION_APPLY_SIZE -> {
+                val current = OverlaySizeSettings.load(this)
+                val size = OverlaySizeSettings.saveNormalized(
+                    context = this,
+                    widthDp = intent.getIntExtra(EXTRA_WIDTH_DP, current.widthDp),
+                    heightDp = intent.getIntExtra(EXTRA_HEIGHT_DP, current.heightDp),
+                )
+                applyOverlaySize(size)
+                if (overlayView == null) stopSelf(startId)
+                return START_NOT_STICKY
+            }
         }
 
-        val entryId = intent?.getStringExtra(EXTRA_ENTRY_ID).orEmpty()
-        val sourceText = intent?.getStringExtra(EXTRA_SOURCE_TEXT).orEmpty()
-        val sourcePayloadText = intent?.getStringExtra(EXTRA_SOURCE_PAYLOAD_TEXT).orEmpty()
-        val displayName = intent?.getStringExtra(EXTRA_DISPLAY_NAME).orEmpty()
-        val roadAddress = intent?.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
-        val memo = intent?.getStringExtra(EXTRA_MEMO).orEmpty()
+        if (intent?.action != ACTION_SHOW) return START_NOT_STICKY
+
+        val entryId = intent.getStringExtra(EXTRA_ENTRY_ID).orEmpty()
+        val sourceText = intent.getStringExtra(EXTRA_SOURCE_TEXT).orEmpty()
+        val sourcePayloadText = intent.getStringExtra(EXTRA_SOURCE_PAYLOAD_TEXT).orEmpty()
+        val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME).orEmpty()
+        val roadAddress = intent.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
+        val memo = intent.getStringExtra(EXTRA_MEMO).orEmpty()
         val display = DestinationOverlayFormatter.format(
             sourceText = sourceText,
             sourcePayloadText = sourcePayloadText,
@@ -130,11 +145,11 @@ class DestinationOverlayService : Service() {
         memo: String,
     ) {
         removeOverlayView()
-        val initialSize = loadOverlaySize()
+        val initialSize = OverlaySizeSettings.load(this)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(15), dp(11), dp(9), dp(10))
+            setPadding(dp(15), dp(11), dp(9), dp(12))
             background = GradientDrawable().apply {
                 setColor(Color.argb(240, 27, 31, 39))
                 cornerRadius = dp(14).toFloat()
@@ -229,55 +244,8 @@ class DestinationOverlayService : Service() {
                 1f,
             ).apply {
                 topMargin = dp(2)
-                bottomMargin = dp(4)
             },
         )
-
-        val currentSizeLabel = TextView(this).apply {
-            text = sizeText(initialSize)
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTextColor(Color.rgb(158, 168, 183))
-            setPadding(0, dp(2), 0, dp(4))
-        }
-        sizeLabel = currentSizeLabel
-        root.addView(currentSizeLabel)
-
-        val controls = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-        controls.addView(
-            sizeButton("↔−", "가로 크기 줄이기") {
-                resizeOverlay(-OverlaySizePolicy.WIDTH_STEP_DP, 0)
-            },
-            controlParams(),
-        )
-        controls.addView(
-            sizeButton("↔+", "가로 크기 늘리기") {
-                resizeOverlay(OverlaySizePolicy.WIDTH_STEP_DP, 0)
-            },
-            controlParams(),
-        )
-        controls.addView(
-            sizeButton("↕−", "세로 크기 줄이기") {
-                resizeOverlay(0, -OverlaySizePolicy.HEIGHT_STEP_DP)
-            },
-            controlParams(),
-        )
-        controls.addView(
-            sizeButton("↕+", "세로 크기 늘리기") {
-                resizeOverlay(0, OverlaySizePolicy.HEIGHT_STEP_DP)
-            },
-            controlParams(),
-        )
-        controls.addView(
-            sizeButton("초기", "오버레이 기본 크기") {
-                resetOverlaySize()
-            },
-            controlParams(),
-        )
-        root.addView(controls)
 
         val params = WindowManager.LayoutParams(
             dp(initialSize.widthDp),
@@ -298,94 +266,13 @@ class DestinationOverlayService : Service() {
         overlayParams = params
     }
 
-    private fun resizeOverlay(widthDeltaDp: Int, heightDeltaDp: Int) {
-        val params = overlayParams ?: return
-        val current = OverlaySize(
-            widthDp = pxToDp(params.width),
-            heightDp = pxToDp(params.height),
-        )
-        val next = OverlaySizePolicy.adjust(
-            currentWidthDp = current.widthDp,
-            currentHeightDp = current.heightDp,
-            widthDeltaDp = widthDeltaDp,
-            heightDeltaDp = heightDeltaDp,
-            maxWidthDp = maxOverlayWidthDp(),
-            maxHeightDp = maxOverlayHeightDp(),
-        )
-        applyOverlaySize(next)
-    }
-
-    private fun resetOverlaySize() {
-        val reset = OverlaySizePolicy.normalizeStored(
-            widthDp = OverlaySizePolicy.DEFAULT_WIDTH_DP,
-            heightDp = OverlaySizePolicy.DEFAULT_HEIGHT_DP,
-            maxWidthDp = maxOverlayWidthDp(),
-            maxHeightDp = maxOverlayHeightDp(),
-        )
-        applyOverlaySize(reset)
-    }
-
     private fun applyOverlaySize(size: OverlaySize) {
         val params = overlayParams ?: return
         params.width = dp(size.widthDp)
         params.height = dp(size.heightDp)
-        sizePreferences().edit()
-            .putInt(KEY_WIDTH_DP, size.widthDp)
-            .putInt(KEY_HEIGHT_DP, size.heightDp)
-            .apply()
-        sizeLabel?.text = sizeText(size)
         overlayView?.let { view ->
             runCatching { windowManager.updateViewLayout(view, params) }
         }
-    }
-
-    private fun loadOverlaySize(): OverlaySize = OverlaySizePolicy.normalizeStored(
-        widthDp = sizePreferences().getInt(KEY_WIDTH_DP, OverlaySizePolicy.DEFAULT_WIDTH_DP),
-        heightDp = sizePreferences().getInt(KEY_HEIGHT_DP, OverlaySizePolicy.DEFAULT_HEIGHT_DP),
-        maxWidthDp = maxOverlayWidthDp(),
-        maxHeightDp = maxOverlayHeightDp(),
-    )
-
-    private fun maxOverlayWidthDp(): Int {
-        val screenWidthDp = pxToDp(resources.displayMetrics.widthPixels)
-        return (screenWidthDp - 16).coerceAtLeast(OverlaySizePolicy.MIN_WIDTH_DP)
-    }
-
-    private fun maxOverlayHeightDp(): Int {
-        val screenHeightDp = pxToDp(resources.displayMetrics.heightPixels)
-        return (screenHeightDp - 120).coerceAtLeast(OverlaySizePolicy.MIN_HEIGHT_DP)
-    }
-
-    private fun sizeText(size: OverlaySize): String =
-        "가로 ${size.widthDp} · 세로 ${size.heightDp}"
-
-    private fun sizeButton(
-        label: String,
-        description: String,
-        onClick: () -> Unit,
-    ): TextView = TextView(this).apply {
-        text = label
-        contentDescription = description
-        textSize = 12f
-        gravity = Gravity.CENTER
-        setTypeface(typeface, Typeface.BOLD)
-        setTextColor(Color.rgb(232, 237, 244))
-        setPadding(dp(3), dp(7), dp(3), dp(7))
-        background = GradientDrawable().apply {
-            setColor(Color.argb(110, 75, 84, 99))
-            cornerRadius = dp(7).toFloat()
-            setStroke(dp(1), Color.argb(100, 255, 255, 255))
-        }
-        setOnClickListener { onClick() }
-    }
-
-    private fun controlParams(): LinearLayout.LayoutParams = LinearLayout.LayoutParams(
-        0,
-        LinearLayout.LayoutParams.WRAP_CONTENT,
-        1f,
-    ).apply {
-        marginStart = dp(2)
-        marginEnd = dp(2)
     }
 
     private fun plainText(
@@ -427,6 +314,7 @@ class DestinationOverlayService : Service() {
                     initialTouchY = event.rawY
                     true
                 }
+
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
                     val dy = (event.rawY - initialTouchY).toInt()
@@ -435,6 +323,7 @@ class DestinationOverlayService : Service() {
                     overlayView?.let { windowManager.updateViewLayout(it, params) }
                     true
                 }
+
                 else -> false
             }
         }
@@ -450,7 +339,6 @@ class DestinationOverlayService : Service() {
         overlayView?.let { view -> runCatching { windowManager.removeView(view) } }
         overlayView = null
         overlayParams = null
-        sizeLabel = null
     }
 
     private fun createNotificationChannel() {
@@ -468,28 +356,22 @@ class DestinationOverlayService : Service() {
         )
     }
 
-    private fun sizePreferences() =
-        getSharedPreferences(SIZE_PREFERENCES_NAME, Context.MODE_PRIVATE)
-
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
-    private fun pxToDp(value: Int): Int =
-        (value / resources.displayMetrics.density).toInt()
 
     companion object {
         private const val CHANNEL_ID = "destination_overlay"
         private const val NOTIFICATION_ID = 3101
         private const val ACTION_SHOW = "com.winzfs.navcapture.action.SHOW_OVERLAY"
         private const val ACTION_STOP = "com.winzfs.navcapture.action.STOP_OVERLAY"
+        private const val ACTION_APPLY_SIZE = "com.winzfs.navcapture.action.APPLY_OVERLAY_SIZE"
         private const val EXTRA_ENTRY_ID = "entry_id"
         private const val EXTRA_SOURCE_TEXT = "source_text"
         private const val EXTRA_SOURCE_PAYLOAD_TEXT = "source_payload_text"
         private const val EXTRA_DISPLAY_NAME = "display_name"
         private const val EXTRA_ROAD_ADDRESS = "road_address"
         private const val EXTRA_MEMO = "memo"
-        private const val SIZE_PREFERENCES_NAME = "destination_overlay_size"
-        private const val KEY_WIDTH_DP = "width_dp"
-        private const val KEY_HEIGHT_DP = "height_dp"
+        private const val EXTRA_WIDTH_DP = "width_dp"
+        private const val EXTRA_HEIGHT_DP = "height_dp"
 
         fun show(context: Context, entry: AddressMemoEntry) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
@@ -506,6 +388,33 @@ class DestinationOverlayService : Service() {
 
         fun hide(context: Context) {
             context.stopService(Intent(context, DestinationOverlayService::class.java))
+        }
+
+        fun currentSize(context: Context): OverlaySize = OverlaySizeSettings.load(context)
+
+        fun adjustSize(
+            context: Context,
+            widthDeltaDp: Int,
+            heightDeltaDp: Int,
+        ): OverlaySize {
+            val size = OverlaySizeSettings.adjust(context, widthDeltaDp, heightDeltaDp)
+            requestSizeApply(context, size)
+            return size
+        }
+
+        fun resetSize(context: Context): OverlaySize {
+            val size = OverlaySizeSettings.reset(context)
+            requestSizeApply(context, size)
+            return size
+        }
+
+        private fun requestSizeApply(context: Context, size: OverlaySize) {
+            val intent = Intent(context, DestinationOverlayService::class.java).apply {
+                action = ACTION_APPLY_SIZE
+                putExtra(EXTRA_WIDTH_DP, size.widthDp)
+                putExtra(EXTRA_HEIGHT_DP, size.heightDp)
+            }
+            runCatching { context.startService(intent) }
         }
     }
 }
