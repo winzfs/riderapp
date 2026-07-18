@@ -24,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.winzfs.navcapture.model.AddressMemoEntry
+import com.winzfs.navcapture.ui.MainActivity
 import com.winzfs.navcapture.ui.MemoEditorActivity
 
 class DestinationOverlayService : Service() {
@@ -65,6 +66,7 @@ class DestinationOverlayService : Service() {
         val displayName = intent.getStringExtra(EXTRA_DISPLAY_NAME).orEmpty()
         val roadAddress = intent.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
         val memo = intent.getStringExtra(EXTRA_MEMO).orEmpty()
+        val previewMode = intent.getBooleanExtra(EXTRA_PREVIEW_MODE, false)
         val display = DestinationOverlayFormatter.format(
             sourceText = sourceText,
             sourcePayloadText = sourcePayloadText,
@@ -72,13 +74,13 @@ class DestinationOverlayService : Service() {
             userDisplayName = displayName,
         )
 
-        startAsForeground(entryId, display, memo)
+        startAsForeground(entryId, display, memo, previewMode)
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
             return START_NOT_STICKY
         }
 
-        showOrUpdateOverlay(entryId, display, memo)
+        showOrUpdateOverlay(entryId, display, memo, previewMode)
         return START_NOT_STICKY
     }
 
@@ -93,11 +95,19 @@ class DestinationOverlayService : Service() {
         entryId: String,
         display: DestinationOverlayFormatter.DisplayParts,
         memo: String,
+        previewMode: Boolean,
     ) {
+        val openIntent = if (previewMode) {
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        } else {
+            openEditorIntent(entryId)
+        }
         val openPendingIntent = PendingIntent.getActivity(
             this,
             0,
-            openEditorIntent(entryId),
+            openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stopPendingIntent = PendingIntent.getService(
@@ -143,20 +153,23 @@ class DestinationOverlayService : Service() {
         entryId: String,
         display: DestinationOverlayFormatter.DisplayParts,
         memo: String,
+        previewMode: Boolean,
     ) {
         removeOverlayView()
         val initialSize = OverlaySizeSettings.load(this)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(15), dp(11), dp(9), dp(12))
+            setPadding(dp(12), dp(8), dp(7), dp(9))
             background = GradientDrawable().apply {
                 setColor(Color.argb(240, 27, 31, 39))
-                cornerRadius = dp(14).toFloat()
+                cornerRadius = dp(12).toFloat()
                 setStroke(dp(1), Color.argb(110, 255, 255, 255))
             }
             elevation = dp(10).toFloat()
-            setOnClickListener { startActivity(openEditorIntent(entryId)) }
+            if (!previewMode) {
+                setOnClickListener { startActivity(openEditorIntent(entryId)) }
+            }
         }
 
         val header = LinearLayout(this).apply {
@@ -165,15 +178,15 @@ class DestinationOverlayService : Service() {
         }
         val addressText = TextView(this).apply {
             text = display.primaryAddress
-            textSize = 20f
+            textSize = 18f
             setTextColor(Color.WHITE)
             setTypeface(typeface, Typeface.BOLD)
             maxLines = 3
-            setLineSpacing(0f, 1.05f)
+            setLineSpacing(0f, 1.03f)
         }
         val closeText = TextView(this).apply {
-            text = "  ×  "
-            textSize = 20f
+            text = " × "
+            textSize = 18f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(220, 225, 232))
             setOnClickListener { stopOverlay() }
@@ -192,7 +205,7 @@ class DestinationOverlayService : Service() {
             content.addView(
                 plainText(
                     value = display.buildingName,
-                    size = 15f,
+                    size = 14f,
                     color = Color.rgb(222, 229, 239),
                     bold = true,
                     maxLines = 2,
@@ -204,7 +217,7 @@ class DestinationOverlayService : Service() {
             content.addView(
                 plainText(
                     value = display.unitDetail,
-                    size = 19f,
+                    size = 17f,
                     color = Color.rgb(255, 220, 142),
                     bold = true,
                     maxLines = 2,
@@ -243,7 +256,7 @@ class DestinationOverlayService : Service() {
                 0,
                 1f,
             ).apply {
-                topMargin = dp(2)
+                topMargin = dp(1)
             },
         )
 
@@ -287,7 +300,7 @@ class DestinationOverlayService : Service() {
         this.maxLines = maxLines
         setTextColor(color)
         if (bold) setTypeface(typeface, Typeface.BOLD)
-        setPadding(0, dp(5), dp(5), 0)
+        setPadding(0, dp(3), dp(4), 0)
     }
 
     private fun openEditorIntent(entryId: String): Intent =
@@ -372,6 +385,7 @@ class DestinationOverlayService : Service() {
         private const val EXTRA_MEMO = "memo"
         private const val EXTRA_WIDTH_DP = "width_dp"
         private const val EXTRA_HEIGHT_DP = "height_dp"
+        private const val EXTRA_PREVIEW_MODE = "preview_mode"
 
         fun show(context: Context, entry: AddressMemoEntry) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
@@ -382,6 +396,35 @@ class DestinationOverlayService : Service() {
                 putExtra(EXTRA_DISPLAY_NAME, entry.placeName)
                 putExtra(EXTRA_ROAD_ADDRESS, entry.roadAddress)
                 putExtra(EXTRA_MEMO, entry.memo)
+            }
+            context.startForegroundService(intent)
+        }
+
+        fun showPreview(
+            context: Context,
+            address: String,
+            buildingName: String,
+            unitDetail: String,
+            memo: String,
+        ) {
+            val sourceText = listOf(address, buildingName, unitDetail)
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .joinToString(" ")
+            val sourcePayload = buildString {
+                appendLine("address=${address.trim()}")
+                appendLine("buildingName=${buildingName.trim()}")
+                append("unitDetail=${unitDetail.trim()}")
+            }
+            val intent = Intent(context, DestinationOverlayService::class.java).apply {
+                action = ACTION_SHOW
+                putExtra(EXTRA_ENTRY_ID, PREVIEW_ENTRY_ID)
+                putExtra(EXTRA_SOURCE_TEXT, sourceText)
+                putExtra(EXTRA_SOURCE_PAYLOAD_TEXT, sourcePayload)
+                putExtra(EXTRA_DISPLAY_NAME, buildingName.trim())
+                putExtra(EXTRA_ROAD_ADDRESS, address.trim())
+                putExtra(EXTRA_MEMO, memo.trim())
+                putExtra(EXTRA_PREVIEW_MODE, true)
             }
             context.startForegroundService(intent)
         }
@@ -416,5 +459,7 @@ class DestinationOverlayService : Service() {
             }
             runCatching { context.startService(intent) }
         }
+
+        private const val PREVIEW_ENTRY_ID = "overlay-preview"
     }
 }
