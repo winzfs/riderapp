@@ -9,10 +9,10 @@ data class OverlaySize(
 object OverlaySizePolicy {
     const val DEFAULT_WIDTH_DP = 320
     const val DEFAULT_HEIGHT_DP = 280
-    const val MIN_WIDTH_DP = 240
-    const val MIN_HEIGHT_DP = 180
-    const val WIDTH_STEP_DP = 20
-    const val HEIGHT_STEP_DP = 20
+    const val MIN_WIDTH_DP = 180
+    const val MIN_HEIGHT_DP = 110
+    const val WIDTH_STEP_DP = 10
+    const val HEIGHT_STEP_DP = 10
 
     fun adjust(
         currentWidthDp: Int,
