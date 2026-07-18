@@ -21,6 +21,10 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="kakaonavi-sdk" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 
     <application
@@ -28,6 +32,15 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".ui.MemoEditorActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <activity
+            android:name=".ui.AddressMemoActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.MainActivity"
@@ -91,7 +104,7 @@
             android:stopWithTask="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps a user-enabled small destination overlay visible while a navigation app is open." />
+                android:value="Keeps a user-enabled small destination address and memo overlay visible while a navigation app is open." />
         </service>
     </application>
 </manifest>
