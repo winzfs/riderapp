@@ -21,7 +21,8 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.winzfs.navcapture.ui.MainActivity
+import com.winzfs.navcapture.model.AddressMemoEntry
+import com.winzfs.navcapture.ui.MemoEditorActivity
 
 class DestinationOverlayService : Service() {
     private lateinit var windowManager: WindowManager
@@ -39,19 +40,19 @@ class DestinationOverlayService : Service() {
             return START_NOT_STICKY
         }
 
-        val destinationName = intent?.getStringExtra(EXTRA_DESTINATION_NAME)
-            .orEmpty()
-            .ifBlank { "배달 목적지" }
+        val entryId = intent?.getStringExtra(EXTRA_ENTRY_ID).orEmpty()
+        val placeName = intent?.getStringExtra(EXTRA_PLACE_NAME).orEmpty().ifBlank { "배달 목적지" }
+        val originalAddress = intent?.getStringExtra(EXTRA_ORIGINAL_ADDRESS).orEmpty()
+        val roadAddress = intent?.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
         val memo = intent?.getStringExtra(EXTRA_MEMO).orEmpty()
 
-        startAsForeground(destinationName, memo)
-
+        startAsForeground(entryId, placeName, roadAddress, memo)
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
             return START_NOT_STICKY
         }
 
-        showOrUpdateOverlay(destinationName, memo)
+        showOrUpdateOverlay(entryId, placeName, originalAddress, roadAddress, memo)
         return START_NOT_STICKY
     }
 
@@ -62,11 +63,16 @@ class DestinationOverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startAsForeground(destinationName: String, memo: String) {
+    private fun startAsForeground(
+        entryId: String,
+        placeName: String,
+        roadAddress: String,
+        memo: String,
+    ) {
         val openPendingIntent = PendingIntent.getActivity(
             this,
             0,
-            openAppIntent(),
+            openEditorIntent(entryId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stopPendingIntent = PendingIntent.getService(
@@ -78,8 +84,8 @@ class DestinationOverlayService : Service() {
 
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("현재 배달 목적지 · $destinationName")
-            .setContentText(memo.ifBlank { "개인 메모 없음" })
+            .setContentTitle("현재 배달 목적지 · $placeName")
+            .setContentText(roadAddress.ifBlank { memo.ifBlank { "주소 메모 없음" } })
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .addAction(
@@ -102,19 +108,25 @@ class DestinationOverlayService : Service() {
         }
     }
 
-    private fun showOrUpdateOverlay(name: String, memo: String) {
+    private fun showOrUpdateOverlay(
+        entryId: String,
+        placeName: String,
+        originalAddress: String,
+        roadAddress: String,
+        memo: String,
+    ) {
         removeOverlayView()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(13), dp(9), dp(9), dp(9))
+            setPadding(dp(13), dp(9), dp(9), dp(10))
             background = GradientDrawable().apply {
-                setColor(Color.argb(235, 30, 34, 42))
+                setColor(Color.argb(238, 30, 34, 42))
                 cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.argb(110, 255, 255, 255))
             }
             elevation = dp(10).toFloat()
-            setOnClickListener { startActivity(openAppIntent()) }
+            setOnClickListener { startActivity(openEditorIntent(entryId)) }
         }
 
         val header = LinearLayout(this).apply {
@@ -122,7 +134,7 @@ class DestinationOverlayService : Service() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val nameText = TextView(this).apply {
-            text = name
+            text = placeName
             textSize = 14f
             setTextColor(Color.WHITE)
             setTypeface(typeface, Typeface.BOLD)
@@ -142,20 +154,30 @@ class DestinationOverlayService : Service() {
         header.addView(closeText)
         root.addView(header)
 
-        val memoText = TextView(this).apply {
-            text = memo.ifBlank { "메모 없음 · 눌러서 추가" }
-            textSize = 12f
-            maxLines = 3
-            setTextColor(
-                if (memo.isBlank()) Color.rgb(165, 174, 188)
-                else Color.rgb(226, 231, 239),
-            )
-            setPadding(0, dp(3), dp(5), 0)
+        if (roadAddress.isNotBlank() && roadAddress != placeName) {
+            root.addView(infoText("도로명 · $roadAddress", Color.rgb(220, 228, 239)))
+        } else if (roadAddress.isBlank()) {
+            root.addView(infoText("도로명주소 자동 확인 중 또는 미확인", Color.rgb(165, 174, 188)))
         }
-        root.addView(memoText)
+
+        if (
+            originalAddress.isNotBlank() &&
+            originalAddress != roadAddress &&
+            originalAddress != placeName
+        ) {
+            root.addView(infoText("기존 주소 · $originalAddress", Color.rgb(185, 194, 207)))
+        }
+
+        root.addView(
+            infoText(
+                if (memo.isBlank()) "메모 없음 · 눌러서 입력" else "메모 · $memo",
+                if (memo.isBlank()) Color.rgb(165, 174, 188) else Color.rgb(238, 241, 246),
+                maxLines = 3,
+            ),
+        )
 
         val params = WindowManager.LayoutParams(
-            dp(270),
+            dp(300),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -172,9 +194,26 @@ class DestinationOverlayService : Service() {
         overlayView = root
     }
 
-    private fun openAppIntent(): Intent = Intent(this, MainActivity::class.java).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    private fun infoText(
+        value: String,
+        color: Int,
+        maxLines: Int = 2,
+    ): TextView = TextView(this).apply {
+        text = value
+        textSize = 11.5f
+        this.maxLines = maxLines
+        setTextColor(color)
+        setPadding(0, dp(3), dp(5), 0)
     }
+
+    private fun openEditorIntent(entryId: String): Intent =
+        MemoEditorActivity.intent(this, entryId, true).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP,
+            )
+        }
 
     private fun installDragHandler(handle: View, params: WindowManager.LayoutParams) {
         var initialX = 0
@@ -221,10 +260,10 @@ class DestinationOverlayService : Service() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "목적지 오버레이",
+                "목적지 주소·메모 오버레이",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "내비게이션 위에 현재 목적지와 개인 메모를 표시합니다."
+                description = "내비게이션 위에 현재 목적지의 주소와 개인 메모를 표시합니다."
                 setShowBadge(false)
             },
         )
@@ -237,18 +276,20 @@ class DestinationOverlayService : Service() {
         private const val NOTIFICATION_ID = 3101
         private const val ACTION_SHOW = "com.winzfs.navcapture.action.SHOW_OVERLAY"
         private const val ACTION_STOP = "com.winzfs.navcapture.action.STOP_OVERLAY"
-        private const val EXTRA_DESTINATION_NAME = "destination_name"
+        private const val EXTRA_ENTRY_ID = "entry_id"
+        private const val EXTRA_PLACE_NAME = "place_name"
+        private const val EXTRA_ORIGINAL_ADDRESS = "original_address"
+        private const val EXTRA_ROAD_ADDRESS = "road_address"
         private const val EXTRA_MEMO = "memo"
 
-        fun show(
-            context: Context,
-            destinationName: String,
-            memo: String,
-        ) {
+        fun show(context: Context, entry: AddressMemoEntry) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
                 action = ACTION_SHOW
-                putExtra(EXTRA_DESTINATION_NAME, destinationName)
-                putExtra(EXTRA_MEMO, memo)
+                putExtra(EXTRA_ENTRY_ID, entry.id)
+                putExtra(EXTRA_PLACE_NAME, entry.title)
+                putExtra(EXTRA_ORIGINAL_ADDRESS, entry.address)
+                putExtra(EXTRA_ROAD_ADDRESS, entry.roadAddress)
+                putExtra(EXTRA_MEMO, entry.memo)
             }
             context.startForegroundService(intent)
         }
