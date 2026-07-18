@@ -16,6 +16,12 @@ class NavigationForwarder(private val context: Context) {
 
         val candidates = buildCandidateIntents(capture, requestedApp)
         if (candidates.isEmpty()) {
+            if (requestedApp == NavApp.KAKAO_NAVI) {
+                throw IllegalArgumentException(
+                    "카카오내비는 배달앱이 전달한 공식 호출 정보가 있을 때만 직접 연결할 수 있습니다. " +
+                        "‘매번 지도앱 선택’에서 티맵·네이버지도·카카오맵을 선택해 주세요.",
+                )
+            }
             throw IllegalArgumentException("목적지 좌표가 없어 ${requestedApp.label}으로 변환할 수 없습니다.")
         }
 
@@ -92,7 +98,10 @@ class NavigationForwarder(private val context: Context) {
         }
 
         if (originalMatches && capture.rawUri.isNotBlank()) {
-            result += Uri.parse(capture.rawUri)
+            val originalUri = Uri.parse(capture.rawUri)
+            if (app != NavApp.KAKAO_NAVI || isCompleteKakaoNaviUri(originalUri)) {
+                result += originalUri
+            }
         }
 
         val lat = capture.latitude
@@ -101,9 +110,7 @@ class NavigationForwarder(private val context: Context) {
 
         val name = capture.destinationName.ifBlank { "배달 목적지" }
         when (app) {
-            NavApp.KAKAO_NAVI -> {
-                result += buildKakaoNaviUri(name, lat, lng)
-            }
+            NavApp.KAKAO_NAVI -> Unit // 공식 Kakao SDK 정보가 담긴 원본 URI만 재사용합니다.
             NavApp.KAKAO_MAP -> {
                 result += Uri.parse("kakaomap://route?ep=${format(lat)},${format(lng)}&by=car")
                 result += buildGeoUri(name, lat, lng)
@@ -137,13 +144,12 @@ class NavigationForwarder(private val context: Context) {
         return result.distinctBy { it.toString() }
     }
 
-    private fun buildKakaoNaviUri(name: String, lat: Double, lng: Double): Uri {
-        val safeName = name
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-        val payload =
-            """{"destination":{"name":"$safeName","x":${format(lng)},"y":${format(lat)}},"option":{"coord_type":"wgs84"}}"""
-        return Uri.parse("kakaonavi-sdk://navigate?param=${Uri.encode(payload)}")
+    private fun isCompleteKakaoNaviUri(uri: Uri): Boolean {
+        val hasApiVersion = !uri.getQueryParameter("apiver").isNullOrBlank() ||
+            !uri.getQueryParameter("api_version").isNullOrBlank()
+        return hasApiVersion &&
+            !uri.getQueryParameter("appkey").isNullOrBlank() &&
+            !uri.getQueryParameter("param").isNullOrBlank()
     }
 
     private fun buildGeoUri(name: String, lat: Double, lng: Double): Uri = Uri.parse(
