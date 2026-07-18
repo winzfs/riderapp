@@ -8,6 +8,8 @@ data class AddressMemoEntry(
     val placeName: String,
     val address: String,
     val roadAddress: String,
+    val unitDetail: String,
+    val roadAddressConfirmed: Boolean,
     val memo: String,
     val latitude: Double?,
     val longitude: Double?,
@@ -27,6 +29,8 @@ data class AddressMemoEntry(
         put("placeName", placeName)
         put("address", address)
         put("roadAddress", roadAddress)
+        put("unitDetail", unitDetail)
+        put("roadAddressConfirmed", roadAddressConfirmed)
         put("memo", memo)
         put("latitude", latitude ?: JSONObject.NULL)
         put("longitude", longitude ?: JSONObject.NULL)
@@ -41,6 +45,8 @@ data class AddressMemoEntry(
             placeName = json.optString("placeName"),
             address = json.optString("address"),
             roadAddress = json.optString("roadAddress"),
+            unitDetail = json.optString("unitDetail"),
+            roadAddressConfirmed = json.optBoolean("roadAddressConfirmed", false),
             memo = json.optString("memo"),
             latitude = json.optNullableDouble("latitude"),
             longitude = json.optNullableDouble("longitude"),
