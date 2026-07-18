@@ -32,10 +32,14 @@ object AddressCandidateScorer {
         targetLongitude: Double,
         candidate: Candidate,
     ): Double {
-        val destination = normalize(destinationName)
-        val feature = normalize(candidate.placeName)
+        val safeDestinationName = KoreanAddressTextParser.searchQuery(destinationName)
+        val destination = normalize(safeDestinationName)
+        val safeFeatureName = candidate.placeName.takeUnless {
+            KoreanAddressTextParser.isUnitOnlyFeature(it)
+        }.orEmpty()
+        val feature = normalize(safeFeatureName)
         val searchable = normalize(
-            listOf(candidate.placeName, candidate.originalAddress, candidate.roadAddress)
+            listOf(safeFeatureName, candidate.originalAddress, candidate.roadAddress)
                 .joinToString(" "),
         )
 
@@ -46,7 +50,7 @@ object AddressCandidateScorer {
             if (feature.isNotBlank() && (feature.contains(destination) || destination.contains(feature))) {
                 score += 70.0
             }
-            tokenize(destinationName).forEach { token ->
+            tokenize(safeDestinationName).forEach { token ->
                 if (searchable.contains(normalize(token))) score += 22.0
             }
         }
@@ -66,7 +70,7 @@ object AddressCandidateScorer {
     }
 
     fun isMeaningfulDestinationName(value: String): Boolean {
-        val normalized = normalize(value)
+        val normalized = normalize(KoreanAddressTextParser.searchQuery(value))
         return normalized.length >= 2 && !isGenericDestination(normalized)
     }
 
@@ -74,6 +78,7 @@ object AddressCandidateScorer {
         .split(TOKEN_SEPARATOR)
         .map(String::trim)
         .filter { it.length >= 2 }
+        .filterNot { KoreanAddressTextParser.isUnitOnlyFeature(it) }
         .filterNot { normalize(it) in GENERIC_TOKENS }
         .distinct()
 
