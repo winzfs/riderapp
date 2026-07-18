@@ -28,16 +28,18 @@ class NavigationForwarder(private val context: Context) {
     private fun resolveTargetApp(capture: CapturedDestination, requestedApp: NavApp): NavApp {
         if (requestedApp != NavApp.AUTO) return requestedApp
         return when (capture.scheme.lowercase()) {
-            "kakaomap" -> NavApp.KAKAO
+            "kakaonavi-sdk" -> NavApp.KAKAO_NAVI
+            "kakaomap" -> NavApp.KAKAO_MAP
             "nmap" -> NavApp.NAVER
             "tmap" -> NavApp.TMAP
-            else -> NavApp.KAKAO
+            else -> NavApp.KAKAO_NAVI
         }
     }
 
     private fun buildTargetUri(capture: CapturedDestination, app: NavApp): Uri? {
         val matchingOriginal = when (app) {
-            NavApp.KAKAO -> capture.scheme == "kakaomap"
+            NavApp.KAKAO_NAVI -> capture.scheme == "kakaonavi-sdk"
+            NavApp.KAKAO_MAP -> capture.scheme == "kakaomap"
             NavApp.TMAP -> capture.scheme == "tmap"
             NavApp.NAVER -> capture.scheme == "nmap"
             NavApp.AUTO -> false
@@ -51,7 +53,8 @@ class NavigationForwarder(private val context: Context) {
         val name = capture.destinationName.ifBlank { "배달 목적지" }
 
         return when (app) {
-            NavApp.KAKAO -> Uri.parse(
+            NavApp.KAKAO_NAVI -> buildKakaoNaviUri(name, lat, lng)
+            NavApp.KAKAO_MAP -> Uri.parse(
                 "kakaomap://route?ep=${format(lat)},${format(lng)}&by=car"
             )
             NavApp.TMAP -> Uri.parse(
@@ -65,11 +68,20 @@ class NavigationForwarder(private val context: Context) {
         }
     }
 
+    private fun buildKakaoNaviUri(name: String, lat: Double, lng: Double): Uri {
+        val safeName = name
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        val payload = """{"destination":{"name":"$safeName","x":${format(lng)},"y":${format(lat)}},"option":{"coord_type":"wgs84"}}"""
+        return Uri.parse("kakaonavi-sdk://navigate?param=${Uri.encode(payload)}")
+    }
+
     private fun rawUriFallback(capture: CapturedDestination, app: NavApp): Uri? {
         if (capture.rawUri.isBlank()) return null
         val raw = Uri.parse(capture.rawUri)
         val canReuse = when (app) {
-            NavApp.KAKAO -> raw.scheme in setOf("kakaomap", "geo", "http", "https")
+            NavApp.KAKAO_NAVI -> raw.scheme in setOf("kakaonavi-sdk", "geo")
+            NavApp.KAKAO_MAP -> raw.scheme in setOf("kakaomap", "geo", "http", "https")
             NavApp.TMAP -> raw.scheme in setOf("tmap", "geo")
             NavApp.NAVER -> raw.scheme in setOf("nmap", "geo")
             NavApp.AUTO -> false
