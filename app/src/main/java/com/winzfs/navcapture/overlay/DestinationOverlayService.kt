@@ -42,18 +42,24 @@ class DestinationOverlayService : Service() {
 
         val entryId = intent?.getStringExtra(EXTRA_ENTRY_ID).orEmpty()
         val sourceText = intent?.getStringExtra(EXTRA_SOURCE_TEXT).orEmpty()
+        val sourcePayloadText = intent?.getStringExtra(EXTRA_SOURCE_PAYLOAD_TEXT).orEmpty()
         val displayName = intent?.getStringExtra(EXTRA_DISPLAY_NAME).orEmpty()
         val roadAddress = intent?.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
         val memo = intent?.getStringExtra(EXTRA_MEMO).orEmpty()
-        val title = sourceText.ifBlank { displayName.ifBlank { "배달 목적지" } }
+        val display = DestinationOverlayFormatter.format(
+            sourceText = sourceText,
+            sourcePayloadText = sourcePayloadText,
+            referenceRoadAddress = roadAddress,
+            userDisplayName = displayName,
+        )
 
-        startAsForeground(entryId, title, roadAddress, memo)
+        startAsForeground(entryId, display, memo)
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
             return START_NOT_STICKY
         }
 
-        showOrUpdateOverlay(entryId, title, displayName, roadAddress, memo)
+        showOrUpdateOverlay(entryId, display, memo)
         return START_NOT_STICKY
     }
 
@@ -66,8 +72,7 @@ class DestinationOverlayService : Service() {
 
     private fun startAsForeground(
         entryId: String,
-        sourceTitle: String,
-        roadAddress: String,
+        display: DestinationOverlayFormatter.DisplayParts,
         memo: String,
     ) {
         val openPendingIntent = PendingIntent.getActivity(
@@ -83,16 +88,22 @@ class DestinationOverlayService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val notificationText = listOf(
+            display.buildingName,
+            display.unitDetail,
+            memo,
+        ).filter(String::isNotBlank).joinToString(" · ").ifBlank { "눌러서 메모 입력" }
+
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("현재 배달 목적지 · $sourceTitle")
-            .setContentText(roadAddress.ifBlank { memo.ifBlank { "참고 주소·메모 없음" } })
+            .setContentTitle(display.primaryAddress)
+            .setContentText(notificationText)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .addAction(
                 Notification.Action.Builder(
                     android.R.drawable.ic_menu_close_clear_cancel,
-                    "오버레이 닫기",
+                    "닫기",
                     stopPendingIntent,
                 ).build(),
             )
@@ -111,18 +122,16 @@ class DestinationOverlayService : Service() {
 
     private fun showOrUpdateOverlay(
         entryId: String,
-        sourceTitle: String,
-        displayName: String,
-        roadAddress: String,
+        display: DestinationOverlayFormatter.DisplayParts,
         memo: String,
     ) {
         removeOverlayView()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(13), dp(9), dp(9), dp(10))
+            setPadding(dp(15), dp(11), dp(9), dp(12))
             background = GradientDrawable().apply {
-                setColor(Color.argb(238, 30, 34, 42))
+                setColor(Color.argb(240, 27, 31, 39))
                 cornerRadius = dp(14).toFloat()
                 setStroke(dp(1), Color.argb(110, 255, 255, 255))
             }
@@ -132,14 +141,15 @@ class DestinationOverlayService : Service() {
 
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.TOP
         }
-        val nameText = TextView(this).apply {
-            text = sourceTitle
-            textSize = 14f
+        val addressText = TextView(this).apply {
+            text = display.primaryAddress
+            textSize = 20f
             setTextColor(Color.WHITE)
             setTypeface(typeface, Typeface.BOLD)
             maxLines = 3
+            setLineSpacing(0f, 1.05f)
         }
         val closeText = TextView(this).apply {
             text = "  ×  "
@@ -149,29 +159,52 @@ class DestinationOverlayService : Service() {
             setOnClickListener { stopOverlay() }
         }
         header.addView(
-            nameText,
+            addressText,
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
         )
         header.addView(closeText)
         root.addView(header)
 
-        if (displayName.isNotBlank() && displayName != sourceTitle) {
-            root.addView(infoText("내 이름 · $displayName", Color.rgb(205, 213, 225)))
+        if (display.buildingName.isNotBlank()) {
+            root.addView(
+                plainText(
+                    value = display.buildingName,
+                    size = 15f,
+                    color = Color.rgb(222, 229, 239),
+                    bold = true,
+                    maxLines = 2,
+                ),
+            )
         }
-        if (roadAddress.isNotBlank() && roadAddress != sourceTitle) {
-            root.addView(infoText("참고 도로명 · $roadAddress", Color.rgb(220, 228, 239)))
+
+        if (display.unitDetail.isNotBlank()) {
+            root.addView(
+                plainText(
+                    value = display.unitDetail,
+                    size = 19f,
+                    color = Color.rgb(255, 220, 142),
+                    bold = true,
+                    maxLines = 2,
+                ),
+            )
         }
 
         root.addView(
-            infoText(
-                if (memo.isBlank()) "메모 없음 · 눌러서 입력" else "메모 · $memo",
-                if (memo.isBlank()) Color.rgb(165, 174, 188) else Color.rgb(238, 241, 246),
+            plainText(
+                value = memo.ifBlank { "눌러서 메모 입력" },
+                size = 12f,
+                color = if (memo.isBlank()) {
+                    Color.rgb(158, 168, 183)
+                } else {
+                    Color.rgb(238, 241, 246)
+                },
+                bold = false,
                 maxLines = 3,
             ),
         )
 
         val params = WindowManager.LayoutParams(
-            dp(300),
+            dp(320),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -188,16 +221,19 @@ class DestinationOverlayService : Service() {
         overlayView = root
     }
 
-    private fun infoText(
+    private fun plainText(
         value: String,
+        size: Float,
         color: Int,
-        maxLines: Int = 2,
+        bold: Boolean,
+        maxLines: Int,
     ): TextView = TextView(this).apply {
         text = value
-        textSize = 11.5f
+        textSize = size
         this.maxLines = maxLines
         setTextColor(color)
-        setPadding(0, dp(3), dp(5), 0)
+        if (bold) setTypeface(typeface, Typeface.BOLD)
+        setPadding(0, dp(5), dp(5), 0)
     }
 
     private fun openEditorIntent(entryId: String): Intent =
@@ -254,10 +290,10 @@ class DestinationOverlayService : Service() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "목적지 원문·메모 오버레이",
+                "목적지 주소·메모 오버레이",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "배달앱 목적지 원문과 별도 참고 주소·메모를 표시합니다."
+                description = "현재 목적지의 세부주소, 건물명, 동·호수와 메모를 표시합니다."
                 setShowBadge(false)
             },
         )
@@ -272,6 +308,7 @@ class DestinationOverlayService : Service() {
         private const val ACTION_STOP = "com.winzfs.navcapture.action.STOP_OVERLAY"
         private const val EXTRA_ENTRY_ID = "entry_id"
         private const val EXTRA_SOURCE_TEXT = "source_text"
+        private const val EXTRA_SOURCE_PAYLOAD_TEXT = "source_payload_text"
         private const val EXTRA_DISPLAY_NAME = "display_name"
         private const val EXTRA_ROAD_ADDRESS = "road_address"
         private const val EXTRA_MEMO = "memo"
@@ -281,6 +318,7 @@ class DestinationOverlayService : Service() {
                 action = ACTION_SHOW
                 putExtra(EXTRA_ENTRY_ID, entry.id)
                 putExtra(EXTRA_SOURCE_TEXT, entry.sourceText)
+                putExtra(EXTRA_SOURCE_PAYLOAD_TEXT, entry.sourcePayloadText)
                 putExtra(EXTRA_DISPLAY_NAME, entry.placeName)
                 putExtra(EXTRA_ROAD_ADDRESS, entry.roadAddress)
                 putExtra(EXTRA_MEMO, entry.memo)
