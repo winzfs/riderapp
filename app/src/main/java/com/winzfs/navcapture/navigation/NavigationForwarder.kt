@@ -14,12 +14,33 @@ class NavigationForwarder(private val context: Context) {
             return@runCatching NavApp.PICK_EACH_TIME
         }
 
+        // A navigation app encoded by the delivery app always takes priority over
+        // RiderApp's fixed fallback setting. This prevents cross-app URI conversion.
+        val sourceApp = SourceNavigationDetector.detect(capture)
+        if (sourceApp != null) {
+            val sourceCandidates = buildCandidateIntents(capture, sourceApp)
+            if (sourceCandidates.isNotEmpty()) {
+                launchFirstAvailable(sourceCandidates, sourceApp)
+                return@runCatching sourceApp
+            }
+
+            // For example, Kakao Navi cannot be reconstructed safely without its
+            // complete SDK URI. Never send it to a different app automatically.
+            launchChooser(capture)
+            return@runCatching NavApp.PICK_EACH_TIME
+        }
+
+        if (requestedApp == NavApp.MATCH_DELIVERY_APP) {
+            launchChooser(capture)
+            return@runCatching NavApp.PICK_EACH_TIME
+        }
+
         val candidates = buildCandidateIntents(capture, requestedApp)
         if (candidates.isEmpty()) {
             if (requestedApp == NavApp.KAKAO_NAVI) {
                 throw IllegalArgumentException(
                     "카카오내비는 배달앱이 전달한 공식 호출 정보가 있을 때만 직접 연결할 수 있습니다. " +
-                        "‘매번 지도앱 선택’에서 티맵·네이버지도·카카오맵을 선택해 주세요.",
+                        "‘배달앱 설정 자동’ 또는 ‘매번 지도앱 선택’을 사용해 주세요.",
                 )
             }
             throw IllegalArgumentException("목적지 좌표가 없어 ${requestedApp.label}으로 변환할 수 없습니다.")
@@ -33,7 +54,7 @@ class NavigationForwarder(private val context: Context) {
         val packageManager = context.packageManager
         val candidates = NavApp.entries
             .asSequence()
-            .filter { it != NavApp.PICK_EACH_TIME }
+            .filter { it != NavApp.MATCH_DELIVERY_APP && it != NavApp.PICK_EACH_TIME }
             .mapNotNull { app ->
                 buildCandidateIntents(capture, app)
                     .firstOrNull { it.resolveActivity(packageManager) != null }
@@ -88,13 +109,15 @@ class NavigationForwarder(private val context: Context) {
     private fun buildUris(capture: CapturedDestination, app: NavApp): List<Uri> {
         val result = mutableListOf<Uri>()
         val originalScheme = capture.scheme.lowercase()
+        val originalHost = capture.host.lowercase()
         val originalMatches = when (app) {
             NavApp.KAKAO_NAVI -> originalScheme == "kakaonavi-sdk"
-            NavApp.KAKAO_MAP -> originalScheme == "kakaomap"
+            NavApp.KAKAO_MAP -> originalScheme == "kakaomap" ||
+                (originalScheme in setOf("http", "https") && originalHost.endsWith("map.kakao.com"))
             NavApp.TMAP -> originalScheme == "tmap"
             NavApp.NAVER -> originalScheme == "nmap"
             NavApp.GOOGLE_MAPS -> originalScheme in setOf("google.navigation", "googlemaps")
-            NavApp.PICK_EACH_TIME -> false
+            NavApp.MATCH_DELIVERY_APP, NavApp.PICK_EACH_TIME -> false
         }
 
         if (originalMatches && capture.rawUri.isNotBlank()) {
@@ -110,7 +133,7 @@ class NavigationForwarder(private val context: Context) {
 
         val name = capture.destinationName.ifBlank { "배달 목적지" }
         when (app) {
-            NavApp.KAKAO_NAVI -> Unit // 공식 Kakao SDK 정보가 담긴 원본 URI만 재사용합니다.
+            NavApp.KAKAO_NAVI -> Unit // Complete original Kakao SDK URI only.
             NavApp.KAKAO_MAP -> {
                 result += Uri.parse("kakaomap://route?ep=${format(lat)},${format(lng)}&by=car")
                 result += buildGeoUri(name, lat, lng)
@@ -118,27 +141,27 @@ class NavigationForwarder(private val context: Context) {
             NavApp.TMAP -> {
                 val encodedName = Uri.encode(name)
                 result += Uri.parse(
-                    "tmap://route?rGoName=$encodedName&rGoX=${format(lng)}&rGoY=${format(lat)}"
+                    "tmap://route?rGoName=$encodedName&rGoX=${format(lng)}&rGoY=${format(lat)}",
                 )
                 result += Uri.parse(
-                    "tmap://?rGoName=$encodedName&rGoX=${format(lng)}&rGoY=${format(lat)}"
+                    "tmap://?rGoName=$encodedName&rGoX=${format(lng)}&rGoY=${format(lat)}",
                 )
             }
             NavApp.NAVER -> {
                 result += Uri.parse(
                     "nmap://navigation?dlat=${format(lat)}&dlng=${format(lng)}" +
-                        "&dname=${Uri.encode(name)}&appname=${context.packageName}"
+                        "&dname=${Uri.encode(name)}&appname=${context.packageName}",
                 )
                 result += Uri.parse(
                     "nmap://route/car?dlat=${format(lat)}&dlng=${format(lng)}" +
-                        "&dname=${Uri.encode(name)}&appname=${context.packageName}"
+                        "&dname=${Uri.encode(name)}&appname=${context.packageName}",
                 )
             }
             NavApp.GOOGLE_MAPS -> {
                 result += Uri.parse("google.navigation:q=${format(lat)},${format(lng)}&mode=d")
                 result += buildGeoUri(name, lat, lng)
             }
-            NavApp.PICK_EACH_TIME -> Unit
+            NavApp.MATCH_DELIVERY_APP, NavApp.PICK_EACH_TIME -> Unit
         }
 
         return result.distinctBy { it.toString() }
@@ -154,7 +177,7 @@ class NavigationForwarder(private val context: Context) {
 
     private fun buildGeoUri(name: String, lat: Double, lng: Double): Uri = Uri.parse(
         "geo:${format(lat)},${format(lng)}?q=" +
-            Uri.encode("${format(lat)},${format(lng)}($name)")
+            Uri.encode("${format(lat)},${format(lng)}($name)"),
     )
 
     private fun format(value: Double): String =
