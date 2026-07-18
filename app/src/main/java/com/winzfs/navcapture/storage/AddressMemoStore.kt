@@ -13,7 +13,7 @@ class AddressMemoStore(context: Context) {
 
     fun load(): List<AddressMemoEntry> {
         val raw = preferences.getString(KEY_ENTRIES, null) ?: return emptyList()
-        return runCatching {
+        val decoded = runCatching {
             val array = JSONArray(raw)
             buildList {
                 for (index in 0 until array.length()) {
@@ -21,24 +21,39 @@ class AddressMemoStore(context: Context) {
                 }
             }.sortedByDescending { it.updatedAt }
         }.getOrDefault(emptyList())
+
+        val deduplicated = AddressMemoDeduplicator.deduplicate(decoded)
+        if (deduplicated != decoded) persist(deduplicated)
+        return deduplicated
     }
 
     fun findById(id: String): AddressMemoEntry? = load().firstOrNull { it.id == id }
 
     fun findForCapture(capture: CapturedDestination): AddressMemoEntry? {
-        val placeKey = PlaceKeyFactory.create(
-            latitude = capture.latitude,
-            longitude = capture.longitude,
-            destinationName = capture.destinationName,
-            rawUri = capture.rawUri,
-        )
-        return load().firstOrNull { it.placeKey == placeKey }
+        val entries = load()
+        val identity = AddressMemoIdentity.forCapture(capture)
+        entries.firstOrNull { AddressMemoIdentity.forEntry(it) == identity }?.let { return it }
+
+        // Some delivery apps provide only a place name and move the pin a few metres
+        // between calls. Nearby matching is a fallback only when no address identity
+        // was available, preventing 1-metre coordinate drift from creating duplicates.
+        if (!identity.startsWith("address:")) {
+            return entries.firstOrNull { entry ->
+                AddressMemoIdentity.isNearby(
+                    capture.latitude,
+                    capture.longitude,
+                    entry.latitude,
+                    entry.longitude,
+                )
+            }
+        }
+        return null
     }
 
     /**
-     * Creates or refreshes the memo entry for a delivery destination.
-     * Only exact delivery-app source fields and original coordinates are refreshed here.
-     * Geocoded/reference addresses never replace delivery-app data.
+     * Creates or refreshes the single memo entry for a delivery address.
+     * Exact delivery-app source fields remain untouched; only the local identity
+     * used to find the memo is normalized.
      */
     fun ensureForCapture(capture: CapturedDestination): AddressMemoEntry {
         val incomingSource = capture.destinationName
@@ -56,15 +71,9 @@ class AddressMemoStore(context: Context) {
         }
 
         val now = System.currentTimeMillis()
-        val placeKey = PlaceKeyFactory.create(
-            latitude = capture.latitude,
-            longitude = capture.longitude,
-            destinationName = capture.destinationName,
-            rawUri = capture.rawUri,
-        )
         val entry = AddressMemoEntry(
             id = UUID.randomUUID().toString(),
-            placeKey = placeKey,
+            placeKey = AddressMemoIdentity.forCapture(capture),
             sourceText = incomingSource,
             sourcePayloadText = incomingPayload,
             placeName = "",
@@ -102,7 +111,7 @@ class AddressMemoStore(context: Context) {
     }
 
     fun save(entry: AddressMemoEntry): AddressMemoEntry {
-        val normalized = entry.copy(
+        val sanitized = entry.copy(
             sourceText = entry.sourceText.replace("\u0000", "").take(MAX_SOURCE_LENGTH),
             sourcePayloadText = entry.sourcePayloadText.replace("\u0000", "").take(MAX_PAYLOAD_LENGTH),
             placeName = entry.placeName.trim().take(MAX_TEXT_LENGTH),
@@ -110,12 +119,40 @@ class AddressMemoStore(context: Context) {
             roadAddress = entry.roadAddress.trim().take(MAX_TEXT_LENGTH),
             unitDetail = entry.unitDetail.trim().take(MAX_DETAIL_LENGTH),
             memo = entry.memo.trim().take(MAX_MEMO_LENGTH),
-            placeKey = buildStablePlaceKey(entry),
-            updatedAt = System.currentTimeMillis(),
         )
-        val items = load().filterNot { it.id == normalized.id }.toMutableList()
-        items.add(0, normalized)
-        persist(items.take(MAX_ENTRIES))
+        val identity = AddressMemoIdentity.forEntry(sanitized)
+        val items = load()
+        val sameAddress = items.firstOrNull { existing ->
+            existing.id != sanitized.id && AddressMemoIdentity.forEntry(existing) == identity
+        }
+
+        val normalized = if (sameAddress == null) {
+            sanitized.copy(
+                placeKey = identity,
+                updatedAt = System.currentTimeMillis(),
+            )
+        } else {
+            AddressMemoDeduplicator.merge(
+                primary = sanitized.copy(
+                    id = sameAddress.id,
+                    placeKey = identity,
+                    createdAt = minOf(sanitized.createdAt, sameAddress.createdAt),
+                    updatedAt = System.currentTimeMillis(),
+                ),
+                secondary = sameAddress,
+            ).copy(
+                placeKey = identity,
+                updatedAt = System.currentTimeMillis(),
+            )
+        }
+
+        val remaining = items.filterNot { existing ->
+            existing.id == normalized.id ||
+                existing.id == sanitized.id ||
+                AddressMemoIdentity.forEntry(existing) == identity
+        }.toMutableList()
+        remaining.add(0, normalized)
+        persist(remaining.take(MAX_ENTRIES))
         return normalized
     }
 
@@ -137,25 +174,6 @@ class AddressMemoStore(context: Context) {
                 entry.memo,
             ).any { normalize(it).contains(needle) }
         }
-    }
-
-    private fun buildStablePlaceKey(entry: AddressMemoEntry): String {
-        if (entry.latitude != null && entry.longitude != null) {
-            return PlaceKeyFactory.create(
-                latitude = entry.latitude,
-                longitude = entry.longitude,
-                destinationName = entry.sourceText.ifBlank { entry.placeName },
-                rawUri = "",
-            )
-        }
-        val addressKey = normalize(
-            entry.roadAddress.ifBlank {
-                entry.address.ifBlank {
-                    entry.placeName.ifBlank { entry.sourceText }
-                }
-            },
-        )
-        return if (addressKey.isBlank()) entry.placeKey else "address:$addressKey"
     }
 
     private fun persist(items: List<AddressMemoEntry>) {
