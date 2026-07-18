@@ -37,15 +37,17 @@ class AddressMemoStore(context: Context) {
 
     /**
      * Creates or refreshes the memo entry for a delivery destination.
-     * Only the exact source text and original coordinates are refreshed here.
+     * Only exact delivery-app source fields and original coordinates are refreshed here.
      * Geocoded/reference addresses never replace delivery-app data.
      */
     fun ensureForCapture(capture: CapturedDestination): AddressMemoEntry {
         val incomingSource = capture.destinationName
+        val incomingPayload = capture.extrasText
 
         findForCapture(capture)?.let { existing ->
             val updated = existing.copy(
                 sourceText = incomingSource.ifBlank { existing.sourceText },
+                sourcePayloadText = incomingPayload.ifBlank { existing.sourcePayloadText },
                 latitude = capture.latitude ?: existing.latitude,
                 longitude = capture.longitude ?: existing.longitude,
             )
@@ -64,6 +66,7 @@ class AddressMemoStore(context: Context) {
             id = UUID.randomUUID().toString(),
             placeKey = placeKey,
             sourceText = incomingSource,
+            sourcePayloadText = incomingPayload,
             placeName = "",
             address = "",
             roadAddress = "",
@@ -84,6 +87,7 @@ class AddressMemoStore(context: Context) {
             id = UUID.randomUUID().toString(),
             placeKey = "draft:${UUID.randomUUID()}",
             sourceText = "",
+            sourcePayloadText = "",
             placeName = "",
             address = "",
             roadAddress = "",
@@ -100,6 +104,7 @@ class AddressMemoStore(context: Context) {
     fun save(entry: AddressMemoEntry): AddressMemoEntry {
         val normalized = entry.copy(
             sourceText = entry.sourceText.replace("\u0000", "").take(MAX_SOURCE_LENGTH),
+            sourcePayloadText = entry.sourcePayloadText.replace("\u0000", "").take(MAX_PAYLOAD_LENGTH),
             placeName = entry.placeName.trim().take(MAX_TEXT_LENGTH),
             address = entry.address.trim().take(MAX_TEXT_LENGTH),
             roadAddress = entry.roadAddress.trim().take(MAX_TEXT_LENGTH),
@@ -124,6 +129,7 @@ class AddressMemoStore(context: Context) {
         return load().filter { entry ->
             listOf(
                 entry.sourceText,
+                entry.sourcePayloadText,
                 entry.placeName,
                 entry.address,
                 entry.roadAddress,
@@ -168,6 +174,7 @@ class AddressMemoStore(context: Context) {
         private const val KEY_ENTRIES = "entries"
         private const val MAX_ENTRIES = 500
         private const val MAX_SOURCE_LENGTH = 1000
+        private const val MAX_PAYLOAD_LENGTH = 12_000
         private const val MAX_TEXT_LENGTH = 250
         private const val MAX_DETAIL_LENGTH = 100
         private const val MAX_MEMO_LENGTH = 1000
