@@ -20,6 +20,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.winzfs.navcapture.model.AddressMemoEntry
 import com.winzfs.navcapture.ui.MemoEditorActivity
@@ -27,6 +28,8 @@ import com.winzfs.navcapture.ui.MemoEditorActivity
 class DestinationOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
+    private var overlayParams: WindowManager.LayoutParams? = null
+    private var sizeLabel: TextView? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -126,10 +129,11 @@ class DestinationOverlayService : Service() {
         memo: String,
     ) {
         removeOverlayView()
+        val initialSize = loadOverlaySize()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(15), dp(11), dp(9), dp(12))
+            setPadding(dp(15), dp(11), dp(9), dp(10))
             background = GradientDrawable().apply {
                 setColor(Color.argb(240, 27, 31, 39))
                 cornerRadius = dp(14).toFloat()
@@ -165,8 +169,11 @@ class DestinationOverlayService : Service() {
         header.addView(closeText)
         root.addView(header)
 
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
         if (display.buildingName.isNotBlank()) {
-            root.addView(
+            content.addView(
                 plainText(
                     value = display.buildingName,
                     size = 15f,
@@ -178,7 +185,7 @@ class DestinationOverlayService : Service() {
         }
 
         if (display.unitDetail.isNotBlank()) {
-            root.addView(
+            content.addView(
                 plainText(
                     value = display.unitDetail,
                     size = 19f,
@@ -189,7 +196,7 @@ class DestinationOverlayService : Service() {
             )
         }
 
-        root.addView(
+        content.addView(
             plainText(
                 value = memo.ifBlank { "눌러서 메모 입력" },
                 size = 12f,
@@ -199,13 +206,80 @@ class DestinationOverlayService : Service() {
                     Color.rgb(238, 241, 246)
                 },
                 bold = false,
-                maxLines = 3,
+                maxLines = 5,
             ),
         )
 
+        val scroll = ScrollView(this).apply {
+            isFillViewport = false
+            addView(
+                content,
+                ScrollView.LayoutParams(
+                    ScrollView.LayoutParams.MATCH_PARENT,
+                    ScrollView.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+        root.addView(
+            scroll,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f,
+            ).apply {
+                topMargin = dp(2)
+                bottomMargin = dp(4)
+            },
+        )
+
+        sizeLabel = TextView(this).apply {
+            text = sizeText(initialSize)
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(158, 168, 183))
+            setPadding(0, dp(2), 0, dp(4))
+        }
+        root.addView(sizeLabel)
+
+        val controls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        controls.addView(
+            sizeButton("↔−", "가로 크기 줄이기") {
+                resizeOverlay(-OverlaySizePolicy.WIDTH_STEP_DP, 0)
+            },
+            controlParams(),
+        )
+        controls.addView(
+            sizeButton("↔+", "가로 크기 늘리기") {
+                resizeOverlay(OverlaySizePolicy.WIDTH_STEP_DP, 0)
+            },
+            controlParams(),
+        )
+        controls.addView(
+            sizeButton("↕−", "세로 크기 줄이기") {
+                resizeOverlay(0, -OverlaySizePolicy.HEIGHT_STEP_DP)
+            },
+            controlParams(),
+        )
+        controls.addView(
+            sizeButton("↕+", "세로 크기 늘리기") {
+                resizeOverlay(0, OverlaySizePolicy.HEIGHT_STEP_DP)
+            },
+            controlParams(),
+        )
+        controls.addView(
+            sizeButton("초기", "오버레이 기본 크기") {
+                resetOverlaySize()
+            },
+            controlParams(),
+        )
+        root.addView(controls)
+
         val params = WindowManager.LayoutParams(
-            dp(320),
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dp(initialSize.widthDp),
+            dp(initialSize.heightDp),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -219,6 +293,97 @@ class DestinationOverlayService : Service() {
         installDragHandler(header, params)
         windowManager.addView(root, params)
         overlayView = root
+        overlayParams = params
+    }
+
+    private fun resizeOverlay(widthDeltaDp: Int, heightDeltaDp: Int) {
+        val params = overlayParams ?: return
+        val current = OverlaySize(
+            widthDp = pxToDp(params.width),
+            heightDp = pxToDp(params.height),
+        )
+        val next = OverlaySizePolicy.adjust(
+            currentWidthDp = current.widthDp,
+            currentHeightDp = current.heightDp,
+            widthDeltaDp = widthDeltaDp,
+            heightDeltaDp = heightDeltaDp,
+            maxWidthDp = maxOverlayWidthDp(),
+            maxHeightDp = maxOverlayHeightDp(),
+        )
+        applyOverlaySize(next)
+    }
+
+    private fun resetOverlaySize() {
+        val reset = OverlaySizePolicy.normalizeStored(
+            widthDp = OverlaySizePolicy.DEFAULT_WIDTH_DP,
+            heightDp = OverlaySizePolicy.DEFAULT_HEIGHT_DP,
+            maxWidthDp = maxOverlayWidthDp(),
+            maxHeightDp = maxOverlayHeightDp(),
+        )
+        applyOverlaySize(reset)
+    }
+
+    private fun applyOverlaySize(size: OverlaySize) {
+        val params = overlayParams ?: return
+        params.width = dp(size.widthDp)
+        params.height = dp(size.heightDp)
+        sizePreferences().edit()
+            .putInt(KEY_WIDTH_DP, size.widthDp)
+            .putInt(KEY_HEIGHT_DP, size.heightDp)
+            .apply()
+        sizeLabel?.text = sizeText(size)
+        overlayView?.let { view ->
+            runCatching { windowManager.updateViewLayout(view, params) }
+        }
+    }
+
+    private fun loadOverlaySize(): OverlaySize = OverlaySizePolicy.normalizeStored(
+        widthDp = sizePreferences().getInt(KEY_WIDTH_DP, OverlaySizePolicy.DEFAULT_WIDTH_DP),
+        heightDp = sizePreferences().getInt(KEY_HEIGHT_DP, OverlaySizePolicy.DEFAULT_HEIGHT_DP),
+        maxWidthDp = maxOverlayWidthDp(),
+        maxHeightDp = maxOverlayHeightDp(),
+    )
+
+    private fun maxOverlayWidthDp(): Int {
+        val screenWidthDp = pxToDp(resources.displayMetrics.widthPixels)
+        return (screenWidthDp - 16).coerceAtLeast(OverlaySizePolicy.MIN_WIDTH_DP)
+    }
+
+    private fun maxOverlayHeightDp(): Int {
+        val screenHeightDp = pxToDp(resources.displayMetrics.heightPixels)
+        return (screenHeightDp - 120).coerceAtLeast(OverlaySizePolicy.MIN_HEIGHT_DP)
+    }
+
+    private fun sizeText(size: OverlaySize): String =
+        "가로 ${size.widthDp} · 세로 ${size.heightDp}"
+
+    private fun sizeButton(
+        label: String,
+        description: String,
+        onClick: () -> Unit,
+    ): TextView = TextView(this).apply {
+        text = label
+        contentDescription = description
+        textSize = 12f
+        gravity = Gravity.CENTER
+        setTypeface(typeface, Typeface.BOLD)
+        setTextColor(Color.rgb(232, 237, 244))
+        setPadding(dp(3), dp(7), dp(3), dp(7))
+        background = GradientDrawable().apply {
+            setColor(Color.argb(110, 75, 84, 99))
+            cornerRadius = dp(7).toFloat()
+            setStroke(dp(1), Color.argb(100, 255, 255, 255))
+        }
+        setOnClickListener { onClick() }
+    }
+
+    private fun controlParams(): LinearLayout.LayoutParams = LinearLayout.LayoutParams(
+        0,
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+        1f,
+    ).apply {
+        marginStart = dp(2)
+        marginEnd = dp(2)
     }
 
     private fun plainText(
@@ -282,6 +447,8 @@ class DestinationOverlayService : Service() {
     private fun removeOverlayView() {
         overlayView?.let { view -> runCatching { windowManager.removeView(view) } }
         overlayView = null
+        overlayParams = null
+        sizeLabel = null
     }
 
     private fun createNotificationChannel() {
@@ -299,7 +466,13 @@ class DestinationOverlayService : Service() {
         )
     }
 
+    private fun sizePreferences() =
+        getSharedPreferences(SIZE_PREFERENCES_NAME, Context.MODE_PRIVATE)
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun pxToDp(value: Int): Int =
+        (value / resources.displayMetrics.density).toInt()
 
     companion object {
         private const val CHANNEL_ID = "destination_overlay"
@@ -312,6 +485,9 @@ class DestinationOverlayService : Service() {
         private const val EXTRA_DISPLAY_NAME = "display_name"
         private const val EXTRA_ROAD_ADDRESS = "road_address"
         private const val EXTRA_MEMO = "memo"
+        private const val SIZE_PREFERENCES_NAME = "destination_overlay_size"
+        private const val KEY_WIDTH_DP = "width_dp"
+        private const val KEY_HEIGHT_DP = "height_dp"
 
         fun show(context: Context, entry: AddressMemoEntry) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
