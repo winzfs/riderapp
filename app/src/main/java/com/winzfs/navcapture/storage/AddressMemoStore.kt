@@ -1,6 +1,7 @@
 package com.winzfs.navcapture.storage
 
 import android.content.Context
+import com.winzfs.navcapture.address.KoreanAddressTextParser
 import com.winzfs.navcapture.model.AddressMemoEntry
 import com.winzfs.navcapture.model.CapturedDestination
 import org.json.JSONArray
@@ -36,14 +37,42 @@ class AddressMemoStore(context: Context) {
     }
 
     fun ensureForCapture(capture: CapturedDestination): AddressMemoEntry {
+        val incoming = KoreanAddressTextParser.parse(
+            destinationName = capture.destinationName,
+            payloadText = capture.extrasText,
+        )
+        val incomingName = capture.destinationName.trim()
+
         findForCapture(capture)?.let { existing ->
+            val correctedPlaceName = when {
+                existing.placeName.isBlank() -> incomingName
+                KoreanAddressTextParser.isUnitOnlyFeature(existing.placeName) && incomingName.isNotBlank() -> incomingName
+                else -> existing.placeName
+            }
+            val correctedRoadAddress = when {
+                existing.roadAddressConfirmed -> existing.roadAddress
+                incoming.roadAddress.isNotBlank() -> incoming.roadAddress
+                else -> existing.roadAddress
+            }
+            val correctedOriginalAddress = when {
+                incoming.lotAddress.isNotBlank() -> incoming.lotAddress
+                existing.address.isNotBlank() -> existing.address
+                incoming.roadAddress.isNotBlank() -> incoming.roadAddress
+                KoreanAddressTextParser.isAddressLike(incomingName) -> incomingName
+                else -> ""
+            }
+            val correctedUnitDetail = incoming.unitDetail.ifBlank { existing.unitDetail }
+
             val updated = existing.copy(
-                placeName = existing.placeName.ifBlank { capture.destinationName.trim() },
+                placeName = correctedPlaceName,
+                address = correctedOriginalAddress,
+                roadAddress = correctedRoadAddress,
+                unitDetail = correctedUnitDetail,
                 latitude = capture.latitude ?: existing.latitude,
                 longitude = capture.longitude ?: existing.longitude,
             )
-            if (updated != existing) save(updated)
-            return updated
+            if (updated != existing) return save(updated)
+            return existing
         }
 
         val now = System.currentTimeMillis()
@@ -53,20 +82,26 @@ class AddressMemoStore(context: Context) {
             destinationName = capture.destinationName,
             rawUri = capture.rawUri,
         )
+        val originalAddress = incoming.lotAddress.ifBlank {
+            incoming.roadAddress.ifBlank {
+                incomingName.takeIf(KoreanAddressTextParser::isAddressLike).orEmpty()
+            }
+        }
         val entry = AddressMemoEntry(
             id = UUID.randomUUID().toString(),
             placeKey = placeKey,
-            placeName = capture.destinationName.trim(),
-            address = capture.destinationName.trim(),
-            roadAddress = "",
+            placeName = incomingName,
+            address = originalAddress,
+            roadAddress = incoming.roadAddress,
+            unitDetail = incoming.unitDetail,
+            roadAddressConfirmed = false,
             memo = legacyMemoStore.get(capture),
             latitude = capture.latitude,
             longitude = capture.longitude,
             createdAt = now,
             updatedAt = now,
         )
-        save(entry)
-        return entry
+        return save(entry)
     }
 
     fun createBlank(): AddressMemoEntry {
@@ -77,6 +112,8 @@ class AddressMemoStore(context: Context) {
             placeName = "",
             address = "",
             roadAddress = "",
+            unitDetail = "",
+            roadAddressConfirmed = false,
             memo = "",
             latitude = null,
             longitude = null,
@@ -90,6 +127,7 @@ class AddressMemoStore(context: Context) {
             placeName = entry.placeName.trim().take(MAX_TEXT_LENGTH),
             address = entry.address.trim().take(MAX_TEXT_LENGTH),
             roadAddress = entry.roadAddress.trim().take(MAX_TEXT_LENGTH),
+            unitDetail = entry.unitDetail.trim().take(MAX_DETAIL_LENGTH),
             memo = entry.memo.trim().take(MAX_MEMO_LENGTH),
             placeKey = buildStablePlaceKey(entry),
             updatedAt = System.currentTimeMillis(),
@@ -108,7 +146,7 @@ class AddressMemoStore(context: Context) {
         val needle = normalize(query)
         if (needle.isBlank()) return load()
         return load().filter { entry ->
-            listOf(entry.placeName, entry.address, entry.roadAddress, entry.memo)
+            listOf(entry.placeName, entry.address, entry.roadAddress, entry.unitDetail, entry.memo)
                 .any { normalize(it).contains(needle) }
         }
     }
@@ -142,6 +180,7 @@ class AddressMemoStore(context: Context) {
         private const val KEY_ENTRIES = "entries"
         private const val MAX_ENTRIES = 500
         private const val MAX_TEXT_LENGTH = 250
+        private const val MAX_DETAIL_LENGTH = 100
         private const val MAX_MEMO_LENGTH = 1000
         private val WHITESPACE = Regex("\\s+")
     }
