@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.widget.ArrayAdapter
@@ -21,6 +22,7 @@ import android.widget.Toast
 import com.winzfs.navcapture.model.CapturedDestination
 import com.winzfs.navcapture.navigation.NavApp
 import com.winzfs.navcapture.navigation.NavigationForwarder
+import com.winzfs.navcapture.overlay.DestinationOverlayService
 import com.winzfs.navcapture.parser.NavigationIntentParser
 import com.winzfs.navcapture.storage.CaptureStore
 import java.text.SimpleDateFormat
@@ -37,6 +39,8 @@ class MainActivity : Activity() {
     private lateinit var detailText: TextView
     private lateinit var historyText: TextView
     private lateinit var autoForwardSwitch: Switch
+    private lateinit var overlaySwitch: Switch
+    private lateinit var overlayPermissionButton: Button
     private lateinit var navSpinner: Spinner
 
     private var currentCapture: CapturedDestination? = null
@@ -57,6 +61,18 @@ class MainActivity : Activity() {
         handleIncomingIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateOverlayPermissionUi()
+        if (
+            ::overlaySwitch.isInitialized &&
+            overlaySwitch.isChecked &&
+            Settings.canDrawOverlays(this)
+        ) {
+            currentCapture?.let(::showDestinationOverlay)
+        }
+    }
+
     override fun onDestroy() {
         pendingForward?.let(handler::removeCallbacks)
         super.onDestroy()
@@ -74,13 +90,13 @@ class MainActivity : Activity() {
         scroll.addView(root)
 
         root.addView(TextView(this).apply {
-            text = "길찾기 중계 테스트"
+            text = "라이더 목적지 중계"
             textSize = 25f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Color.rgb(25, 29, 36))
         })
         root.addView(TextView(this).apply {
-            text = "배달앱이 네비로 넘기는 URI·좌표·목적지명을 받아서 기록합니다. 인터넷과 위치 권한은 사용하지 않습니다."
+            text = "배달앱의 목적지를 저장하고 작은 오버레이로 표시한 뒤 원하는 지도 앱으로 연결합니다."
             textSize = 14f
             setTextColor(Color.rgb(80, 86, 96))
             setPadding(0, dp(8), 0, dp(18))
@@ -89,11 +105,44 @@ class MainActivity : Activity() {
         statusText = cardText("아직 길찾기 호출을 받지 않았습니다.", 16f, true)
         root.addView(statusText)
 
-        root.addView(sectionTitle("중계 설정"))
-        autoForwardSwitch = Switch(this).apply {
-            text = "수신 후 자동으로 네비 열기"
+        root.addView(sectionTitle("목적지 오버레이"))
+        overlaySwitch = Switch(this).apply {
+            text = "다른 앱 위에 현재 목적지 표시"
             textSize = 16f
-            isChecked = settings().getBoolean(KEY_AUTO_FORWARD, false)
+            isChecked = settings().getBoolean(KEY_OVERLAY_ENABLED, true)
+            setPadding(dp(4), dp(6), dp(4), dp(6))
+            setOnCheckedChangeListener { _, checked ->
+                settings().edit().putBoolean(KEY_OVERLAY_ENABLED, checked).apply()
+                if (checked) {
+                    if (Settings.canDrawOverlays(this@MainActivity)) {
+                        currentCapture?.let(::showDestinationOverlay)
+                    } else {
+                        toast("먼저 오버레이 권한을 허용해 주세요.")
+                    }
+                } else {
+                    DestinationOverlayService.hide(this@MainActivity)
+                }
+            }
+        }
+        root.addView(overlaySwitch)
+
+        overlayPermissionButton = Button(this).apply {
+            isAllCaps = false
+            setOnClickListener { openOverlayPermissionSettings() }
+        }
+        root.addView(overlayPermissionButton, marginParams(bottom = 8))
+
+        root.addView(Button(this).apply {
+            text = "현재 오버레이 닫기"
+            isAllCaps = false
+            setOnClickListener { DestinationOverlayService.hide(this@MainActivity) }
+        }, marginParams(bottom = 8))
+
+        root.addView(sectionTitle("지도 앱 연결"))
+        autoForwardSwitch = Switch(this).apply {
+            text = "목적지를 받으면 바로 지도 앱 선택/실행"
+            textSize = 16f
+            isChecked = settings().getBoolean(KEY_AUTO_FORWARD, true)
             setPadding(dp(4), dp(6), dp(4), dp(6))
             setOnCheckedChangeListener { _, checked ->
                 settings().edit().putBoolean(KEY_AUTO_FORWARD, checked).apply()
@@ -117,19 +166,22 @@ class MainActivity : Activity() {
         root.addView(navSpinner, marginParams(top = 4, bottom = 10))
 
         root.addView(Button(this).apply {
-            text = "현재 목적지를 선택한 네비로 열기"
+            text = "현재 목적지를 선택한 지도 앱으로 열기"
             isAllCaps = false
             setOnClickListener { forwardCurrentCapture() }
         }, marginParams(bottom = 8))
 
         root.addView(Button(this).apply {
-            text = "광주 샘플 URI로 파서 시험"
+            text = "광주 샘플 목적지로 시험"
             isAllCaps = false
             setOnClickListener {
                 handleIncomingIntent(
                     Intent(
                         Intent.ACTION_VIEW,
-                        Uri.parse("geo:35.1595454,126.8526012?q=35.1595454,126.8526012(광주광역시청)"),
+                        Uri.parse(
+                            "geo:35.1595454,126.8526012" +
+                                "?q=35.1595454,126.8526012(광주광역시청)",
+                        ),
                     ),
                     synthetic = true,
                 )
@@ -155,6 +207,7 @@ class MainActivity : Activity() {
             setOnClickListener {
                 store.clear()
                 currentCapture = null
+                DestinationOverlayService.hide(this@MainActivity)
                 detailText.text = "기록을 지웠습니다."
                 statusText.text = "새 길찾기 호출을 기다리는 중"
                 renderHistory()
@@ -162,13 +215,14 @@ class MainActivity : Activity() {
         }, marginParams(top = 12))
 
         root.addView(TextView(this).apply {
-            text = "중요: 배달앱이 카카오맵·티맵·네이버지도의 패키지를 직접 지정해 실행하면 일반 앱은 중간에서 받을 수 없습니다. 설치 후 실제 길찾기 버튼을 눌렀을 때 이 앱이 선택 후보로 나타나는지 확인하세요."
+            text = "권장 설정: 지도 앱은 ‘매번 지도앱 선택’으로 두면 RiderApp이 목적지를 받은 뒤 설치된 카카오내비·카카오맵·티맵·네이버지도·구글지도 중에서 다시 선택할 수 있습니다."
             textSize = 13f
-            setTextColor(Color.rgb(125, 72, 18))
+            setTextColor(Color.rgb(53, 84, 128))
             setPadding(dp(4), dp(18), dp(4), 0)
         })
 
         setContentView(scroll)
+        updateOverlayPermissionUi()
     }
 
     private fun handleIncomingIntent(intent: Intent?, synthetic: Boolean = false) {
@@ -187,10 +241,27 @@ class MainActivity : Activity() {
         val origin = if (synthetic) "샘플 파싱 성공" else "길찾기 전달값 수신 성공"
         renderCapture(capture, if (saved) origin else "$origin · 중복 기록 생략")
         renderHistory()
+        showDestinationOverlay(capture)
 
-        if (!synthetic && autoForwardSwitch.isChecked) {
+        if (autoForwardSwitch.isChecked) {
             scheduleForward()
         }
+    }
+
+    private fun showDestinationOverlay(capture: CapturedDestination) {
+        if (!overlaySwitch.isChecked) return
+        if (!Settings.canDrawOverlays(this)) {
+            statusText.text = "목적지 저장 성공 · 오버레이 권한 필요"
+            updateOverlayPermissionUi()
+            return
+        }
+
+        DestinationOverlayService.show(
+            context = this,
+            destinationName = capture.destinationName.ifBlank { "배달 목적지" },
+            latitude = capture.latitude,
+            longitude = capture.longitude,
+        )
     }
 
     private fun scheduleForward() {
@@ -198,7 +269,7 @@ class MainActivity : Activity() {
         pendingForward = Runnable { forwardCurrentCapture() }.also {
             handler.postDelayed(it, AUTO_FORWARD_DELAY_MS)
         }
-        statusText.text = "수신 성공 · 잠시 후 선택한 네비로 연결합니다"
+        statusText.text = "수신 성공 · 목적지 표시 후 지도 앱을 엽니다"
     }
 
     private fun forwardCurrentCapture() {
@@ -209,11 +280,37 @@ class MainActivity : Activity() {
         }
         val requested = NavApp.entries[navSpinner.selectedItemPosition.coerceAtLeast(0)]
         forwarder.forward(capture, requested)
-            .onSuccess { app -> statusText.text = "저장 완료 · ${app.label} 실행" }
-            .onFailure { error ->
-                statusText.text = "네비 실행 실패"
-                toast(error.message ?: "네비 앱을 열지 못했습니다.")
+            .onSuccess { app ->
+                statusText.text = if (app == NavApp.PICK_EACH_TIME) {
+                    "저장 완료 · 지도 앱을 선택하세요"
+                } else {
+                    "저장 완료 · ${app.label} 실행"
+                }
             }
+            .onFailure { error ->
+                statusText.text = "지도 앱 실행 실패"
+                toast(error.message ?: "지도 앱을 열지 못했습니다.")
+            }
+    }
+
+    private fun openOverlayPermissionSettings() {
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName"),
+        )
+        runCatching { startActivity(intent) }
+            .onFailure {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+            }
+    }
+
+    private fun updateOverlayPermissionUi() {
+        if (!::overlayPermissionButton.isInitialized) return
+        overlayPermissionButton.text = if (Settings.canDrawOverlays(this)) {
+            "오버레이 권한 허용됨 · 설정 열기"
+        } else {
+            "오버레이 권한 허용하기"
+        }
     }
 
     private fun renderCapture(capture: CapturedDestination, headline: String) {
@@ -307,7 +404,8 @@ class MainActivity : Activity() {
         private const val SETTINGS_NAME = "nav_capture_settings"
         private const val KEY_AUTO_FORWARD = "auto_forward"
         private const val KEY_NAV_APP = "nav_app"
-        private const val AUTO_FORWARD_DELAY_MS = 650L
+        private const val KEY_OVERLAY_ENABLED = "overlay_enabled"
+        private const val AUTO_FORWARD_DELAY_MS = 550L
     }
 }
 
