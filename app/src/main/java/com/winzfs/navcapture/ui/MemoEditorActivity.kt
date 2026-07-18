@@ -26,10 +26,9 @@ class MemoEditorActivity : Activity() {
     private lateinit var resolver: RoadAddressResolver
     private lateinit var entry: AddressMemoEntry
 
+    private lateinit var sourceTextView: TextView
     private lateinit var placeNameEdit: EditText
-    private lateinit var originalAddressEdit: EditText
     private lateinit var roadAddressEdit: EditText
-    private lateinit var unitDetailEdit: EditText
     private lateinit var memoEdit: EditText
     private lateinit var statusText: TextView
     private lateinit var autoFindButton: Button
@@ -66,7 +65,7 @@ class MemoEditorActivity : Activity() {
             setTextColor(Color.rgb(25, 29, 36))
         })
         root.addView(TextView(this).apply {
-            text = "도로명주소와 동·호수는 확인·수정할 수 있고, 개인 메모는 한 칸에 자유롭게 기록합니다."
+            text = "배달앱 원문은 수정하지 않습니다. 참고 도로명주소와 개인 메모만 별도로 저장합니다."
             textSize = 13f
             setTextColor(Color.rgb(80, 86, 96))
             setPadding(0, dp(7), 0, dp(15))
@@ -75,24 +74,22 @@ class MemoEditorActivity : Activity() {
         statusText = card("주소와 메모를 입력해 주세요.")
         root.addView(statusText, params(bottom = 12))
 
-        root.addView(label("장소명 또는 목적지명"))
-        placeNameEdit = singleLineEdit("예: 광주광역시청, ○○아파트")
+        root.addView(label("배달앱 원문 · 수정 불가"))
+        sourceTextView = card("직접 추가한 메모에는 배달앱 원문이 없습니다.").apply {
+            setTextIsSelectable(true)
+        }
+        root.addView(sourceTextView, params(bottom = 13))
+
+        root.addView(label("내 표시 이름 · 선택"))
+        placeNameEdit = singleLineEdit("예: 수완 ○○아파트, 자주 가는 가게")
         root.addView(placeNameEdit, params(bottom = 11))
 
-        root.addView(label("지번주소 또는 배달앱 원문 주소"))
-        originalAddressEdit = singleLineEdit("배달앱에서 받은 주소 또는 구주소")
-        root.addView(originalAddressEdit, params(bottom = 11))
-
-        root.addView(label("도로명주소"))
-        roadAddressEdit = singleLineEdit("배달앱 원문을 우선 사용하며 직접 수정할 수 있습니다")
-        root.addView(roadAddressEdit, params(bottom = 11))
-
-        root.addView(label("동·호수/상세주소"))
-        unitDetailEdit = singleLineEdit("예: 101동 1001호")
-        root.addView(unitDetailEdit, params(bottom = 9))
+        root.addView(label("참고 도로명주소 · 내비 입력에 사용하지 않음"))
+        roadAddressEdit = singleLineEdit("자동으로 찾거나 직접 입력할 수 있습니다")
+        root.addView(roadAddressEdit, params(bottom = 9))
 
         autoFindButton = Button(this).apply {
-            text = "목적지명과 위치로 도로명주소 찾기"
+            text = "원문과 위치로 참고 도로명주소 찾기"
             isAllCaps = false
             setOnClickListener { findRoadAddress() }
         }
@@ -138,42 +135,39 @@ class MemoEditorActivity : Activity() {
     }
 
     private fun renderEntry() {
+        sourceTextView.text = entry.sourceText.ifBlank {
+            "직접 추가한 메모에는 배달앱 원문이 없습니다."
+        }
         placeNameEdit.setText(entry.placeName)
-        originalAddressEdit.setText(entry.address)
         roadAddressEdit.setText(entry.roadAddress)
-        unitDetailEdit.setText(entry.unitDetail)
         memoEdit.setText(entry.memo)
         autoFindButton.isEnabled = entry.latitude != null && entry.longitude != null ||
-            entry.placeName.isNotBlank() || entry.address.isNotBlank()
+            entry.sourceText.isNotBlank() || entry.placeName.isNotBlank()
         statusText.text = if (entry.roadAddress.isBlank()) {
-            "도로명주소가 아직 확인되지 않았습니다. 자동 찾기 후 결과를 직접 수정할 수 있습니다."
+            "배달앱 원문은 그대로 보존됩니다. 필요할 때만 참고 주소를 추가하세요."
         } else {
-            "저장된 도로명주소·상세주소·메모를 수정할 수 있습니다."
+            "참고 주소와 메모를 수정할 수 있습니다. 배달앱 원문과 내비 목적지는 바뀌지 않습니다."
         }
     }
 
     private fun saveEntry() {
         val placeName = placeNameEdit.text.toString().trim()
-        val originalAddress = originalAddressEdit.text.toString().trim()
         val roadAddress = roadAddressEdit.text.toString().trim()
-        val unitDetail = unitDetailEdit.text.toString().trim()
-        if (placeName.isBlank() && originalAddress.isBlank() && roadAddress.isBlank()) {
-            toast("장소명이나 주소를 하나 이상 입력해 주세요.")
+        if (entry.sourceText.isBlank() && placeName.isBlank() && roadAddress.isBlank()) {
+            toast("직접 추가할 때는 표시 이름이나 참고 주소를 입력해 주세요.")
             return
         }
 
         entry = store.save(
             entry.copy(
                 placeName = placeName,
-                address = originalAddress,
                 roadAddress = roadAddress,
-                unitDetail = unitDetail,
                 roadAddressConfirmed = roadAddress.isNotBlank(),
                 memo = memoEdit.text.toString(),
             ),
         )
         intent.putExtra(EXTRA_ENTRY_ID, entry.id)
-        statusText.text = "주소별 메모를 저장했습니다. 직접 수정한 도로명주소는 자동으로 덮어쓰지 않습니다."
+        statusText.text = "참고 주소와 메모를 저장했습니다. 배달앱 원문은 변경하지 않았습니다."
         if (refreshOverlay) DestinationOverlayService.show(this, entry)
         toast("저장했습니다.")
     }
@@ -181,35 +175,35 @@ class MemoEditorActivity : Activity() {
     private fun findRoadAddress() {
         val latitude = entry.latitude
         val longitude = entry.longitude
-        val destinationName = roadAddressEdit.text.toString().trim()
-            .ifBlank { originalAddressEdit.text.toString().trim() }
+        val query = entry.sourceText
+            .ifBlank { roadAddressEdit.text.toString().trim() }
             .ifBlank { placeNameEdit.text.toString().trim() }
 
         autoFindButton.isEnabled = false
-        statusText.text = "동·호수를 제외하고 도로명주소 후보를 찾는 중입니다."
+        statusText.text = "배달앱 원문은 유지한 채 참고 도로명주소 후보를 찾는 중입니다."
 
         if (latitude != null && longitude != null) {
-            resolver.resolve(destinationName, latitude, longitude) { result ->
+            resolver.resolve(query, latitude, longitude) { result ->
                 autoFindButton.isEnabled = true
                 result.onSuccess { candidate -> applyCandidate(candidate) }
                     .onFailure { error ->
-                        statusText.text = "자동 주소 변환 실패"
-                        toast(error.message ?: "도로명주소를 찾지 못했습니다.")
+                        statusText.text = "참고 주소 확인 실패 · 배달앱 원문은 그대로 유지됨"
+                        toast(error.message ?: "도로명주소 후보를 찾지 못했습니다.")
                     }
             }
             return
         }
 
-        if (destinationName.isBlank()) {
+        if (query.isBlank()) {
             autoFindButton.isEnabled = true
             toast("검색할 장소명이나 주소를 입력해 주세요.")
             return
         }
-        resolver.search(destinationName) { result ->
+        resolver.search(query) { result ->
             autoFindButton.isEnabled = true
             result.onSuccess(::showCandidateDialog)
                 .onFailure { error ->
-                    statusText.text = "주소 검색 실패"
+                    statusText.text = "참고 주소 검색 실패"
                     toast(error.message ?: "주소 후보를 찾지 못했습니다.")
                 }
         }
@@ -229,7 +223,7 @@ class MemoEditorActivity : Activity() {
             }
         }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("도로명주소 후보 선택")
+            .setTitle("참고 도로명주소 후보 선택")
             .setItems(labels) { _, index -> applyCandidate(roadCandidates[index]) }
             .setNegativeButton("취소", null)
             .show()
@@ -239,9 +233,9 @@ class MemoEditorActivity : Activity() {
         if (candidate.roadAddress.isNotBlank()) {
             roadAddressEdit.setText(candidate.roadAddress)
             roadAddressEdit.setSelection(roadAddressEdit.text.length)
-            statusText.text = "도로명주소 후보를 채웠습니다. 동·호수는 기존 값을 유지하므로 저장 전에 확인해 주세요."
+            statusText.text = "참고 주소만 채웠습니다. 배달앱 원문과 실제 내비 목적지는 그대로입니다."
         } else {
-            statusText.text = "도로명주소를 확정하지 못했습니다. 직접 확인해 주세요."
+            statusText.text = "참고 도로명주소를 확인하지 못했습니다."
         }
     }
 
@@ -252,7 +246,7 @@ class MemoEditorActivity : Activity() {
         }
         AlertDialog.Builder(this)
             .setTitle("주소 메모 삭제")
-            .setMessage("이 주소와 개인 메모를 삭제할까요?")
+            .setMessage("이 장소의 참고 주소와 개인 메모를 삭제할까요?")
             .setPositiveButton("삭제") { _, _ ->
                 store.delete(entry.id)
                 if (refreshOverlay) DestinationOverlayService.hide(this)
