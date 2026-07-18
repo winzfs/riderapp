@@ -17,15 +17,14 @@ object AddressMemoDeduplicator {
             val key = AddressMemoIdentity.forEntry(rawEntry)
             val entry = if (rawEntry.placeKey == key) rawEntry else rawEntry.copy(placeKey = key)
             val current = merged[key]
-            merged[key] = if (current == null) entry else merge(current, entry)
+            merged[key] = if (current == null) entry else merge(current, entry).copy(placeKey = key)
         }
         return merged.values.sortedByDescending(AddressMemoEntry::updatedAt)
     }
 
     fun merge(primary: AddressMemoEntry, secondary: AddressMemoEntry): AddressMemoEntry {
         val primaryRoadWins = primary.roadAddressConfirmed || !secondary.roadAddressConfirmed
-        return primary.copy(
-            placeKey = AddressMemoIdentity.forEntry(primary),
+        val merged = primary.copy(
             sourceText = primary.sourceText.ifBlank { secondary.sourceText },
             sourcePayloadText = primary.sourcePayloadText.ifBlank { secondary.sourcePayloadText },
             placeName = primary.placeName.ifBlank { secondary.placeName },
@@ -43,5 +42,6 @@ object AddressMemoDeduplicator {
             createdAt = minOf(primary.createdAt, secondary.createdAt),
             updatedAt = maxOf(primary.updatedAt, secondary.updatedAt),
         )
+        return merged.copy(placeKey = AddressMemoIdentity.forEntry(merged))
     }
 }
