@@ -33,6 +33,7 @@ class RoadAddressResolver(context: Context) {
             return
         }
 
+        val safeQuery = KoreanAddressTextParser.searchQuery(destinationName)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             geocoder.getFromLocation(
                 latitude,
@@ -40,9 +41,9 @@ class RoadAddressResolver(context: Context) {
                 MAX_RESULTS,
                 object : Geocoder.GeocodeListener {
                     override fun onGeocode(reverseResults: MutableList<Address>) {
-                        if (AddressCandidateScorer.isMeaningfulDestinationName(destinationName)) {
+                        if (AddressCandidateScorer.isMeaningfulDestinationName(safeQuery)) {
                             searchNameNearCoordinates(
-                                destinationName,
+                                safeQuery,
                                 latitude,
                                 longitude,
                                 reverseResults,
@@ -50,7 +51,7 @@ class RoadAddressResolver(context: Context) {
                             )
                         } else {
                             finishResolve(
-                                destinationName,
+                                safeQuery,
                                 latitude,
                                 longitude,
                                 reverseResults,
@@ -75,9 +76,9 @@ class RoadAddressResolver(context: Context) {
                     @Suppress("DEPRECATION")
                     val reverse = geocoder.getFromLocation(latitude, longitude, MAX_RESULTS).orEmpty()
                     @Suppress("DEPRECATION")
-                    val named = if (AddressCandidateScorer.isMeaningfulDestinationName(destinationName)) {
+                    val named = if (AddressCandidateScorer.isMeaningfulDestinationName(safeQuery)) {
                         geocoder.getFromLocationName(
-                            destinationName,
+                            safeQuery,
                             MAX_RESULTS,
                             latitude - SEARCH_RADIUS_DEGREES,
                             longitude - SEARCH_RADIUS_DEGREES,
@@ -87,7 +88,7 @@ class RoadAddressResolver(context: Context) {
                     } else {
                         emptyList()
                     }
-                    chooseResolved(destinationName, latitude, longitude, reverse + named)
+                    chooseResolved(safeQuery, latitude, longitude, reverse + named)
                         ?: throw IllegalStateException("도로명주소 후보를 찾지 못했습니다.")
                 }
                 callbackOnMain(callback, result)
@@ -99,7 +100,7 @@ class RoadAddressResolver(context: Context) {
         query: String,
         callback: (Result<List<ResolvedAddress>>) -> Unit,
     ) {
-        val keyword = query.trim()
+        val keyword = KoreanAddressTextParser.searchQuery(query)
         if (keyword.isBlank()) {
             callback(Result.failure(IllegalArgumentException("검색할 주소나 장소명을 입력해 주세요.")))
             return
@@ -207,6 +208,7 @@ class RoadAddressResolver(context: Context) {
     ): ResolvedAddress? {
         val resolved = addresses
             .map(::toResolved)
+            .filter { it.roadAddress.isNotBlank() || it.originalAddress.isNotBlank() }
             .distinctBy(::candidateKey)
         val candidates = resolved.map { item ->
             AddressCandidateScorer.Candidate(
@@ -246,14 +248,18 @@ class RoadAddressResolver(context: Context) {
             .filter(String::isNotBlank)
             .distinct()
             .joinToString(" ")
-        val roadAddress = when {
-            ROAD_PATTERN.containsMatchIn(fullLine) -> fullLine
-            ROAD_PATTERN.containsMatchIn(assembledRoad) -> assembledRoad
-            else -> ""
-        }
-        val originalAddress = fullLine.ifBlank { assembledRoad }
+
+        val roadAddress = KoreanAddressTextParser.extractRoadAddress(fullLine)
+            .ifBlank { KoreanAddressTextParser.extractRoadAddress(assembledRoad) }
+        val originalAddress = KoreanAddressTextParser.extractLotAddress(fullLine)
+            .ifBlank { fullLine.ifBlank { assembledRoad } }
+        val rawFeatureName = address.featureName.orEmpty().trim()
+        val safeFeatureName = rawFeatureName.takeUnless {
+            KoreanAddressTextParser.isUnitOnlyFeature(it)
+        }.orEmpty()
+
         return ResolvedAddress(
-            placeName = address.featureName.orEmpty().trim(),
+            placeName = safeFeatureName,
             originalAddress = originalAddress,
             roadAddress = roadAddress,
             latitude = if (address.hasLatitude()) address.latitude else null,
@@ -279,7 +285,6 @@ class RoadAddressResolver(context: Context) {
     companion object {
         private const val MAX_RESULTS = 5
         private const val SEARCH_RADIUS_DEGREES = 0.025
-        private val ROAD_PATTERN = Regex("(?:대로|로|길)\\s*\\d")
         private val COUNTRY_PREFIX = Regex("^(대한민국|South Korea|Republic of Korea)\\s*")
         private val POSTAL_PREFIX = Regex("^\\d{5}\\s+")
     }
