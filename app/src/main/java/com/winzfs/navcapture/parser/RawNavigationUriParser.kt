@@ -16,7 +16,8 @@ class RawNavigationUriParser {
         val params = parseQuery(rawUri)
         val destination = when (structure.scheme) {
             "geo" -> parseGeo(rawUri, params)
-            "kakaomap" -> parseKakao(structure.host, params)
+            "kakaomap" -> parseKakaoMap(structure.host, params)
+            "kakaonavi-sdk" -> parseKakaoNavi(params)
             "nmap" -> parseNaver(structure.host, params)
             "tmap" -> parseTmap(params)
             "http", "https" -> parseWeb(structure.host, structure.path, params)
@@ -58,7 +59,7 @@ class RawNavigationUriParser {
         )
     }
 
-    private fun parseKakao(host: String, params: Map<String, String>): Destination {
+    private fun parseKakaoMap(host: String, params: Map<String, String>): Destination {
         val point = when (host) {
             "route" -> parseCoordinatePair(params["ep"].orEmpty())
             "look", "roadview" -> parseCoordinatePair(params["p"].orEmpty())
@@ -73,6 +74,21 @@ class RawNavigationUriParser {
                 params["ep_name"], params["ename"], params["name"], params["q"],
             ),
             format = "Kakao Map URI",
+        )
+    }
+
+    private fun parseKakaoNavi(params: Map<String, String>): Destination {
+        val payload = params["param"].orEmpty()
+        val destinationJson = DESTINATION_OBJECT.find(payload)?.groupValues?.getOrNull(1).orEmpty()
+        val x = jsonNumber(destinationJson, "x")
+        val y = jsonNumber(destinationJson, "y")
+        val name = jsonString(destinationJson, "name")
+
+        return Destination(
+            latitude = y,
+            longitude = x,
+            name = name,
+            format = "Kakao Navi SDK URI",
         )
     }
 
@@ -162,6 +178,21 @@ class RawNavigationUriParser {
         return lat to lng
     }
 
+    private fun jsonNumber(json: String, key: String): Double? {
+        val regex = Regex("\\\"${Regex.escape(key)}\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)")
+        return regex.find(json)?.groupValues?.getOrNull(1)?.toDoubleOrNull()
+    }
+
+    private fun jsonString(json: String, key: String): String {
+        val regex = Regex("\\\"${Regex.escape(key)}\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\"])*)\\\"")
+        val encoded = regex.find(json)?.groupValues?.getOrNull(1).orEmpty()
+        return encoded
+            .replace("\\\"", "\"")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
+    }
+
     private fun firstDouble(params: Map<String, String>, vararg keys: String): Double? {
         for (key in keys) {
             params[key]?.toDoubleOrNull()?.let { return it }
@@ -203,6 +234,10 @@ class RawNavigationUriParser {
         )
         private val KAKAO_LINK_TO = Regex(
             "/link/to/([^,]+),(-?\\d+(?:\\.\\d+)?),(-?\\d+(?:\\.\\d+)?)"
+        )
+        private val DESTINATION_OBJECT = Regex(
+            "\\\"destination\\\"\\s*:\\s*\\{(.*?)\\}",
+            setOf(RegexOption.DOT_MATCHES_ALL),
         )
     }
 }
