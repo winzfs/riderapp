@@ -191,6 +191,14 @@ class MainActivity : Activity() {
             setOnClickListener {
                 updateOverlaySizeText(DestinationOverlayService.resetSize(this@MainActivity))
             }
+        }, marginParams(bottom = 6))
+
+        root.addView(Button(this).apply {
+            text = "샘플 주소로 오버레이 레이아웃 테스트"
+            isAllCaps = false
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, OverlayPreviewActivity::class.java))
+            }
         }, marginParams(bottom = 8))
 
         root.addView(sectionTitle("지도 앱 연결"))
@@ -245,23 +253,6 @@ class MainActivity : Activity() {
             isAllCaps = false
             setOnClickListener {
                 startActivity(Intent(this@MainActivity, AddressMemoActivity::class.java))
-            }
-        }, marginParams(bottom = 8))
-
-        root.addView(Button(this).apply {
-            text = "광주 샘플 목적지로 시험"
-            isAllCaps = false
-            setOnClickListener {
-                handleIncomingIntent(
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(
-                            "geo:35.1595454,126.8526012" +
-                                "?q=35.1595454,126.8526012(광주광역시청)",
-                        ),
-                    ),
-                    synthetic = true,
-                )
             }
         }, marginParams(bottom = 8))
 
@@ -409,6 +400,7 @@ class MainActivity : Activity() {
     ) {
         overlaySizeText.text = buildString {
             append("현재 크기  가로 ${size.widthDp}dp · 세로 ${size.heightDp}dp")
+            append("\n10dp 단위로 조절 · 최소 180dp × 110dp")
             append("\n버튼을 누르면 떠 있는 오버레이에도 바로 적용됩니다.")
         }
     }
