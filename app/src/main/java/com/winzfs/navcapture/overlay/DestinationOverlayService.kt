@@ -232,14 +232,15 @@ class DestinationOverlayService : Service() {
             },
         )
 
-        sizeLabel = TextView(this).apply {
+        val currentSizeLabel = TextView(this).apply {
             text = sizeText(initialSize)
             textSize = 10f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(158, 168, 183))
             setPadding(0, dp(2), 0, dp(4))
         }
-        root.addView(sizeLabel)
+        sizeLabel = currentSizeLabel
+        root.addView(currentSizeLabel)
 
         val controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
