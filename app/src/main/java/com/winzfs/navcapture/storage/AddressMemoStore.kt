@@ -1,7 +1,6 @@
 package com.winzfs.navcapture.storage
 
 import android.content.Context
-import com.winzfs.navcapture.address.KoreanAddressTextParser
 import com.winzfs.navcapture.model.AddressMemoEntry
 import com.winzfs.navcapture.model.CapturedDestination
 import org.json.JSONArray
@@ -36,38 +35,17 @@ class AddressMemoStore(context: Context) {
         return load().firstOrNull { it.placeKey == placeKey }
     }
 
+    /**
+     * Creates or refreshes the memo entry for a delivery destination.
+     * Only the exact source text and original coordinates are refreshed here.
+     * Geocoded/reference addresses never replace delivery-app data.
+     */
     fun ensureForCapture(capture: CapturedDestination): AddressMemoEntry {
-        val incoming = KoreanAddressTextParser.parse(
-            destinationName = capture.destinationName,
-            payloadText = capture.extrasText,
-        )
-        val incomingName = capture.destinationName.trim()
+        val incomingSource = capture.destinationName
 
         findForCapture(capture)?.let { existing ->
-            val correctedPlaceName = when {
-                existing.placeName.isBlank() -> incomingName
-                KoreanAddressTextParser.isUnitOnlyFeature(existing.placeName) && incomingName.isNotBlank() -> incomingName
-                else -> existing.placeName
-            }
-            val correctedRoadAddress = when {
-                existing.roadAddressConfirmed -> existing.roadAddress
-                incoming.roadAddress.isNotBlank() -> incoming.roadAddress
-                else -> existing.roadAddress
-            }
-            val correctedOriginalAddress = when {
-                incoming.lotAddress.isNotBlank() -> incoming.lotAddress
-                existing.address.isNotBlank() -> existing.address
-                incoming.roadAddress.isNotBlank() -> incoming.roadAddress
-                KoreanAddressTextParser.isAddressLike(incomingName) -> incomingName
-                else -> ""
-            }
-            val correctedUnitDetail = incoming.unitDetail.ifBlank { existing.unitDetail }
-
             val updated = existing.copy(
-                placeName = correctedPlaceName,
-                address = correctedOriginalAddress,
-                roadAddress = correctedRoadAddress,
-                unitDetail = correctedUnitDetail,
+                sourceText = incomingSource.ifBlank { existing.sourceText },
                 latitude = capture.latitude ?: existing.latitude,
                 longitude = capture.longitude ?: existing.longitude,
             )
@@ -82,18 +60,14 @@ class AddressMemoStore(context: Context) {
             destinationName = capture.destinationName,
             rawUri = capture.rawUri,
         )
-        val originalAddress = incoming.lotAddress.ifBlank {
-            incoming.roadAddress.ifBlank {
-                incomingName.takeIf(KoreanAddressTextParser::isAddressLike).orEmpty()
-            }
-        }
         val entry = AddressMemoEntry(
             id = UUID.randomUUID().toString(),
             placeKey = placeKey,
-            placeName = incomingName,
-            address = originalAddress,
-            roadAddress = incoming.roadAddress,
-            unitDetail = incoming.unitDetail,
+            sourceText = incomingSource,
+            placeName = "",
+            address = "",
+            roadAddress = "",
+            unitDetail = "",
             roadAddressConfirmed = false,
             memo = legacyMemoStore.get(capture),
             latitude = capture.latitude,
@@ -109,6 +83,7 @@ class AddressMemoStore(context: Context) {
         return AddressMemoEntry(
             id = UUID.randomUUID().toString(),
             placeKey = "draft:${UUID.randomUUID()}",
+            sourceText = "",
             placeName = "",
             address = "",
             roadAddress = "",
@@ -124,6 +99,7 @@ class AddressMemoStore(context: Context) {
 
     fun save(entry: AddressMemoEntry): AddressMemoEntry {
         val normalized = entry.copy(
+            sourceText = entry.sourceText.replace("\u0000", "").take(MAX_SOURCE_LENGTH),
             placeName = entry.placeName.trim().take(MAX_TEXT_LENGTH),
             address = entry.address.trim().take(MAX_TEXT_LENGTH),
             roadAddress = entry.roadAddress.trim().take(MAX_TEXT_LENGTH),
@@ -146,8 +122,14 @@ class AddressMemoStore(context: Context) {
         val needle = normalize(query)
         if (needle.isBlank()) return load()
         return load().filter { entry ->
-            listOf(entry.placeName, entry.address, entry.roadAddress, entry.unitDetail, entry.memo)
-                .any { normalize(it).contains(needle) }
+            listOf(
+                entry.sourceText,
+                entry.placeName,
+                entry.address,
+                entry.roadAddress,
+                entry.unitDetail,
+                entry.memo,
+            ).any { normalize(it).contains(needle) }
         }
     }
 
@@ -156,11 +138,17 @@ class AddressMemoStore(context: Context) {
             return PlaceKeyFactory.create(
                 latitude = entry.latitude,
                 longitude = entry.longitude,
-                destinationName = entry.placeName,
+                destinationName = entry.sourceText.ifBlank { entry.placeName },
                 rawUri = "",
             )
         }
-        val addressKey = normalize(entry.roadAddress.ifBlank { entry.address.ifBlank { entry.placeName } })
+        val addressKey = normalize(
+            entry.roadAddress.ifBlank {
+                entry.address.ifBlank {
+                    entry.placeName.ifBlank { entry.sourceText }
+                }
+            },
+        )
         return if (addressKey.isBlank()) entry.placeKey else "address:$addressKey"
     }
 
@@ -179,6 +167,7 @@ class AddressMemoStore(context: Context) {
         private const val PREFERENCES_NAME = "address_memos"
         private const val KEY_ENTRIES = "entries"
         private const val MAX_ENTRIES = 500
+        private const val MAX_SOURCE_LENGTH = 1000
         private const val MAX_TEXT_LENGTH = 250
         private const val MAX_DETAIL_LENGTH = 100
         private const val MAX_MEMO_LENGTH = 1000
