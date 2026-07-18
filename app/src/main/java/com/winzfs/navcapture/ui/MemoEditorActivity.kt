@@ -29,6 +29,7 @@ class MemoEditorActivity : Activity() {
     private lateinit var placeNameEdit: EditText
     private lateinit var originalAddressEdit: EditText
     private lateinit var roadAddressEdit: EditText
+    private lateinit var unitDetailEdit: EditText
     private lateinit var memoEdit: EditText
     private lateinit var statusText: TextView
     private lateinit var autoFindButton: Button
@@ -65,7 +66,7 @@ class MemoEditorActivity : Activity() {
             setTextColor(Color.rgb(25, 29, 36))
         })
         root.addView(TextView(this).apply {
-            text = "주소 정보는 확인·수정할 수 있고, 개인 메모는 자유롭게 한 칸에 기록합니다."
+            text = "도로명주소와 동·호수는 확인·수정할 수 있고, 개인 메모는 한 칸에 자유롭게 기록합니다."
             textSize = 13f
             setTextColor(Color.rgb(80, 86, 96))
             setPadding(0, dp(7), 0, dp(15))
@@ -78,13 +79,17 @@ class MemoEditorActivity : Activity() {
         placeNameEdit = singleLineEdit("예: 광주광역시청, ○○아파트")
         root.addView(placeNameEdit, params(bottom = 11))
 
-        root.addView(label("원래 주소·지번주소"))
+        root.addView(label("지번주소 또는 배달앱 원문 주소"))
         originalAddressEdit = singleLineEdit("배달앱에서 받은 주소 또는 구주소")
         root.addView(originalAddressEdit, params(bottom = 11))
 
         root.addView(label("도로명주소"))
-        roadAddressEdit = singleLineEdit("자동으로 찾거나 직접 입력할 수 있습니다")
-        root.addView(roadAddressEdit, params(bottom = 9))
+        roadAddressEdit = singleLineEdit("배달앱 원문을 우선 사용하며 직접 수정할 수 있습니다")
+        root.addView(roadAddressEdit, params(bottom = 11))
+
+        root.addView(label("동·호수/상세주소"))
+        unitDetailEdit = singleLineEdit("예: 101동 1001호")
+        root.addView(unitDetailEdit, params(bottom = 9))
 
         autoFindButton = Button(this).apply {
             text = "목적지명과 위치로 도로명주소 찾기"
@@ -136,13 +141,14 @@ class MemoEditorActivity : Activity() {
         placeNameEdit.setText(entry.placeName)
         originalAddressEdit.setText(entry.address)
         roadAddressEdit.setText(entry.roadAddress)
+        unitDetailEdit.setText(entry.unitDetail)
         memoEdit.setText(entry.memo)
         autoFindButton.isEnabled = entry.latitude != null && entry.longitude != null ||
             entry.placeName.isNotBlank() || entry.address.isNotBlank()
         statusText.text = if (entry.roadAddress.isBlank()) {
             "도로명주소가 아직 확인되지 않았습니다. 자동 찾기 후 결과를 직접 수정할 수 있습니다."
         } else {
-            "저장된 도로명주소와 메모를 수정할 수 있습니다."
+            "저장된 도로명주소·상세주소·메모를 수정할 수 있습니다."
         }
     }
 
@@ -150,6 +156,7 @@ class MemoEditorActivity : Activity() {
         val placeName = placeNameEdit.text.toString().trim()
         val originalAddress = originalAddressEdit.text.toString().trim()
         val roadAddress = roadAddressEdit.text.toString().trim()
+        val unitDetail = unitDetailEdit.text.toString().trim()
         if (placeName.isBlank() && originalAddress.isBlank() && roadAddress.isBlank()) {
             toast("장소명이나 주소를 하나 이상 입력해 주세요.")
             return
@@ -160,11 +167,13 @@ class MemoEditorActivity : Activity() {
                 placeName = placeName,
                 address = originalAddress,
                 roadAddress = roadAddress,
+                unitDetail = unitDetail,
+                roadAddressConfirmed = roadAddress.isNotBlank(),
                 memo = memoEdit.text.toString(),
             ),
         )
         intent.putExtra(EXTRA_ENTRY_ID, entry.id)
-        statusText.text = "주소별 메모를 저장했습니다."
+        statusText.text = "주소별 메모를 저장했습니다. 직접 수정한 도로명주소는 자동으로 덮어쓰지 않습니다."
         if (refreshOverlay) DestinationOverlayService.show(this, entry)
         toast("저장했습니다.")
     }
@@ -172,11 +181,12 @@ class MemoEditorActivity : Activity() {
     private fun findRoadAddress() {
         val latitude = entry.latitude
         val longitude = entry.longitude
-        val destinationName = placeNameEdit.text.toString().trim()
+        val destinationName = roadAddressEdit.text.toString().trim()
             .ifBlank { originalAddressEdit.text.toString().trim() }
+            .ifBlank { placeNameEdit.text.toString().trim() }
 
         autoFindButton.isEnabled = false
-        statusText.text = "목적지명과 위치를 비교해 도로명주소 후보를 찾는 중입니다."
+        statusText.text = "동·호수를 제외하고 도로명주소 후보를 찾는 중입니다."
 
         if (latitude != null && longitude != null) {
             resolver.resolve(destinationName, latitude, longitude) { result ->
@@ -206,38 +216,32 @@ class MemoEditorActivity : Activity() {
     }
 
     private fun showCandidateDialog(candidates: List<RoadAddressResolver.ResolvedAddress>) {
-        if (candidates.isEmpty()) {
-            statusText.text = "주소 후보가 없습니다."
-            toast("검색 결과가 없습니다.")
+        val roadCandidates = candidates.filter { it.roadAddress.isNotBlank() }
+        if (roadCandidates.isEmpty()) {
+            statusText.text = "도로명주소 후보가 없습니다."
+            toast("도로명주소 검색 결과가 없습니다.")
             return
         }
-        val labels = candidates.map { candidate ->
+        val labels = roadCandidates.map { candidate ->
             buildString {
-                append(candidate.roadAddress.ifBlank { candidate.originalAddress })
+                append(candidate.roadAddress)
                 candidate.placeName.takeIf(String::isNotBlank)?.let { append("\n$it") }
             }
         }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("도로명주소 후보 선택")
-            .setItems(labels) { _, index -> applyCandidate(candidates[index]) }
+            .setItems(labels) { _, index -> applyCandidate(roadCandidates[index]) }
             .setNegativeButton("취소", null)
             .show()
     }
 
     private fun applyCandidate(candidate: RoadAddressResolver.ResolvedAddress) {
-        if (placeNameEdit.text.isBlank() && candidate.placeName.isNotBlank()) {
-            placeNameEdit.setText(candidate.placeName)
-        }
-        if (originalAddressEdit.text.isBlank() && candidate.originalAddress.isNotBlank()) {
-            originalAddressEdit.setText(candidate.originalAddress)
-        }
         if (candidate.roadAddress.isNotBlank()) {
             roadAddressEdit.setText(candidate.roadAddress)
-        }
-        statusText.text = if (candidate.roadAddress.isBlank()) {
-            "주소 후보는 찾았지만 도로명주소를 확정하지 못했습니다. 직접 확인해 주세요."
+            roadAddressEdit.setSelection(roadAddressEdit.text.length)
+            statusText.text = "도로명주소 후보를 채웠습니다. 동·호수는 기존 값을 유지하므로 저장 전에 확인해 주세요."
         } else {
-            "목적지명과 위치가 가장 잘 맞는 도로명주소 후보를 채웠습니다. 저장 전에 확인해 주세요."
+            statusText.text = "도로명주소를 확정하지 못했습니다. 직접 확인해 주세요."
         }
     }
 
