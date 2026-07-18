@@ -138,7 +138,7 @@ object KoreanAddressTextParser {
         "(?:[가-힣A-Za-z0-9·.\\-]+\\s+){0,5}[가-힣A-Za-z0-9·.\\-]+(?:대로|로|길)\\s*\\d+(?:-\\d+)?",
     )
     private val LOT_ADDRESS = Regex(
-        "(?:[가-힣A-Za-z0-9·.\\-]+\\s+){1,5}[가-힣A-Za-z0-9·.\\-]+(?:읍|면|동|리|가)\\s+\\d+(?:-\\d+)?",
+        "(?:[가-힣A-Za-z0-9·.\\-]+\\s+){1,5}[가-힣A-Za-z][가-힣A-Za-z0-9·.\\-]*(?:읍|면|동|리|가)\\s+\\d+(?:-\\d+)?",
     )
     private val DONG_DETAIL = Regex("(?<![가-힣A-Za-z0-9])(?:제\\s*)?\\d{1,4}\\s*동(?![가-힣])")
     private val LETTER_DONG_DETAIL = Regex("(?<![가-힣A-Za-z0-9])[A-Za-z]\\s*동(?![가-힣])")
