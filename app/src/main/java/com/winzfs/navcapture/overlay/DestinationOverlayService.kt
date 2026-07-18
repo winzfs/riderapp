@@ -44,15 +44,16 @@ class DestinationOverlayService : Service() {
         val placeName = intent?.getStringExtra(EXTRA_PLACE_NAME).orEmpty().ifBlank { "배달 목적지" }
         val originalAddress = intent?.getStringExtra(EXTRA_ORIGINAL_ADDRESS).orEmpty()
         val roadAddress = intent?.getStringExtra(EXTRA_ROAD_ADDRESS).orEmpty()
+        val unitDetail = intent?.getStringExtra(EXTRA_UNIT_DETAIL).orEmpty()
         val memo = intent?.getStringExtra(EXTRA_MEMO).orEmpty()
 
-        startAsForeground(entryId, placeName, roadAddress, memo)
+        startAsForeground(entryId, placeName, roadAddress, unitDetail, memo)
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
             return START_NOT_STICKY
         }
 
-        showOrUpdateOverlay(entryId, placeName, originalAddress, roadAddress, memo)
+        showOrUpdateOverlay(entryId, placeName, originalAddress, roadAddress, unitDetail, memo)
         return START_NOT_STICKY
     }
 
@@ -67,6 +68,7 @@ class DestinationOverlayService : Service() {
         entryId: String,
         placeName: String,
         roadAddress: String,
+        unitDetail: String,
         memo: String,
     ) {
         val openPendingIntent = PendingIntent.getActivity(
@@ -82,10 +84,14 @@ class DestinationOverlayService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val notificationText = listOf(roadAddress, unitDetail)
+            .filter(String::isNotBlank)
+            .joinToString(" · ")
+            .ifBlank { memo.ifBlank { "주소 메모 없음" } }
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("현재 배달 목적지 · $placeName")
-            .setContentText(roadAddress.ifBlank { memo.ifBlank { "주소 메모 없음" } })
+            .setContentText(notificationText)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .addAction(
@@ -113,6 +119,7 @@ class DestinationOverlayService : Service() {
         placeName: String,
         originalAddress: String,
         roadAddress: String,
+        unitDetail: String,
         memo: String,
     ) {
         removeOverlayView()
@@ -160,12 +167,16 @@ class DestinationOverlayService : Service() {
             root.addView(infoText("도로명주소 자동 확인 중 또는 미확인", Color.rgb(165, 174, 188)))
         }
 
+        if (unitDetail.isNotBlank()) {
+            root.addView(infoText("상세 · $unitDetail", Color.rgb(248, 220, 154)))
+        }
+
         if (
             originalAddress.isNotBlank() &&
             originalAddress != roadAddress &&
             originalAddress != placeName
         ) {
-            root.addView(infoText("기존 주소 · $originalAddress", Color.rgb(185, 194, 207)))
+            root.addView(infoText("지번 · $originalAddress", Color.rgb(185, 194, 207)))
         }
 
         root.addView(
@@ -280,6 +291,7 @@ class DestinationOverlayService : Service() {
         private const val EXTRA_PLACE_NAME = "place_name"
         private const val EXTRA_ORIGINAL_ADDRESS = "original_address"
         private const val EXTRA_ROAD_ADDRESS = "road_address"
+        private const val EXTRA_UNIT_DETAIL = "unit_detail"
         private const val EXTRA_MEMO = "memo"
 
         fun show(context: Context, entry: AddressMemoEntry) {
@@ -289,6 +301,7 @@ class DestinationOverlayService : Service() {
                 putExtra(EXTRA_PLACE_NAME, entry.title)
                 putExtra(EXTRA_ORIGINAL_ADDRESS, entry.address)
                 putExtra(EXTRA_ROAD_ADDRESS, entry.roadAddress)
+                putExtra(EXTRA_UNIT_DETAIL, entry.unitDetail)
                 putExtra(EXTRA_MEMO, entry.memo)
             }
             context.startForegroundService(intent)
