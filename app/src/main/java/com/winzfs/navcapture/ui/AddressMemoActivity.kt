@@ -51,14 +51,14 @@ class AddressMemoActivity : Activity() {
             setTextColor(Color.rgb(25, 29, 36))
         })
         root.addView(TextView(this).apply {
-            text = "길찾기 중이 아니어도 주소를 추가하고, 저장된 장소 메모를 검색·보기·수정할 수 있습니다."
+            text = "배달앱 원문은 그대로 보존되며, 참고 주소와 개인 메모는 별도로 검색·수정할 수 있습니다."
             textSize = 13f
             setTextColor(Color.rgb(80, 86, 96))
             setPadding(0, dp(7), 0, dp(14))
         })
 
         searchEdit = EditText(this).apply {
-            hint = "주소·장소명·메모 검색"
+            hint = "배달앱 원문·참고 주소·메모 검색"
             textSize = 15f
             setSingleLine(true)
             setPadding(dp(13), dp(10), dp(13), dp(10))
@@ -128,11 +128,13 @@ class AddressMemoActivity : Activity() {
 
     private fun entryCard(entry: AddressMemoEntry): TextView = TextView(this).apply {
         text = buildString {
-            appendLine(entry.title)
-            entry.roadAddress.takeIf(String::isNotBlank)?.let { appendLine("도로명: $it") }
-            entry.address
-                .takeIf { it.isNotBlank() && it != entry.roadAddress && it != entry.title }
-                ?.let { appendLine("주소: $it") }
+            appendLine(entry.sourceText.ifBlank { entry.placeName.ifBlank { "직접 추가한 메모" } })
+            entry.placeName
+                .takeIf { it.isNotBlank() && it != entry.sourceText }
+                ?.let { appendLine("내 이름: $it") }
+            entry.roadAddress.takeIf(String::isNotBlank)?.let {
+                appendLine("참고 도로명: $it")
+            }
             if (entry.memo.isNotBlank()) appendLine("메모: ${entry.memo.take(120)}")
             append("수정: ${formatTime(entry.updatedAt)}")
         }
