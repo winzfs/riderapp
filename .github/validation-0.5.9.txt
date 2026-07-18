@@ -1,0 +1,1 @@
+Validate RiderApp 0.5.9 compact overlay bounds and editable real-layout preview.
