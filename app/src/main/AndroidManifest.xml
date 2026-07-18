@@ -43,6 +43,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.OverlayPreviewActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true"
