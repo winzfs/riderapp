@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.1 independent background/text opacity, true text outlines, and polished shared UI.
