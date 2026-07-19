@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.2 font-size controls and single-layout text outline rendering.
