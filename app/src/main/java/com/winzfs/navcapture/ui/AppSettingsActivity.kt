@@ -160,11 +160,11 @@ class AppSettingsActivity : Activity() {
         )
 
         addView(miniTitle("색상"), fullWidthParams(top = 14))
-        backgroundColorField = colorField(this, "배경색", "#1B1F27")
-        primaryColorField = colorField(this, "주소 글자색", "#FFFFFF")
-        secondaryColorField = colorField(this, "건물·메모 글자색", "#DEE5EF")
-        accentColorField = colorField(this, "동·호수 강조색", "#FFDC8E")
-        outlineColorField = colorField(this, "윤곽선 색", "#FFFFFF")
+        backgroundColorField = colorField(this@AppSettingsActivity, "배경색", "#1B1F27")
+        primaryColorField = colorField(this@AppSettingsActivity, "주소 글자색", "#FFFFFF")
+        secondaryColorField = colorField(this@AppSettingsActivity, "건물·메모 글자색", "#DEE5EF")
+        accentColorField = colorField(this@AppSettingsActivity, "동·호수 강조색", "#FFDC8E")
+        outlineColorField = colorField(this@AppSettingsActivity, "윤곽선 색", "#FFFFFF")
         listOf(
             backgroundColorField,
             primaryColorField,
@@ -230,7 +230,7 @@ class AppSettingsActivity : Activity() {
             )
             val savedApp = NavApp.fromStored(settings().getString(KEY_NAV_APP, null))
             setSelection(navApps.indexOf(savedApp).coerceAtLeast(0))
-            onItemSelectedListener = SimpleItemSelectedListener { position ->
+            onItemSelectedListener = SettingsItemSelectedListener { position ->
                 settings().edit().putString(KEY_NAV_APP, navApps[position].name).apply()
             }
         }
@@ -493,7 +493,7 @@ class AppSettingsActivity : Activity() {
     }
 }
 
-private class SimpleItemSelectedListener(
+private class SettingsItemSelectedListener(
     private val onSelected: (Int) -> Unit,
 ) : android.widget.AdapterView.OnItemSelectedListener {
     override fun onItemSelected(
