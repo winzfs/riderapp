@@ -186,17 +186,8 @@ class DestinationOverlayService : Service() {
                     ),
                 )
                 cornerRadius = dp(12).toFloat()
-                if (style.outlineWidthDp > 0 && style.outlineOpacityPercent > 0) {
-                    setStroke(
-                        dp(style.outlineWidthDp),
-                        OverlayStyleSettings.argb(
-                            style.outlineColor,
-                            style.outlineOpacityPercent,
-                        ),
-                    )
-                }
             }
-            elevation = dp(10).toFloat()
+            elevation = if (style.backgroundOpacityPercent == 0) 0f else dp(9).toFloat()
             if (!previewMode) {
                 setOnClickListener { startActivity(openEditorIntent(entryId)) }
             }
@@ -206,19 +197,24 @@ class DestinationOverlayService : Service() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
         }
-        val addressText = TextView(this).apply {
-            text = display.primaryAddress
-            textSize = 18f
-            setTextColor(0xFF000000.toInt() or style.primaryTextColor)
-            setTypeface(typeface, Typeface.BOLD)
-            maxLines = 3
-            setLineSpacing(0f, 1.03f)
-        }
+        val addressText = outlinedText(
+            value = display.primaryAddress,
+            size = 18f,
+            fillRgb = style.primaryTextColor,
+            bold = true,
+            maxLines = 3,
+            style = style,
+        )
         val closeText = TextView(this).apply {
             text = " × "
             textSize = 18f
             gravity = Gravity.CENTER
-            setTextColor(OverlayStyleSettings.muted(style.secondaryTextColor))
+            setTextColor(
+                OverlayStyleSettings.muted(
+                    style.secondaryTextColor,
+                    style.textOpacityPercent,
+                ),
+            )
             setOnClickListener { stopOverlay() }
         }
         header.addView(
@@ -233,39 +229,39 @@ class DestinationOverlayService : Service() {
         }
         if (display.buildingName.isNotBlank()) {
             content.addView(
-                plainText(
+                outlinedText(
                     value = display.buildingName,
                     size = 14f,
-                    color = 0xFF000000.toInt() or style.secondaryTextColor,
+                    fillRgb = style.secondaryTextColor,
                     bold = true,
                     maxLines = 2,
+                    style = style,
                 ),
             )
         }
 
         if (display.unitDetail.isNotBlank()) {
             content.addView(
-                plainText(
+                outlinedText(
                     value = display.unitDetail,
                     size = 17f,
-                    color = 0xFF000000.toInt() or style.accentTextColor,
+                    fillRgb = style.accentTextColor,
                     bold = true,
                     maxLines = 2,
+                    style = style,
                 ),
             )
         }
 
         content.addView(
-            plainText(
+            outlinedText(
                 value = memo.ifBlank { "눌러서 메모 입력" },
                 size = 12f,
-                color = if (memo.isBlank()) {
-                    OverlayStyleSettings.muted(style.secondaryTextColor)
-                } else {
-                    0xFF000000.toInt() or style.secondaryTextColor
-                },
+                fillRgb = style.secondaryTextColor,
                 bold = false,
                 maxLines = 5,
+                style = style,
+                muted = memo.isBlank(),
             ),
         )
 
@@ -309,6 +305,85 @@ class DestinationOverlayService : Service() {
         overlayParams = params
     }
 
+    /**
+     * Draws an actual text outline without coupling it to the overlay background alpha.
+     * Eight offset copies form the stroke and the fully independent fill is drawn last.
+     */
+    private fun outlinedText(
+        value: String,
+        size: Float,
+        fillRgb: Int,
+        bold: Boolean,
+        maxLines: Int,
+        style: OverlayStyle,
+        muted: Boolean = false,
+    ): FrameLayout {
+        val outlineWidthPx = dp(style.textOutlineWidthDp)
+        val fillOpacity = if (muted) {
+            (style.textOpacityPercent * 62) / 100
+        } else {
+            style.textOpacityPercent
+        }
+        val fillColor = OverlayStyleSettings.argb(fillRgb, fillOpacity)
+        val outlineOpacity = (style.textOutlineOpacityPercent * style.textOpacityPercent) / 100
+        val outlineColor = OverlayStyleSettings.argb(style.textOutlineColor, outlineOpacity)
+
+        return FrameLayout(this).apply {
+            val edge = outlineWidthPx.coerceAtLeast(0)
+            setPadding(edge, dp(3) + edge, dp(4) + edge, edge)
+
+            if (outlineWidthPx > 0 && outlineOpacity > 0) {
+                val offsets = arrayOf(
+                    -outlineWidthPx to 0,
+                    outlineWidthPx to 0,
+                    0 to -outlineWidthPx,
+                    0 to outlineWidthPx,
+                    -outlineWidthPx to -outlineWidthPx,
+                    -outlineWidthPx to outlineWidthPx,
+                    outlineWidthPx to -outlineWidthPx,
+                    outlineWidthPx to outlineWidthPx,
+                )
+                offsets.forEach { (offsetX, offsetY) ->
+                    addView(
+                        overlayTextView(value, size, outlineColor, bold, maxLines).apply {
+                            translationX = offsetX.toFloat()
+                            translationY = offsetY.toFloat()
+                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        },
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                        ),
+                    )
+                }
+            }
+
+            addView(
+                overlayTextView(value, size, fillColor, bold, maxLines),
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+    }
+
+    private fun overlayTextView(
+        value: String,
+        size: Float,
+        color: Int,
+        bold: Boolean,
+        maxLines: Int,
+    ): TextView = TextView(this).apply {
+        text = value
+        textSize = size
+        this.maxLines = maxLines
+        setTextColor(color)
+        includeFontPadding = false
+        setLineSpacing(0f, 1.03f)
+        if (bold) setTypeface(typeface, Typeface.BOLD)
+    }
+
     private fun refreshCurrentOverlay() {
         val display = activeDisplay ?: return
         showOrUpdateOverlay(
@@ -326,21 +401,6 @@ class DestinationOverlayService : Service() {
         overlayView?.let { view ->
             runCatching { windowManager.updateViewLayout(view, params) }
         }
-    }
-
-    private fun plainText(
-        value: String,
-        size: Float,
-        color: Int,
-        bold: Boolean,
-        maxLines: Int,
-    ): TextView = TextView(this).apply {
-        text = value
-        textSize = size
-        this.maxLines = maxLines
-        setTextColor(color)
-        if (bold) setTypeface(typeface, Typeface.BOLD)
-        setPadding(0, dp(3), dp(4), 0)
     }
 
     private fun openEditorIntent(entryId: String): Intent =
