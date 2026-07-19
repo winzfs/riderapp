@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
@@ -48,7 +47,6 @@ class DestinationOverlayService : Service() {
                 stopOverlay()
                 return START_NOT_STICKY
             }
-
             ACTION_APPLY_SIZE -> {
                 val current = OverlaySizeSettings.load(this)
                 val size = OverlaySizeSettings.saveNormalized(
@@ -60,7 +58,6 @@ class DestinationOverlayService : Service() {
                 if (overlayView == null) stopSelf(startId)
                 return START_NOT_STICKY
             }
-
             ACTION_APPLY_STYLE -> {
                 refreshCurrentOverlay()
                 if (overlayView == null) stopSelf(startId)
@@ -94,7 +91,6 @@ class DestinationOverlayService : Service() {
             stopOverlay()
             return START_NOT_STICKY
         }
-
         showOrUpdateOverlay(entryId, display, memo, previewMode)
         return START_NOT_STICKY
     }
@@ -131,13 +127,10 @@ class DestinationOverlayService : Service() {
             Intent(this, DestinationOverlayService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-
-        val notificationText = listOf(
-            display.buildingName,
-            display.unitDetail,
-            memo,
-        ).filter(String::isNotBlank).joinToString(" · ").ifBlank { "눌러서 메모 입력" }
-
+        val notificationText = listOf(display.buildingName, display.unitDetail, memo)
+            .filter(String::isNotBlank)
+            .joinToString(" · ")
+            .ifBlank { "눌러서 메모 입력" }
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle(display.primaryAddress)
@@ -188,9 +181,7 @@ class DestinationOverlayService : Service() {
                 cornerRadius = dp(12).toFloat()
             }
             elevation = if (style.backgroundOpacityPercent == 0) 0f else dp(9).toFloat()
-            if (!previewMode) {
-                setOnClickListener { startActivity(openEditorIntent(entryId)) }
-            }
+            if (!previewMode) setOnClickListener { startActivity(openEditorIntent(entryId)) }
         }
 
         val header = LinearLayout(this).apply {
@@ -199,7 +190,7 @@ class DestinationOverlayService : Service() {
         }
         val addressText = outlinedText(
             value = display.primaryAddress,
-            size = 18f,
+            sizeSp = style.addressTextSizeSp,
             fillRgb = style.primaryTextColor,
             bold = true,
             maxLines = 3,
@@ -207,7 +198,7 @@ class DestinationOverlayService : Service() {
         )
         val closeText = TextView(this).apply {
             text = " × "
-            textSize = 18f
+            textSize = (style.addressTextSizeSp.coerceIn(16, 22)).toFloat()
             gravity = Gravity.CENTER
             setTextColor(
                 OverlayStyleSettings.muted(
@@ -224,14 +215,12 @@ class DestinationOverlayService : Service() {
         header.addView(closeText)
         root.addView(header)
 
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         if (display.buildingName.isNotBlank()) {
             content.addView(
                 outlinedText(
                     value = display.buildingName,
-                    size = 14f,
+                    sizeSp = style.buildingTextSizeSp,
                     fillRgb = style.secondaryTextColor,
                     bold = true,
                     maxLines = 2,
@@ -239,12 +228,11 @@ class DestinationOverlayService : Service() {
                 ),
             )
         }
-
         if (display.unitDetail.isNotBlank()) {
             content.addView(
                 outlinedText(
                     value = display.unitDetail,
-                    size = 17f,
+                    sizeSp = style.unitTextSizeSp,
                     fillRgb = style.accentTextColor,
                     bold = true,
                     maxLines = 2,
@@ -252,11 +240,10 @@ class DestinationOverlayService : Service() {
                 ),
             )
         }
-
         content.addView(
             outlinedText(
                 value = memo.ifBlank { "눌러서 메모 입력" },
-                size = 12f,
+                sizeSp = style.memoTextSizeSp,
                 fillRgb = style.secondaryTextColor,
                 bold = false,
                 maxLines = 5,
@@ -281,9 +268,7 @@ class DestinationOverlayService : Service() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f,
-            ).apply {
-                topMargin = dp(1)
-            },
+            ).apply { topMargin = dp(1) },
         )
 
         val params = WindowManager.LayoutParams(
@@ -305,83 +290,32 @@ class DestinationOverlayService : Service() {
         overlayParams = params
     }
 
-    /**
-     * Draws an actual text outline without coupling it to the overlay background alpha.
-     * Eight offset copies form the stroke and the fully independent fill is drawn last.
-     */
     private fun outlinedText(
         value: String,
-        size: Float,
+        sizeSp: Int,
         fillRgb: Int,
         bold: Boolean,
         maxLines: Int,
         style: OverlayStyle,
         muted: Boolean = false,
-    ): FrameLayout {
-        val outlineWidthPx = dp(style.textOutlineWidthDp)
+    ): OutlinedTextView {
         val fillOpacity = if (muted) {
             (style.textOpacityPercent * 62) / 100
         } else {
             style.textOpacityPercent
         }
-        val fillColor = OverlayStyleSettings.argb(fillRgb, fillOpacity)
         val outlineOpacity = (style.textOutlineOpacityPercent * style.textOpacityPercent) / 100
-        val outlineColor = OverlayStyleSettings.argb(style.textOutlineColor, outlineOpacity)
-
-        return FrameLayout(this).apply {
-            val edge = outlineWidthPx.coerceAtLeast(0)
-            setPadding(edge, dp(3) + edge, dp(4) + edge, edge)
-
-            if (outlineWidthPx > 0 && outlineOpacity > 0) {
-                val offsets = arrayOf(
-                    -outlineWidthPx to 0,
-                    outlineWidthPx to 0,
-                    0 to -outlineWidthPx,
-                    0 to outlineWidthPx,
-                    -outlineWidthPx to -outlineWidthPx,
-                    -outlineWidthPx to outlineWidthPx,
-                    outlineWidthPx to -outlineWidthPx,
-                    outlineWidthPx to outlineWidthPx,
-                )
-                offsets.forEach { (offsetX, offsetY) ->
-                    addView(
-                        overlayTextView(value, size, outlineColor, bold, maxLines).apply {
-                            translationX = offsetX.toFloat()
-                            translationY = offsetY.toFloat()
-                            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                        },
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                        ),
-                    )
-                }
-            }
-
-            addView(
-                overlayTextView(value, size, fillColor, bold, maxLines),
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                ),
+        return OutlinedTextView(this).apply {
+            configure(
+                value = value,
+                sizeSp = sizeSp,
+                fillColor = OverlayStyleSettings.argb(fillRgb, fillOpacity),
+                outlineColor = OverlayStyleSettings.argb(style.textOutlineColor, outlineOpacity),
+                outlineWidthDp = style.textOutlineWidthDp,
+                bold = bold,
+                maxLines = maxLines,
             )
         }
-    }
-
-    private fun overlayTextView(
-        value: String,
-        size: Float,
-        color: Int,
-        bold: Boolean,
-        maxLines: Int,
-    ): TextView = TextView(this).apply {
-        text = value
-        textSize = size
-        this.maxLines = maxLines
-        setTextColor(color)
-        includeFontPadding = false
-        setLineSpacing(0f, 1.03f)
-        if (bold) setTypeface(typeface, Typeface.BOLD)
     }
 
     private fun refreshCurrentOverlay() {
@@ -398,9 +332,7 @@ class DestinationOverlayService : Service() {
         val params = overlayParams ?: return
         params.width = dp(size.widthDp)
         params.height = dp(size.heightDp)
-        overlayView?.let { view ->
-            runCatching { windowManager.updateViewLayout(view, params) }
-        }
+        overlayView?.let { view -> runCatching { windowManager.updateViewLayout(view, params) } }
     }
 
     private fun openEditorIntent(entryId: String): Intent =
@@ -417,7 +349,6 @@ class DestinationOverlayService : Service() {
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
-
         handle.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -427,7 +358,6 @@ class DestinationOverlayService : Service() {
                     initialTouchY = event.rawY
                     true
                 }
-
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
                     val dy = (event.rawY - initialTouchY).toInt()
@@ -436,7 +366,6 @@ class DestinationOverlayService : Service() {
                     overlayView?.let { windowManager.updateViewLayout(it, params) }
                     true
                 }
-
                 else -> false
             }
         }
@@ -462,8 +391,7 @@ class DestinationOverlayService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
                 "목적지 주소·메모 오버레이",
@@ -542,11 +470,7 @@ class DestinationOverlayService : Service() {
 
         fun currentSize(context: Context): OverlaySize = OverlaySizeSettings.load(context)
 
-        fun adjustSize(
-            context: Context,
-            widthDeltaDp: Int,
-            heightDeltaDp: Int,
-        ): OverlaySize {
+        fun adjustSize(context: Context, widthDeltaDp: Int, heightDeltaDp: Int): OverlaySize {
             val size = OverlaySizeSettings.adjust(context, widthDeltaDp, heightDeltaDp)
             requestSizeApply(context, size)
             return size
