@@ -8,7 +8,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -24,13 +23,18 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.winzfs.navcapture.model.AddressMemoEntry
-import com.winzfs.navcapture.ui.MainActivity
 import com.winzfs.navcapture.ui.MemoEditorActivity
+import com.winzfs.navcapture.ui.OverlayPreviewActivity
 
 class DestinationOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var overlayParams: WindowManager.LayoutParams? = null
+
+    private var activeEntryId: String = ""
+    private var activeDisplay: DestinationOverlayFormatter.DisplayParts? = null
+    private var activeMemo: String = ""
+    private var activePreviewMode: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -56,6 +60,12 @@ class DestinationOverlayService : Service() {
                 if (overlayView == null) stopSelf(startId)
                 return START_NOT_STICKY
             }
+
+            ACTION_APPLY_STYLE -> {
+                refreshCurrentOverlay()
+                if (overlayView == null) stopSelf(startId)
+                return START_NOT_STICKY
+            }
         }
 
         if (intent?.action != ACTION_SHOW) return START_NOT_STICKY
@@ -74,6 +84,11 @@ class DestinationOverlayService : Service() {
             userDisplayName = displayName,
         )
 
+        activeEntryId = entryId
+        activeDisplay = display
+        activeMemo = memo
+        activePreviewMode = previewMode
+
         startAsForeground(entryId, display, memo, previewMode)
         if (!Settings.canDrawOverlays(this)) {
             stopOverlay()
@@ -85,7 +100,7 @@ class DestinationOverlayService : Service() {
     }
 
     override fun onDestroy() {
-        removeOverlayView()
+        removeOverlayView(clearActive = true)
         super.onDestroy()
     }
 
@@ -98,7 +113,7 @@ class DestinationOverlayService : Service() {
         previewMode: Boolean,
     ) {
         val openIntent = if (previewMode) {
-            Intent(this, MainActivity::class.java).apply {
+            Intent(this, OverlayPreviewActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
         } else {
@@ -155,16 +170,31 @@ class DestinationOverlayService : Service() {
         memo: String,
         previewMode: Boolean,
     ) {
-        removeOverlayView()
-        val initialSize = OverlaySizeSettings.load(this)
+        val previousParams = overlayParams
+        removeOverlayView(clearActive = false)
+        val size = OverlaySizeSettings.load(this)
+        val style = OverlayStyleSettings.load(this)
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(7), dp(9))
             background = GradientDrawable().apply {
-                setColor(Color.argb(240, 27, 31, 39))
+                setColor(
+                    OverlayStyleSettings.argb(
+                        style.backgroundColor,
+                        style.backgroundOpacityPercent,
+                    ),
+                )
                 cornerRadius = dp(12).toFloat()
-                setStroke(dp(1), Color.argb(110, 255, 255, 255))
+                if (style.outlineWidthDp > 0 && style.outlineOpacityPercent > 0) {
+                    setStroke(
+                        dp(style.outlineWidthDp),
+                        OverlayStyleSettings.argb(
+                            style.outlineColor,
+                            style.outlineOpacityPercent,
+                        ),
+                    )
+                }
             }
             elevation = dp(10).toFloat()
             if (!previewMode) {
@@ -179,7 +209,7 @@ class DestinationOverlayService : Service() {
         val addressText = TextView(this).apply {
             text = display.primaryAddress
             textSize = 18f
-            setTextColor(Color.WHITE)
+            setTextColor(0xFF000000.toInt() or style.primaryTextColor)
             setTypeface(typeface, Typeface.BOLD)
             maxLines = 3
             setLineSpacing(0f, 1.03f)
@@ -188,7 +218,7 @@ class DestinationOverlayService : Service() {
             text = " × "
             textSize = 18f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(220, 225, 232))
+            setTextColor(OverlayStyleSettings.muted(style.secondaryTextColor))
             setOnClickListener { stopOverlay() }
         }
         header.addView(
@@ -206,7 +236,7 @@ class DestinationOverlayService : Service() {
                 plainText(
                     value = display.buildingName,
                     size = 14f,
-                    color = Color.rgb(222, 229, 239),
+                    color = 0xFF000000.toInt() or style.secondaryTextColor,
                     bold = true,
                     maxLines = 2,
                 ),
@@ -218,7 +248,7 @@ class DestinationOverlayService : Service() {
                 plainText(
                     value = display.unitDetail,
                     size = 17f,
-                    color = Color.rgb(255, 220, 142),
+                    color = 0xFF000000.toInt() or style.accentTextColor,
                     bold = true,
                     maxLines = 2,
                 ),
@@ -230,9 +260,9 @@ class DestinationOverlayService : Service() {
                 value = memo.ifBlank { "눌러서 메모 입력" },
                 size = 12f,
                 color = if (memo.isBlank()) {
-                    Color.rgb(158, 168, 183)
+                    OverlayStyleSettings.muted(style.secondaryTextColor)
                 } else {
-                    Color.rgb(238, 241, 246)
+                    0xFF000000.toInt() or style.secondaryTextColor
                 },
                 bold = false,
                 maxLines = 5,
@@ -261,22 +291,32 @@ class DestinationOverlayService : Service() {
         )
 
         val params = WindowManager.LayoutParams(
-            dp(initialSize.widthDp),
-            dp(initialSize.heightDp),
+            dp(size.widthDp),
+            dp(size.heightDp),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.END
-            x = dp(10)
-            y = dp(92)
+            x = previousParams?.x ?: dp(10)
+            y = previousParams?.y ?: dp(92)
         }
 
         installDragHandler(header, params)
         windowManager.addView(root, params)
         overlayView = root
         overlayParams = params
+    }
+
+    private fun refreshCurrentOverlay() {
+        val display = activeDisplay ?: return
+        showOrUpdateOverlay(
+            entryId = activeEntryId,
+            display = display,
+            memo = activeMemo,
+            previewMode = activePreviewMode,
+        )
     }
 
     private fun applyOverlaySize(size: OverlaySize) {
@@ -343,15 +383,21 @@ class DestinationOverlayService : Service() {
     }
 
     private fun stopOverlay() {
-        removeOverlayView()
+        removeOverlayView(clearActive = true)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    private fun removeOverlayView() {
+    private fun removeOverlayView(clearActive: Boolean) {
         overlayView?.let { view -> runCatching { windowManager.removeView(view) } }
         overlayView = null
         overlayParams = null
+        if (clearActive) {
+            activeEntryId = ""
+            activeDisplay = null
+            activeMemo = ""
+            activePreviewMode = false
+        }
     }
 
     private fun createNotificationChannel() {
@@ -377,6 +423,7 @@ class DestinationOverlayService : Service() {
         private const val ACTION_SHOW = "com.winzfs.navcapture.action.SHOW_OVERLAY"
         private const val ACTION_STOP = "com.winzfs.navcapture.action.STOP_OVERLAY"
         private const val ACTION_APPLY_SIZE = "com.winzfs.navcapture.action.APPLY_OVERLAY_SIZE"
+        private const val ACTION_APPLY_STYLE = "com.winzfs.navcapture.action.APPLY_OVERLAY_STYLE"
         private const val EXTRA_ENTRY_ID = "entry_id"
         private const val EXTRA_SOURCE_TEXT = "source_text"
         private const val EXTRA_SOURCE_PAYLOAD_TEXT = "source_payload_text"
@@ -449,6 +496,13 @@ class DestinationOverlayService : Service() {
             val size = OverlaySizeSettings.reset(context)
             requestSizeApply(context, size)
             return size
+        }
+
+        fun refreshStyle(context: Context) {
+            val intent = Intent(context, DestinationOverlayService::class.java).apply {
+                action = ACTION_APPLY_STYLE
+            }
+            runCatching { context.startService(intent) }
         }
 
         private fun requestSizeApply(context: Context, size: OverlaySize) {
