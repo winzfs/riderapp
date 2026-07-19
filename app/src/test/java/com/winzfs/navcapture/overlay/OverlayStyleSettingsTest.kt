@@ -24,4 +24,32 @@ class OverlayStyleSettingsTest {
         assertEquals(0xFF123456.toInt(), OverlayStyleSettings.argb(0x123456, 100))
         assertEquals(0x00123456, OverlayStyleSettings.argb(0x123456, -20))
     }
+
+    @Test
+    fun backgroundCanBeInvisibleWhileTextRemainsOpaque() {
+        val normalized = OverlayStyleSettings.normalize(
+            OverlayStyleSettings.defaultStyle.copy(
+                backgroundOpacityPercent = 0,
+                textOpacityPercent = 100,
+            ),
+        )
+        assertEquals(0, normalized.backgroundOpacityPercent)
+        assertEquals(100, normalized.textOpacityPercent)
+        assertEquals(0x001B1F27, OverlayStyleSettings.argb(normalized.backgroundColor, normalized.backgroundOpacityPercent))
+        assertEquals(0xFFFFFFFF.toInt(), OverlayStyleSettings.argb(normalized.primaryTextColor, normalized.textOpacityPercent))
+    }
+
+    @Test
+    fun textOutlineValuesAreClamped() {
+        val normalized = OverlayStyleSettings.normalize(
+            OverlayStyleSettings.defaultStyle.copy(
+                textOutlineWidthDp = 99,
+                textOutlineOpacityPercent = -10,
+                textOpacityPercent = 0,
+            ),
+        )
+        assertEquals(OverlayStyleSettings.MAX_TEXT_OUTLINE_WIDTH_DP, normalized.textOutlineWidthDp)
+        assertEquals(0, normalized.textOutlineOpacityPercent)
+        assertEquals(OverlayStyleSettings.MIN_TEXT_OPACITY_PERCENT, normalized.textOpacityPercent)
+    }
 }
