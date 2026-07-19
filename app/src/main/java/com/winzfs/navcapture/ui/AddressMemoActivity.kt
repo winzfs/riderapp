@@ -2,17 +2,14 @@ package com.winzfs.navcapture.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import com.winzfs.navcapture.model.AddressMemoEntry
 import com.winzfs.navcapture.storage.AddressMemoStore
@@ -38,31 +35,17 @@ class AddressMemoActivity : Activity() {
     }
 
     private fun buildUi() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(20), dp(18), dp(24))
-            setBackgroundColor(Color.rgb(245, 246, 248))
-        }
+        val page = RiderUi.page(this)
+        val root = page.root
+        root.addView(
+            RiderUi.topBar(
+                activity = this,
+                titleText = "주소 메모",
+                subtitleText = "주소별 개인 메모를 검색하고 관리합니다.",
+            ),
+        )
 
-        root.addView(TextView(this).apply {
-            text = "주소별 개인 메모"
-            textSize = 24f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Color.rgb(25, 29, 36))
-        })
-        root.addView(TextView(this).apply {
-            text = "배달앱 원문은 그대로 보존되며, 참고 주소와 개인 메모는 별도로 검색·수정할 수 있습니다."
-            textSize = 13f
-            setTextColor(Color.rgb(80, 86, 96))
-            setPadding(0, dp(7), 0, dp(14))
-        })
-
-        searchEdit = EditText(this).apply {
-            hint = "배달앱 원문·참고 주소·메모 검색"
-            textSize = 15f
-            setSingleLine(true)
-            setPadding(dp(13), dp(10), dp(13), dp(10))
-            setBackgroundColor(Color.WHITE)
+        searchEdit = RiderUi.input(this, "주소·건물명·메모 검색").apply {
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -71,51 +54,41 @@ class AddressMemoActivity : Activity() {
                 override fun afterTextChanged(s: Editable?) = Unit
             })
         }
-        root.addView(searchEdit, fullWidthParams(bottom = 10))
+        root.addView(searchEdit, RiderUi.fullWidth(this, bottom = 10))
 
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            addView(
+                RiderUi.primaryButton(this@AddressMemoActivity, "새 주소 메모") {
+                    startActivity(Intent(this@AddressMemoActivity, MemoEditorActivity::class.java))
+                },
+                RiderUi.weighted(this@AddressMemoActivity, end = 4, heightDp = 46),
+            )
+            addView(
+                RiderUi.secondaryButton(this@AddressMemoActivity, "공식 주소 검색") {
+                    openOfficialAddressSearch()
+                },
+                RiderUi.weighted(this@AddressMemoActivity, start = 4, heightDp = 46),
+            )
         }
-        actions.addView(Button(this).apply {
-            text = "새 주소 메모"
-            isAllCaps = false
-            setOnClickListener {
-                startActivity(Intent(this@AddressMemoActivity, MemoEditorActivity::class.java))
-            }
-        }, weightedParams(end = 4))
-        actions.addView(Button(this).apply {
-            text = "공식 주소 검색"
-            isAllCaps = false
-            setOnClickListener { openOfficialAddressSearch() }
-        }, weightedParams(start = 4))
-        root.addView(actions, fullWidthParams(bottom = 12))
+        root.addView(actions, RiderUi.fullWidth(this, bottom = 14))
 
         emptyText = TextView(this).apply {
             text = "저장된 주소 메모가 없습니다."
             textSize = 14f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(100, 106, 116))
-            setPadding(dp(8), dp(24), dp(8), dp(24))
+            setTextColor(RiderUi.muted)
+            setPadding(8, RiderUi.dp(this@AddressMemoActivity, 34), 8, RiderUi.dp(this@AddressMemoActivity, 34))
         }
         root.addView(emptyText)
 
         listContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        val scroll = ScrollView(this).apply {
-            addView(listContainer)
-        }
-        root.addView(
-            scroll,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f,
-            ),
-        )
+        root.addView(listContainer, RiderUi.fullWidth(this))
 
-        setContentView(root)
+        setContentView(page.scroll)
     }
 
     private fun renderList(query: String) {
@@ -123,25 +96,66 @@ class AddressMemoActivity : Activity() {
         val entries = store.search(query)
         listContainer.removeAllViews()
         emptyText.visibility = if (entries.isEmpty()) TextView.VISIBLE else TextView.GONE
-        entries.forEach { entry -> listContainer.addView(entryCard(entry), fullWidthParams(bottom = 9)) }
+        entries.forEach { entry ->
+            listContainer.addView(entryCard(entry), RiderUi.fullWidth(this, bottom = 9))
+        }
     }
 
-    private fun entryCard(entry: AddressMemoEntry): TextView = TextView(this).apply {
-        text = buildString {
-            appendLine(entry.sourceText.ifBlank { entry.placeName.ifBlank { "직접 추가한 메모" } })
-            entry.placeName
-                .takeIf { it.isNotBlank() && it != entry.sourceText }
-                ?.let { appendLine("내 이름: $it") }
-            entry.roadAddress.takeIf(String::isNotBlank)?.let {
-                appendLine("참고 도로명: $it")
+    private fun entryCard(entry: AddressMemoEntry): LinearLayout = RiderUi.card(this, paddingDp = 15).apply {
+        isClickable = true
+        isFocusable = true
+        background = RiderUi.ripple(
+            context = this@AddressMemoActivity,
+            color = RiderUi.surface,
+            radiusDp = 18f,
+            strokeColor = RiderUi.border,
+            strokeWidthDp = 1,
+        )
+
+        val titleText = entry.placeName.ifBlank {
+            entry.sourceText.ifBlank {
+                entry.roadAddress.ifBlank { "직접 추가한 메모" }
             }
-            if (entry.memo.isNotBlank()) appendLine("메모: ${entry.memo.take(120)}")
-            append("수정: ${formatTime(entry.updatedAt)}")
         }
-        textSize = 14f
-        setTextColor(Color.rgb(35, 39, 47))
-        setPadding(dp(15), dp(13), dp(15), dp(13))
-        setBackgroundColor(Color.WHITE)
+        addView(TextView(this@AddressMemoActivity).apply {
+            text = titleText
+            textSize = 16f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(RiderUi.title)
+            maxLines = 2
+        })
+
+        val address = when {
+            entry.roadAddress.isNotBlank() -> entry.roadAddress
+            entry.sourceText.isNotBlank() && entry.sourceText != titleText -> entry.sourceText
+            else -> ""
+        }
+        if (address.isNotBlank()) {
+            addView(TextView(this@AddressMemoActivity).apply {
+                text = address
+                textSize = 13f
+                setTextColor(RiderUi.body)
+                maxLines = 2
+                setPadding(0, RiderUi.dp(this@AddressMemoActivity, 6), 0, 0)
+            })
+        }
+
+        addView(TextView(this@AddressMemoActivity).apply {
+            text = entry.memo.ifBlank { "저장된 메모 없음" }
+            textSize = 13f
+            setTextColor(if (entry.memo.isBlank()) RiderUi.muted else RiderUi.body)
+            maxLines = 3
+            setLineSpacing(0f, 1.12f)
+            setPadding(0, RiderUi.dp(this@AddressMemoActivity, 8), 0, 0)
+        })
+
+        addView(TextView(this@AddressMemoActivity).apply {
+            text = "수정 ${formatTime(entry.updatedAt)}"
+            textSize = 11.5f
+            setTextColor(RiderUi.muted)
+            setPadding(0, RiderUi.dp(this@AddressMemoActivity, 9), 0, 0)
+        })
+
         setOnClickListener {
             startActivity(MemoEditorActivity.intent(this@AddressMemoActivity, entry.id, false))
         }
@@ -158,18 +172,4 @@ class AddressMemoActivity : Activity() {
 
     private fun formatTime(timestamp: Long): String =
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA).format(Date(timestamp))
-
-    private fun fullWidthParams(bottom: Int = 0): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { bottomMargin = dp(bottom) }
-
-    private fun weightedParams(start: Int = 0, end: Int = 0): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-            marginStart = dp(start)
-            marginEnd = dp(end)
-        }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
