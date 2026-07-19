@@ -52,4 +52,20 @@ class OverlayStyleSettingsTest {
         assertEquals(0, normalized.textOutlineOpacityPercent)
         assertEquals(OverlayStyleSettings.MIN_TEXT_OPACITY_PERCENT, normalized.textOpacityPercent)
     }
+
+    @Test
+    fun individualFontSizesAreClamped() {
+        val normalized = OverlayStyleSettings.normalize(
+            OverlayStyleSettings.defaultStyle.copy(
+                addressTextSizeSp = 1,
+                buildingTextSizeSp = 99,
+                unitTextSizeSp = 1,
+                memoTextSizeSp = 99,
+            ),
+        )
+        assertEquals(OverlayStyleSettings.MIN_ADDRESS_TEXT_SIZE_SP, normalized.addressTextSizeSp)
+        assertEquals(OverlayStyleSettings.MAX_BUILDING_TEXT_SIZE_SP, normalized.buildingTextSizeSp)
+        assertEquals(OverlayStyleSettings.MIN_UNIT_TEXT_SIZE_SP, normalized.unitTextSizeSp)
+        assertEquals(OverlayStyleSettings.MAX_MEMO_TEXT_SIZE_SP, normalized.memoTextSizeSp)
+    }
 }
