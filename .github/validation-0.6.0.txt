@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.0 modern dashboard, grouped settings, live overlay style controls, and preview rendering.
