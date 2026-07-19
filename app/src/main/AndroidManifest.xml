@@ -47,15 +47,23 @@
             android:exported="false" />
 
         <activity
-            android:name=".ui.MainActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:exported="true"
-            android:launchMode="singleTask">
+            android:name=".ui.AppSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.DashboardActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <activity
             android:name=".ui.NavigationReceiverActivity"
