@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -15,7 +14,7 @@ import com.winzfs.navcapture.model.AddressMemoEntry
 import com.winzfs.navcapture.model.CapturedDestination
 import com.winzfs.navcapture.navigation.NavApp
 import com.winzfs.navcapture.navigation.NavigationForwarder
-import com.winzfs.navcapture.overlay.DestinationOverlayService
+import com.winzfs.navcapture.overlay.DestinationDisplayController
 import com.winzfs.navcapture.parser.NavigationIntentParser
 import com.winzfs.navcapture.storage.AddressMemoStore
 import com.winzfs.navcapture.storage.CaptureStore
@@ -63,8 +62,9 @@ class MainActivity : Activity() {
             addressMemoStore.findById(oldEntry.id)?.let { refreshed ->
                 currentEntry = refreshed
                 renderCurrentDestination("현재 목적지")
-                if (overlayEnabled() && Settings.canDrawOverlays(this)) {
-                    DestinationOverlayService.show(this, refreshed)
+                if (displayEnabled()) {
+                    val displayed = DestinationDisplayController.show(this, refreshed)
+                    if (!displayed) statusText.text = "카드형 표시를 위한 오버레이 권한 필요"
                 }
             }
         }
@@ -128,7 +128,7 @@ class MainActivity : Activity() {
         }.apply { isEnabled = false }
         actionRow.addView(editMemoButton, RiderUi.weighted(this, end = 4, heightDp = 46))
         actionRow.addView(
-            RiderUi.secondaryButton(this, "오버레이 설정") {
+            RiderUi.secondaryButton(this, "표시·알림 설정") {
                 startActivity(Intent(this@MainActivity, AppSettingsActivity::class.java))
             },
             RiderUi.weighted(this, start = 4, heightDp = 46),
@@ -155,7 +155,7 @@ class MainActivity : Activity() {
         currentEntry = addressMemoStore.ensureForCapture(capture)
         val origin = if (synthetic) "샘플 목적지" else "목적지 수신 완료"
         renderCurrentDestination(if (saved) origin else "$origin · 동일 호출")
-        showDestinationOverlay()
+        showDestinationDisplay()
         resolveRoadAddressIfNeeded(capture, requireNotNull(currentEntry))
 
         if (!synthetic && autoForwardEnabled()) scheduleForward()
@@ -202,7 +202,7 @@ class MainActivity : Activity() {
                 if (currentEntry?.id == saved.id) {
                     currentEntry = saved
                     renderCurrentDestination("목적지 수신 완료")
-                    showDestinationOverlay()
+                    showDestinationDisplay()
                 }
             }.onFailure {
                 if (currentEntry?.id == initialEntry.id) {
@@ -220,14 +220,12 @@ class MainActivity : Activity() {
         startActivity(MemoEditorActivity.intent(this, entry.id, true))
     }
 
-    private fun showDestinationOverlay() {
+    private fun showDestinationDisplay() {
         val entry = currentEntry ?: return
-        if (!overlayEnabled()) return
-        if (!Settings.canDrawOverlays(this)) {
-            statusText.text = "목적지 수신 완료 · 오버레이 권한 필요"
-            return
+        if (!displayEnabled()) return
+        if (!DestinationDisplayController.show(this, entry)) {
+            statusText.text = "카드형 표시를 위한 오버레이 권한 필요"
         }
-        DestinationOverlayService.show(this, entry)
     }
 
     private fun scheduleForward() {
@@ -294,7 +292,7 @@ class MainActivity : Activity() {
     )
 
     private fun autoForwardEnabled(): Boolean = settings().getBoolean(KEY_AUTO_FORWARD, true)
-    private fun overlayEnabled(): Boolean = settings().getBoolean(KEY_OVERLAY_ENABLED, true)
+    private fun displayEnabled(): Boolean = settings().getBoolean(KEY_DISPLAY_ENABLED, true)
 
     private fun isMeaningful(capture: CapturedDestination): Boolean =
         capture.hasCoordinates || capture.destinationName.isNotBlank() || capture.rawUri.isNotBlank()
@@ -314,7 +312,7 @@ class MainActivity : Activity() {
         private const val SETTINGS_NAME = "nav_capture_settings"
         private const val KEY_AUTO_FORWARD = "auto_forward"
         private const val KEY_NAV_APP = "nav_app"
-        private const val KEY_OVERLAY_ENABLED = "overlay_enabled"
+        private const val KEY_DISPLAY_ENABLED = "overlay_enabled"
         private const val AUTO_FORWARD_DELAY_MS = 550L
 
         fun relayIntent(context: Context, capture: CapturedDestination): Intent =
