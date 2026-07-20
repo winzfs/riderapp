@@ -6,10 +6,11 @@ import org.junit.Test
 
 class OverlayPresentationSettingsTest {
     @Test
-    fun defaultPresentationUsesCardAndDetailedNotification() {
+    fun defaultPresentationUsesCardAndDetailedSystemNotification() {
         val defaults = OverlayPresentationSettings.defaultPresentation
         assertEquals(OverlayPresentationMode.CARD, defaults.mode)
         assertTrue(defaults.showDetailedNotification)
+        assertTrue(defaults.showHeadsUpNotification)
     }
 
     @Test
