@@ -135,5 +135,15 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps a user-enabled small destination address and memo overlay visible while a navigation app is open." />
         </service>
+
+        <service
+            android:name=".overlay.DestinationNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the current delivery destination visible as an ongoing user-enabled system notification while navigation is active." />
+        </service>
     </application>
 </manifest>
