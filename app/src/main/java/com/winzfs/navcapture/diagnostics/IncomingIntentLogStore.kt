@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import com.winzfs.navcapture.BuildConfig
 import com.winzfs.navcapture.model.CapturedDestination
 import org.json.JSONObject
 import java.io.File
@@ -86,7 +85,7 @@ class IncomingIntentLogStore(private val activity: Activity) {
     ): String = buildString {
         appendLine("════════════════════════════════")
         appendLine("수신 시각: ${formatTime(now)}")
-        appendLine("앱 버전: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        appendLine("앱 버전: ${appVersionLabel()}")
         appendLine("Android: ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
         appendLine("추정 호출 출처: $source")
         appendLine("callingPackage: ${activity.callingPackage.orEmpty().ifBlank { "없음" }}")
@@ -218,6 +217,17 @@ class IncomingIntentLogStore(private val activity: Activity) {
             append('}')
         }
     }
+
+    private fun appVersionLabel(): String = runCatching {
+        val info = activity.packageManager.getPackageInfo(activity.packageName, 0)
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
+        }
+        "${info.versionName.orEmpty().ifBlank { "알 수 없음" }} ($versionCode)"
+    }.getOrDefault("확인 불가")
 
     private fun sanitizeText(value: String): String {
         if (value.isBlank()) return ""
