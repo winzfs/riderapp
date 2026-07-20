@@ -1,8 +1,11 @@
 package com.winzfs.navcapture.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -10,7 +13,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import com.winzfs.navcapture.overlay.DestinationOverlayService
+import com.winzfs.navcapture.overlay.DestinationDisplayController
+import com.winzfs.navcapture.overlay.OverlayPresentationSettings
 import com.winzfs.navcapture.overlay.OverlayStyleSettings
 
 class OverlayPreviewActivity : Activity() {
@@ -37,12 +41,12 @@ class OverlayPreviewActivity : Activity() {
         root.addView(
             RiderUi.topBar(
                 activity = this,
-                titleText = "샘플 오버레이",
-                subtitleText = "실제 목적지와 같은 포매터와 오버레이 서비스로 확인합니다.",
+                titleText = "표시 테스트",
+                subtitleText = "실제 카드 오버레이 또는 시스템 알림으로 확인합니다.",
             ),
         )
 
-        val styleCard = RiderUi.card(this, "현재 스타일")
+        val styleCard = RiderUi.card(this, "현재 표시 방식")
         styleSummary = TextView(this).apply {
             textSize = 13f
             setTextColor(RiderUi.body)
@@ -51,7 +55,7 @@ class OverlayPreviewActivity : Activity() {
         }
         styleCard.addView(styleSummary)
         styleCard.addView(
-            RiderUi.secondaryButton(this, "크기·색상·투명도 설정 열기") {
+            RiderUi.secondaryButton(this, "표시·알림 설정 열기") {
                 startActivity(Intent(this, AppSettingsActivity::class.java))
             },
             RiderUi.fullWidth(this, top = 11, heightDp = 44),
@@ -91,7 +95,7 @@ class OverlayPreviewActivity : Activity() {
         root.addView(inputCard, RiderUi.fullWidth(this, bottom = 12))
 
         root.addView(
-            RiderUi.primaryButton(this, "샘플 오버레이 표시 · 업데이트") {
+            RiderUi.primaryButton(this, "현재 방식으로 샘플 표시") {
                 showPreview()
             },
             RiderUi.fullWidth(this, bottom = 8, heightDp = 50),
@@ -109,8 +113,8 @@ class OverlayPreviewActivity : Activity() {
                 RiderUi.weighted(this@OverlayPreviewActivity, end = 4, heightDp = 46),
             )
             addView(
-                RiderUi.secondaryButton(this@OverlayPreviewActivity, "오버레이 닫기") {
-                    DestinationOverlayService.hide(this@OverlayPreviewActivity)
+                RiderUi.secondaryButton(this@OverlayPreviewActivity, "현재 표시 닫기") {
+                    DestinationDisplayController.hide(this@OverlayPreviewActivity)
                 },
                 RiderUi.weighted(this@OverlayPreviewActivity, start = 4, heightDp = 46),
             )
@@ -141,12 +145,19 @@ class OverlayPreviewActivity : Activity() {
     private fun renderStyleSummary() {
         if (!::styleSummary.isInitialized) return
         val style = OverlayStyleSettings.load(this)
+        val notificationOnly = OverlayPresentationSettings.isNotificationOnly(this)
         styleSummary.text = buildString {
-            append("배경 ${style.backgroundOpacityPercent}%")
-            append("  ·  글자 ${style.textOpacityPercent}%")
-            append("  ·  글자 윤곽선 ${style.textOutlineWidthDp}dp")
-            if (style.backgroundOpacityPercent == 0 && style.textOpacityPercent == 100) {
-                append("\n배경은 완전히 투명하고 글자는 선명하게 표시됩니다.")
+            append(
+                if (notificationOnly) {
+                    "시스템 알림 전용 · 상태표시줄 아이콘과 알림창에 표시"
+                } else {
+                    "카드형 오버레이 · 다른 앱 위에 표시"
+                },
+            )
+            if (!notificationOnly) {
+                append("\n배경 ${style.backgroundOpacityPercent}%")
+                append("  ·  글자 ${style.textOpacityPercent}%")
+                append("  ·  글자 윤곽선 ${style.textOutlineWidthDp}dp")
             }
         }
     }
@@ -157,16 +168,7 @@ class OverlayPreviewActivity : Activity() {
             toast("샘플 주소를 입력해 주세요.")
             return
         }
-        if (!Settings.canDrawOverlays(this)) {
-            toast("먼저 오버레이 권한을 허용해 주세요.")
-            val permissionIntent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName"),
-            )
-            runCatching { startActivity(permissionIntent) }
-                .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)) }
-            return
-        }
+        if (!ensurePresentationPermission()) return
 
         val building = buildingInput.text.toString().trim()
         val unit = unitInput.text.toString().trim()
@@ -178,14 +180,47 @@ class OverlayPreviewActivity : Activity() {
             .putString(KEY_MEMO, memo)
             .apply()
 
-        DestinationOverlayService.showPreview(
+        val displayed = DestinationDisplayController.showPreview(
             context = this,
             address = address,
             buildingName = building,
             unitDetail = unit,
             memo = memo,
         )
-        toast("실제 레이아웃으로 샘플 오버레이를 표시했습니다.")
+        if (displayed) {
+            toast(
+                if (OverlayPresentationSettings.isNotificationOnly(this)) {
+                    "알림창에 샘플 목적지를 표시했습니다."
+                } else {
+                    "실제 카드 오버레이로 샘플을 표시했습니다."
+                },
+            )
+        } else {
+            toast("카드형 표시에 필요한 오버레이 권한을 허용해 주세요.")
+        }
+    }
+
+    private fun ensurePresentationPermission(): Boolean {
+        if (OverlayPresentationSettings.isNotificationOnly(this)) {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATION_PERMISSION)
+                toast("알림 권한을 허용한 뒤 다시 표시 버튼을 눌러 주세요.")
+                return false
+            }
+            return true
+        }
+
+        if (Settings.canDrawOverlays(this)) return true
+        toast("카드형 오버레이 권한을 허용해 주세요.")
+        val permissionIntent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName"),
+        )
+        runCatching { startActivity(permissionIntent) }
+            .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)) }
+        return false
     }
 
     private fun toast(message: String) {
@@ -198,6 +233,7 @@ class OverlayPreviewActivity : Activity() {
         private const val KEY_BUILDING = "building"
         private const val KEY_UNIT = "unit"
         private const val KEY_MEMO = "memo"
+        private const val REQUEST_NOTIFICATION_PERMISSION = 8201
 
         private const val DEFAULT_ADDRESS = "광주광역시 광산구 수완로24번길 84"
         private const val DEFAULT_BUILDING = "수완대방노블랜드"
