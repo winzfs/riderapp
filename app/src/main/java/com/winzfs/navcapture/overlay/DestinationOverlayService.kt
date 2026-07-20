@@ -1,7 +1,5 @@
 package com.winzfs.navcapture.overlay
 
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,7 +17,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -32,7 +29,6 @@ class DestinationOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var overlayParams: WindowManager.LayoutParams? = null
-    private var tickerAnimator: ObjectAnimator? = null
 
     private var activeEntryId: String = ""
     private var activeDisplay: DestinationOverlayFormatter.DisplayParts? = null
@@ -51,7 +47,7 @@ class DestinationOverlayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
-                stopOverlay()
+                stopDestinationDisplay()
                 return START_NOT_STICKY
             }
 
@@ -63,13 +59,13 @@ class DestinationOverlayService : Service() {
                     heightDp = intent.getIntExtra(EXTRA_HEIGHT_DP, current.heightDp),
                 )
                 applyOverlaySize(size)
-                if (overlayView == null) stopSelf(startId)
+                if (activeDisplay == null) stopSelf(startId)
                 return START_NOT_STICKY
             }
 
             ACTION_APPLY_STYLE -> {
-                refreshCurrentOverlay()
-                if (overlayView == null) stopSelf(startId)
+                refreshCurrentPresentation()
+                if (activeDisplay == null) stopSelf(startId)
                 return START_NOT_STICKY
             }
 
@@ -102,11 +98,7 @@ class DestinationOverlayService : Service() {
         activePreviewMode = previewMode
 
         startAsForeground(entryId, display, memo, previewMode)
-        if (!Settings.canDrawOverlays(this)) {
-            stopOverlay()
-            return START_NOT_STICKY
-        }
-        showOrUpdateOverlay(entryId, display, memo, previewMode)
+        showCurrentPresentation(entryId, display, memo, previewMode)
         return START_NOT_STICKY
     }
 
@@ -144,24 +136,32 @@ class DestinationOverlayService : Service() {
         )
 
         val presentation = OverlayPresentationSettings.load(this)
-        val summaryText = listOf(display.buildingName, display.unitDetail, memo)
-            .filter(String::isNotBlank)
-            .joinToString(" · ")
-            .ifBlank { "목적지 상세정보 없음" }
-        val detailedText = listOf(
-            display.primaryAddress,
-            display.buildingName,
-            display.unitDetail,
+        val title = display.unitDetail.ifBlank {
+            display.buildingName.ifBlank { display.primaryAddress }
+        }
+        val collapsedText = listOf(
+            display.primaryAddress.takeUnless { it == title }.orEmpty(),
             memo,
-        ).filter(String::isNotBlank).joinToString("\n")
+        ).filter(String::isNotBlank)
+            .joinToString(" · ")
+            .ifBlank { "눌러서 현재 목적지 열기" }
+        val detailedText = buildString {
+            display.primaryAddress.takeIf(String::isNotBlank)?.let { appendLine("주소  $it") }
+            display.buildingName.takeIf(String::isNotBlank)?.let { appendLine("건물  $it") }
+            display.unitDetail.takeIf(String::isNotBlank)?.let { appendLine("동·호수  $it") }
+            memo.takeIf(String::isNotBlank)?.let { appendLine("메모  $it") }
+        }.trim().ifBlank { collapsedText }
 
         val builder = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
-            .setCategory(Notification.CATEGORY_SERVICE)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(true)
+            .setCategory(Notification.CATEGORY_NAVIGATION)
             .setVisibility(Notification.VISIBILITY_PRIVATE)
-            .setSubText(if (previewMode) "샘플 오버레이" else "현재 배달 목적지")
+            .setSubText(if (previewMode) "샘플 목적지" else "현재 배달 목적지")
+            .setTicker(listOf(title, collapsedText).filter(String::isNotBlank).joinToString(" · "))
             .addAction(
                 Notification.Action.Builder(
                     android.R.drawable.ic_menu_close_clear_cancel,
@@ -172,17 +172,17 @@ class DestinationOverlayService : Service() {
 
         if (presentation.showDetailedNotification) {
             builder
-                .setContentTitle(display.primaryAddress)
-                .setContentText(summaryText)
+                .setContentTitle(title)
+                .setContentText(collapsedText)
                 .setStyle(
                     Notification.BigTextStyle()
-                        .setBigContentTitle(display.primaryAddress)
-                        .bigText(detailedText.ifBlank { summaryText }),
+                        .setBigContentTitle(title)
+                        .bigText(detailedText),
                 )
         } else {
             builder
-                .setContentTitle("목적지 오버레이 실행 중")
-                .setContentText("눌러서 현재 목적지 열기")
+                .setContentTitle("현재 배달 목적지 표시 중")
+                .setContentText("눌러서 목적지와 메모 열기")
         }
 
         val notification = builder.build()
@@ -197,33 +197,25 @@ class DestinationOverlayService : Service() {
         }
     }
 
-    private fun showOrUpdateOverlay(
+    private fun showCurrentPresentation(
         entryId: String,
         display: DestinationOverlayFormatter.DisplayParts,
         memo: String,
         previewMode: Boolean,
     ) {
         val presentation = OverlayPresentationSettings.load(this)
-        val style = OverlayStyleSettings.load(this)
-        removeOverlayView(clearActive = false)
         currentPresentationMode = presentation.mode
+        removeOverlayView(clearActive = false)
 
         when (presentation.mode) {
-            OverlayPresentationMode.CARD -> showCardOverlay(
-                entryId = entryId,
-                display = display,
-                memo = memo,
-                previewMode = previewMode,
-                style = style,
-            )
+            OverlayPresentationMode.CARD -> {
+                if (Settings.canDrawOverlays(this)) {
+                    showCardOverlay(entryId, display, memo, previewMode, OverlayStyleSettings.load(this))
+                }
+            }
 
-            OverlayPresentationMode.TOP_TICKER -> showTopTickerOverlay(
-                entryId = entryId,
-                display = display,
-                memo = memo,
-                previewMode = previewMode,
-                style = style,
-            )
+            // Kept under the legacy enum name for settings migration. This mode shows no fake overlay.
+            OverlayPresentationMode.TOP_TICKER -> Unit
         }
     }
 
@@ -338,116 +330,6 @@ class DestinationOverlayService : Service() {
         overlayParams = params
     }
 
-    private fun showTopTickerOverlay(
-        entryId: String,
-        display: DestinationOverlayFormatter.DisplayParts,
-        memo: String,
-        previewMode: Boolean,
-        style: OverlayStyle,
-    ) {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(9), dp(3), dp(4), dp(3))
-            background = overlayBackground(style, cornerRadiusDp = 10)
-            elevation = if (style.backgroundOpacityPercent == 0) 0f else dp(8).toFloat()
-        }
-        val viewport = FrameLayout(this).apply {
-            clipChildren = true
-            clipToPadding = true
-            if (!previewMode) setOnClickListener { startActivity(openEditorIntent(entryId)) }
-        }
-        val track = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val tickerContent = listOf(
-            display.primaryAddress,
-            display.buildingName,
-            display.unitDetail,
-            memo,
-        ).filter(String::isNotBlank)
-            .joinToString("   •   ")
-            .ifBlank { "목적지 정보 없음" }
-        val tickerTextSize = style.addressTextSizeSp.coerceIn(12, 24)
-        val firstText = tickerText(tickerContent, tickerTextSize, style)
-        val secondText = tickerText(tickerContent, tickerTextSize, style)
-        track.addView(firstText)
-        track.addView(secondText)
-        viewport.addView(
-            track,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            ).apply { gravity = Gravity.CENTER_VERTICAL },
-        )
-        root.addView(
-            viewport,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f),
-        )
-        root.addView(closeButton(style, tickerTextSize))
-
-        val tickerHeightDp = (tickerTextSize + 24).coerceIn(42, 64)
-        val params = WindowManager.LayoutParams(
-            resources.displayMetrics.widthPixels - dp(12),
-            dp(tickerHeightDp),
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = 0
-            y = statusBarHeightPx() + dp(4)
-        }
-
-        windowManager.addView(root, params)
-        overlayView = root
-        overlayParams = params
-        root.post { startTickerAnimation(viewport, track, firstText) }
-    }
-
-    private fun tickerText(
-        value: String,
-        sizeSp: Int,
-        style: OverlayStyle,
-    ): OutlinedTextView = outlinedText(
-        value = value,
-        sizeSp = sizeSp,
-        fillRgb = style.primaryTextColor,
-        bold = true,
-        maxLines = 1,
-        style = style,
-        topSpacingDp = 0,
-        endSpacingDp = 42,
-    ).apply {
-        setSingleLine(true)
-    }
-
-    private fun startTickerAnimation(
-        viewport: FrameLayout,
-        track: LinearLayout,
-        firstText: View,
-    ) {
-        tickerAnimator?.cancel()
-        val repeatDistance = firstText.width.toFloat()
-        if (repeatDistance <= 0f) return
-        if (repeatDistance <= viewport.width.toFloat()) {
-            track.translationX = 0f
-            return
-        }
-        val distanceDp = repeatDistance / resources.displayMetrics.density
-        tickerAnimator = ObjectAnimator.ofFloat(track, View.TRANSLATION_X, 0f, -repeatDistance).apply {
-            duration = ((distanceDp / TICKER_SPEED_DP_PER_SECOND) * 1000L)
-                .toLong()
-                .coerceAtLeast(4_000L)
-            interpolator = LinearInterpolator()
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.RESTART
-            start()
-        }
-    }
-
     private fun outlinedText(
         value: String,
         sizeSp: Int,
@@ -456,8 +338,6 @@ class DestinationOverlayService : Service() {
         maxLines: Int,
         style: OverlayStyle,
         muted: Boolean = false,
-        topSpacingDp: Int = 3,
-        endSpacingDp: Int = 4,
     ): OutlinedTextView {
         val fillOpacity = if (muted) {
             (style.textOpacityPercent * 62) / 100
@@ -474,8 +354,6 @@ class DestinationOverlayService : Service() {
                 outlineWidthDp = style.textOutlineWidthDp,
                 bold = bold,
                 maxLines = maxLines,
-                topSpacingDp = topSpacingDp,
-                endSpacingDp = endSpacingDp,
             )
         }
     }
@@ -491,7 +369,7 @@ class DestinationOverlayService : Service() {
                     style.textOpacityPercent,
                 ),
             )
-            setOnClickListener { stopOverlay() }
+            setOnClickListener { stopDestinationDisplay() }
         }
 
     private fun overlayBackground(style: OverlayStyle, cornerRadiusDp: Int): GradientDrawable =
@@ -505,16 +383,6 @@ class DestinationOverlayService : Service() {
             cornerRadius = dp(cornerRadiusDp).toFloat()
         }
 
-    private fun refreshCurrentOverlay() {
-        val display = activeDisplay ?: return
-        showOrUpdateOverlay(
-            entryId = activeEntryId,
-            display = display,
-            memo = activeMemo,
-            previewMode = activePreviewMode,
-        )
-    }
-
     private fun refreshCurrentPresentation() {
         val display = activeDisplay ?: return
         startAsForeground(
@@ -523,14 +391,12 @@ class DestinationOverlayService : Service() {
             memo = activeMemo,
             previewMode = activePreviewMode,
         )
-        if (Settings.canDrawOverlays(this)) {
-            showOrUpdateOverlay(
-                entryId = activeEntryId,
-                display = display,
-                memo = activeMemo,
-                previewMode = activePreviewMode,
-            )
-        }
+        showCurrentPresentation(
+            entryId = activeEntryId,
+            display = display,
+            memo = activeMemo,
+            previewMode = activePreviewMode,
+        )
     }
 
     private fun applyOverlaySize(size: OverlaySize) {
@@ -579,7 +445,7 @@ class DestinationOverlayService : Service() {
         }
     }
 
-    private fun stopOverlay() {
+    private fun stopDestinationDisplay() {
         removeOverlayView(clearActive = true)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -592,8 +458,6 @@ class DestinationOverlayService : Service() {
                 lastCardY = params.y
             }
         }
-        tickerAnimator?.cancel()
-        tickerAnimator = null
         overlayView?.let { view -> runCatching { windowManager.removeView(view) } }
         overlayView = null
         overlayParams = null
@@ -605,20 +469,15 @@ class DestinationOverlayService : Service() {
         }
     }
 
-    private fun statusBarHeightPx(): Int {
-        val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else 0
-    }
-
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "목적지 주소·메모 오버레이",
+                "현재 배달 목적지",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "현재 목적지의 주소, 건물명, 동·호수와 메모를 표시합니다."
+                description = "상태표시줄과 알림 패널에 현재 목적지의 주소와 메모를 표시합니다."
                 setShowBadge(false)
             },
         )
@@ -643,7 +502,6 @@ class DestinationOverlayService : Service() {
         private const val EXTRA_WIDTH_DP = "width_dp"
         private const val EXTRA_HEIGHT_DP = "height_dp"
         private const val EXTRA_PREVIEW_MODE = "preview_mode"
-        private const val TICKER_SPEED_DP_PER_SECOND = 42f
 
         fun show(context: Context, entry: AddressMemoEntry) {
             val intent = Intent(context, DestinationOverlayService::class.java).apply {
