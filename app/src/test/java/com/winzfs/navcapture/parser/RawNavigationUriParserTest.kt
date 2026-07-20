@@ -43,6 +43,16 @@ class RawNavigationUriParserTest {
     }
 
     @Test
+    fun parsesQuotedKakaoNaviCoordinatesFromCoupangEats() {
+        val payload = "%7B%22destination%22%3A%7B%22name%22%3A%22%EC%88%98%EC%99%84%EB%A3%A8%EC%95%84%EC%B1%84%22%2C%22x%22%3A%22126.81613495904809%22%2C%22y%22%3A%2235.197143351968194%22%7D%2C%22option%22%3A%7B%22coord_type%22%3A%22wgs84%22%2C%22rpoption%22%3A%224%22%7D%7D"
+        val result = parser.parse("kakaonavi-sdk://navigate?param=$payload&apiver=1.0")
+
+        assertEquals("수완루아채", result.destinationName)
+        assertEquals(35.197143351968194, result.latitude!!, 0.0000000001)
+        assertEquals(126.81613495904809, result.longitude!!, 0.0000000001)
+    }
+
+    @Test
     fun parsesTmapDestination() {
         val result = parser.parse(
             "tmap://route?rGoName=%EA%B4%91%EC%A3%BC%EA%B4%91%EC%97%AD%EC%8B%9C%EC%B2%AD" +
