@@ -14,14 +14,12 @@ enum class OverlayPresentationMode {
 data class OverlayPresentation(
     val mode: OverlayPresentationMode,
     val showDetailedNotification: Boolean,
-    val showHeadsUpNotification: Boolean,
 )
 
 object OverlayPresentationSettings {
     val defaultPresentation = OverlayPresentation(
         mode = OverlayPresentationMode.CARD,
         showDetailedNotification = true,
-        showHeadsUpNotification = true,
     )
 
     fun load(context: Context): OverlayPresentation {
@@ -38,10 +36,6 @@ object OverlayPresentationSettings {
                 KEY_DETAILED_NOTIFICATION,
                 defaultPresentation.showDetailedNotification,
             ),
-            showHeadsUpNotification = preferences.getBoolean(
-                KEY_HEADS_UP_NOTIFICATION,
-                defaultPresentation.showHeadsUpNotification,
-            ),
         )
     }
 
@@ -49,7 +43,6 @@ object OverlayPresentationSettings {
         preferences(context).edit()
             .putString(KEY_MODE, presentation.mode.name)
             .putBoolean(KEY_DETAILED_NOTIFICATION, presentation.showDetailedNotification)
-            .putBoolean(KEY_HEADS_UP_NOTIFICATION, presentation.showHeadsUpNotification)
             .apply()
         return presentation
     }
@@ -74,11 +67,6 @@ object OverlayPresentationSettings {
         return save(context, current.copy(showDetailedNotification = enabled))
     }
 
-    fun setHeadsUpNotification(context: Context, enabled: Boolean): OverlayPresentation {
-        val current = load(context)
-        return save(context, current.copy(showHeadsUpNotification = enabled))
-    }
-
     fun isNotificationOnly(context: Context): Boolean =
         load(context).mode == OverlayPresentationMode.TOP_TICKER
 
@@ -90,5 +78,4 @@ object OverlayPresentationSettings {
     private const val PREFERENCES_NAME = "destination_overlay_presentation"
     private const val KEY_MODE = "mode"
     private const val KEY_DETAILED_NOTIFICATION = "detailed_notification"
-    private const val KEY_HEADS_UP_NOTIFICATION = "heads_up_notification"
 }
