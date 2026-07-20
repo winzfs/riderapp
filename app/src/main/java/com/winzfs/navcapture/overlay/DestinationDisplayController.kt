@@ -8,26 +8,20 @@ import com.winzfs.navcapture.storage.AddressMemoStore
 /**
  * Chooses the real Android presentation path.
  *
- * CARD uses TYPE_APPLICATION_OVERLAY. The legacy TOP_TICKER stored value now routes to an
- * ongoing system notification, because modern Android does not expose scrolling status-bar text.
+ * CARD uses TYPE_APPLICATION_OVERLAY plus the required ongoing notification.
+ * The legacy TOP_TICKER stored value now means a system-notification-only mode.
  */
 object DestinationDisplayController {
     fun show(context: Context, entry: AddressMemoEntry): Boolean {
         DisplaySessionStore.saveEntry(context, entry.id)
-        return if (OverlayPresentationSettings.isNotificationOnly(context)) {
+        if (!OverlayPresentationSettings.isNotificationOnly(context) &&
+            !Settings.canDrawOverlays(context)
+        ) {
             DestinationOverlayService.hide(context)
-            DestinationNotificationService.show(context, entry)
-            true
-        } else {
-            DestinationNotificationService.hide(context)
-            if (!Settings.canDrawOverlays(context)) {
-                DestinationOverlayService.hide(context)
-                false
-            } else {
-                DestinationOverlayService.show(context, entry)
-                true
-            }
+            return false
         }
+        DestinationOverlayService.show(context, entry)
+        return true
     }
 
     fun showPreview(
@@ -38,32 +32,20 @@ object DestinationDisplayController {
         memo: String,
     ): Boolean {
         DisplaySessionStore.savePreview(context, address, buildingName, unitDetail, memo)
-        return if (OverlayPresentationSettings.isNotificationOnly(context)) {
+        if (!OverlayPresentationSettings.isNotificationOnly(context) &&
+            !Settings.canDrawOverlays(context)
+        ) {
             DestinationOverlayService.hide(context)
-            DestinationNotificationService.showPreview(
-                context = context,
-                address = address,
-                buildingName = buildingName,
-                unitDetail = unitDetail,
-                memo = memo,
-            )
-            true
-        } else {
-            DestinationNotificationService.hide(context)
-            if (!Settings.canDrawOverlays(context)) {
-                DestinationOverlayService.hide(context)
-                false
-            } else {
-                DestinationOverlayService.showPreview(
-                    context = context,
-                    address = address,
-                    buildingName = buildingName,
-                    unitDetail = unitDetail,
-                    memo = memo,
-                )
-                true
-            }
+            return false
         }
+        DestinationOverlayService.showPreview(
+            context = context,
+            address = address,
+            buildingName = buildingName,
+            unitDetail = unitDetail,
+            memo = memo,
+        )
+        return true
     }
 
     fun refreshPresentation(context: Context) {
@@ -71,6 +53,7 @@ object DestinationDisplayController {
             is DisplaySession.Entry -> {
                 AddressMemoStore(context).findById(session.entryId)?.let { show(context, it) }
             }
+
             is DisplaySession.Preview -> showPreview(
                 context = context,
                 address = session.address,
@@ -78,25 +61,18 @@ object DestinationDisplayController {
                 unitDetail = session.unitDetail,
                 memo = session.memo,
             )
-            null -> {
-                DestinationOverlayService.hide(context)
-                DestinationNotificationService.hide(context)
-            }
+
+            null -> DestinationOverlayService.hide(context)
         }
     }
 
     fun refreshStyle(context: Context) {
-        if (OverlayPresentationSettings.isNotificationOnly(context)) {
-            DestinationNotificationService.refresh(context)
-        } else {
-            DestinationOverlayService.refreshStyle(context)
-        }
+        DestinationOverlayService.refreshStyle(context)
     }
 
     fun hide(context: Context) {
         DisplaySessionStore.clear(context)
         DestinationOverlayService.hide(context)
-        DestinationNotificationService.hide(context)
     }
 }
 
@@ -142,12 +118,14 @@ private object DisplaySessionStore {
             TYPE_ENTRY -> preferences.getString(KEY_ENTRY_ID, null)
                 ?.takeIf(String::isNotBlank)
                 ?.let(DisplaySession::Entry)
+
             TYPE_PREVIEW -> DisplaySession.Preview(
                 address = preferences.getString(KEY_ADDRESS, "").orEmpty(),
                 buildingName = preferences.getString(KEY_BUILDING, "").orEmpty(),
                 unitDetail = preferences.getString(KEY_UNIT, "").orEmpty(),
                 memo = preferences.getString(KEY_MEMO, "").orEmpty(),
             )
+
             else -> null
         }
     }
