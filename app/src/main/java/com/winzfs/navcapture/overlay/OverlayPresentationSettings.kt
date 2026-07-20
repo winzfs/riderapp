@@ -21,7 +21,7 @@ object OverlayPresentationSettings {
     val defaultPresentation = OverlayPresentation(
         mode = OverlayPresentationMode.CARD,
         showDetailedNotification = true,
-        showHeadsUpNotification = false,
+        showHeadsUpNotification = true,
     )
 
     fun load(context: Context): OverlayPresentation {
