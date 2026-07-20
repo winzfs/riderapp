@@ -9,6 +9,8 @@ import com.winzfs.navcapture.model.CapturedDestination
 import org.json.JSONObject
 import java.io.File
 import java.lang.reflect.Array as ReflectArray
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,7 +36,7 @@ class IncomingIntentLogStore(private val activity: Activity) {
         parseError: Throwable? = null,
     ): Entry = synchronized(FILE_LOCK) {
         val now = System.currentTimeMillis()
-        val source = sourceLabel(activity)
+        val source = sourceLabel(activity, sourceIntent)
         val destination = parsedCapture?.destinationName.orEmpty().ifBlank {
             sourceIntent.data?.toString().orEmpty().take(80)
         }.ifBlank { "목적지명 없음" }
@@ -123,6 +125,8 @@ class IncomingIntentLogStore(private val activity: Activity) {
             appendLine("meaningful=${parsedCapture.hasCoordinates || parsedCapture.destinationName.isNotBlank() || parsedCapture.rawUri.isNotBlank()}")
             appendLine("extrasSnapshot=")
             appendLine(indent(sanitizeText(parsedCapture.extrasText).ifBlank { "없음" }))
+            appendLine()
+            append(renderDeliveryDetailAssessment(sourceIntent, parsedCapture))
         }
         parseError?.let {
             appendLine()
@@ -130,6 +134,49 @@ class IncomingIntentLogStore(private val activity: Activity) {
             appendLine("${it.javaClass.name}: ${sanitizeText(it.message.orEmpty())}")
         }
     }.take(MAX_ENTRY_CHARS)
+
+    private fun renderDeliveryDetailAssessment(
+        sourceIntent: Intent,
+        parsedCapture: CapturedDestination,
+    ): String = buildString {
+        val decodedPayload = decodeRepeatedly(
+            listOf(
+                sourceIntent.data?.toString().orEmpty(),
+                parsedCapture.rawUri,
+                parsedCapture.destinationName,
+                parsedCapture.extrasText,
+            ).joinToString("\n"),
+        )
+        val unitMatches = UNIT_DETAIL.findAll(decodedPayload)
+            .map { it.value.trim() }
+            .filterNot { it in ADMINISTRATIVE_DONG_WORDS }
+            .distinct()
+            .take(10)
+            .toList()
+        val compactPair = COMPACT_UNIT_PAIR.find(decodedPayload)?.value.orEmpty()
+
+        appendLine("[전달 데이터 판단]")
+        appendLine("좌표 전달=${if (parsedCapture.hasCoordinates) "있음" else "없음"}")
+        appendLine(
+            "동·호수 텍스트 전달=" + when {
+                unitMatches.isNotEmpty() -> unitMatches.joinToString(" · ")
+                compactPair.isNotBlank() -> compactPair
+                else -> "없음"
+            },
+        )
+        appendLine(
+            when {
+                parsedCapture.hasCoordinates && unitMatches.isEmpty() && compactPair.isBlank() ->
+                    "판단=목적지 위치는 좌표로 전달됐지만 동·호수 문자열은 전달되지 않았습니다. 네비의 동 위치 핀은 이 좌표를 사용한 결과일 수 있습니다."
+                parsedCapture.hasCoordinates ->
+                    "판단=좌표와 상세주소 후보가 함께 전달됐습니다."
+                unitMatches.isNotEmpty() || compactPair.isNotBlank() ->
+                    "판단=상세주소 후보는 있으나 목적지 좌표는 추출되지 않았습니다."
+                else ->
+                    "판단=좌표와 동·호수 문자열을 모두 확인하지 못했습니다."
+            },
+        )
+    }
 
     private fun renderExtras(intent: Intent): String = buildString {
         appendLine("[Extras]")
@@ -239,12 +286,37 @@ class IncomingIntentLogStore(private val activity: Activity) {
 
     private fun isSensitiveKey(value: String): Boolean = SENSITIVE_KEY.containsMatchIn(value)
 
-    private fun sourceLabel(activity: Activity): String {
+    private fun sourceLabel(activity: Activity, sourceIntent: Intent): String {
         val referrer = activity.referrer?.toString().orEmpty()
-        return activity.callingPackage
+        val direct = activity.callingPackage
             ?: activity.callingActivity?.packageName
             ?: referrer.removePrefix("android-app://").substringBefore('/').takeIf(String::isNotBlank)
-            ?: "확인 불가"
+        val embedded = inferPackageFromPayload(sourceIntent.data?.toString().orEmpty())
+        return packageLabel(direct ?: embedded ?: "확인 불가")
+    }
+
+    private fun inferPackageFromPayload(value: String): String? {
+        val decoded = decodeRepeatedly(value)
+        APP_PKG_JSON.find(decoded)?.groupValues?.getOrNull(1)?.let { return it }
+        ANDROID_PKG_TOKEN.find(decoded)?.groupValues?.getOrNull(1)?.let { return it }
+        return null
+    }
+
+    private fun packageLabel(packageName: String): String = when (packageName) {
+        "com.coupang.mobile.eats.courier" -> "쿠팡이츠 배달파트너 ($packageName)"
+        else -> packageName
+    }
+
+    private fun decodeRepeatedly(value: String): String {
+        var current = value
+        repeat(3) {
+            val decoded = runCatching {
+                URLDecoder.decode(current, StandardCharsets.UTF_8.name())
+            }.getOrDefault(current)
+            if (decoded == current) return current
+            current = decoded
+        }
+        return current
     }
 
     private fun indent(value: String): String = value.lineSequence().joinToString("\n") { "  $it" }
@@ -302,5 +374,16 @@ class IncomingIntentLogStore(private val activity: Activity) {
         private val SECRET_ASSIGNMENT = Regex(
             "(?i)(token|auth|password|passwd|secret|api.?key|app.?key|session|cookie|bearer|client.?secret|access.?key)\\s*[:=]\\s*[^&,;\\s}\"]+",
         )
+        private val APP_PKG_JSON = Regex("\\\"appPkg\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"")
+        private val ANDROID_PKG_TOKEN = Regex("android_pkg/([A-Za-z0-9._]+)")
+        private val UNIT_DETAIL = Regex(
+            "(?<![가-힣A-Za-z0-9])(?:[A-Za-z]|B?\\d{1,4})\\s*(?:동|층|호)(?![가-힣])",
+            RegexOption.IGNORE_CASE,
+        )
+        private val COMPACT_UNIT_PAIR = Regex(
+            "(?<!\\d)(?:B?\\d{1,4})\\s*[-/]\\s*(?:B?\\d{1,4})(?!\\d)",
+            RegexOption.IGNORE_CASE,
+        )
+        private val ADMINISTRATIVE_DONG_WORDS = setOf("수완동", "신가동", "장덕동")
     }
 }
