@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.4 extras-only destination handling, local incoming Intent diagnostics, and simplified UI.
