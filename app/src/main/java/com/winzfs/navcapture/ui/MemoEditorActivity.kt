@@ -14,7 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.winzfs.navcapture.address.RoadAddressResolver
 import com.winzfs.navcapture.model.AddressMemoEntry
-import com.winzfs.navcapture.overlay.DestinationOverlayService
+import com.winzfs.navcapture.overlay.DestinationDisplayController
 import com.winzfs.navcapture.storage.AddressMemoStore
 
 class MemoEditorActivity : Activity() {
@@ -29,8 +29,8 @@ class MemoEditorActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var autoFindButton: Button
 
-    private val refreshOverlay: Boolean
-        get() = intent.getBooleanExtra(EXTRA_REFRESH_OVERLAY, false)
+    private val refreshDisplay: Boolean
+        get() = intent.getBooleanExtra(EXTRA_REFRESH_DISPLAY, false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -156,7 +156,7 @@ class MemoEditorActivity : Activity() {
         )
         intent.putExtra(EXTRA_ENTRY_ID, entry.id)
         statusText.text = "참고 주소와 메모를 저장했습니다. 배달앱 원문은 변경하지 않았습니다."
-        if (refreshOverlay) DestinationOverlayService.show(this, entry)
+        if (refreshDisplay) DestinationDisplayController.show(this, entry)
         toast("저장했습니다.")
     }
 
@@ -237,7 +237,7 @@ class MemoEditorActivity : Activity() {
             .setMessage("이 장소의 참고 주소와 개인 메모를 삭제할까요?")
             .setPositiveButton("삭제") { _, _ ->
                 store.delete(entry.id)
-                if (refreshOverlay) DestinationOverlayService.hide(this)
+                if (refreshDisplay) DestinationDisplayController.hide(this)
                 toast("삭제했습니다.")
                 finish()
             }
@@ -260,12 +260,12 @@ class MemoEditorActivity : Activity() {
 
     companion object {
         private const val EXTRA_ENTRY_ID = "entry_id"
-        private const val EXTRA_REFRESH_OVERLAY = "refresh_overlay"
+        private const val EXTRA_REFRESH_DISPLAY = "refresh_overlay"
 
         fun intent(context: Context, entryId: String, refreshOverlay: Boolean): Intent =
             Intent(context, MemoEditorActivity::class.java).apply {
                 putExtra(EXTRA_ENTRY_ID, entryId)
-                putExtra(EXTRA_REFRESH_OVERLAY, refreshOverlay)
+                putExtra(EXTRA_REFRESH_DISPLAY, refreshOverlay)
             }
     }
 }
