@@ -2,7 +2,6 @@ package com.winzfs.navcapture.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -13,12 +12,16 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import com.winzfs.navcapture.navigation.NavApp
 import com.winzfs.navcapture.overlay.DestinationOverlayService
+import com.winzfs.navcapture.overlay.OverlayPresentationMode
+import com.winzfs.navcapture.overlay.OverlayPresentationSettings
 import com.winzfs.navcapture.overlay.OverlaySize
 import com.winzfs.navcapture.overlay.OverlaySizePolicy
 import com.winzfs.navcapture.overlay.OverlayStyle
@@ -62,11 +65,12 @@ class AppSettingsActivity : Activity() {
             RiderUi.topBar(
                 activity = this,
                 titleText = "오버레이 설정",
-                subtitleText = "표시, 크기, 글자와 색상을 항목별로 조절합니다.",
+                subtitleText = "표시 방식, 알림창, 크기와 글자를 항목별로 조절합니다.",
             ),
         )
 
         root.addView(buildDisplayCard(), RiderUi.fullWidth(this, bottom = 12))
+        root.addView(buildPresentationCard(), RiderUi.fullWidth(this, bottom = 12))
         root.addView(buildSizeCard(), RiderUi.fullWidth(this, bottom = 12))
         root.addView(buildBackgroundCard(), RiderUi.fullWidth(this, bottom = 12))
         root.addView(buildTypographyCard(), RiderUi.fullWidth(this, bottom = 12))
@@ -114,19 +118,96 @@ class AppSettingsActivity : Activity() {
         )
     }
 
+    private fun buildPresentationCard(): LinearLayout = RiderUi.card(
+        context = this,
+        titleText = "표시 방식과 알림창",
+        subtitleText = "카드형 또는 화면 최상단 한 줄 스크롤바를 선택하고, 알림창 상세 표시를 정합니다.",
+    ).apply {
+        val presentation = OverlayPresentationSettings.load(this@AppSettingsActivity)
+        val cardId = View.generateViewId()
+        val tickerId = View.generateViewId()
+        val modeGroup = RadioGroup(this@AppSettingsActivity).apply {
+            orientation = RadioGroup.VERTICAL
+        }
+        modeGroup.addView(RadioButton(this@AppSettingsActivity).apply {
+            id = cardId
+            text = "카드형 오버레이"
+            textSize = 15f
+            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 5), 0, RiderUi.dp(this@AppSettingsActivity, 3))
+        })
+        modeGroup.addView(RadioButton(this@AppSettingsActivity).apply {
+            id = tickerId
+            text = "화면 상단 한 줄 스크롤바"
+            textSize = 15f
+            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 3), 0, RiderUi.dp(this@AppSettingsActivity, 5))
+        })
+        modeGroup.check(
+            if (presentation.mode == OverlayPresentationMode.TOP_TICKER) tickerId else cardId,
+        )
+        modeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val mode = if (checkedId == tickerId) {
+                OverlayPresentationMode.TOP_TICKER
+            } else {
+                OverlayPresentationMode.CARD
+            }
+            OverlayPresentationSettings.setMode(this@AppSettingsActivity, mode)
+            DestinationOverlayService.refreshPresentation(this@AppSettingsActivity)
+        }
+        addView(modeGroup, RiderUi.fullWidth(this@AppSettingsActivity, top = 8))
+
+        addView(TextView(this@AppSettingsActivity).apply {
+            text = "상단 스크롤바는 시스템 상태 아이콘 영역 바로 아래에 고정되며, 주소 · 건물명 · 동호수 · 메모가 반복해서 흐릅니다."
+            textSize = 12.5f
+            setTextColor(RiderUi.muted)
+            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 4), 0, RiderUi.dp(this@AppSettingsActivity, 7))
+        }, RiderUi.fullWidth(this@AppSettingsActivity))
+
+        addView(Switch(this@AppSettingsActivity).apply {
+            text = "알림창에 주소·동호수·메모 상세 표시"
+            textSize = 15f
+            isChecked = presentation.showDetailedNotification
+            setOnCheckedChangeListener { _, checked ->
+                OverlayPresentationSettings.setDetailedNotification(
+                    this@AppSettingsActivity,
+                    checked,
+                )
+                DestinationOverlayService.refreshPresentation(this@AppSettingsActivity)
+            }
+        }, RiderUi.fullWidth(this@AppSettingsActivity, top = 4))
+
+        addView(TextView(this@AppSettingsActivity).apply {
+            text = "꺼도 오버레이 실행을 위한 최소 서비스 알림은 유지됩니다. 켜면 상단바를 내려 주소와 메모 전체를 펼쳐 볼 수 있습니다."
+            textSize = 12.5f
+            setTextColor(RiderUi.muted)
+            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 4), 0, 0)
+        }, RiderUi.fullWidth(this@AppSettingsActivity))
+    }
+
     private fun buildSizeCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "창 크기",
-        subtitleText = "가로와 세로를 10dp 단위로 조절합니다. 현재 오버레이에 즉시 반영됩니다.",
+        subtitleText = "카드형 오버레이의 가로와 세로를 10dp 단위로 조절합니다.",
     ).apply {
         widthValue = RiderUi.valueBox(this@AppSettingsActivity)
         heightValue = RiderUi.valueBox(this@AppSettingsActivity)
-        addView(stepper("가로", widthValue,
-            { adjustSize(-OverlaySizePolicy.WIDTH_STEP_DP, 0) },
-            { adjustSize(OverlaySizePolicy.WIDTH_STEP_DP, 0) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 11))
-        addView(stepper("세로", heightValue,
-            { adjustSize(0, -OverlaySizePolicy.HEIGHT_STEP_DP) },
-            { adjustSize(0, OverlaySizePolicy.HEIGHT_STEP_DP) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 7))
+        addView(
+            stepper(
+                "가로",
+                widthValue,
+                { adjustSize(-OverlaySizePolicy.WIDTH_STEP_DP, 0) },
+                { adjustSize(OverlaySizePolicy.WIDTH_STEP_DP, 0) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 11),
+        )
+        addView(
+            stepper(
+                "세로",
+                heightValue,
+                { adjustSize(0, -OverlaySizePolicy.HEIGHT_STEP_DP) },
+                { adjustSize(0, OverlaySizePolicy.HEIGHT_STEP_DP) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 7),
+        )
         addView(
             RiderUi.secondaryButton(this@AppSettingsActivity, "기본 창 크기로 복원") {
                 renderSize(DestinationOverlayService.resetSize(this@AppSettingsActivity))
@@ -141,14 +222,23 @@ class AppSettingsActivity : Activity() {
         subtitleText = "배경만 변경되며 글자 선명도에는 영향을 주지 않습니다.",
     ).apply {
         backgroundOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
-        addView(stepper("배경 투명도", backgroundOpacityValue,
-            { adjustBackgroundOpacity(-OverlayStyleSettings.OPACITY_STEP_PERCENT) },
-            { adjustBackgroundOpacity(OverlayStyleSettings.OPACITY_STEP_PERCENT) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 11))
-        addView(presetRow(
-            "완전 투명" to { setBackgroundOpacity(0) },
-            "반투명" to { setBackgroundOpacity(45) },
-            "진하게" to { setBackgroundOpacity(85) },
-        ), RiderUi.fullWidth(this@AppSettingsActivity, top = 8))
+        addView(
+            stepper(
+                "배경 투명도",
+                backgroundOpacityValue,
+                { adjustBackgroundOpacity(-OverlayStyleSettings.OPACITY_STEP_PERCENT) },
+                { adjustBackgroundOpacity(OverlayStyleSettings.OPACITY_STEP_PERCENT) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 11),
+        )
+        addView(
+            presetRow(
+                "완전 투명" to { setBackgroundOpacity(0) },
+                "반투명" to { setBackgroundOpacity(45) },
+                "진하게" to { setBackgroundOpacity(85) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 8),
+        )
 
         backgroundColorField = colorField("배경색")
         addView(backgroundColorField.root, RiderUi.fullWidth(this@AppSettingsActivity, top = 13))
@@ -171,7 +261,7 @@ class AppSettingsActivity : Activity() {
     private fun buildTypographyCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "글자 크기",
-        subtitleText = "각 정보의 크기를 1sp 단위로 조절합니다. 좁은 창에서는 줄바꿈도 함께 확인하세요.",
+        subtitleText = "각 정보의 크기를 1sp 단위로 조절합니다. 상단 스크롤바는 주소 크기를 사용합니다.",
     ).apply {
         addressTextSizeValue = RiderUi.valueBox(this@AppSettingsActivity)
         buildingTextSizeValue = RiderUi.valueBox(this@AppSettingsActivity)
@@ -198,14 +288,23 @@ class AppSettingsActivity : Activity() {
         subtitleText = "글자 투명도와 항목별 색상을 배경과 별도로 조절합니다.",
     ).apply {
         textOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
-        addView(stepper("글자 선명도", textOpacityValue,
-            { adjustTextOpacity(-OverlayStyleSettings.OPACITY_STEP_PERCENT) },
-            { adjustTextOpacity(OverlayStyleSettings.OPACITY_STEP_PERCENT) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 11))
-        addView(presetRow(
-            "60%" to { setTextOpacity(60) },
-            "80%" to { setTextOpacity(80) },
-            "선명 100%" to { setTextOpacity(100) },
-        ), RiderUi.fullWidth(this@AppSettingsActivity, top = 8))
+        addView(
+            stepper(
+                "글자 선명도",
+                textOpacityValue,
+                { adjustTextOpacity(-OverlayStyleSettings.OPACITY_STEP_PERCENT) },
+                { adjustTextOpacity(OverlayStyleSettings.OPACITY_STEP_PERCENT) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 11),
+        )
+        addView(
+            presetRow(
+                "60%" to { setTextOpacity(60) },
+                "80%" to { setTextOpacity(80) },
+                "선명 100%" to { setTextOpacity(100) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 8),
+        )
 
         primaryColorField = colorField("주소 글자색")
         secondaryColorField = colorField("건물명·메모색")
@@ -222,16 +321,28 @@ class AppSettingsActivity : Activity() {
     private fun buildTextOutlineCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "글자 윤곽선",
-        subtitleText = "글자 한 개를 스트로크와 본문으로 겹쳐 그려 줄바꿈 시에도 정확히 맞습니다. 0dp는 윤곽선 없음입니다.",
+        subtitleText = "글자 한 개를 스트로크와 본문으로 겹쳐 그립니다. 0dp는 윤곽선 없음입니다.",
     ).apply {
         outlineWidthValue = RiderUi.valueBox(this@AppSettingsActivity)
         outlineOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
-        addView(stepper("윤곽선 두께", outlineWidthValue,
-            { adjustTextOutlineWidth(-OverlayStyleSettings.TEXT_OUTLINE_WIDTH_STEP_DP) },
-            { adjustTextOutlineWidth(OverlayStyleSettings.TEXT_OUTLINE_WIDTH_STEP_DP) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 11))
-        addView(stepper("윤곽선 선명도", outlineOpacityValue,
-            { adjustTextOutlineOpacity(-OverlayStyleSettings.TEXT_OUTLINE_OPACITY_STEP_PERCENT) },
-            { adjustTextOutlineOpacity(OverlayStyleSettings.TEXT_OUTLINE_OPACITY_STEP_PERCENT) }), RiderUi.fullWidth(this@AppSettingsActivity, top = 7))
+        addView(
+            stepper(
+                "윤곽선 두께",
+                outlineWidthValue,
+                { adjustTextOutlineWidth(-OverlayStyleSettings.TEXT_OUTLINE_WIDTH_STEP_DP) },
+                { adjustTextOutlineWidth(OverlayStyleSettings.TEXT_OUTLINE_WIDTH_STEP_DP) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 11),
+        )
+        addView(
+            stepper(
+                "윤곽선 선명도",
+                outlineOpacityValue,
+                { adjustTextOutlineOpacity(-OverlayStyleSettings.TEXT_OUTLINE_OPACITY_STEP_PERCENT) },
+                { adjustTextOutlineOpacity(OverlayStyleSettings.TEXT_OUTLINE_OPACITY_STEP_PERCENT) },
+            ),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 7),
+        )
 
         outlineColorField = colorField("윤곽선 색")
         addView(outlineColorField.root, RiderUi.fullWidth(this@AppSettingsActivity, top = 10))
@@ -277,13 +388,16 @@ class AppSettingsActivity : Activity() {
         }, RiderUi.fullWidth(this@AppSettingsActivity, heightDp = 48))
     }
 
-    private fun fontSizeStepper(label: String, valueView: TextView, target: FontTarget): LinearLayout =
-        stepper(
-            label = label,
-            valueView = valueView,
-            minus = { adjustFontSize(target, -OverlayStyleSettings.TEXT_SIZE_STEP_SP) },
-            plus = { adjustFontSize(target, OverlayStyleSettings.TEXT_SIZE_STEP_SP) },
-        )
+    private fun fontSizeStepper(
+        label: String,
+        valueView: TextView,
+        target: FontTarget,
+    ): LinearLayout = stepper(
+        label = label,
+        valueView = valueView,
+        minus = { adjustFontSize(target, -OverlayStyleSettings.TEXT_SIZE_STEP_SP) },
+        plus = { adjustFontSize(target, OverlayStyleSettings.TEXT_SIZE_STEP_SP) },
+    )
 
     private fun stepper(
         label: String,
@@ -298,32 +412,66 @@ class AppSettingsActivity : Activity() {
             textSize = 14f
             setTextColor(RiderUi.body)
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        addView(RiderUi.smallButton(this@AppSettingsActivity, "−", minus), LinearLayout.LayoutParams(RiderUi.dp(this@AppSettingsActivity, 43), RiderUi.dp(this@AppSettingsActivity, 42)))
-        addView(valueView, LinearLayout.LayoutParams(RiderUi.dp(this@AppSettingsActivity, 84), RiderUi.dp(this@AppSettingsActivity, 42)).apply {
-            marginStart = RiderUi.dp(this@AppSettingsActivity, 5)
-            marginEnd = RiderUi.dp(this@AppSettingsActivity, 5)
-        })
-        addView(RiderUi.smallButton(this@AppSettingsActivity, "+", plus), LinearLayout.LayoutParams(RiderUi.dp(this@AppSettingsActivity, 43), RiderUi.dp(this@AppSettingsActivity, 42)))
+        addView(
+            RiderUi.smallButton(this@AppSettingsActivity, "−", minus),
+            LinearLayout.LayoutParams(
+                RiderUi.dp(this@AppSettingsActivity, 43),
+                RiderUi.dp(this@AppSettingsActivity, 42),
+            ),
+        )
+        addView(
+            valueView,
+            LinearLayout.LayoutParams(
+                RiderUi.dp(this@AppSettingsActivity, 84),
+                RiderUi.dp(this@AppSettingsActivity, 42),
+            ).apply {
+                marginStart = RiderUi.dp(this@AppSettingsActivity, 5)
+                marginEnd = RiderUi.dp(this@AppSettingsActivity, 5)
+            },
+        )
+        addView(
+            RiderUi.smallButton(this@AppSettingsActivity, "+", plus),
+            LinearLayout.LayoutParams(
+                RiderUi.dp(this@AppSettingsActivity, 43),
+                RiderUi.dp(this@AppSettingsActivity, 42),
+            ),
+        )
     }
 
-    private fun presetRow(vararg presets: Pair<String, () -> Unit>): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        presets.forEachIndexed { index, (label, action) ->
-            addView(
-                RiderUi.smallButton(this@AppSettingsActivity, label, action),
-                LinearLayout.LayoutParams(0, RiderUi.dp(this@AppSettingsActivity, 40), 1f).apply {
-                    if (index > 0) marginStart = RiderUi.dp(this@AppSettingsActivity, 5)
-                },
-            )
+    private fun presetRow(vararg presets: Pair<String, () -> Unit>): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            presets.forEachIndexed { index, (label, action) ->
+                addView(
+                    RiderUi.smallButton(this@AppSettingsActivity, label, action),
+                    LinearLayout.LayoutParams(
+                        0,
+                        RiderUi.dp(this@AppSettingsActivity, 40),
+                        1f,
+                    ).apply {
+                        if (index > 0) marginStart = RiderUi.dp(this@AppSettingsActivity, 5)
+                    },
+                )
+            }
         }
-    }
 
     private fun colorField(label: String): ColorField {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(RiderUi.dp(this@AppSettingsActivity, 12), RiderUi.dp(this@AppSettingsActivity, 7), RiderUi.dp(this@AppSettingsActivity, 8), RiderUi.dp(this@AppSettingsActivity, 7))
-            background = RiderUi.rounded(RiderUi.soft, 12f, RiderUi.border, 1, this@AppSettingsActivity)
+            setPadding(
+                RiderUi.dp(this@AppSettingsActivity, 12),
+                RiderUi.dp(this@AppSettingsActivity, 7),
+                RiderUi.dp(this@AppSettingsActivity, 8),
+                RiderUi.dp(this@AppSettingsActivity, 7),
+            )
+            background = RiderUi.rounded(
+                RiderUi.soft,
+                12f,
+                RiderUi.border,
+                1,
+                this@AppSettingsActivity,
+            )
         }
         root.addView(TextView(this).apply {
             text = label
@@ -342,8 +490,20 @@ class AppSettingsActivity : Activity() {
             minWidth = RiderUi.dp(this@AppSettingsActivity, 31)
             minHeight = RiderUi.dp(this@AppSettingsActivity, 31)
         }
-        root.addView(input, LinearLayout.LayoutParams(RiderUi.dp(this@AppSettingsActivity, 92), RiderUi.dp(this@AppSettingsActivity, 39)))
-        root.addView(swatch, LinearLayout.LayoutParams(RiderUi.dp(this@AppSettingsActivity, 31), RiderUi.dp(this@AppSettingsActivity, 31)))
+        root.addView(
+            input,
+            LinearLayout.LayoutParams(
+                RiderUi.dp(this@AppSettingsActivity, 92),
+                RiderUi.dp(this@AppSettingsActivity, 39),
+            ),
+        )
+        root.addView(
+            swatch,
+            LinearLayout.LayoutParams(
+                RiderUi.dp(this@AppSettingsActivity, 31),
+                RiderUi.dp(this@AppSettingsActivity, 31),
+            ),
+        )
         return ColorField(root, input, swatch)
     }
 
@@ -443,11 +603,20 @@ class AppSettingsActivity : Activity() {
 
     private fun updateColorField(field: ColorField, color: Int) {
         field.input.setText(OverlayStyleSettings.formatHex(color))
-        field.swatch.background = RiderUi.rounded(0xFF000000.toInt() or color, 9f, RiderUi.border, 1, this)
+        field.swatch.background = RiderUi.rounded(
+            0xFF000000.toInt() or color,
+            9f,
+            RiderUi.border,
+            1,
+            this,
+        )
     }
 
     private fun openOverlayPermissionSettings() {
-        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName"),
+        )
         runCatching { startActivity(intent) }
             .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)) }
     }
