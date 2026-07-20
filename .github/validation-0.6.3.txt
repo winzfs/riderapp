@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.3 top scrolling overlay bar and expanded notification details.
