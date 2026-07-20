@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.5 notification-only presentation, Android notification permission UI, and quoted Kakao Navi coordinates.
