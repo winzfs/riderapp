@@ -1,0 +1,1 @@
+Validate RiderApp 0.6.5 real system notification mode, quoted Kakao Navi coordinates, and diagnostic source/detail assessment.
