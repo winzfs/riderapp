@@ -1,8 +1,11 @@
 package com.winzfs.navcapture.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputFilter
@@ -29,6 +32,7 @@ import com.winzfs.navcapture.overlay.OverlayStyleSettings
 
 class AppSettingsActivity : Activity() {
     private lateinit var overlayPermissionButton: Button
+    private lateinit var notificationPermissionButton: Button
     private lateinit var widthValue: TextView
     private lateinit var heightValue: TextView
     private lateinit var backgroundOpacityValue: TextView
@@ -53,9 +57,25 @@ class AppSettingsActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        updatePermissionButton()
+        updatePermissionButtons()
         renderSize()
         renderStyle(OverlayStyleSettings.load(this))
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            updatePermissionButtons()
+            if (hasNotificationPermission()) {
+                toast("알림 권한을 허용했습니다.")
+            } else {
+                toast("알림 권한이 없으면 상태표시줄과 알림 패널에 목적지가 보이지 않습니다.")
+            }
+        }
     }
 
     private fun buildUi() {
@@ -64,8 +84,8 @@ class AppSettingsActivity : Activity() {
         root.addView(
             RiderUi.topBar(
                 activity = this,
-                titleText = "오버레이 설정",
-                subtitleText = "표시 방식, 알림창, 크기와 글자를 항목별로 조절합니다.",
+                titleText = "목적지 표시 설정",
+                subtitleText = "화면 카드, 알림 패널, 크기와 글자를 조절합니다.",
             ),
         )
 
@@ -78,7 +98,7 @@ class AppSettingsActivity : Activity() {
         root.addView(buildTextOutlineCard(), RiderUi.fullWidth(this, bottom = 12))
         root.addView(buildNavigationCard(), RiderUi.fullWidth(this, bottom = 12))
         root.addView(
-            RiderUi.primaryButton(this, "샘플 주소로 실제 오버레이 확인") {
+            RiderUi.primaryButton(this, "샘플 주소·알림 테스트") {
                 startActivity(Intent(this, OverlayPreviewActivity::class.java))
             },
             RiderUi.fullWidth(this, heightDp = 50),
@@ -88,11 +108,11 @@ class AppSettingsActivity : Activity() {
 
     private fun buildDisplayCard(): LinearLayout = RiderUi.card(
         context = this,
-        titleText = "표시",
-        subtitleText = "오버레이 권한과 현재 표시 상태를 관리합니다.",
+        titleText = "표시 기능",
+        subtitleText = "목적지를 화면 카드 또는 시스템 알림 패널에 유지합니다.",
     ).apply {
         addView(Switch(this@AppSettingsActivity).apply {
-            text = "다른 앱 위에 목적지 표시"
+            text = "목적지 표시 기능 사용"
             textSize = 15f
             isChecked = settings().getBoolean(KEY_OVERLAY_ENABLED, true)
             setPadding(0, RiderUi.dp(this@AppSettingsActivity, 7), 0, 0)
@@ -100,8 +120,15 @@ class AppSettingsActivity : Activity() {
                 settings().edit().putBoolean(KEY_OVERLAY_ENABLED, checked).apply()
                 if (!checked) {
                     DestinationOverlayService.hide(this@AppSettingsActivity)
-                } else if (!Settings.canDrawOverlays(this@AppSettingsActivity)) {
-                    toast("오버레이 권한을 먼저 허용해 주세요.")
+                } else {
+                    val notificationOnly = OverlayPresentationSettings.isNotificationOnly(
+                        this@AppSettingsActivity,
+                    )
+                    if (notificationOnly) {
+                        requestNotificationPermissionIfNeeded()
+                    } else if (!Settings.canDrawOverlays(this@AppSettingsActivity)) {
+                        toast("화면 카드 모드에는 오버레이 권한이 필요합니다.")
+                    }
                 }
             }
         }, RiderUi.fullWidth(this@AppSettingsActivity, top = 5))
@@ -109,9 +136,25 @@ class AppSettingsActivity : Activity() {
         overlayPermissionButton = RiderUi.secondaryButton(this@AppSettingsActivity, "") {
             openOverlayPermissionSettings()
         }
-        addView(overlayPermissionButton, RiderUi.fullWidth(this@AppSettingsActivity, top = 8, heightDp = 46))
         addView(
-            RiderUi.secondaryButton(this@AppSettingsActivity, "현재 오버레이 닫기") {
+            overlayPermissionButton,
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 8, heightDp = 46),
+        )
+
+        notificationPermissionButton = RiderUi.secondaryButton(this@AppSettingsActivity, "") {
+            if (hasNotificationPermission()) {
+                openNotificationSettings()
+            } else {
+                requestNotificationPermissionIfNeeded()
+            }
+        }
+        addView(
+            notificationPermissionButton,
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 7, heightDp = 46),
+        )
+
+        addView(
+            RiderUi.secondaryButton(this@AppSettingsActivity, "현재 목적지 표시 닫기") {
                 DestinationOverlayService.hide(this@AppSettingsActivity)
             },
             RiderUi.fullWidth(this@AppSettingsActivity, top = 7, heightDp = 46),
@@ -120,50 +163,75 @@ class AppSettingsActivity : Activity() {
 
     private fun buildPresentationCard(): LinearLayout = RiderUi.card(
         context = this,
-        titleText = "표시 방식과 알림창",
-        subtitleText = "카드형 또는 화면 최상단 한 줄 스크롤바를 선택하고, 알림창 상세 표시를 정합니다.",
+        titleText = "표시 위치",
+        subtitleText = "상태표시줄에는 앱 아이콘이 표시되고, 아래로 내리면 주소와 메모를 확인할 수 있습니다.",
     ).apply {
         val presentation = OverlayPresentationSettings.load(this@AppSettingsActivity)
         val cardId = View.generateViewId()
-        val tickerId = View.generateViewId()
+        val notificationOnlyId = View.generateViewId()
         val modeGroup = RadioGroup(this@AppSettingsActivity).apply {
             orientation = RadioGroup.VERTICAL
         }
         modeGroup.addView(RadioButton(this@AppSettingsActivity).apply {
             id = cardId
-            text = "카드형 오버레이"
+            text = "화면 위 카드 + 알림 패널"
             textSize = 15f
-            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 5), 0, RiderUi.dp(this@AppSettingsActivity, 3))
+            setPadding(
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 5),
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 3),
+            )
         })
         modeGroup.addView(RadioButton(this@AppSettingsActivity).apply {
-            id = tickerId
-            text = "화면 상단 한 줄 스크롤바"
+            id = notificationOnlyId
+            text = "알림 패널만"
             textSize = 15f
-            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 3), 0, RiderUi.dp(this@AppSettingsActivity, 5))
+            setPadding(
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 3),
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 5),
+            )
         })
         modeGroup.check(
-            if (presentation.mode == OverlayPresentationMode.TOP_TICKER) tickerId else cardId,
+            if (presentation.mode == OverlayPresentationMode.TOP_TICKER) {
+                notificationOnlyId
+            } else {
+                cardId
+            },
         )
         modeGroup.setOnCheckedChangeListener { _, checkedId ->
-            val mode = if (checkedId == tickerId) {
+            val mode = if (checkedId == notificationOnlyId) {
                 OverlayPresentationMode.TOP_TICKER
             } else {
                 OverlayPresentationMode.CARD
             }
             OverlayPresentationSettings.setMode(this@AppSettingsActivity, mode)
+            if (mode == OverlayPresentationMode.TOP_TICKER) {
+                requestNotificationPermissionIfNeeded()
+            } else if (!Settings.canDrawOverlays(this@AppSettingsActivity)) {
+                toast("화면 카드를 표시하려면 오버레이 권한을 허용해 주세요.")
+            }
             DestinationOverlayService.refreshPresentation(this@AppSettingsActivity)
         }
         addView(modeGroup, RiderUi.fullWidth(this@AppSettingsActivity, top = 8))
 
         addView(TextView(this@AppSettingsActivity).apply {
-            text = "상단 스크롤바는 시스템 상태 아이콘 영역 바로 아래에 고정되며, 주소 · 건물명 · 동호수 · 메모가 반복해서 흐릅니다."
+            text = "안드로이드 상태표시줄 내부에 앱이 임의의 문장을 흘려보낼 수는 없습니다. 알림만 모드에서는 화면 위에 별도 창을 만들지 않고, 시스템 상태표시줄 아이콘과 알림 패널만 사용합니다."
             textSize = 12.5f
             setTextColor(RiderUi.muted)
-            setPadding(0, RiderUi.dp(this@AppSettingsActivity, 4), 0, RiderUi.dp(this@AppSettingsActivity, 7))
+            setLineSpacing(0f, 1.13f)
+            setPadding(
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 4),
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 7),
+            )
         }, RiderUi.fullWidth(this@AppSettingsActivity))
 
         addView(Switch(this@AppSettingsActivity).apply {
-            text = "알림창에 주소·동호수·메모 상세 표시"
+            text = "알림 패널에 주소·동호수·메모 상세 표시"
             textSize = 15f
             isChecked = presentation.showDetailedNotification
             setOnCheckedChangeListener { _, checked ->
@@ -171,14 +239,16 @@ class AppSettingsActivity : Activity() {
                     this@AppSettingsActivity,
                     checked,
                 )
+                if (checked) requestNotificationPermissionIfNeeded()
                 DestinationOverlayService.refreshPresentation(this@AppSettingsActivity)
             }
         }, RiderUi.fullWidth(this@AppSettingsActivity, top = 4))
 
         addView(TextView(this@AppSettingsActivity).apply {
-            text = "꺼도 오버레이 실행을 위한 최소 서비스 알림은 유지됩니다. 켜면 상단바를 내려 주소와 메모 전체를 펼쳐 볼 수 있습니다."
+            text = "알림을 펼치면 주소, 건물명, 동·호수, 메모가 줄별로 표시됩니다. 알림 권한이 꺼져 있으면 포그라운드 서비스는 실행돼도 일반 알림 패널에는 보이지 않을 수 있습니다."
             textSize = 12.5f
             setTextColor(RiderUi.muted)
+            setLineSpacing(0f, 1.13f)
             setPadding(0, RiderUi.dp(this@AppSettingsActivity, 4), 0, 0)
         }, RiderUi.fullWidth(this@AppSettingsActivity))
     }
@@ -186,7 +256,7 @@ class AppSettingsActivity : Activity() {
     private fun buildSizeCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "창 크기",
-        subtitleText = "카드형 오버레이의 가로와 세로를 10dp 단위로 조절합니다.",
+        subtitleText = "화면 위 카드 모드의 가로와 세로를 10dp 단위로 조절합니다.",
     ).apply {
         widthValue = RiderUi.valueBox(this@AppSettingsActivity)
         heightValue = RiderUi.valueBox(this@AppSettingsActivity)
@@ -219,7 +289,7 @@ class AppSettingsActivity : Activity() {
     private fun buildBackgroundCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "배경",
-        subtitleText = "배경만 변경되며 글자 선명도에는 영향을 주지 않습니다.",
+        subtitleText = "화면 위 카드의 배경만 변경하며 글자 선명도에는 영향을 주지 않습니다.",
     ).apply {
         backgroundOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
         addView(
@@ -261,7 +331,7 @@ class AppSettingsActivity : Activity() {
     private fun buildTypographyCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "글자 크기",
-        subtitleText = "각 정보의 크기를 1sp 단위로 조절합니다. 상단 스크롤바는 주소 크기를 사용합니다.",
+        subtitleText = "화면 위 카드에 표시되는 각 정보의 크기를 1sp 단위로 조절합니다.",
     ).apply {
         addressTextSizeValue = RiderUi.valueBox(this@AppSettingsActivity)
         buildingTextSizeValue = RiderUi.valueBox(this@AppSettingsActivity)
@@ -285,7 +355,7 @@ class AppSettingsActivity : Activity() {
     private fun buildTextAppearanceCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "글자 색상과 선명도",
-        subtitleText = "글자 투명도와 항목별 색상을 배경과 별도로 조절합니다.",
+        subtitleText = "화면 위 카드의 글자 투명도와 항목별 색상을 조절합니다.",
     ).apply {
         textOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
         addView(
@@ -321,7 +391,7 @@ class AppSettingsActivity : Activity() {
     private fun buildTextOutlineCard(): LinearLayout = RiderUi.card(
         context = this,
         titleText = "글자 윤곽선",
-        subtitleText = "글자 한 개를 스트로크와 본문으로 겹쳐 그립니다. 0dp는 윤곽선 없음입니다.",
+        subtitleText = "화면 위 카드 글자를 스트로크와 본문으로 겹쳐 그립니다. 0dp는 윤곽선 없음입니다.",
     ).apply {
         outlineWidthValue = RiderUi.valueBox(this@AppSettingsActivity)
         outlineOpacityValue = RiderUi.valueBox(this@AppSettingsActivity)
@@ -370,7 +440,10 @@ class AppSettingsActivity : Activity() {
             }
         }, RiderUi.fullWidth(this@AppSettingsActivity, top = 4))
 
-        addView(RiderUi.sectionLabel(this@AppSettingsActivity, "기본 지도 앱"), RiderUi.fullWidth(this@AppSettingsActivity, top = 8))
+        addView(
+            RiderUi.sectionLabel(this@AppSettingsActivity, "기본 지도 앱"),
+            RiderUi.fullWidth(this@AppSettingsActivity, top = 8),
+        )
         val navApps = NavApp.entries
         addView(Spinner(this@AppSettingsActivity).apply {
             adapter = ArrayAdapter(
@@ -380,8 +453,19 @@ class AppSettingsActivity : Activity() {
             )
             val savedApp = NavApp.fromStored(settings().getString(KEY_NAV_APP, null))
             setSelection(navApps.indexOf(savedApp).coerceAtLeast(0))
-            background = RiderUi.rounded(RiderUi.soft, 12f, RiderUi.border, 1, this@AppSettingsActivity)
-            setPadding(RiderUi.dp(this@AppSettingsActivity, 12), 0, RiderUi.dp(this@AppSettingsActivity, 12), 0)
+            background = RiderUi.rounded(
+                RiderUi.soft,
+                12f,
+                RiderUi.border,
+                1,
+                this@AppSettingsActivity,
+            )
+            setPadding(
+                RiderUi.dp(this@AppSettingsActivity, 12),
+                0,
+                RiderUi.dp(this@AppSettingsActivity, 12),
+                0,
+            )
             onItemSelectedListener = SettingsItemSelectedListener { position ->
                 settings().edit().putString(KEY_NAV_APP, navApps[position].name).apply()
             }
@@ -621,12 +705,41 @@ class AppSettingsActivity : Activity() {
             .onFailure { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)) }
     }
 
-    private fun updatePermissionButton() {
-        if (!::overlayPermissionButton.isInitialized) return
-        overlayPermissionButton.text = if (Settings.canDrawOverlays(this)) {
-            "오버레이 권한 허용됨 · 시스템 설정"
-        } else {
-            "오버레이 권한 허용하기"
+    private fun hasNotificationPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission()) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQUEST_NOTIFICATION_PERMISSION,
+            )
+        }
+    }
+
+    private fun openNotificationSettings() {
+        startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            },
+        )
+    }
+
+    private fun updatePermissionButtons() {
+        if (::overlayPermissionButton.isInitialized) {
+            overlayPermissionButton.text = if (Settings.canDrawOverlays(this)) {
+                "화면 카드 권한 허용됨 · 시스템 설정"
+            } else {
+                "화면 카드 권한 허용하기"
+            }
+        }
+        if (::notificationPermissionButton.isInitialized) {
+            notificationPermissionButton.text = if (hasNotificationPermission()) {
+                "알림 권한 허용됨 · 알림 설정"
+            } else {
+                "알림 권한 허용하기"
+            }
         }
     }
 
@@ -649,6 +762,7 @@ class AppSettingsActivity : Activity() {
         private const val KEY_AUTO_FORWARD = "auto_forward"
         private const val KEY_NAV_APP = "nav_app"
         private const val KEY_OVERLAY_ENABLED = "overlay_enabled"
+        private const val REQUEST_NOTIFICATION_PERMISSION = 4102
     }
 }
 
