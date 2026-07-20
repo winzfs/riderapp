@@ -35,7 +35,6 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var destinationTitle: TextView
     private lateinit var detailText: TextView
-    private lateinit var historyText: TextView
     private lateinit var editMemoButton: android.widget.Button
 
     private var currentCapture: CapturedDestination? = null
@@ -49,7 +48,6 @@ class MainActivity : Activity() {
         forwarder = NavigationForwarder(this)
         addressResolver = RoadAddressResolver(this)
         buildUi()
-        renderHistory()
         handleIncomingIntent(intent)
     }
 
@@ -83,41 +81,40 @@ class MainActivity : Activity() {
         root.addView(
             RiderUi.topBar(
                 activity = this,
-                titleText = "목적지 상세",
-                subtitleText = "원본 목적지는 그대로 유지하고 표시 정보와 메모만 관리합니다.",
+                titleText = "목적지",
+                subtitleText = "배달앱에서 받은 원본 목적지를 그대로 사용합니다.",
             ),
         )
 
-        val statusCard = RiderUi.card(this)
-        statusText = TextView(this).apply {
-            text = "아직 길찾기 호출을 받지 않았습니다."
-            textSize = 13f
-            setTextColor(RiderUi.body)
-            setLineSpacing(0f, 1.15f)
-        }
-        statusCard.addView(statusText)
-        root.addView(statusCard, RiderUi.fullWidth(this, bottom = 12))
-
         val destinationCard = RiderUi.card(this, "현재 목적지")
+        statusText = TextView(this).apply {
+            text = "배달앱에서 길찾기를 누르면 목적지를 받습니다."
+            textSize = 12.5f
+            setTextColor(RiderUi.muted)
+            setLineSpacing(0f, 1.12f)
+            setPadding(0, RiderUi.dp(this@MainActivity, 8), 0, 0)
+        }
         destinationTitle = TextView(this).apply {
-            text = "목적지가 들어오면 여기에 표시됩니다."
-            textSize = 20f
+            text = "아직 받은 목적지가 없습니다"
+            textSize = 21f
             setTextColor(RiderUi.title)
             setPadding(0, RiderUi.dp(this@MainActivity, 10), 0, 0)
         }
         detailText = TextView(this).apply {
+            text = "주소와 메모가 여기에 표시됩니다."
             textSize = 13f
             setTextColor(RiderUi.body)
-            setLineSpacing(0f, 1.18f)
+            setLineSpacing(0f, 1.2f)
             setTextIsSelectable(true)
             setPadding(0, RiderUi.dp(this@MainActivity, 8), 0, 0)
         }
+        destinationCard.addView(statusText)
         destinationCard.addView(destinationTitle)
         destinationCard.addView(detailText)
         root.addView(destinationCard, RiderUi.fullWidth(this, bottom = 12))
 
         root.addView(
-            RiderUi.primaryButton(this, "원본 목적지를 지도 앱으로 열기") {
+            RiderUi.primaryButton(this, "지도 앱으로 열기") {
                 forwardCurrentCapture()
             },
             RiderUi.fullWidth(this, bottom = 8, heightDp = 50),
@@ -126,7 +123,7 @@ class MainActivity : Activity() {
         val actionRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-        editMemoButton = RiderUi.secondaryButton(this, "현재 장소 메모") {
+        editMemoButton = RiderUi.secondaryButton(this, "메모 수정") {
             openCurrentMemoEditor()
         }.apply { isEnabled = false }
         actionRow.addView(editMemoButton, RiderUi.weighted(this, end = 4, heightDp = 46))
@@ -136,40 +133,7 @@ class MainActivity : Activity() {
             },
             RiderUi.weighted(this, start = 4, heightDp = 46),
         )
-        root.addView(actionRow, RiderUi.fullWidth(this, bottom = 12))
-
-        val historyCard = RiderUi.card(this, "최근 목적지", "최근 10건만 간단히 표시합니다.")
-        historyText = TextView(this).apply {
-            text = "기록 없음"
-            textSize = 12.5f
-            setTextColor(RiderUi.body)
-            setLineSpacing(0f, 1.18f)
-            setTextIsSelectable(true)
-            setPadding(0, RiderUi.dp(this@MainActivity, 10), 0, 0)
-        }
-        historyCard.addView(historyText)
-        historyCard.addView(
-            RiderUi.secondaryButton(this, "주소 메모 전체 보기") {
-                startActivity(Intent(this@MainActivity, AddressMemoActivity::class.java))
-            },
-            RiderUi.fullWidth(this, top = 12, heightDp = 44),
-        )
-        root.addView(historyCard, RiderUi.fullWidth(this, bottom = 12))
-
-        root.addView(
-            RiderUi.dangerButton(this, "최근 목적지 기록 지우기") {
-                captureStore.clear()
-                currentCapture = null
-                currentEntry = null
-                DestinationOverlayService.hide(this@MainActivity)
-                destinationTitle.text = "현재 목적지 없음"
-                detailText.text = "목적지 기록을 지웠습니다. 주소별 개인 메모는 유지됩니다."
-                statusText.text = "새 길찾기 호출을 기다리는 중입니다."
-                editMemoButton.isEnabled = false
-                renderHistory()
-            },
-            RiderUi.fullWidth(this, heightDp = 46),
-        )
+        root.addView(actionRow, RiderUi.fullWidth(this))
 
         setContentView(page.scroll)
     }
@@ -177,12 +141,9 @@ class MainActivity : Activity() {
     private fun handleIncomingIntent(intent: Intent?, synthetic: Boolean = false) {
         if (intent == null) return
 
+        // Some delivery apps put apartment destinations only in Extras or ClipData.
+        // Parse the entire Intent before deciding that it has no destination.
         val relayedCapture = readRelayedCapture(intent)
-        if (!synthetic && intent.data == null && relayedCapture == null) {
-            restoreLatestDestination()
-            return
-        }
-
         val capture = relayedCapture ?: parser.parse(intent)
         if (!isMeaningful(capture)) {
             restoreLatestDestination()
@@ -192,9 +153,8 @@ class MainActivity : Activity() {
         currentCapture = capture
         val saved = captureStore.save(capture)
         currentEntry = addressMemoStore.ensureForCapture(capture)
-        val origin = if (synthetic) "샘플 목적지 확인" else "원본 목적지 수신 완료"
-        renderCurrentDestination(if (saved) origin else "$origin · 중복 기록 생략")
-        renderHistory()
+        val origin = if (synthetic) "샘플 목적지" else "목적지 수신 완료"
+        renderCurrentDestination(if (saved) origin else "$origin · 동일 호출")
         showDestinationOverlay()
         resolveRoadAddressIfNeeded(capture, requireNotNull(currentEntry))
 
@@ -209,15 +169,15 @@ class MainActivity : Activity() {
     private fun restoreLatestDestination() {
         val capture = captureStore.load().firstOrNull(::isMeaningful)
         if (capture == null) {
-            statusText.text = "저장된 목적지가 없습니다."
-            destinationTitle.text = "현재 목적지 없음"
-            detailText.text = "배달앱에서 길찾기를 누르면 목적지가 표시됩니다."
+            statusText.text = "새 목적지를 기다리는 중"
+            destinationTitle.text = "아직 받은 목적지가 없습니다"
+            detailText.text = "배달앱에서 길찾기를 누르면 주소와 메모가 표시됩니다."
+            editMemoButton.isEnabled = false
             return
         }
         currentCapture = capture
         currentEntry = addressMemoStore.ensureForCapture(capture)
-        renderCurrentDestination("최근 원본 목적지 복원")
-        renderHistory()
+        renderCurrentDestination("최근 목적지")
     }
 
     private fun resolveRoadAddressIfNeeded(
@@ -227,7 +187,7 @@ class MainActivity : Activity() {
         if (initialEntry.roadAddress.isNotBlank() || initialEntry.roadAddressConfirmed) return
         val latitude = capture.latitude ?: return
         val longitude = capture.longitude ?: return
-        statusText.text = "원본 목적지 저장 완료 · 참고 주소 확인 중"
+        statusText.text = "주소 확인 중"
 
         addressResolver.resolve(
             destinationName = capture.destinationName,
@@ -241,13 +201,12 @@ class MainActivity : Activity() {
                 val saved = addressMemoStore.save(latest.copy(roadAddress = resolved.roadAddress))
                 if (currentEntry?.id == saved.id) {
                     currentEntry = saved
-                    renderCurrentDestination("원본 유지 · 참고 주소 확인 완료")
-                    renderHistory()
+                    renderCurrentDestination("목적지 수신 완료")
                     showDestinationOverlay()
                 }
             }.onFailure {
                 if (currentEntry?.id == initialEntry.id) {
-                    statusText.text = "원본 목적지는 저장됨 · 참고 주소는 미확인"
+                    statusText.text = "목적지는 저장됨 · 참고 주소 미확인"
                 }
             }
         }
@@ -265,7 +224,7 @@ class MainActivity : Activity() {
         val entry = currentEntry ?: return
         if (!overlayEnabled()) return
         if (!Settings.canDrawOverlays(this)) {
-            statusText.text = "원본 목적지 저장 완료 · 오버레이 권한 필요"
+            statusText.text = "목적지 수신 완료 · 오버레이 권한 필요"
             return
         }
         DestinationOverlayService.show(this, entry)
@@ -276,22 +235,21 @@ class MainActivity : Activity() {
         pendingForward = Runnable { forwardCurrentCapture() }.also {
             handler.postDelayed(it, AUTO_FORWARD_DELAY_MS)
         }
-        statusText.text = "원본 목적지를 그대로 지도 앱으로 전달합니다."
+        statusText.text = "지도 앱으로 연결 중"
     }
 
     private fun forwardCurrentCapture() {
         val capture = currentCapture ?: captureStore.load().firstOrNull(::isMeaningful)
         if (capture == null) {
-            toast("먼저 길찾기 전달값을 받아야 합니다.")
+            toast("먼저 길찾기 목적지를 받아야 합니다.")
             return
         }
-        val requested = selectedNavApp()
-        forwarder.forward(capture, requested)
+        forwarder.forward(capture, selectedNavApp())
             .onSuccess { app ->
                 statusText.text = if (app == NavApp.PICK_EACH_TIME) {
-                    "원본 목적지 유지 · 지도 앱을 선택하세요."
+                    "사용할 지도 앱을 선택하세요"
                 } else {
-                    "원본 목적지 유지 · ${app.label} 실행"
+                    "${app.label} 실행"
                 }
             }
             .onFailure { error ->
@@ -307,39 +265,27 @@ class MainActivity : Activity() {
         statusText.text = headline
         if (capture == null || entry == null) {
             destinationTitle.text = "현재 목적지 없음"
-            detailText.text = "목적지를 받으면 이곳에 표시됩니다."
+            detailText.text = "목적지를 받으면 주소와 메모가 표시됩니다."
             return
         }
 
         destinationTitle.text = entry.placeName.ifBlank {
-            capture.destinationName.ifBlank { "배달 목적지" }
+            capture.destinationName.ifBlank {
+                entry.roadAddress.ifBlank { "배달 목적지" }
+            }
         }
         detailText.text = buildString {
-            appendLine("배달앱 원문 · ${capture.destinationName.ifBlank { "이름 없음" }}")
-            entry.roadAddress.takeIf(String::isNotBlank)?.let {
-                appendLine("참고 주소 · $it")
+            capture.destinationName.takeIf(String::isNotBlank)?.let {
+                appendLine("원문 · $it")
             }
-            appendLine("개인 메모 · ${entry.memo.ifBlank { "없음" }}")
-            append("수신 시각 · ${formatTime(capture.capturedAt)}")
-        }
-    }
-
-    private fun renderHistory() {
-        if (!::historyText.isInitialized) return
-        val captures = captureStore.load().filter(::isMeaningful)
-        historyText.text = if (captures.isEmpty()) {
-            "기록 없음"
-        } else {
-            captures.take(10).mapIndexed { index, capture ->
-                val entry = addressMemoStore.findForCapture(capture)
-                buildString {
-                    append("${index + 1}. ${capture.destinationName.ifBlank { "배달 목적지" }}")
-                    append("  ·  ${formatTime(capture.capturedAt)}")
-                    entry?.memo?.takeIf(String::isNotBlank)?.let {
-                        append("\n   ${it.take(80)}")
-                    }
-                }
-            }.joinToString("\n\n")
+            entry.roadAddress.takeIf(String::isNotBlank)?.let {
+                appendLine("주소 · $it")
+            }
+            if (capture.hasCoordinates) {
+                appendLine("좌표 · ${capture.latitude}, ${capture.longitude}")
+            }
+            appendLine("메모 · ${entry.memo.ifBlank { "없음" }}")
+            append("수신 · ${formatTime(capture.capturedAt)}")
         }
     }
 
