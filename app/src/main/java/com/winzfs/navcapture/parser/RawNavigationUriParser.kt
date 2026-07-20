@@ -178,8 +178,12 @@ class RawNavigationUriParser {
         return lat to lng
     }
 
+    /** Kakao SDK payloads may encode x/y as JSON numbers or numeric strings. */
     private fun jsonNumber(json: String, key: String): Double? {
-        val regex = Regex("\\\"${Regex.escape(key)}\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)")
+        val regex = Regex(
+            "\\\"${Regex.escape(key)}\\\"\\s*:\\s*\\\"?" +
+                "(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\\"?",
+        )
         return regex.find(json)?.groupValues?.getOrNull(1)?.toDoubleOrNull()
     }
 
