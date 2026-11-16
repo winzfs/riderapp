@@ -28,7 +28,7 @@ jobs:
         env:
           RIDER_PREBUILT: "1"
         run: node tests/daily-browser.cjs
-      - name: Check actual deployed Positron vector map after rollout
+      - name: Verify deployed playback controls, 30x GPS timing and Positron after v59 rollout
         env:
           RIDER_PREBUILT: "0"
         run: node tests/daily-browser.cjs
