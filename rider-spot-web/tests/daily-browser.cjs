@@ -78,7 +78,7 @@ const fixtures = [
       return !!(map && panes && panes.children.length);
     }, null, { timeout: 20000 });
     assert.equal(await page.locator(".rs56-ride-choice").count(), 3);
-    assert.match(await page.locator(".rs33-trip-summary").first().innerText(), /7\\.8 km/);
+    assert.ok((await page.locator(".rs33-trip-summary").first().innerText()).includes("7.8 km"));
     const center = await page.evaluate(() => {
       const map = window.__rsMap;
       return { lat: map.getCenter().lat, lng: map.getCenter().lng, zoom: map.getZoom() };
