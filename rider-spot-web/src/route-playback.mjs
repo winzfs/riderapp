@@ -88,7 +88,7 @@ export function playbackFrame(track, position) {
     const count = index + 1;
     const coords = segment.coordinates.slice(0, count);
     const next = index + 1;
-    if (next < segment.times.length && segment.times[next] > time) {
+    if (next < segment.times.length && time > segment.times[index] && segment.times[next] > time) {
       const ratio =
         (time - segment.times[index]) / (segment.times[next] - segment.times[index]);
       const from = segment.coordinates[index], to = segment.coordinates[next];
