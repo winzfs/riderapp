@@ -35,12 +35,15 @@ jobs:
           const base = '/assets/rider-spot-' + manifest.hash + '/';
           const src = base + 'tab-resume.js';
           const css = base + 'daily-timeline.css';
+          const nativeCss = base + 'native-light-map.css';
           const html = readFileSync('dist/index.html', 'utf8');
           const sw = readFileSync('dist/sw.js', 'utf8');
           if (!manifest.files.includes(src) || !html.includes(src) || !sw.includes(src))
             throw Error('Tab recovery missing from HTML, Worker asset list or service worker');
           if (!manifest.files.includes(css) || !html.includes(css) || !sw.includes(css))
             throw Error('Daily timeline stylesheet missing from release');
+          if (!manifest.files.includes(nativeCss) || !html.includes(nativeCss) || !sw.includes(nativeCss))
+            throw Error('Native simple map stylesheet missing from release');
           console.log('PASS bundled navigation recovery and daily timeline CSS: ' + manifest.hash);
           NODE
       - name: Stage validated release assets for Cloudflare deployment
@@ -53,7 +56,7 @@ jobs:
           cp dist/release.json prebuilt/release.json
           bundle_dir="dist/assets/rider-spot-$(node -p "require('./dist/release.json').hash")"
           test -s "$bundle_dir/app.mjs"
-          for name in app.mjs route-worker.mjs native-gps.js map-reports.js tab-resume.js daily-timeline.css; do
+          for name in app.mjs route-worker.mjs native-gps.js map-reports.js tab-resume.js daily-timeline.css native-light-map.css; do
             cp "$bundle_dir/$name" "prebuilt/$name"
           done
           git config user.name "github-actions[bot]"
