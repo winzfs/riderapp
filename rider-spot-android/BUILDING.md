@@ -1,13 +1,13 @@
-# 라이더스팟 v1.0.3 · 로컬 기록 및 알림 종료
+라이더스팟 Android v1.0.4 (Google OAuth 복귀 수정)
 
-- 운행 시작 후 GPS는 Android 전경 서비스에서 SQLite에만 저장. 앱의 웹 타임라인도 로컬 저장.
-- 운행 종료(앱 또는 Android 알림)할 때 전체 네이티브 GPS 기록을 병합해 Supabase 서버로 전송. 실패 시 기기 내부 보존 후 재전송.
-- 15초 GPS 상태 감시, 45초 이상 콜백 중단 시 공급자 재등록, 부정확한 위치 필터 및 로컬 기록 심플 개선.
-- 알림 영역에 '라이더스팟 · GPS 운행 기록 중' 표시 및 '운행 종료' 버튼 제공. 알림 버튼 누르면 라이더스팟이 열리며 기록 종료/최종 동기화.
-- 서버에 위치를 실시간 공유하는 별도 기능은 사용자 동의 시에만 동작, 운행 기록과 독립.
-- Android 13+에서 알림 표시 허용 필요. 알림 권한 거부 시 설정 안내.
-- Android 강제 종료/위치 서비스 비활성화/권한 철회/GPS 음영 지역은 누락될 수 있고, 없는 경로는 만들지 않음.
-- 테스트 소스: rider-spot-android/source.tar.xz. 분리 브랜치에만 저장, 기존 riderapp main 및 rider-spot Cloudflare 웹앱은 변경하지 않음.
-- Debug APK는 빌드마다 서명이 달라 기존 버전 덮어쓰기가 거부될 수 있음. 삭제 전 로컬 기록이 서버에 동기화됐는지 확인.
+원인: 외부 Chrome은 WebView와 다른 쿠키/세션 저장소를 사용하여 Google 로그인 후 Chrome에만 로그인되었습니다.
 
-빌드: Actions → Rider Spot Native APK → Artifacts → RiderSpot-Android-1.0.3-LocalGPS-Notification-debug.
+해결:
+- 네이티브 브리지 signInWithOAuth(skipBrowserRedirect=true), 기존 Supabase 승인 URL 루트로 redirectTo 유지
+- Chrome에서 OAuth 실행, Cloudflare Worker의 단기 HttpOnly 쿠키가 있는 브라우저만 로그인 완료 브릿지 실행
+- 라이더스팟 Android 딥링크 (riderspot-oauth://signin/callback)와 nonce 검증 후 app WebView의 기존 Supabase auth.setSession() 호출
+- GPS, 운행 종료 서버 전송, 알림 기능은 그대로 유지
+
+운영 Cloudflare Worker에 server/native-oauth-worker.js 로직 배포 필요.
+백그라운드 GPS 경로는 운행 중 로컬 저장, 종료 시에만 서버에 업로드됩니다.
+Debug 빌드 서명이 다를 수 있으니 삭제 전 미동기화 기록 확인.
