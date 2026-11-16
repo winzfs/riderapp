@@ -1,14 +1,13 @@
-# 라이더스팟 v1.0.2: 화면 꺼짐 GPS 기록 보강
+# 라이더스팟 v1.0.3 · 로컬 기록 및 알림 종료
 
-기존 Android 앱 기능은 유지하며 화면 잠금 후 생기는 기록 공백을 줄이기 위한 수정입니다.
+- 운행 시작 후 GPS는 Android 전경 서비스에서 SQLite에만 저장. 앱의 웹 타임라인도 로컬 저장.
+- 운행 종료(앱 또는 Android 알림)할 때 전체 네이티브 GPS 기록을 병합해 Supabase 서버로 전송. 실패 시 기기 내부 보존 후 재전송.
+- 15초 GPS 상태 감시, 45초 이상 콜백 중단 시 공급자 재등록, 부정확한 위치 필터 및 로컬 기록 심플 개선.
+- 알림 영역에 '라이더스팟 · GPS 운행 기록 중' 표시 및 '운행 종료' 버튼 제공. 알림 버튼 누르면 라이더스팟이 열리며 기록 종료/최종 동기화.
+- 서버에 위치를 실시간 공유하는 별도 기능은 사용자 동의 시에만 동작, 운행 기록과 독립.
+- Android 13+에서 알림 표시 허용 필요. 알림 권한 거부 시 설정 안내.
+- Android 강제 종료/위치 서비스 비활성화/권한 철회/GPS 음영 지역은 누락될 수 있고, 없는 경로는 만들지 않음.
+- 테스트 소스: rider-spot-android/source.tar.xz. 분리 브랜치에만 저장, 기존 riderapp main 및 rider-spot Cloudflare 웹앱은 변경하지 않음.
+- Debug APK는 빌드마다 서명이 달라 기존 버전 덮어쓰기가 거부될 수 있음. 삭제 전 로컬 기록이 서버에 동기화됐는지 확인.
 
-- 위치 요청: 3초 간격·거리 제한 0m, GPS+Fused+Network(Android 지원 범위)
-- 정지 중에도 최대 약 25초마다 저장 가능한 좌표 유지(위치 공급자가 갱신을 전달하는 조건)
-- 명시적으로 시작한 GPS 전경 서비스의 시스템 재시작 복구(START_STICKY)
-- 운행 기록 중에만 부분 CPU wake lock 사용; 일시정지/종료 때 즉시 해제
-- 종료 시 SQLite 전체 경로를 합쳐 Supabase 재업로드, 실패 시 오프라인 큐에 재전송
-- 원본 SQLite 경로는 기기 내 유지, 기존 Cloudflare/Supabase 데이터·운영 코드 변경 없음
-
-**주의:** 안드로이드 OS 강제 중지, 절전 정책, 권한 해제, GPS 신호 차단으로 실제 샘플이 없는 구간은 복원할 수 없습니다. 실기기 장시간 검증 전 베타 APK입니다. 기존 APK 제거 시 기기 미동기화 기록 손실 가능성이 있으므로 기존 데이터 서버 동기화 후 업데이트 설치하세요.
-
-APK: GitHub Actions > Rider Spot Native APK > Artifacts > RiderSpot-Android-1.0.2-ScreenOff-fix-debug.
+빌드: Actions → Rider Spot Native APK → Artifacts → RiderSpot-Android-1.0.3-LocalGPS-Notification-debug.
