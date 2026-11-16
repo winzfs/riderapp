@@ -1,0 +1,146 @@
+const MIN_ZOOM = 7.5;
+const MAX_ZOOM = 19;
+
+function readCamera(key) {
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem(key) || localStorage.getItem(key),
+    );
+    if (
+      saved &&
+      Number.isFinite(saved.lat) &&
+      Math.abs(saved.lat) <= 90 &&
+      Number.isFinite(saved.lng) &&
+      Number.isFinite(saved.zoom)
+    )
+      return saved;
+  } catch {
+    /* Storage can be disabled. */
+  }
+  return null;
+}
+
+export function createMapController(L, node, cameraId, fallback) {
+  const isCourse = cameraId !== "main";
+  const key = isCourse ? `rs:map-camera:${cameraId}` : "rs:map-main-camera-v52";
+  const saved =
+    readCamera(key) ||
+    (isCourse && readCamera(`rs:map-camera-v48:${cameraId}:1`));
+  const map = L.map(node, {
+    zoomControl: false,
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+    zoomSnap: 0,
+    zoomDelta: 0.25,
+    touchZoom: true,
+    bounceAtZoomLimits: false,
+    trackResize: false,
+    preferCanvas: isCourse,
+  }).setView(saved ? [saved.lat, saved.lng] : fallback, saved?.zoom ?? 13);
+  let center = map.getCenter();
+  let zoom = map.getZoom();
+  let cameraChosen = Boolean(saved);
+  let readyToSave = cameraChosen;
+  let resizing = false;
+  let touch = false;
+  let moving = false;
+  let frame = 0;
+  let width = node.clientWidth;
+  let height = node.clientHeight;
+
+  function save() {
+    if (!readyToSave) return;
+    try {
+      const value = JSON.stringify({ lat: center.lat, lng: center.lng, zoom });
+      sessionStorage.setItem(key, value);
+      localStorage.setItem(key, value);
+    } catch {
+      /* Camera persistence is optional. */
+    }
+  }
+  function begin() {
+    if (resizing) return;
+    moving = true;
+    cameraChosen = readyToSave = true;
+  }
+  function finish() {
+    moving = false;
+    if (resizing) return;
+    center = map.getCenter();
+    zoom = map.getZoom();
+    save();
+    scheduleResize();
+  }
+  function resize() {
+    frame = 0;
+    if (
+      touch ||
+      moving ||
+      !node.clientWidth ||
+      !node.clientHeight ||
+      (width === node.clientWidth && height === node.clientHeight)
+    )
+      return;
+    width = node.clientWidth;
+    height = node.clientHeight;
+    resizing = true;
+    try {
+      map.invalidateSize({ pan: false, animate: false });
+      map.setView(center, zoom, { animate: false, reset: true });
+    } finally {
+      resizing = false;
+    }
+  }
+  function scheduleResize() {
+    if (!frame) frame = requestAnimationFrame(resize);
+  }
+  function onTouchStart() {
+    touch = true;
+  }
+  function onTouchEnd(event) {
+    touch = event.touches.length > 0;
+    if (!touch) scheduleResize();
+  }
+  map.on("movestart zoomstart", begin);
+  map.on("moveend", finish);
+  node.addEventListener("touchstart", onTouchStart, { passive: true });
+  document.addEventListener("touchend", onTouchEnd, { passive: true });
+  document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+  const observer = new ResizeObserver(scheduleResize);
+  observer.observe(node);
+  window.addEventListener("pageshow", scheduleResize);
+
+  function moveTo(position, level) {
+    cameraChosen = readyToSave = true;
+    map.setView([Number(position.lat), Number(position.lng)], level, {
+      animate: false,
+    });
+    finish();
+  }
+  function showBounds(bounds, explicit = false) {
+    if (!bounds || (!explicit && (cameraChosen || touch))) return;
+    cameraChosen = readyToSave = true;
+    map.fitBounds(bounds, { padding: [45, 66], maxZoom: 16, animate: false });
+    finish();
+  }
+  return {
+    map,
+    moveTo,
+    showBounds,
+    initialLocation(position) {
+      if (!cameraChosen && !touch) moveTo(position, 16);
+    },
+    destroy() {
+      save();
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("pageshow", scheduleResize);
+      node.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+      map.off("movestart zoomstart", begin);
+      map.off("moveend", finish);
+      map.remove();
+    },
+  };
+}

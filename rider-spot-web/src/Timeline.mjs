@@ -1,0 +1,868 @@
+import {
+  rs33Zone,
+  rs33ISO,
+  rs33Time,
+  rs33Format,
+  rs33DateAdd,
+  rs33WeekStart,
+  rs33Duration,
+} from "./timeline-dates.mjs";
+import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
+import { useRouteAnalysis } from "./use-route-analysis.mjs";
+
+export function createTimeline(S, Zo) {
+  const rs33J = S.createElement;
+  const EMPTY = [];
+  const thumbnailCache = new WeakMap();
+  function rs33Thumb(trip) {
+    const source = Array.isArray(trip.points) ? trip.points : EMPTY;
+    if (thumbnailCache.has(source)) return thumbnailCache.get(source);
+    const groups = [];
+    let line = [];
+    let previous = null;
+    const step = Math.max(1, Math.ceil(source.length / 96));
+    for (
+      let i = 0;
+      i < source.length;
+      i = Math.min(i + step, source.length - 1)
+    ) {
+      const point = source[i];
+      if (
+        point?.break ||
+        !Number.isFinite(point?.lat) ||
+        !Number.isFinite(point?.lng) ||
+        (previous &&
+          Number(point.t) - Number(previous.t) > Math.max(30000, step * 2000))
+      ) {
+        if (line.length > 1) groups.push(line);
+        line = [];
+      }
+      if (Number.isFinite(point?.lat) && Number.isFinite(point?.lng))
+        line.push(point);
+      previous = point;
+      if (i === source.length - 1) break;
+    }
+    if (line.length > 1) groups.push(line);
+    const points = groups.flat();
+    if (!points.length)
+      return rs33J(
+        "span",
+        { className: "rs33-thumb rs33-thumb-empty" },
+        "경로 없음",
+      );
+    let x0 = Infinity,
+      x1 = -Infinity,
+      y0 = Infinity,
+      y1 = -Infinity;
+    for (const p of points) {
+      x0 = Math.min(x0, p.lng);
+      x1 = Math.max(x1, p.lng);
+      y0 = Math.min(y0, p.lat);
+      y1 = Math.max(y1, p.lat);
+    }
+    const lonScale = Math.cos(((y1 + y0) * Math.PI) / 360);
+    const scale = Math.min(
+      80 / Math.max((x1 - x0) * lonScale, 1e-9),
+      49 / Math.max(y1 - y0, 1e-9),
+    );
+    const shapes = groups.map((path, i) =>
+      rs33J("polyline", {
+        key: i,
+        points: path
+          .map((p) =>
+            [
+              (51 + (p.lng - (x0 + x1) / 2) * lonScale * scale).toFixed(1),
+              (33 - (p.lat - (y0 + y1) / 2) * scale).toFixed(1),
+            ].join(","),
+          )
+          .join(" "),
+        fill: "none",
+        stroke: "#08775d",
+        strokeWidth: 3,
+        strokeLinejoin: "round",
+        strokeLinecap: "round",
+      }),
+    );
+    const thumbnail = rs33J(
+      "svg",
+      { viewBox: "0 0 102 66", className: "rs33-thumb", "aria-hidden": true },
+      shapes,
+    );
+    thumbnailCache.set(source, thumbnail);
+    return thumbnail;
+  }
+  function ss({ ride, notify }) {
+    const today = rs33ISO(Date.now());
+    const [selected, setSelected] = S.useState(null);
+    const [day, setDay] = S.useState(today);
+    const [week, setWeek] = S.useState(rs33WeekStart(today));
+    const [expanded, setExpanded] = S.useState(false);
+    const [focused, setFocused] = S.useState(null);
+    const [reset, setReset] = S.useState(0);
+    const [memo, setMemo] = S.useState("");
+    const [memoBusy, setMemoBusy] = S.useState(false);
+    const [finished, setFinished] = S.useState(false);
+    const [allDays, setAllDays] = S.useState(false);
+    const [eventOpen, setEventOpen] = S.useState(() => {
+      try {
+        return localStorage.getItem("rs:trip-events-open") === "1";
+      } catch {
+        return false;
+      }
+    });
+    const [showStamps, setShowStamps] = S.useState(() => {
+      try {
+        return localStorage.getItem("rs:route-time-stamps") !== "0";
+      } catch {
+        return true;
+      }
+    });
+    const [roadPreview, setRoadPreview] = S.useState(null);
+    const [roadBusy, setRoadBusy] = S.useState(false);
+    const [roadNotice, setRoadNotice] = S.useState("");
+    const current =
+      ride.history.find((row) => row?.id === selected) || ride.trip;
+    const ended = Boolean(current?.ended_at);
+    const analysis = useRouteAnalysis(S, current);
+    const raw = analysis?.course;
+    const activeRoad =
+      roadPreview?.tripId === current?.id &&
+      roadPreview?.pointCount === (current?.points?.length || 0)
+        ? roadPreview
+        : null;
+    const shown = activeRoad?.course || raw;
+    const stamps = raw?.stamps || EMPTY;
+    const onStamp = S.useCallback((stamp) => setFocused(stamp), []);
+    S.useEffect(() => {
+      if (!expanded) return;
+      const previous = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      const close = (event) => {
+        if (event.key === "Escape") setExpanded(false);
+      };
+      window.addEventListener("keydown", close);
+      return () => {
+        document.body.style.overflow = previous;
+        window.removeEventListener("keydown", close);
+      };
+    }, [expanded]);
+    async function rs38MatchRoads() {
+      if (!current || roadBusy) return;
+      if (activeRoad) {
+        setRoadPreview(null);
+        setRoadNotice("GPS 원본 경로를 표시합니다.");
+        return;
+      }
+      const batches = raw?.batches;
+      if (!batches) {
+        setRoadNotice(
+          "도로 보정은 연속 GPS 구간 최대 5개(약 350개 좌표)까지 지원해요.",
+        );
+        return;
+      }
+      if (!batches.length) {
+        setRoadNotice("도로 보정에 필요한 GPS 좌표가 부족해요.");
+        return;
+      }
+      if (
+        !confirm(
+          "도로에 맞춰 표시하기 위해 해당 운행의 GPS 좌표를 외부 OSRM 공개 경로 서비스로 보냅니다. GPS 원본·Supabase 저장 경로는 바꾸지 않습니다. 계속할까요?",
+        )
+      )
+        return;
+      setRoadBusy(true);
+      setRoadNotice("도로를 확인하고 있어요…");
+      try {
+        const matched = [];
+        let skipped = 0;
+        for (let i = 0; i < batches.length; i++) {
+          const response = await fetch("/api/route-match", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify({ points: batches[i] }),
+          });
+          const data = await response.json();
+          if (!response.ok)
+            throw Error(
+              data?.message || "도로 경로 서비스를 사용할 수 없어요.",
+            );
+          const lines = Array.isArray(data.lines) ? data.lines : [];
+          if (!lines.length) skipped++;
+          for (const line of lines) {
+            if (Array.isArray(line) && line.length >= 2) matched.push(line);
+          }
+          if (i < batches.length - 1)
+            await new Promise((resolve) => setTimeout(resolve, 1250));
+        }
+        if (!matched.length)
+          throw Error(
+            "GPS 정확도가 부족하거나 도로와 일치하는 경로를 찾지 못했어요.",
+          );
+        setRoadPreview({
+          tripId: current.id,
+          pointCount: current.points.length,
+          course: analyzeMatchedCourse(matched),
+        });
+        setRoadNotice(
+          skipped
+            ? "도로 확인에 실패한 " +
+                skipped +
+                "개 구간은 표시하지 않았어요. 도로 선은 추정 경로예요."
+            : "도로에 맞춘 추정 경로입니다. 실제 운행한 길과 다를 수 있어요.",
+        );
+      } catch (error) {
+        setRoadNotice(
+          error?.message ||
+            "도로 경로를 불러오지 못했어요. 원본 GPS로 표시합니다.",
+        );
+      } finally {
+        setRoadBusy(false);
+      }
+    }
+    function view(trip) {
+      setSelected(trip.id);
+      setMemo(trip.memo || "");
+      setFocused(null);
+      setExpanded(false);
+      setRoadPreview(null);
+      setRoadNotice("");
+    }
+    function back() {
+      setSelected(null);
+      setExpanded(false);
+      setFocused(null);
+    }
+    function choose(date) {
+      setDay(date);
+      setWeek(rs33WeekStart(date));
+      setAllDays(false);
+    }
+    async function finish() {
+      if (!ride.trip) return;
+      const currentId = ride.trip.id;
+      try {
+        await ride.finish();
+      } catch (error) {
+        notify(error.message);
+        return;
+      }
+      setSelected(currentId);
+      setMemo("");
+      setFocused(null);
+      setFinished(true);
+    }
+    async function saveMemo(event) {
+      event.preventDefault();
+      if (!current || memoBusy) return;
+      setMemoBusy(true);
+      try {
+        await ride.saveMemo(current.id, memo.trim());
+      } catch (error) {
+        notify(error.message || "메모를 저장하지 못했어요.");
+      } finally {
+        setMemoBusy(false);
+      }
+    }
+    if (current) {
+      const path = rs33J(Zo, {
+        key: current.id,
+        position: ended ? null : ride.position || current.points?.at(-1),
+        course: {
+          id: current.id,
+          geometry: shown?.geometry,
+          stamps: showStamps ? stamps : EMPTY,
+          bounds: shown?.bounds,
+          fitRequest: reset,
+          onStamp,
+        },
+      });
+      const start = rs33Timestamp(current.started_at),
+        end = rs33Timestamp(current.ended_at);
+      return rs33J(
+        "section",
+        { className: "trip-page rs33-trip-detail" },
+        rs33J(
+          "div",
+          { className: "trip-heading" },
+          rs33J(
+            "button",
+            {
+              type: "button",
+              className: "back",
+              onClick: back,
+              disabled: !ended,
+            },
+            ended ? "‹ 운행 목록" : "운행 기록 중",
+          ),
+          rs33J(
+            "h1",
+            null,
+            start
+              ? new Intl.DateTimeFormat("ko-KR", {
+                  timeZone: rs33Zone,
+                  month: "long",
+                  day: "numeric",
+                  weekday: "short",
+                }).format(new Date(start))
+              : "운행 기록",
+          ),
+          rs33J(
+            "span",
+            { className: "rs33-state" },
+            ended ? "나만 보기" : ride.paused ? "휴식 중" : "기록 중",
+          ),
+        ),
+        rs33J(
+          "div",
+          {
+            className:
+              "rs33-course-shell" + (expanded ? " rs33-course-full" : ""),
+            role: expanded ? "dialog" : undefined,
+            "aria-modal": expanded ? true : undefined,
+            "aria-label": expanded ? "전체 화면 운행 지도" : undefined,
+          },
+          rs33J(
+            "div",
+            { className: "rs33-course-controls" },
+            rs33J(
+              "button",
+              {
+                type: "button",
+                disabled: !shown?.bounds,
+                onClick: () => {
+                  setFocused(null);
+                  setReset((value) => value + 1);
+                },
+              },
+              "전체 경로",
+            ),
+            rs33J(
+              "button",
+              {
+                type: "button",
+                className: "rs38-road-toggle",
+                "aria-pressed": !!activeRoad,
+                disabled: roadBusy || !raw,
+                onClick: rs38MatchRoads,
+              },
+              roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정",
+            ),
+            rs33J(
+              "button",
+              {
+                type: "button",
+                className: "rs33-expand",
+                "aria-expanded": expanded,
+                onClick: () => setExpanded((value) => !value),
+              },
+              expanded ? "닫기" : "크게 보기",
+            ),
+            rs33J(
+              "button",
+              {
+                type: "button",
+                className: "rs45-stamp-toggle",
+                "aria-pressed": showStamps,
+                "aria-label": showStamps
+                  ? "경로 시간 표시 숨기기"
+                  : "경로 시간 표시 켜기",
+                onClick: () => {
+                  setShowStamps((value) => {
+                    const next = !value;
+                    try {
+                      localStorage.setItem(
+                        "rs:route-time-stamps",
+                        next ? "1" : "0",
+                      );
+                    } catch {}
+                    return next;
+                  });
+                  setFocused(null);
+                },
+              },
+              showStamps ? "시간 숨기기" : "시간 켜기",
+            ),
+          ),
+          rs33J(
+            "div",
+            { className: "trip-map rs33-course-map" },
+            path,
+            !ended
+              ? rs33J(
+                  "button",
+                  {
+                    type: "button",
+                    className: "rs43-current-position",
+                    "aria-label": "지도에서 내 현재 위치로 이동",
+                    onClick: () => {
+                      const pos = ride.position || current?.points?.at(-1);
+                      if (
+                        !pos ||
+                        !Number.isFinite(Number(pos.lat)) ||
+                        !Number.isFinite(Number(pos.lng))
+                      ) {
+                        notify("현재 위치를 확인하는 중이에요.");
+                        ride.locate?.().catch(() => {});
+                        return;
+                      }
+                      setFocused(null);
+                      const map = window.__rsMap;
+                      if (map)
+                        map.setView([Number(pos.lat), Number(pos.lng)], 17, {
+                          animate: true,
+                        });
+                    },
+                  },
+                  "◎ 내 위치",
+                )
+              : null,
+          ),
+          !analysis
+            ? rs33J(
+                "p",
+                { className: "rs33-muted", role: "status" },
+                "운행 경로를 불러오는 중…",
+              )
+            : analysis.error
+              ? rs33J(
+                  "p",
+                  { className: "rs33-muted", role: "alert" },
+                  "경로 표시를 완료하지 못했어요.",
+                )
+              : null,
+          roadNotice
+            ? rs33J(
+                "p",
+                { className: "rs38-road-notice", role: "status" },
+                roadNotice,
+              )
+            : null,
+          rs33J(
+            "div",
+            { className: "rs33-course-footer" },
+            shown?.revisitCount
+              ? rs33J(
+                  "div",
+                  { className: "rs43-revisit-key" },
+                  "청록 경로 · 오렌지 겹선은 재통과 추정 (2회/3회/4회 이상)",
+                )
+              : null,
+            rs33J(
+              "div",
+              { className: "rs33-course-legend" },
+              rs33J("span", { "aria-hidden": true }),
+              rs33J("small", null, "출발 → 마지막 기록"),
+              showStamps && focused
+                ? rs33J(
+                    "b",
+                    null,
+                    rs33Time(focused.time) + " · " + focused.label,
+                  )
+                : null,
+            ),
+            showStamps && stamps.length
+              ? rs33J(
+                  "div",
+                  {
+                    className: "rs33-stamp-list",
+                    "aria-label": "경로 시간 스탬프",
+                  },
+                  stamps.map((stamp, i) =>
+                    rs33J(
+                      "button",
+                      {
+                        type: "button",
+                        key: stamp.kind + ":" + stamp.time + ":" + i,
+                        "aria-pressed": focused?.time === stamp.time,
+                        onClick: () => setFocused(stamp),
+                      },
+                      rs33Time(stamp.time),
+                      stamp.kind === "start"
+                        ? " 출발"
+                        : stamp.kind === "end"
+                          ? " 마지막"
+                          : stamp.kind === "stop"
+                            ? " 정차"
+                            : "",
+                    ),
+                  ),
+                )
+              : showStamps
+                ? rs33J(
+                    "p",
+                    { className: "rs33-muted" },
+                    "지도에 표시할 GPS 시간이 없어요.",
+                  )
+                : null,
+          ),
+        ),
+        rs33J(
+          "div",
+          { className: "trip-details rs33-trip-body" },
+          rs33J(
+            "div",
+            { className: "rs33-trip-summary" },
+            rs33J(
+              "strong",
+              null,
+              rs33Format.format(Number(current.distance_km) || 0) + " km",
+            ),
+            rs33J(
+              "span",
+              null,
+              [
+                start ? rs33Time(start) : "",
+                end
+                  ? start && rs33ISO(start) === rs33ISO(end)
+                    ? rs33Time(end)
+                    : rs33ISO(end).slice(5) + " " + rs33Time(end)
+                  : "운행 중",
+              ]
+                .filter(Boolean)
+                .join(" – "),
+            ),
+            rs33J(
+              "small",
+              null,
+              end && start ? rs33Duration(end - start) : "운행 중",
+              raw?.gapCount ? " · GPS 기록 공백 " + raw.gapCount + "구간" : "",
+            ),
+          ),
+          !ended
+            ? rs33J(
+                "div",
+                { className: "actions" },
+                rs33J(
+                  "button",
+                  {
+                    type: "button",
+                    className: "secondary",
+                    onClick: ride.togglePause,
+                  },
+                  ride.paused ? "운행 재개" : "휴식",
+                ),
+                rs33J(
+                  "button",
+                  { type: "button", className: "primary", onClick: finish },
+                  "운행 종료",
+                ),
+              )
+            : null,
+          finished && ended
+            ? rs33J(
+                "button",
+                {
+                  type: "button",
+                  className: "primary rs33-income-link",
+                  onClick: () => window.__rsOpenTool?.("earnings"),
+                },
+                "이어서 수익 기록",
+              )
+            : null,
+          ended
+            ? rs33J(
+                "form",
+                { className: "rs33-trip-memo", onSubmit: saveMemo },
+                rs33J("label", { htmlFor: "rs33-trip-memo" }, "운행 메모"),
+                rs33J(
+                  "div",
+                  null,
+                  rs33J("input", {
+                    id: "rs33-trip-memo",
+                    value: memo,
+                    maxLength: 140,
+                    onChange: (event) => setMemo(event.target.value),
+                    placeholder: "예: 점심 피크 · 수완동",
+                  }),
+                  rs33J(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "secondary",
+                      disabled: memoBusy,
+                    },
+                    "저장",
+                  ),
+                ),
+              )
+            : null,
+          ended
+            ? null
+            : rs33J(
+                "p",
+                { className: "rs33-muted" },
+                "운행 경로는 기기에 기록 중입니다. GPS 저장 상태를 확인할 수 있어요.",
+              ),
+          rs33J(
+            "section",
+            { className: "rs44-events" },
+            rs33J(
+              "button",
+              {
+                type: "button",
+                className: "rs44-event-toggle",
+                "aria-expanded": eventOpen,
+                "aria-controls": "rs44-event-list",
+                onClick: () => {
+                  const value = !eventOpen;
+                  setEventOpen(value);
+                  try {
+                    localStorage.setItem(
+                      "rs:trip-events-open",
+                      value ? "1" : "0",
+                    );
+                  } catch {}
+                },
+              },
+              rs33J("span", null, "운행 이벤트"),
+              rs33J(
+                "span",
+                { className: "rs44-count" },
+                (current.events || []).length + "개",
+              ),
+              rs33J(
+                "span",
+                { className: "rs44-chevron", "aria-hidden": true },
+                eventOpen ? "⌃" : "⌄",
+              ),
+            ),
+            eventOpen
+              ? rs33J(
+                  "ol",
+                  {
+                    id: "rs44-event-list",
+                    className: "timeline rs44-event-list",
+                  },
+                  (Array.isArray(current.events) ? current.events : EMPTY)
+                    .filter((event) => event && typeof event.type === "string")
+                    .map((event, i) =>
+                      rs33J(
+                        "li",
+                        { key: i },
+                        rs33J("span", { className: "timeline-dot" }),
+                        rs33J(
+                          "time",
+                          null,
+                          rs33Timestamp(event.at) ? rs33Time(event.at) : "—",
+                        ),
+                        rs33J("strong", null, event.type),
+                      ),
+                    ),
+                )
+              : null,
+          ),
+          ended
+            ? rs33J(
+                "div",
+                { className: "actions" },
+                rs33J(
+                  "button",
+                  {
+                    type: "button",
+                    className: "secondary",
+                    onClick: () =>
+                      ride
+                        .sync(current)
+                        .catch((error) => notify(error.message)),
+                  },
+                  "서버 저장",
+                ),
+                rs33J(
+                  "button",
+                  {
+                    type: "button",
+                    className: "back danger",
+                    onClick: async () => {
+                      if (!confirm("이 운행 기록을 삭제할까요?")) return;
+                      try {
+                        await ride.remove(current.id);
+                        back();
+                      } catch (error) {
+                        notify(error.message);
+                      }
+                    },
+                  },
+                  "기록 삭제",
+                ),
+              )
+            : null,
+        ),
+      );
+    }
+    const history = ride.history.filter((trip) =>
+      rs33Timestamp(trip?.started_at),
+    );
+    const byDay = new Map();
+    for (const trip of history) {
+      const key = rs33ISO(trip.started_at);
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(trip);
+    }
+    const entries = allDays ? history : byDay.get(day) || [];
+    const km = entries.reduce(
+      (sum, trip) => sum + (Number(trip.distance_km) || 0),
+      0,
+    );
+    const elapsed = entries.reduce(
+      (sum, trip) =>
+        sum +
+        Math.max(
+          0,
+          (rs33Timestamp(trip.ended_at) || 0) -
+            (rs33Timestamp(trip.started_at) || 0),
+        ),
+      0,
+    );
+    const labels = ["월", "화", "수", "목", "금", "토", "일"];
+    return rs33J(
+      "section",
+      { className: "page rs33-timeline" },
+      rs33J(
+        "div",
+        { className: "rs33-title" },
+        rs33J("h1", null, "타임라인"),
+        rs33J(
+          "button",
+          {
+            type: "button",
+            className: "primary",
+            disabled: ride.busy,
+            onClick: ride.startTrip,
+          },
+          ride.busy ? "위치 확인 중…" : "운행 시작",
+        ),
+      ),
+      rs33J(
+        "div",
+        { className: "rs33-week-head" },
+        rs33J(
+          "button",
+          {
+            type: "button",
+            "aria-label": "이전 주",
+            onClick: () => choose(rs33DateAdd(week, -7)),
+          },
+          "‹",
+        ),
+        rs33J(
+          "strong",
+          null,
+          Number(day.slice(0, 4)) + "년 " + Number(day.slice(5, 7)) + "월",
+        ),
+        rs33J(
+          "button",
+          {
+            type: "button",
+            "aria-label": "다음 주",
+            disabled: week >= rs33WeekStart(today),
+            onClick: () => choose(rs33DateAdd(week, 7)),
+          },
+          "›",
+        ),
+      ),
+      rs33J(
+        "div",
+        { className: "rs33-week", role: "group", "aria-label": "운행 날짜" },
+        ...labels.map((label, i) => {
+          const date = rs33DateAdd(week, i);
+          return rs33J(
+            "button",
+            {
+              type: "button",
+              key: date,
+              disabled: date > today,
+              "aria-pressed": date === day && !allDays,
+              "aria-label":
+                date +
+                (byDay.has(date)
+                  ? " 운행 " + byDay.get(date).length + "회"
+                  : ""),
+              onClick: () => choose(date),
+            },
+            rs33J("small", null, label),
+            rs33J("b", null, Number(date.slice(8))),
+            rs33J("span", { "data-has-record": byDay.has(date) }),
+          );
+        }),
+      ),
+      rs33J(
+        "div",
+        { className: "rs33-trip-summary" },
+        rs33J(
+          "small",
+          null,
+          allDays
+            ? "전체 운행"
+            : day === today
+              ? "오늘 운행"
+              : day.slice(5).replace("-", "월 ") + "일 운행",
+        ),
+        rs33J(
+          "strong",
+          null,
+          rs33Format.format(km) +
+            " km · " +
+            (entries.length ? rs33Duration(elapsed) : "0분"),
+        ),
+        rs33J("span", null, "운행 " + entries.length + "회 · 비공개 기록"),
+      ),
+      rs33J(
+        "div",
+        { className: "rs33-list-title" },
+        rs33J("h2", null, "운행 기록"),
+        rs33J(
+          "button",
+          {
+            type: "button",
+            className: "back",
+            onClick: () => setAllDays((value) => !value),
+          },
+          allDays ? "선택한 날짜 보기" : "전체 기록 보기",
+        ),
+      ),
+      entries.length
+        ? rs33J(
+            "div",
+            { className: "rs33-rides" },
+            entries.map((trip) =>
+              rs33J(
+                "button",
+                {
+                  type: "button",
+                  className: "rs33-ride-row",
+                  key: trip.id,
+                  onClick: () => view(trip),
+                },
+                rs33J(
+                  "div",
+                  null,
+                  rs33J(
+                    "small",
+                    null,
+                    (allDays ? rs33ISO(trip.started_at) + " · " : "") +
+                      rs33Time(trip.started_at) +
+                      (rs33Timestamp(trip.ended_at)
+                        ? " – " + rs33Time(trip.ended_at)
+                        : ""),
+                  ),
+                  rs33J("strong", null, trip.memo || "운행 경로"),
+                  rs33J(
+                    "small",
+                    null,
+                    rs33Format.format(Number(trip.distance_km) || 0) + " km",
+                  ),
+                ),
+                rs33Thumb(trip),
+              ),
+            ),
+          )
+        : rs33J(
+            "p",
+            { className: "rs33-empty" },
+            "이날 저장된 운행 기록이 없어요.",
+          ),
+    );
+  }
+  return ss;
+}
