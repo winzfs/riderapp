@@ -28,3 +28,7 @@ jobs:
         env:
           RIDER_PREBUILT: "1"
         run: node tests/daily-browser.cjs
+      - name: Check actual deployed Positron vector map after rollout
+        env:
+          RIDER_PREBUILT: "0"
+        run: node tests/daily-browser.cjs
