@@ -34,11 +34,9 @@ export function rs33DrawCourse(L, map, geometry) {
       weight: 9,
       opacity: 0.92,
     }).addTo(group);
-  if (geometry.dots.length) {
-    const dotLines = geometry.dots.map((point) => [point, point]);
-    L.polyline(dotLines, { ...line, color: "#178f78", weight: 9 }).addTo(group);
-    L.polyline(dotLines, { ...line, color: "#ff9a50", weight: 6 }).addTo(group);
-  }
+  // Single-point GPS fragments remain in route geometry for analysis, but
+  // are deliberately not rendered as orange/green dots on the map.
+  // Their visual markers made sparse and noisy GPS samples look like stops.
   geometry.gradient.forEach((coordinates, tone) => {
     if (!coordinates.length) return;
     const p = tone / 23;
