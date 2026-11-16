@@ -4,6 +4,7 @@ on:
     branches: [feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-daily-browser.yml'
+      - 'rider-spot-web/tests/daily-browser.cjs'
   workflow_dispatch:
 permissions:
   contents: read
