@@ -34,15 +34,15 @@ export function addBasemap(L, map) {
   window.L = L;
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    // Native Android keeps a GPU-free raster renderer. The dedicated class
-    // gives it the same calm, light visual palette without MapLibre/WebGL.
-    className: "rs57-native-light-tiles",
     attribution:
       '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
   const wrap = map.getContainer().closest(".map-wrap");
   const state = {
-    mode: window.__rsNativeInstalled ? "simple-raster" : "simple",
+    // Restore the same OpenFreeMap Positron vector style on both web and
+    // Android WebView. The native bridge must not change the map design.
+    // Leaflet and the existing WebGL teardown guard keep tab switching stable.
+    mode: "simple",
     osm,
     gl: null,
     glMap: null,
@@ -417,7 +417,7 @@ export function addBasemap(L, map) {
       });
       gl.on("webglcontextlost", () => {
         if (state.alive && state.gl === layer) {
-          state.mode = "simple-raster";
+          state.mode = "classic";
           restoreOsm();
         }
       });
@@ -430,12 +430,14 @@ export function addBasemap(L, map) {
       });
       fallbackTimer = setTimeout(() => {
         if (state.alive && state.gl === layer && !state.hasGl) {
-          console.warn("Vector map unavailable; keeping classic tiles");
+          console.warn("Vector map unavailable; switching to the safety basemap");
+          state.mode = "classic";
           restoreOsm();
         }
       }, 14000);
     } catch (error) {
       console.warn("Rider Spot map fallback:", error?.message || error);
+      state.mode = "classic";
       restoreOsm();
     } finally {
       state.loading = false;
