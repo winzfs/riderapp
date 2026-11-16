@@ -7,7 +7,7 @@ on:
       - '.github/workflows/rider-spot-web-checks.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate-webview-navigation:
     runs-on: ubuntu-latest
@@ -32,10 +32,34 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           const manifest = JSON.parse(readFileSync('dist/release.json', 'utf8'));
-          const src = '/assets/rider-spot-' + manifest.hash + '/tab-resume.js';
+          const base = '/assets/rider-spot-' + manifest.hash + '/';
+          const src = base + 'tab-resume.js';
+          const css = base + 'daily-timeline.css';
           const html = readFileSync('dist/index.html', 'utf8');
           const sw = readFileSync('dist/sw.js', 'utf8');
           if (!manifest.files.includes(src) || !html.includes(src) || !sw.includes(src))
             throw Error('Tab recovery missing from HTML, Worker asset list or service worker');
-          console.log('PASS bundled navigation recovery: ' + src);
+          if (!manifest.files.includes(css) || !html.includes(css) || !sw.includes(css))
+            throw Error('Daily timeline stylesheet missing from release');
+          console.log('PASS bundled navigation recovery and daily timeline CSS: ' + manifest.hash);
           NODE
+      - name: Stage validated release assets for Cloudflare deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p prebuilt
+          cp dist/index.html prebuilt/index.html
+          cp dist/sw.js prebuilt/sw.js
+          cp dist/release.json prebuilt/release.json
+          bundle_dir="dist/assets/rider-spot-$(node -p "require('./dist/release.json').hash")"
+          test -s "$bundle_dir/app.mjs"
+          for name in app.mjs route-worker.mjs native-gps.js map-reports.js tab-resume.js daily-timeline.css; do
+            cp "$bundle_dir/$name" "prebuilt/$name"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f prebuilt/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(web): stage tested timeline release [skip ci]"
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
