@@ -68,6 +68,26 @@ const fixtures = [
     await daySelector.click();
     await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
     await page.getByLabel("운행 경로 지도", { exact: true }).waitFor();
+    // Native Android must keep the GPU-free raster renderer, but should not
+    // expose the highly saturated old map style.
+    await page.waitForFunction(() =>
+      Boolean(document.querySelector(".leaflet-layer.rs57-native-light-tiles"))
+    );
+    const basemap = await page.evaluate(() => {
+      const layer = document.querySelector(".leaflet-layer.rs57-native-light-tiles");
+      const style = getComputedStyle(layer);
+      return {
+        filter: style.filter,
+        nativeInstalled: window.__rsNativeInstalled,
+        cssSheetLoaded: [...document.styleSheets].some(
+          sheet => sheet.href?.includes("native-light-map.css")
+        ),
+      };
+    });
+    assert.equal(basemap.nativeInstalled, true);
+    assert.equal(basemap.cssSheetLoaded, true);
+    assert.ok(basemap.filter.includes("grayscale("),
+      "Native tile layer did not receive the low-saturation style: " + basemap.filter);
     await page.waitForFunction(() =>
       document.querySelector(".rs56-day-overview .leaflet-container") &&
       document.querySelector(".rs56-day-overview .leaflet-overlay-pane")
