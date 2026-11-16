@@ -166,7 +166,7 @@ export function useRoutePlayback(React, source) {
       if (previous == null) {
         previous = lastCommit = now;
       } else {
-        pending += Math.min(200, Math.max(0, now - previous)) * state.speed;
+        pending += Math.max(0, now - previous) * state.speed;
         previous = now;
       }
       if (now - lastCommit >= 85) {
