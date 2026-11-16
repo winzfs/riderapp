@@ -46,8 +46,9 @@ test("the installed Android WebView uses the actual OpenFreeMap Positron vector 
     getMaplibreMap() { return gl; },
     onRemove() {},
   };
+  const node = { dataset: {}, closest() { return wrap; } };
   const map = {
-    getContainer() { return { closest() { return wrap; } }; },
+    getContainer() { return node; },
     hasLayer(layer) { return layer === rasterLayer && rasterMounted; },
     removeLayer(layer) {
       if (layer === rasterLayer) rasterMounted = false;
@@ -70,10 +71,12 @@ test("the installed Android WebView uses the actual OpenFreeMap Positron vector 
   try {
     const cleanup = addBasemap(leaflet, map);
     assert.equal(wrap.dataset.rsBase, "simple");
+    assert.equal(node.dataset.rsBasemap, "loading");
     await new Promise((resolve) => setTimeout(resolve, 30));
     assert.ok(loads.includes("vector-layer"));
     assert.ok(loads.includes("vector-attached"));
     assert.equal(wrap.dataset.rsBase, "simple");
+    assert.equal(node.dataset.rsBasemap, "positron");
     assert.equal(rasterMounted, false, "vector map replaces old raster tiles on load");
     cleanup();
   } finally {
