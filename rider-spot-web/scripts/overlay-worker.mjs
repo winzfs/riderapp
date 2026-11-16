@@ -34,7 +34,9 @@ export function overlayWorker(source, releaseAssets, expectedSha) {
       body,
       path.endsWith(".html")
         ? "text/html; charset=utf-8"
-        : "application/javascript; charset=utf-8",
+        : path.endsWith(".css")
+          ? "text/css; charset=utf-8"
+          : "application/javascript; charset=utf-8",
     ];
   }
   return (
