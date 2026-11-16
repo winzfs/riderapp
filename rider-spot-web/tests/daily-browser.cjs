@@ -68,26 +68,28 @@ const fixtures = [
     await daySelector.click();
     await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
     await page.getByLabel("운행 경로 지도", { exact: true }).waitFor();
-    // Native Android must keep the GPU-free raster renderer, but should not
-    // expose the highly saturated old map style.
-    await page.waitForFunction(() =>
-      Boolean(document.querySelector(".leaflet-layer.rs57-native-light-tiles"))
-    );
+    // The APK must use the exact Positron vector style previously used by
+    // the web, not a CSS-filtered OpenStreetMap raster approximation.
+    await page.waitForFunction(() => {
+      const container = document.querySelector(".rs56-day-overview .map");
+      return container?.dataset.rsBasemap === "positron" &&
+        Boolean(container.querySelector("canvas.maplibregl-canvas"));
+    }, null, { timeout: 30000 });
     const basemap = await page.evaluate(() => {
-      const layer = document.querySelector(".leaflet-layer.rs57-native-light-tiles");
-      const style = getComputedStyle(layer);
+      const container = document.querySelector(".rs56-day-overview .map");
       return {
-        filter: style.filter,
         nativeInstalled: window.__rsNativeInstalled,
-        cssSheetLoaded: [...document.styleSheets].some(
+        renderer: container.dataset.rsBasemap,
+        canvas: container.querySelectorAll("canvas.maplibregl-canvas").length,
+        hasFakeRasterFilter: [...document.styleSheets].some(
           sheet => sheet.href?.includes("native-light-map.css")
         ),
       };
     });
     assert.equal(basemap.nativeInstalled, true);
-    assert.equal(basemap.cssSheetLoaded, true);
-    assert.ok(basemap.filter.includes("grayscale("),
-      "Native tile layer did not receive the low-saturation style: " + basemap.filter);
+    assert.equal(basemap.renderer, "positron");
+    assert.ok(basemap.canvas > 0);
+    assert.equal(basemap.hasFakeRasterFilter, false);
     await page.waitForFunction(() =>
       document.querySelector(".rs56-day-overview .leaflet-container") &&
       document.querySelector(".rs56-day-overview .leaflet-overlay-pane")
@@ -106,15 +108,23 @@ const fixtures = [
     assert.ok(center.lat > 35.1 && center.lat < 35.22, "daily map fitted");
     await page.locator(".rs56-ride-choice").first().click();
     await page.locator(".rs33-trip-detail").waitFor();
+    await page.waitForFunction(() =>
+      document.querySelector(".rs33-trip-detail .map")?.dataset.rsBasemap === "positron",
+      null, { timeout: 30000 }
+    );
     await page.getByRole("button", { name: "‹ 운행 목록" }).click();
     await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
+    await page.waitForFunction(() =>
+      document.querySelector(".rs56-day-overview .map")?.dataset.rsBasemap === "positron",
+      null, { timeout: 30000 }
+    );
     await page.locator(".rs56-ride-choice").last().click();
     await page.locator(".rs33-trip-detail").waitFor();
     assert.match(await page.locator(".rs33-trip-summary").last().innerText(), /0 km/);
     assert.equal(await page.evaluate(() => localStorage.getItem("rs:trips:guest")), original);
     assert.deepEqual(errors, []);
     assert.equal(navigations.length, 1);
-    console.log("PASS daily-first timeline: 3 saved runs, 2 route groups, 0-km run, detail/back and unchanged GPS records", center);
+    console.log("PASS Android native-flag Positron vector map: daily + detail/back, 3 runs, 0-km, unchanged GPS and no navigation reset", center);
   } finally {
     await context.close();
     await browser.close();
