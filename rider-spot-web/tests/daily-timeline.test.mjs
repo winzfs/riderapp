@@ -74,9 +74,9 @@ test("a day with zero-GPS trips remains selectable without drawing a false path"
 test("explicit route break and overlapping runs never produce artificial cross-run connections", () => {
   const start = Date.parse("2026-11-16T09:00:00Z");
   const a = record("a", "2026-11-16T09:00:00Z", "2026-11-16T10:00:00Z", 1,
-    [point(35.1, 126.7, start), {...point(35.11, 126.71, start + 10000), break: true}, point(35.12, 126.72, start + 20000)]);
+    [point(35.1, 126.7, start), {...point(35.1002, 126.7002, start + 10000), break: true}, point(35.1004, 126.7004, start + 20000)]);
   const b = record("b", "2026-11-16T09:20:00Z", "2026-11-16T09:30:00Z", 2,
-    [point(36.1, 127.7, start + 20 * 60000),point(36.11, 127.71, start + 20 * 60000 + 10000)]);
+    [point(36.1, 127.7, start + 20 * 60000),point(36.1002, 127.7002, start + 20 * 60000 + 10000)]);
   const daily = buildDailyTimeline([b, a], "2026-11-16");
   assert.equal(daily.trips[0].id, "a");
   assert.equal(rs33Paths(daily.route.points).length, 3);
