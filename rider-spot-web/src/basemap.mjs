@@ -34,12 +34,15 @@ export function addBasemap(L, map) {
   window.L = L;
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
+    // Native Android keeps a GPU-free raster renderer. The dedicated class
+    // gives it the same calm, light visual palette without MapLibre/WebGL.
+    className: "rs57-native-light-tiles",
     attribution:
       '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
   const wrap = map.getContainer().closest(".map-wrap");
   const state = {
-    mode: window.__rsNativeInstalled ? "classic" : "simple",
+    mode: window.__rsNativeInstalled ? "simple-raster" : "simple",
     osm,
     gl: null,
     glMap: null,
@@ -55,7 +58,7 @@ export function addBasemap(L, map) {
   let readyTimer, fallbackTimer;
   function paint() {
     if (!state.alive) return;
-    const isVector = state.mode !== "classic";
+    const isVector = state.mode === "simple";
     if (wrap) {
       wrap.dataset.rsBase = state.mode;
       wrap.classList.toggle("rs-map-pending", isVector && !state.hasGl);
@@ -80,7 +83,7 @@ export function addBasemap(L, map) {
   async function update() {
     if (!state.alive) return;
     const wanted = state.mode;
-    if (wanted === "classic") {
+    if (wanted !== "simple") {
       restoreOsm();
       return;
     }
@@ -102,7 +105,7 @@ export function addBasemap(L, map) {
     paint();
     try {
       await libs(L);
-      if (!state.alive || state.mode === "classic") return;
+      if (!state.alive || state.mode !== "simple") return;
       const layer = L.maplibreGL({
         style: STYLES[state.mode],
         interactive: false,
@@ -414,7 +417,7 @@ export function addBasemap(L, map) {
       });
       gl.on("webglcontextlost", () => {
         if (state.alive && state.gl === layer) {
-          state.mode = "classic";
+          state.mode = "simple-raster";
           restoreOsm();
         }
       });
@@ -439,7 +442,7 @@ export function addBasemap(L, map) {
     }
   }
   paint();
-  if (state.mode !== "classic") update();
+  if (state.mode === "simple") update();
   return () => {
     state.alive = false;
     clearTimeout(readyTimer);
