@@ -1,6 +1,7 @@
 import { addBasemap } from "./basemap.mjs";
 import { createMapController } from "./map-controller.mjs";
 import { rs33DrawCourse, paintCourseLabels } from "./course-layers.mjs";
+import { createPlaybackLayer } from "./route-playback.mjs";
 
 const EMPTY = [];
 const presence = {
@@ -57,6 +58,7 @@ export function createRiderMap(React, L, fallback) {
     const marker = React.useRef(null);
     const accuracy = React.useRef(null);
     const peers = React.useRef(null);
+    const player = React.useRef(null);
     const originalFocus = React.useRef(focus);
     const initialFit = React.useRef(course?.fitRequest);
     const cameraId = course?.id || "main";
@@ -73,6 +75,7 @@ export function createRiderMap(React, L, fallback) {
       return () => {
         controller.current = null;
         peers.current = marker.current = accuracy.current = null;
+        player.current = null;
         if (window.__rsMap === map) window.__rsMap = null;
         removeBasemap();
         current.destroy();
@@ -142,13 +145,13 @@ export function createRiderMap(React, L, fallback) {
     }, [cameraId, course?.bounds, course?.fitRequest]);
 
     React.useEffect(() => {
-      if (!course?.geometry) return;
+      if (!course?.geometry || course?.playback?.showing) return;
       const map = controller.current.map;
       return rs33DrawCourse(L, map, course.geometry);
-    }, [cameraId, course?.geometry]);
+    }, [cameraId, course?.geometry, course?.playback?.showing]);
 
     React.useEffect(() => {
-      if (!course?.geometry) return;
+      if (!course?.geometry || course?.playback?.showing) return;
       return paintCourseLabels(
         L,
         controller.current.map,
@@ -156,7 +159,25 @@ export function createRiderMap(React, L, fallback) {
         course.stamps,
         course.onStamp,
       );
-    }, [cameraId, course?.geometry, course?.stamps, course?.onStamp]);
+    }, [cameraId, course?.geometry, course?.stamps, course?.onStamp, course?.playback?.showing]);
+
+    React.useEffect(() => {
+      if (!course?.playback?.showing || !course.playback.track) return;
+      const renderer = createPlaybackLayer(
+        L, controller.current.map, course.playback.track,
+      );
+      player.current = renderer;
+      renderer.setTime(course.playback.elapsed);
+      return () => {
+        if (player.current === renderer) player.current = null;
+        renderer.destroy();
+      };
+    }, [cameraId, course?.playback?.showing, course?.playback?.track]);
+
+    React.useEffect(() => {
+      if (!course?.playback?.showing) return;
+      player.current?.setTime(course.playback.elapsed);
+    }, [cameraId, course?.playback?.showing, course?.playback?.elapsed]);
 
     return React.createElement("div", {
       className: "map",
