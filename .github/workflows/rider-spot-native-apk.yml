@@ -21,6 +21,19 @@ jobs:
           mkdir -p rider-spot-android/build-src
           tar -xJf rider-spot-android/source.tar.xz -C rider-spot-android/build-src
           test -s rider-spot-android/build-src/app/src/main/java/com/riderspot/android/TrackingService.java
+      - name: Inspect native WebView lifecycle sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAVA_DIR="rider-spot-android/build-src/app/src/main/java"
+          echo '=== Native source file names ==='
+          find "$JAVA_DIR" -type f \( -name '*.java' -o -name '*.kt' \) | sort
+          echo '=== WebView lifecycle and navigation references ==='
+          grep -RInE 'loadUrl|shouldOverrideUrlLoading|onPageFinished|onRenderProcessGone|onReceivedError|evaluateJavascript|onNewIntent|onCreate|onResume|onPause|onDestroy|WebViewClient|setWebViewClient|window\\.location|history\\.|onBackPressed|doUpdateVisitedHistory' "$JAVA_DIR" || true
+          echo '=== MainActivity source ==='
+          for path in $(find "$JAVA_DIR" -name 'MainActivity.java' -o -name 'MainActivity.kt'); do
+            sed -n '1,440p' "$path"
+          done
       - name: Configure Java
         uses: actions/setup-java@v4
         with:
