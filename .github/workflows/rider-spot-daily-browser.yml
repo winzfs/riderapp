@@ -24,5 +24,7 @@ jobs:
           cache-dependency-path: rider-spot-web/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Check deployed daily map, ride selector and native-safe navigation
+      - name: Check candidate Positron map in native mode, ride selection and navigation
+        env:
+          RIDER_PREBUILT: "1"
         run: node tests/daily-browser.cjs
