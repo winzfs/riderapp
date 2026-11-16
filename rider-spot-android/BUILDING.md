@@ -1,13 +1,11 @@
-라이더스팟 Android v1.0.4 (Google OAuth 복귀 수정)
-
-원인: 외부 Chrome은 WebView와 다른 쿠키/세션 저장소를 사용하여 Google 로그인 후 Chrome에만 로그인되었습니다.
-
-해결:
-- 네이티브 브리지 signInWithOAuth(skipBrowserRedirect=true), 기존 Supabase 승인 URL 루트로 redirectTo 유지
-- Chrome에서 OAuth 실행, Cloudflare Worker의 단기 HttpOnly 쿠키가 있는 브라우저만 로그인 완료 브릿지 실행
-- 라이더스팟 Android 딥링크 (riderspot-oauth://signin/callback)와 nonce 검증 후 app WebView의 기존 Supabase auth.setSession() 호출
-- GPS, 운행 종료 서버 전송, 알림 기능은 그대로 유지
-
-운영 Cloudflare Worker에 server/native-oauth-worker.js 로직 배포 필요.
-백그라운드 GPS 경로는 운행 중 로컬 저장, 종료 시에만 서버에 업로드됩니다.
-Debug 빌드 서명이 다를 수 있으니 삭제 전 미동기화 기록 확인.
+# Rider Spot Android v1.0.5 — 60초 이상 정차 이벤트
+- GPS가 연속 수신된 구간에서 30m 이내 60초 이상 머문 정차를 자동 탐지합니다.
+- 이벤트에는 정차 시작·종료 시간, 정차 초 단위 길이, GPS 위도·경도가 기록됩니다.
+- 운행 중에는 휴대폰 SQLite와 로컬 브라우저 저장소에만 저장하고, 운행 종료 후 Supabase 경로와 함께 전송합니다.
+- `riderspot-native-stop-v1` 이벤트는 중복 제거와 시간순 병합이 적용됩니다.
+- 라이더스팟 Cloudflare 웹 UI v37: 타임라인 이벤트 + 지도 정차 시간 스탬프.
+- 기존 Google OAuth 앱 복귀와 알림 운행 종료 기능을 유지합니다.
+- 모바일 실기기 장시간/백그라운드 GPS 검증은 필요합니다.
+- 기존 설치 APK 제거 전 미동기화 운행 경로 유무를 반드시 확인하세요.
+- 소스: rider-spot-android/source.tar.xz
+- APK 위치: Actions → Rider Spot Native APK → Artifacts → RiderSpot-Android-1.0.5-StopEvents-debug
