@@ -19,7 +19,7 @@ const buildOptions = {
   format: "esm",
   target: "chrome110",
 };
-const [app, worker, gps, reports, template, previousSw] = await Promise.all([
+const [app, worker, gps, reports, tabResume, template, previousSw] = await Promise.all([
   build({
     ...buildOptions,
     stdin: {
@@ -31,6 +31,7 @@ const [app, worker, gps, reports, template, previousSw] = await Promise.all([
   build({ ...buildOptions, entryPoints: ["src/route-worker.mjs"] }),
   read("src/native-gps.js"),
   read("src/map-reports.js"),
+  read("src/tab-resume.js"),
   read("legacy/index.html"),
   read("legacy/sw.js"),
 ]);
@@ -39,6 +40,7 @@ const encoded = {
   "route-worker.mjs": worker.outputFiles[0].text,
   "native-gps.js": gps,
   "map-reports.js": reports,
+  "tab-resume.js": tabResume,
 };
 const hash = createHash("sha256")
   .update(JSON.stringify([encoded, template, previousSw]))
@@ -53,11 +55,13 @@ const oldApp =
 const oldReports = "/rider-map-reports-v36-fd33eca4ded1.js";
 const oldGps = "/rider-gps-recovery-v42.js?gps=v50";
 const oldSync = "/rider-trip-sync-v18-eee13da20fdf.js";
+const oldTabResume = "/rider-tab-resume-v54.js";
 function substitute(value) {
   const values = {
     [oldApp]: `${base}/app.mjs`,
     [oldReports]: `${base}/map-reports.js`,
     [oldGps]: `${base}/native-gps.js`,
+    [oldTabResume]: `${base}/tab-resume.js`,
   };
   return values[value] || value;
 }
@@ -71,6 +75,7 @@ const oldCore = JSON.parse(previousSw.match(/const CORE=(\[[^\n]+\]);/)[1]);
 const core = [
   ...oldCore.filter((path) => path !== oldSync).map(substitute),
   `${base}/route-worker.mjs`,
+  `${base}/tab-resume.js`,
 ];
 const serviceWorker = previousSw
   .replace(/^const CACHE=.*$/m, `const CACHE='rider-spot-shell-${hash}';`)
