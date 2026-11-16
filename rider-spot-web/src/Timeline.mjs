@@ -230,7 +230,9 @@ export function createTimeline(S, Zo) {
       ride.history.find((row) => row?.id === selected) || ride.trip;
     const ended = Boolean(current?.ended_at);
     const analysis = useRouteAnalysis(S, current);
-    const dailyPlayback = useRoutePlayback(S, daily?.trips);
+    const dailyPlayback = useRoutePlayback(
+      S, selected || ride.trip || allDays ? null : daily?.trips,
+    );
     const detailPlayback = useRoutePlayback(S, ended ? current : null);
     const raw = analysis?.course;
     const activeRoad =
