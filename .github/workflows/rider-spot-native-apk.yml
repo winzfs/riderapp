@@ -34,6 +34,10 @@ jobs:
           for path in $(find "$JAVA_DIR" -name 'MainActivity.java' -o -name 'MainActivity.kt'); do
             sed -n '1,440p' "$path"
           done
+          echo '=== Native bridge source ==='
+          find rider-spot-android/build-src/app/src/main -name native-bridge.js -type f -exec sh -c 'for f; do echo "FILE: $f"; sed -n "1,460p" "$f"; done' sh {} +
+          echo '=== Activity lifecycle tail ==='
+          for path in $(find "$JAVA_DIR" -name 'MainActivity.java'); do sed -n '570,660p' "$path"; done
       - name: Configure Java
         uses: actions/setup-java@v4
         with:
