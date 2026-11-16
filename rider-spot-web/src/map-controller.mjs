@@ -30,6 +30,9 @@ export function createMapController(L, node, cameraId, fallback) {
     zoomControl: false,
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
+    // Pinch still updates continuously via Leaflet touchZoom. A CSS zoom
+    // transition can outlive the map pane when React switches tabs.
+    zoomAnimation: false,
     zoomSnap: 0,
     zoomDelta: 0.25,
     touchZoom: true,

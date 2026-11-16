@@ -416,9 +416,19 @@ async function mapTest() {
         );
         throw error;
       });
+    for (let i = 0; i < 10; i++) {
+      await page.evaluate(() => {
+        document.querySelector(".leaflet-control-zoom-out").click();
+        window.__rsGoToTab("trips");
+      });
+      await page.getByRole("heading", { name: "타임라인" }).waitFor();
+      await tab(page, "지도").click();
+      await page.getByLabel(mapLabel, { exact: true }).waitFor();
+    }
+    await page.waitForTimeout(350);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS main map: 31 touch pinches, minimum zoom, pan, updated GPS, resize, 5 tab cycles, reload and explicit location",
+      "PASS main map: 31 touch pinches, minimum zoom, pan, updated GPS, resize, 5 tab cycles, reload and explicit location, 10 immediate zoom-and-switch cycles",
     );
   } finally {
     await context.close();
