@@ -159,8 +159,10 @@ const fixtures = [
     }, null, { timeout: 9000 });
     const dailyClock = await dailyPlayer.locator(".rs59-seek").inputValue();
     assert.ok(Number(dailyClock) < 300000, "timer does not jump to the end");
-    assert.ok((await page.locator(".rs56-day-overview .rs59-playback-marker").count()) > 0,
-      "playback head should be visible");
+    assert.ok(await page.evaluate(() =>
+      Object.values(window.__rsMap?._layers || {}).some(layer =>
+        layer?.options?.className === "rs59-playback-marker"
+      )), "playback head should exist on Leaflet canvas map");
     await dailyPlayer.getByRole("button", { name: "경로 재생 일시정지" }).click();
     const paused = Number(await dailyPlayer.locator(".rs59-seek").inputValue());
     await page.waitForTimeout(200);
@@ -175,7 +177,9 @@ const fixtures = [
     }, null, { timeout: 5000 });
     await dailyPlayer.getByRole("button", { name: "경로 재생 종료하고 전체 경로 보기" }).click();
     await page.waitForFunction(() =>
-      !document.querySelector(".rs56-day-overview .rs59-playback-marker")
+      !Object.values(window.__rsMap?._layers || {}).some(layer =>
+        layer?.options?.className === "rs59-playback-marker"
+      )
     );
     await page.locator(".rs56-ride-choice").first().click();
     await page.locator(".rs33-trip-detail .rs59-player").waitFor();
