@@ -148,7 +148,44 @@ const fixtures = [
       return { lat: map.getCenter().lat, lng: map.getCenter().lng, zoom: map.getZoom() };
     });
     assert.ok(center.lat > 35.1 && center.lat < 35.22, "daily map fitted");
+    // Real-time playback: 30x means ~30 GPS seconds for each wall second,
+    // and the route draws progressively rather than showing the full line.
+    const dailyPlayer = page.locator(".rs56-day-overview .rs59-player");
+    await dailyPlayer.getByRole("combobox", { name: "경로 재생 배속" }).selectOption("30");
+    await dailyPlayer.getByRole("button", { name: "경로 재생 시작" }).click();
+    await page.waitForFunction(() => {
+      const seek = document.querySelector(".rs56-day-overview .rs59-seek");
+      return seek && Number(seek.value) > 6000;
+    }, null, { timeout: 9000 });
+    const dailyClock = await dailyPlayer.locator(".rs59-seek").inputValue();
+    assert.ok(Number(dailyClock) < 300000, "timer does not jump to the end");
+    assert.ok((await page.locator(".rs56-day-overview .rs59-playback-marker").count()) > 0,
+      "playback head should be visible");
+    await dailyPlayer.getByRole("button", { name: "경로 재생 일시정지" }).click();
+    const paused = Number(await dailyPlayer.locator(".rs59-seek").inputValue());
+    await page.waitForTimeout(200);
+    const stillPaused = Number(await dailyPlayer.locator(".rs59-seek").inputValue());
+    assert.ok(Math.abs(stillPaused - paused) < 7500, "pause must stop elapsed time");
+    await dailyPlayer.locator(".rs59-seek").focus();
+    await dailyPlayer.locator(".rs59-seek").press("End");
+    await page.waitForFunction(() => {
+      const player = document.querySelector(".rs56-day-overview .rs59-player");
+      const seek = player?.querySelector(".rs59-seek");
+      return seek && Math.abs(Number(seek.value) - Number(seek.max)) < 1000;
+    }, null, { timeout: 5000 });
+    await dailyPlayer.getByRole("button", { name: "경로 재생 종료하고 전체 경로 보기" }).click();
+    await page.waitForFunction(() =>
+      !document.querySelector(".rs56-day-overview .rs59-playback-marker")
+    );
     await page.locator(".rs56-ride-choice").first().click();
+    await page.locator(".rs33-trip-detail .rs59-player").waitFor();
+    const detailPlayer = page.locator(".rs33-trip-detail .rs59-player");
+    await detailPlayer.getByRole("button", { name: "경로 재생 시작" }).click();
+    await page.waitForFunction(() =>
+      Number(document.querySelector(".rs33-trip-detail .rs59-seek")?.value) > 1500,
+      null, { timeout: 9000 }
+    );
+    await detailPlayer.getByRole("button", { name: "경로 재생 일시정지" }).click();
     await page.locator(".rs33-trip-detail").waitFor();
     await page.waitForFunction(() =>
       document.querySelector(".rs33-trip-detail .map")?.dataset.rsBasemap === "positron",
@@ -166,7 +203,7 @@ const fixtures = [
     assert.equal(await page.evaluate(() => localStorage.getItem("rs:trips:guest")), original);
     assert.deepEqual(errors, []);
     assert.equal(navigations.length, 1);
-    console.log("PASS Android native-flag Positron vector map: daily + detail/back, 3 runs, 0-km, unchanged GPS and no navigation reset", center);
+    console.log("PASS native Positron + GPS-time playback 30x, pause, seek, reset, daily/detail/back, saved GPS unchanged", center);
   } finally {
     await context.close();
     await browser.close();
