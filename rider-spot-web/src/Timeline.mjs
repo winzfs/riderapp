@@ -1006,6 +1006,7 @@ export function createTimeline(S, Zo) {
                   key: trip.id,
                   onClick: () => view(trip),
                   "aria-label":
+                    (trip.memo ? trip.memo + ", " : "") +
                     (allDays ? "" : index + 1 + "차, ") +
                     dateNote +
                     rs33Time(tripStart) +
