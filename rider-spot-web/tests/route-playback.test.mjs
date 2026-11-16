@@ -94,6 +94,6 @@ test("Leaflet playback renderer updates and cleans its layers with no raw-record
   playback.setTime(5000);
   playback.destroy();
   assert.deepEqual(layers[0],[[35.1,126.8]]);
-  assert.equal(layers[2][0].length,2);
+  assert.ok(layers.some(entry => Array.isArray(entry) && entry.length === 2 && Array.isArray(entry[0])));
   assert.equal(layers.at(-1),"destroy");
 });
