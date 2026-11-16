@@ -59,6 +59,10 @@ export function addBasemap(L, map) {
   function paint() {
     if (!state.alive) return;
     const isVector = state.mode === "simple";
+    // Diagnostic lives on the actual Leaflet map element, including timeline
+    // cards that do not have a .map-wrap ancestor. Used for Android regression checks.
+    map.getContainer().dataset.rsBasemap =
+      state.hasGl ? "positron" : isVector ? "loading" : "classic";
     if (wrap) {
       wrap.dataset.rsBase = state.mode;
       wrap.classList.toggle("rs-map-pending", isVector && !state.hasGl);
