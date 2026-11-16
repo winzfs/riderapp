@@ -1,0 +1,51 @@
+name: Rider Spot Native APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - 'rider-spot-android/**'
+      - '.github/workflows/rider-spot-native-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  assemble-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Unpack Rider Spot source
+        shell: bash
+        run: |
+          mkdir -p rider-spot-android/build-src
+          tar -xJf rider-spot-android/source.tar.xz -C rider-spot-android/build-src
+          test -s rider-spot-android/build-src/app/src/main/java/com/riderspot/android/TrackingService.java
+      - name: Configure Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android 36 SDK
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Check GPS bridge tests
+        working-directory: rider-spot-android/build-src
+        run: node --test tests/*.test.cjs
+      - name: Build APK
+        working-directory: rider-spot-android/build-src
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Confirm installable file
+        run: test -s rider-spot-android/build-src/app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-Android-1.0.0-debug
+          path: rider-spot-android/build-src/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
