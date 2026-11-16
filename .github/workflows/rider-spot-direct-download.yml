@@ -1,0 +1,42 @@
+name: Publish Rider Spot APK direct download
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-direct-download.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout APK feature branch
+        uses: actions/checkout@v4
+      - name: Download verified GPS stability APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build-output
+          gh run download 43868394220 --repo winzfs/riderapp --name RiderSpot-Android-1.0.6-GPS-Stability-debug --dir build-output
+          test -s build-output/app-debug.apk
+          echo "60c692a252550c9ed51fb68c2d2e2cf43fc5e6d1719b6e4ad4092f7a6949c2e1  build-output/app-debug.apk" | sha256sum --check
+          cp build-output/app-debug.apk RiderSpot-Android-v1.0.6-GPS-Stability.apk
+      - name: Publish direct install URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="riderspot-android-v1.0.6"
+          FILE="RiderSpot-Android-v1.0.6-GPS-Stability.apk"
+          if gh release view "$TAG" --repo winzfs/riderapp >/dev/null 2>&1; then
+            gh release upload "$TAG" "$FILE" --repo winzfs/riderapp --clobber
+          else
+            gh release create "$TAG" "$FILE" --repo winzfs/riderapp --target "$GITHUB_SHA" --title "Rider Spot Android v1.0.6 — GPS Stability (beta)" --notes "Android debug-signed beta APK. GPS fused/GNSS stability enhancements. Before uninstalling older versions, sync local trips. This release is for Rider Spot; it does not replace the separate riderapp main branch application." --prerelease
+          fi
+          gh release view "$TAG" --repo winzfs/riderapp --json assets --jq '.assets[].url'
