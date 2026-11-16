@@ -19,7 +19,7 @@ const buildOptions = {
   format: "esm",
   target: "chrome110",
 };
-const [app, worker, gps, reports, tabResume, template, previousSw] = await Promise.all([
+const [app, worker, gps, reports, tabResume, dailyCss, template, previousSw] = await Promise.all([
   build({
     ...buildOptions,
     stdin: {
@@ -32,6 +32,7 @@ const [app, worker, gps, reports, tabResume, template, previousSw] = await Promi
   read("src/native-gps.js"),
   read("src/map-reports.js"),
   read("src/tab-resume.js"),
+  read("src/daily-timeline.css"),
   read("legacy/index.html"),
   read("legacy/sw.js"),
 ]);
@@ -41,6 +42,7 @@ const encoded = {
   "native-gps.js": gps,
   "map-reports.js": reports,
   "tab-resume.js": tabResume,
+  "daily-timeline.css": dailyCss,
 };
 const hash = createHash("sha256")
   .update(JSON.stringify([encoded, template, previousSw]))
@@ -70,12 +72,14 @@ const html = template
     /<script defer src="\/rider-trip-sync-v18-eee13da20fdf\.js"><\/script>/,
     "",
   )
-  .replace(/\bsrc="([^"]+)"/g, (_, path) => `src="${substitute(path)}"`);
+  .replace(/\bsrc="([^"]+)"/g, (_, path) => `src="${substitute(path)}"`)
+  .replace("</head>", `<link rel="stylesheet" href="${base}/daily-timeline.css"></head>`);
 const oldCore = JSON.parse(previousSw.match(/const CORE=(\[[^\n]+\]);/)[1]);
 const core = [
   ...oldCore.filter((path) => path !== oldSync).map(substitute),
   `${base}/route-worker.mjs`,
   `${base}/tab-resume.js`,
+  `${base}/daily-timeline.css`,
 ];
 const serviceWorker = previousSw
   .replace(/^const CACHE=.*$/m, `const CACHE='rider-spot-shell-${hash}';`)
