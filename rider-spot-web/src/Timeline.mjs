@@ -10,6 +10,7 @@ import {
 import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
 import { useRouteAnalysis } from "./use-route-analysis.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
+import { useRoutePlayback } from "./route-playback.mjs";
 
 export function createTimeline(S, Zo) {
   const rs33J = S.createElement;
@@ -92,6 +93,100 @@ export function createTimeline(S, Zo) {
     thumbnailCache.set(source, thumbnail);
     return thumbnail;
   }
+  function formatPlaybackClock(ms) {
+    const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    return (hours ? hours + ":" : "") +
+      String(minutes).padStart(2, "0") + ":" +
+      String(seconds).padStart(2, "0");
+  }
+  function playbackBar(player, label) {
+    if (!player?.track || player.track.samples < 2 || player.duration < 1)
+      return null;
+    const complete = player.elapsed >= player.duration;
+    return rs33J(
+      "section",
+      { className: "rs59-player", "aria-label": label + " 재생" },
+      rs33J(
+        "div",
+        { className: "rs59-player-top" },
+        rs33J(
+          "button",
+          {
+            type: "button",
+            className: "rs59-play",
+            "aria-label": player.playing ? "경로 재생 일시정지" :
+              complete ? "경로 처음부터 다시 재생" : "경로 재생 시작",
+            "aria-pressed": player.playing,
+            onClick: player.toggle,
+          },
+          player.playing ? "Ⅱ 일시정지" : complete ? "↻ 다시 재생" : "▶ 경로 재생",
+        ),
+        rs33J(
+          "label",
+          { className: "rs59-speed" },
+          rs33J("span", null, "속도"),
+          rs33J(
+            "select",
+            {
+              "aria-label": "경로 재생 배속",
+              value: player.speed,
+              onChange: (event) => player.setSpeed(event.target.value),
+            },
+            ...[10, 20, 30, 60].map((speed) =>
+              rs33J("option", { key: speed, value: speed }, speed + "배")),
+          ),
+        ),
+        player.showing
+          ? rs33J(
+              "button",
+              {
+                type: "button",
+                className: "rs59-reset",
+                onClick: player.reset,
+                "aria-label": "경로 재생 종료하고 전체 경로 보기",
+              },
+              "전체 경로",
+            )
+          : null,
+      ),
+      rs33J(
+        "input",
+        {
+          className: "rs59-seek",
+          type: "range",
+          min: 0,
+          max: Math.max(1, Math.round(player.duration)),
+          step: 1000,
+          value: Math.min(Math.round(player.elapsed), Math.round(player.duration)),
+          "aria-label": "경로 재생 위치",
+          "aria-valuetext":
+            formatPlaybackClock(player.elapsed) + " / " +
+            formatPlaybackClock(player.duration),
+          onChange: (event) => player.seek(event.target.value),
+        },
+      ),
+      rs33J(
+        "div",
+        { className: "rs59-time-row" },
+        rs33J(
+          "span",
+          null,
+          player.showing && player.displayTime
+            ? "기록 시각 " + rs33Time(player.displayTime)
+            : "실제 GPS 속도 기준",
+        ),
+        rs33J(
+          "span",
+          { className: "rs59-elapsed" },
+          formatPlaybackClock(player.elapsed) + " / " +
+            formatPlaybackClock(player.duration),
+        ),
+      ),
+    );
+  }
   function ss({ ride, notify }) {
     const today = rs33ISO(Date.now());
     const [selected, setSelected] = S.useState(null);
@@ -135,6 +230,8 @@ export function createTimeline(S, Zo) {
       ride.history.find((row) => row?.id === selected) || ride.trip;
     const ended = Boolean(current?.ended_at);
     const analysis = useRouteAnalysis(S, current);
+    const dailyPlayback = useRoutePlayback(S, daily?.trips);
+    const detailPlayback = useRoutePlayback(S, ended ? current : null);
     const raw = analysis?.course;
     const activeRoad =
       roadPreview?.tripId === current?.id &&
@@ -289,6 +386,13 @@ export function createTimeline(S, Zo) {
           bounds: shown?.bounds,
           fitRequest: reset,
           onStamp,
+          playback: detailPlayback.showing
+            ? {
+                showing: true,
+                track: detailPlayback.track,
+                elapsed: detailPlayback.elapsed,
+              }
+            : null,
         },
       });
       const start = rs33Timestamp(current.started_at),
@@ -432,6 +536,7 @@ export function createTimeline(S, Zo) {
                 )
               : null,
           ),
+          ended ? playbackBar(detailPlayback, "개별 운행 경로") : null,
           !analysis
             ? rs33J(
                 "p",
@@ -919,9 +1024,17 @@ export function createTimeline(S, Zo) {
                         bounds: dailyCourse?.course?.bounds,
                         fitRequest: reset,
                         onStamp,
+                        playback: dailyPlayback.showing
+                          ? {
+                              showing: true,
+                              track: dailyPlayback.track,
+                              elapsed: dailyPlayback.elapsed,
+                            }
+                          : null,
                       },
                     }),
                   ),
+                  playbackBar(dailyPlayback, "하루 통합 경로"),
                   dailyCourse?.error
                     ? rs33J(
                         "p",
