@@ -159,8 +159,14 @@ async function riderSpotMatchRoads(request, url) {
   let rest=multipart.slice(end,multipart.lastIndexOf('\r\n--'));
   if(!rest.includes(routingStart)||rest.includes('riderSpotMatchRoads'))throw Error('Worker routing pattern mismatch');
   rest=rest.replace(routingStart,routingStart+"if(u.pathname==='/api/route-match')return riderSpotMatchRoads(request,u);");
-  const code='const files='+JSON.stringify(files)+'\n'+handler+'\n'+rest;
-  if(!code.includes('handleRiderSpotOAuth')||!code.includes("'/api/industry-news'")||!code.includes('rs38MatchRoads')||!code.includes('riderSpotMatchRoads'))throw Error('Deployment guard failed');
+  // Preserve the script preamble; it contains the native Google OAuth handler.
+  // Dropping it makes every request throw Error 1101.
+  const sourceStart=multipart.indexOf('\r\n\r\n')+4;
+  if(sourceStart<4||sourceStart>=pos)throw Error('Invalid Worker multipart preamble');
+  const preamble=multipart.slice(sourceStart,pos);
+  if(!preamble.includes('async function handleRiderSpotOAuth('))throw Error('Missing OAuth handler; refusing deploy');
+  const code=preamble+'const files='+JSON.stringify(files)+'\n'+handler+'\n'+rest;
+  if(!code.includes('async function handleRiderSpotOAuth(')||!code.includes("'/api/industry-news'")||!code.includes('rs38MatchRoads')||!code.includes('riderSpotMatchRoads'))throw Error('Deployment guard failed');
   const form=new FormData();
   form.append('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:'2026-11-15',bindings:[]})],{type:'application/json'}));
   form.append('worker.mjs',new Blob([code],{type:'application/javascript+module'}),'worker.mjs');
