@@ -1,5 +1,12 @@
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
+const { readFileSync, existsSync } = require("node:fs");
+const { resolve } = require("node:path");
+const candidate = process.env.RIDER_PREBUILT === "1";
+const manifest = candidate
+  ? JSON.parse(readFileSync(resolve(__dirname, "../prebuilt/release.json"), "utf8"))
+  : null;
+const candidateRoot = resolve(__dirname, "../prebuilt");
 
 const ORIGIN = "https://rider-spot.jazzhjm.workers.dev/";
 const when = (stamp) => Date.parse(stamp);
@@ -27,7 +34,12 @@ const fixtures = [
 ];
 
 (async () => {
-  const browser = await chromium.launch({ args: ["--no-sandbox"] });
+  const browser = await chromium.launch({
+    args: [
+      "--no-sandbox", "--enable-webgl", "--use-gl=angle",
+      "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
+    ],
+  });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
     timezoneId: "Asia/Seoul", serviceWorkers: "block",
@@ -44,6 +56,24 @@ const fixtures = [
     }, fixtures);
     await context.route("**/*", async (route) => {
       const url = new URL(route.request().url());
+      if (candidate && url.origin === new URL(ORIGIN).origin) {
+        const prefix = "/assets/rider-spot-" + manifest.hash + "/";
+        const file = url.pathname === "/" || url.pathname === "/index.html"
+          ? "index.html"
+          : url.pathname === "/sw.js"
+            ? "sw.js"
+            : url.pathname.startsWith(prefix)
+              ? url.pathname.slice(prefix.length)
+              : null;
+        if (file && existsSync(resolve(candidateRoot, file))) {
+          return route.fulfill({
+            path: resolve(candidateRoot, file),
+            contentType: file.endsWith(".mjs") ? "text/javascript"
+              : file.endsWith(".css") ? "text/css"
+              : file.endsWith(".html") ? "text/html" : "application/javascript",
+          });
+        }
+      }
       if (url.hostname.endsWith(".supabase.co"))
         return route.fulfill({ json: [] });
       if (url.hostname.includes("tile.openstreetmap.org"))
@@ -52,7 +82,12 @@ const fixtures = [
     });
     const page = await context.newPage();
     const errors = [];
+    const resourceErrors = [];
     const navigations = [];
+    page.on("requestfailed", request => {
+      if (/openfreemap|maplibre|jsdelivr/.test(request.url()))
+        resourceErrors.push(request.url() + ": " + request.failure()?.errorText);
+    });
     page.on("pageerror", error => errors.push(error.message));
     page.on("framenavigated", frame => {
       if (frame === page.mainFrame()) navigations.push(frame.url());
@@ -74,7 +109,14 @@ const fixtures = [
       const container = document.querySelector(".rs56-day-overview .map");
       return container?.dataset.rsBasemap === "positron" &&
         Boolean(container.querySelector("canvas.maplibregl-canvas"));
-    }, null, { timeout: 30000 });
+    }, null, { timeout: 30000 }).catch(async error => {
+      console.error("Positron loading diagnostic", await page.evaluate(() => ({
+        mapBase: document.querySelector(".rs56-day-overview .map")?.dataset.rsBasemap,
+        canvasCount: document.querySelectorAll(".maplibregl-canvas").length,
+        webgl: Boolean(document.createElement("canvas").getContext("webgl")),
+      })), resourceErrors);
+      throw error;
+    });
     const basemap = await page.evaluate(() => {
       const container = document.querySelector(".rs56-day-overview .map");
       return {
