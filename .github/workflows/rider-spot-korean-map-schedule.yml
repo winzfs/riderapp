@@ -37,6 +37,7 @@ jobs:
           KOREAN_SHOPS_CSV_URL: ${{ vars.KOREAN_SHOPS_CSV_URL }}
           KOREAN_SHOPS_SNAPSHOT: ${{ vars.KOREAN_SHOPS_SNAPSHOT }}
         run: python3 scripts/refresh-korean-map.py
+      # Importer quality guards are shared with the normal app branch CI.
       - name: Normalize and spatially partition data
         run: |
           python3 scripts/import-korean-map.py \
