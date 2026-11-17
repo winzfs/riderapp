@@ -59,4 +59,7 @@ test("road reports, riders and low-zoom maps never query the POI database", asyn
   const lowZoom = fixture(12);
   await createPublicPoiOverlay(() => {}).refresh({ ...lowZoom, filter: "places" });
   assert.equal(lowZoom.calls.reads, 0, "small-scale map should not render hundreds of pins");
+  const city = fixture(13);
+  await createPublicPoiOverlay(() => {}).refresh({ ...city, filter: "places" });
+  assert.equal(city.calls.reads, 1, "default city zoom should show sampled facilities");
 });
