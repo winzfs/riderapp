@@ -132,7 +132,7 @@ def build(shops, admin, source_metadata=None):
         "sources": {
             "region": "V-World administrative polygons, 2023-07-29 (via KnellBalm/kr-admin-geojson; KOGI 1 attribution)",
             "shop": f"SEMAS business locations, {period[:4]}-{period[4:]} ({metadata.get('shops_source', 'public CSV snapshot')})",
-            "building": "SEMAS store-linked road-name building names, 2025-06 (not a complete building inventory)"
+            "building": f"SEMAS store-linked road-name building names, {period[:4]}-{period[4:]} (not a complete building inventory)"
         }
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
