@@ -201,7 +201,7 @@ export function createRiderMap(React, L, fallback) {
       if (!course?.live || !course.follow || !validPosition(position)) return;
       const controllerNow = controller.current;
       if (!controllerNow) return;
-      const zoom = Math.max(16, controllerNow.map.getZoom());
+      const zoom = Math.max(17, controllerNow.map.getZoom());
       controllerNow.moveTo(position, zoom);
     }, [cameraId, course?.live, course?.follow, position?.lat, position?.lng]);
 
