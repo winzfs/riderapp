@@ -6,6 +6,9 @@ Fail closed on missing, malformed or unexpectedly small data; never fall back
 silently to an older file when the newest source cannot be downloaded.
 """
 import hashlib
+import csv
+import io
+import zipfile
 import json
 import os
 import pathlib
@@ -19,6 +22,7 @@ HUB = "https://huggingface.co"
 DATASET = "ginipick/market"
 UA = "RiderSpot-KoreanMapUpdate/1.0 (public source validation)"
 MAX_BYTES = 180 * 1024 * 1024
+OFFICIAL_ARCHIVE_MAX_BYTES = 850 * 1024 * 1024
 MIN_BYTES = 2 * 1024 * 1024
 FILE_PATTERN = re.compile(r"^소상공인시장진흥공단_상가\(상권\)정보_광주_(20\d{4})\.csv$")
 
@@ -34,6 +38,93 @@ def download(url, dest, limit=MAX_BYTES):
             digest.update(chunk)
             output.write(chunk)
     return {"bytes": length, "sha256": digest.hexdigest()}
+
+
+def current_official_csv():
+    """Try the current unauthenticated national SEMAS ZIP from data.go.kr."""
+    page = "https://www.data.go.kr/data/15083033/fileData.do"
+    headers = {"User-Agent": "Mozilla/5.0 (RiderSpot public data)", "Referer": page}
+    with urllib.request.urlopen(urllib.request.Request(page, headers=headers), timeout=40) as response:
+        html = response.read(4_000_000).decode("utf-8", "replace")
+    found = re.search(r"fileDataDown\('([^']+)'\s*,\s*'([^']+)'", html)
+    if not found or found.group(1) != "15083033" or not found.group(2).startswith("uddi:"):
+        raise RuntimeError("Official download metadata link unavailable")
+    args = {
+        "publicDataDetailPk": found.group(2), "publicDataPk": found.group(1),
+        "atchFileId": "", "fileDetailSn": "1",
+        "url": "/tcs/dss/selectFileDataDownload.do",
+    }
+    info_url = "https://www.data.go.kr/tcs/dss/selectFileDataDownload.do?" + urllib.parse.urlencode(args)
+    with urllib.request.urlopen(urllib.request.Request(info_url, headers=headers), timeout=45) as response:
+        data = json.load(response)
+    fid = str(data.get("atchFileId") or "")
+    file_sn = str(data.get("fileDetailSn") or "")
+    name = str((data.get("dataSetFileDetailInfo") or {}).get("dataNm") or "")
+    if not re.fullmatch(r"FILE_\d{8,}", fid) or not file_sn.isdigit():
+        raise RuntimeError("Official attachment ID is invalid")
+    period_match = re.search(r"_(20\d{4})\d{2}$", name)
+    if not period_match:
+        raise RuntimeError("Official SEMAS snapshot period cannot be verified")
+    period = period_match.group(1)
+    args = {"atchFileId": fid, "fileDetailSn": file_sn, "dataNm": name}
+    url = "https://www.data.go.kr/cmm/cmm/fileDownload.do?" + urllib.parse.urlencode(args)
+    archive = DEST / "semas-official.zip"
+    result = download(url, archive, OFFICIAL_ARCHIVE_MAX_BYTES)
+    if result["bytes"] < MIN_BYTES:
+        raise RuntimeError("Official SEMAS download is too small")
+    shops = DEST / "shops.csv"
+    def read_csv(handle, outwriter):
+        # Source is documented as UTF-8. Filter the national CSV to Gwangju.
+        reader = csv.DictReader(io.TextIOWrapper(handle, encoding="utf-8-sig", newline=""))
+        if not reader.fieldnames or not {"상호명", "경도", "위도", "시도명"}.issubset(set(reader.fieldnames)):
+            raise RuntimeError("Unexpected columns in official SEMAS CSV")
+        count = 0
+        for record in reader:
+            if record.get("시도명") == "광주광역시":
+                outwriter.writerow(record)
+                count += 1
+        return count
+    count = 0
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as zipped:
+            candidates = [x for x in zipped.infolist()
+                          if x.filename.lower().endswith(".csv") and x.file_size < 600_000_000]
+            if not candidates:
+                raise RuntimeError("Official archive has no CSV files")
+            # Prefer Gwangju CSV, otherwise scan all regional CSVs.
+            region_files = [x for x in candidates if "광주" in x.filename]
+            files = region_files or candidates
+            with shops.open("w", encoding="utf-8", newline="") as dest:
+                writer = None
+                for item in files:
+                    with zipped.open(item) as infile:
+                        reader = csv.DictReader(io.TextIOWrapper(infile, encoding="utf-8-sig", newline=""))
+                        if not reader.fieldnames or not {"상호명", "경도", "위도", "시도명"}.issubset(set(reader.fieldnames)):
+                            continue
+                        if writer is None:
+                            writer = csv.DictWriter(dest, fieldnames=reader.fieldnames)
+                            writer.writeheader()
+                        for row in reader:
+                            if row.get("시도명") == "광주광역시":
+                                writer.writerow(row)
+                                count += 1
+    else:
+        with shops.open("w", encoding="utf-8", newline="") as dest, archive.open("rb") as infile:
+            reader = csv.DictReader(io.TextIOWrapper(infile, encoding="utf-8-sig", newline=""))
+            if not reader.fieldnames or not {"상호명", "경도", "위도", "시도명"}.issubset(set(reader.fieldnames)):
+                raise RuntimeError("Official CSV columns are unrecognized")
+            writer = csv.DictWriter(dest, fieldnames=reader.fieldnames)
+            writer.writeheader()
+            for row in reader:
+                if row.get("시도명") == "광주광역시":
+                    writer.writerow(row)
+                    count += 1
+    if count < 50_000 or count > 230_000:
+        raise RuntimeError(f"Unexpected official Gwangju records: {count}")
+    digest = hashlib.sha256(shops.read_bytes()).hexdigest()
+    print("Official 2026 SEMAS CSV:", period, "records", count, "sha256", digest)
+    return shops, period, "Official SEMAS data.go.kr public CSV", digest
+
 
 def select_shops():
     specified = os.environ.get("KOREAN_SHOPS_CSV_URL", "").strip()
@@ -63,12 +154,24 @@ def select_shops():
 
 def main():
     DEST.mkdir(parents=True, exist_ok=True)
-    shops_url, period, source_name = select_shops()
-    shops = DEST / "shops.csv"
-    shops_result = download(shops_url, shops)
+    custom = os.environ.get("KOREAN_SHOPS_CSV_URL", "").strip()
+    if not custom:
+        try:
+            shops, period, source_name, sha = current_official_csv()
+            shops_result = {"bytes": shops.stat().st_size, "sha256": sha}
+        except Exception as error:
+            print("WARNING: official file unavailable; using dated public mirror:", type(error).__name__, str(error)[:170])
+            shops_url, period, source_name = select_shops()
+            shops = DEST / "shops.csv"
+            shops_result = download(shops_url, shops)
+    else:
+        shops_url, period, source_name = select_shops()
+        shops = DEST / "shops.csv"
+        shops_result = download(shops_url, shops)
     if shops_result["bytes"] < MIN_BYTES:
         raise RuntimeError("Gwangju store source is too small")
-    header = shops.open("r", encoding="utf-8-sig").readline()
+    with shops.open("r", encoding="utf-8-sig") as input:
+        header = input.readline()
     if not ("상호명" in header or "bizesNm" in header):
         raise RuntimeError("Unrecognized SEMAS file header")
     admin_url = ("https://raw.githubusercontent.com/KnellBalm/kr-admin-geojson/"
