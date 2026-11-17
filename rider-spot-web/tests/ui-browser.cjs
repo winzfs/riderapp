@@ -56,7 +56,10 @@ async function check(width,native){
  assert.equal(await recap.count(),1,'completed day should render one passive result card');
  assert.match(await recap.innerText(),/\+40 XP/,'same-day rides award XP once');
  assert.equal(await recap.locator('.rs-game-recap-award').count(),1,'first ride achievement unlocks only once');
- assert.equal(await recap.locator('.rs-game-copy').count(),1,'day recap can be shared without GPS coordinates');
+ assert.equal(await recap.locator('.rs-game-copy').count(),0,'recap excludes redundant sharing actions');
+ assert.ok(await recap.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.rs56-day-overview')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'recap is above map');
+ assert.equal(await p.locator('.rs56-day-course>.rs33-course-controls').count(),0,'route controls are in the lower toolbar');
+ assert.equal(await p.locator('.rs56-day-course .rs59-course-tools').count(),1,'one consolidated lower toolbar');
  assert.equal(await p.locator('.rs56-ride-choice').count(),3);
  const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60','100'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
  await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);

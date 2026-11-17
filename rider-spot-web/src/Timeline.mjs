@@ -428,6 +428,7 @@ export function createTimeline(S, Zo) {
         }, roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
         rs33J("button", {
           type: "button", className: "rs33-expand",
+          "aria-label": expanded ? "닫기" : "크게 보기",
           "aria-expanded": expanded,
           onClick: () => setExpanded((value) => !value),
         }, expanded ? "↙ 닫기" : "⛶ 크게"),
