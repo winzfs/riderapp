@@ -127,7 +127,7 @@ export function createRecords(R, client) {
       let payload;
       if(odometer){
         const distance=Number(value);
-        if(!/^\\d{1,7}$/.test(value)||!Number.isSafeInteger(distance)||distance>9999999)
+        if(!/^\d{1,7}$/.test(value)||!Number.isSafeInteger(distance)||distance>9999999)
           throw Error("계기판 거리를 0~9,999,999km 사이로 입력해 주세요.");
         payload={odometer_km:distance};
       }else{
@@ -165,7 +165,7 @@ export function createRecords(R, client) {
           const raw=String(form.get(key)||"").trim();
           if(!raw)return null;
           const n=Number(raw);
-          if(!/^\\d+$/.test(raw)||!Number.isSafeInteger(n)||n<1||n>max)
+          if(!/^\d+$/.test(raw)||!Number.isSafeInteger(n)||n<1||n>max)
             throw Error(item+"의 교체 주기를 확인해 주세요.");
           return n;
         };
