@@ -16,7 +16,7 @@ DATA = Path(__file__).resolve().parents[1] / "data" / "korean-map"
 BBOX = (126.68, 34.98, 127.13, 35.36)
 OFFICIAL_NAMES = re.compile(
     r"^(?:광주광역시청|(?:광산|동|서|남|북)구청)$|"
-    r"(?:행정복지센터|주민센터|동사무소|우체국|보건소|세무서|경찰서|소방서|"
+    r"(?:행정복지센터|주민센터|(?<!합)동사무소|우체국|보건소|세무서|경찰서|소방서|"
     r"소방본부|지구대|파출소|법원|검찰청|등기소|119안전센터)$"
 )
 OSM_AMENITIES = frozenset(("townhall", "police", "fire_station", "courthouse",
