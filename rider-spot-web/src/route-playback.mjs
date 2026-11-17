@@ -225,7 +225,7 @@ export function useRoutePlayback(React, source) {
     },
     setSpeed(value) {
       const speed = Number(value);
-      if (![10, 20, 30, 60].includes(speed)) return;
+      if (![10, 20, 30, 60, 100].includes(speed)) return;
       setState((prev) => ({ ...prev, speed }));
     },
     reset() {
