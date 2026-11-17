@@ -1332,7 +1332,7 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .app .bottom-nav button.active{color:#a34518;font-weight:800}
 .app .bottom-nav button.active:before{content:"";position:absolute;top:1px;width:24px;height:3px;border-radius:3px;background:currentColor}
 .ride-launch{padding:7px 16px;background:white;text-align:center}
-.ride-launch button,.record-primary{background:#ad471b;color:white;border:0;border-radius:12px;min-height:48px;font-size:16px;font-weight:750;padding:9px 18px}
+.ride-launch button,.record-sheet footer .record-primary,.record-primary{background:#ad471b;color:white;border:0;border-radius:12px;min-height:48px;font-size:16px;font-weight:750;padding:9px 18px}
 .ride-launch button{width:min(100%,540px)}
 .ride-launch.active button{width:auto;min-height:44px;background:#fff2e6;color:#92380d}
 .ride-launch.active button:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#df692e;margin-right:8px}

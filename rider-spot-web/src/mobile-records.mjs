@@ -131,8 +131,9 @@ export function createRecords(R, client) {
     const rows=data?.rows||[], vehicle=data?.vehicle, cycles=data?.cycles||[];
     const choices=[...new Set([...rows.flatMap(itemsOf),...defaults,...cycles.map(c=>c.item_key)])];
     const latest=rows.find(r=>r.odometer_km!=null),fuel=data?.fuel;
-    const readings=[[vehicle?.odometer_km,vehicle?.updated_at && rs33ISO(vehicle.updated_at)],[latest?.odometer_km,latest?.serviced_on],[fuel?.odometer_km,fuel?.fueled_on]]
+    const readings=[[vehicle?.odometer_km,vehicle?.odometer_recorded_on],[latest?.odometer_km,latest?.serviced_on],[fuel?.odometer_km,fuel?.fueled_on]]
       .filter(([v,d])=>v!=null&&d).sort((a,b)=>b[1].localeCompare(a[1])||b[0]-a[0]);
+    if(vehicle?.odometer_km!=null && !vehicle.odometer_recorded_on && (!readings.length || vehicle.odometer_km>readings[0][0])) readings.unshift([vehicle.odometer_km,"입력일 미기록"]);
     const visible=rows.filter(row=>!filter||itemsOf(row).includes(filter));
     const tool=name=>window.__rsOpenTool?.(name);
     const edit=value=>user?setEditor(value):login();

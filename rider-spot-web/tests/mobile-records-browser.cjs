@@ -57,7 +57,7 @@ async function run(browser,width,height){
     await page.goto(origin,{waitUntil:"domcontentloaded"});
     await page.locator(".ride-launch button").waitFor();
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
-    await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
+    await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     const dialog=page.getByRole("dialog");
     await dialog.getByRole("button",{name:"앞 타이어",exact:true}).click();
@@ -72,7 +72,14 @@ async function run(browser,width,height){
     await dialog.getByLabel("총비용").fill("140000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByText("140,000원",{exact:true}).waitFor();assert.equal(records.length,3);
     await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
-    await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();await shot("timeline");
+    await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
+    const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");
+    const count=await clocks.count();assert.ok(count>0);
+    await page.evaluate(()=>window.__rsMap.setZoom(9));await page.waitForTimeout(300);
+    assert.equal(await clocks.count(),count);assert.equal(await page.evaluate(()=>window.__rsMap.getZoom()),9);
+    await page.getByRole("button",{name:"전체 경로 맞춤",exact:true}).click();
+    await page.waitForFunction(()=>window.__rsMap.getZoom()>9);
+    await page.locator(".rs-game-recap").scrollIntoViewIfNeeded();await shot("timeline");
     await page.locator(".record-income").click();
     const coupang=dialog.getByLabel("쿠팡이츠"),baemin=dialog.getByLabel("배민");
     await coupang.fill("50000");await coupang.press("Enter");assert.equal(await baemin.evaluate(el=>el===document.activeElement),true);

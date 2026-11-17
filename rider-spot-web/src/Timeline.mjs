@@ -110,7 +110,7 @@ export function createTimeline(S, Zo, Income) {
       String(seconds).padStart(2, "0")
     );
   }
-  function playbackBar(player, label) {
+  function playbackBar(player, label, fit) {
     if (!player?.track || player.track.samples < 2 || player.duration < 1)
       return null;
     const complete = player.elapsed >= player.duration;
@@ -155,18 +155,16 @@ export function createTimeline(S, Zo, Income) {
             ),
           ),
         ),
-        player.showing
-          ? rs33J(
+        rs33J(
               "button",
               {
                 type: "button",
                 className: "rs59-reset",
-                onClick: player.reset,
-                "aria-label": "경로 재생 종료하고 전체 경로 보기",
+                onClick: () => { player.reset(); fit(); },
+                "aria-label": player.showing ? "경로 재생 종료하고 전체 경로 보기" : "전체 경로 맞춤",
               },
               "전체 경로",
-            )
-          : null,
+            ),
       ),
       rs33J("input", {
         className: "rs59-seek",
@@ -370,6 +368,11 @@ export function createTimeline(S, Zo, Income) {
         setRoadBusy(false);
       }
     }
+    function fit() {
+      setFollowing(false);
+      setFocused(null);
+      setReset(value=>value+1);
+    }
     function view(trip) {
       setFinished(false);
       setSelected(trip.id);
@@ -380,6 +383,7 @@ export function createTimeline(S, Zo, Income) {
       setRoadNotice("");
     }
     function back() {
+      if(current?.started_at) choose(rs33ISO(current.started_at));
       setFinished(false);
       setSelected(null);
       setExpanded(false);
@@ -565,7 +569,7 @@ export function createTimeline(S, Zo, Income) {
                 )
               : null,
           ),
-          ended ? playbackBar(detailPlayback, "개별 운행 경로") : null,
+          ended ? playbackBar(detailPlayback, "개별 운행 경로", fit) : null,
           courseToolbar(false),
           !analysis
             ? rs33J(
@@ -966,7 +970,7 @@ export function createTimeline(S, Zo, Income) {
                         },
                       }, following ? "◉ 추적 중" : "◎ 내 위치")
                     : null,
-                  playbackBar(dailyPlayback, "하루 통합 경로"),
+                  playbackBar(dailyPlayback, "하루 통합 경로", fit),
                   courseToolbar(true),
                   dailyCourse?.error
                     ? rs33J(

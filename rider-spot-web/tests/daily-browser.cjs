@@ -101,7 +101,7 @@ const fixtures = [
     const daySelector = page.getByRole("group", { name: "운행 날짜" })
       .getByRole("button", { name: "2026-11-16 운행 3회" });
     await daySelector.click();
-    await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
+    await page.getByRole("region", { name: "하루 통합 운행 경로" }).waitFor();
     await page.getByLabel("운행 경로 지도", { exact: true }).waitFor();
     // The APK must use the exact Positron vector style previously used by
     // the web, not a CSS-filtered OpenStreetMap raster approximation.
@@ -139,10 +139,10 @@ const fixtures = [
     await page.waitForFunction(() => {
       const map = window.__rsMap;
       const panes = document.querySelector(".rs56-day-overview .leaflet-overlay-pane");
-      return !!(map && panes && panes.children.length);
+      return !!(map && panes && (panes.children.length || map.__rsVectorGl?.getLayer("rs-course-gradient")));
     }, null, { timeout: 20000 });
     assert.equal(await page.locator(".rs56-ride-choice").count(), 3);
-    assert.ok((await page.locator(".rs33-trip-summary").first().innerText()).includes("7.8 km"));
+    assert.match(await page.locator(".rs-game-recap-stats").innerText(), /7\.8\s*km/);
     const center = await page.evaluate(() => {
       const map = window.__rsMap;
       return { lat: map.getCenter().lat, lng: map.getCenter().lng, zoom: map.getZoom() };
@@ -196,7 +196,7 @@ const fixtures = [
       null, { timeout: 30000 }
     );
     await page.getByRole("button", { name: "‹ 하루 전체" }).click();
-    await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
+    await page.getByRole("region", { name: "하루 통합 운행 경로" }).waitFor();
     await page.waitForFunction(() =>
       document.querySelector(".rs56-day-overview .map")?.dataset.rsBasemap === "positron",
       null, { timeout: 30000 }
