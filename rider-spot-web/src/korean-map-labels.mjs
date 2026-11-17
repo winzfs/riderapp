@@ -2,7 +2,25 @@
 // Text-only overlays: these must never restore facility markers or POI icons.
 // OpenMapTiles does not encode most apartment/building names in its building layer;
 // those require a separate licensed Korean public-data import.
+export const KOREAN_GOVERNMENT_FILTER = [
+  "any",
+  ["match", ["get", "class"], ["town_hall", "police", "fire_station"], true, false],
+  ["all",
+    ["==", ["get", "class"], "office"],
+    ["match", ["get", "subclass"],
+      ["government", "courthouse", "public_building"], true, false],
+  ],
+];
+
 export const KOREAN_POI_TIERS = Object.freeze([
+  {
+    id: "rs-korean-government-names",
+    minzoom: 12.2,
+    government: true,
+    color: "#48645e",
+    size: [12.2, 10.8, 15, 12.4, 18, 13.4],
+    padding: 2,
+  },
   {
     id: "rs-korean-landmark-names",
     minzoom: 13.7,
@@ -69,7 +87,8 @@ export function addKoreanPoiNameLayers(gl) {
         filter: [
           "all",
           HAS_POI_NAME,
-          ["match", ["get", "class"], tier.classes, true, false],
+          tier.government ? KOREAN_GOVERNMENT_FILTER :
+            ["match", ["get", "class"], tier.classes, true, false],
         ],
         layout: {
           "text-field": KOREAN_POI_NAME,
@@ -82,7 +101,7 @@ export function addKoreanPoiNameLayers(gl) {
           "text-ignore-placement": false,
           "text-variable-anchor": ["top", "bottom", "left", "right"],
           "text-radial-offset": 0.3,
-          "symbol-sort-key": ["coalesce", ["get", "rank"], 100],
+          "symbol-sort-key": tier.government ? 1 : ["coalesce", ["get", "rank"], 100],
         },
         paint: {
           "text-color": tier.color,
