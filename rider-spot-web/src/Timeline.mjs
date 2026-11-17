@@ -12,11 +12,13 @@ import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
 import { useRouteAnalysis } from "./use-route-analysis.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
 import { useRoutePlayback } from "./route-playback.mjs";
+import { createGamificationUI } from "./gamification-ui.mjs";
 import { timelineStartPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
 
 export function createTimeline(S, Zo) {
   const rs33J = S.createElement;
   const { Icon, Metrics } = createUI(S);
+  const { DayRideCard } = createGamificationUI(S);
   const EMPTY = [];
   const thumbnailCache = new WeakMap();
   function rs33Thumb(trip) {
@@ -354,6 +356,7 @@ export function createTimeline(S, Zo) {
       }
     }
     function view(trip) {
+      setFinished(false);
       setSelected(trip.id);
       setMemo(trip.memo || "");
       setFocused(null);
@@ -362,6 +365,7 @@ export function createTimeline(S, Zo) {
       setRoadNotice("");
     }
     function back() {
+      setFinished(false);
       setSelected(null);
       setExpanded(false);
       setFocused(null);
@@ -693,6 +697,13 @@ export function createTimeline(S, Zo) {
                   ride.busy ? "저장 중…" : "운행 종료",
                 ),
               )
+            : null,
+          finished && ended
+            ? rs33J(DayRideCard, {
+                history: ride.history,
+                day: rs33ISO(start),
+                celebrate: true,
+              })
             : null,
           finished && ended
             ? rs33J(
@@ -1140,6 +1151,7 @@ export function createTimeline(S, Zo) {
             ),
           )
         : null,
+      !allDays ? rs33J(DayRideCard, { history: ride.history, day }) : null,
       rs33J(
         "div",
         { className: "rs33-list-title" },
