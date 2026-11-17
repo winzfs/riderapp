@@ -48,7 +48,7 @@ async function check(width,native){
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();await p.getByRole('button',{name:'2026-11-16 운행 3회',exact:true}).click();await p.getByRole('heading',{name:'하루 전체 경로'}).waitFor();await p.waitForFunction(()=>document.querySelector('.rs56-day-map .map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
  if(baseline)await shot('timeline');else {
  await layout('timeline');assert.equal(await p.locator('.rs56-ride-choice').count(),3);
- const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
+ const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60','100'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
  await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);
  await player.locator('.rs59-seek').focus();await player.locator('.rs59-seek').press('End');await player.getByRole('button',{name:'경로 재생 종료하고 전체 경로 보기'}).click();
  await p.getByRole('button',{name:'크게 보기',exact:true}).click();await p.getByRole('dialog',{name:'전체 화면 하루 운행 지도'}).waitFor();await shot('fullscreen');await p.keyboard.press('Escape');
