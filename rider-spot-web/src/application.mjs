@@ -1009,36 +1009,23 @@ export function mountApplication({
             }),
           ),
           H(
-            "div",
-            { className: "rs63-post-manage-actions" },
-            u?.id === selected.user_id
-              ? H(
-                  "button",
-                  { type: "button", onClick: editPost, disabled: busy },
-                  "수정",
-                )
-              : null,
-            u?.id === selected.user_id
-              ? H(
-                  "button",
-                  {
+            "details",
+            { className: "rs63-post-manage-menu" },
+            H("summary", { "aria-label": "게시글 더보기" }, "⋯"),
+            H(
+              "div",
+              { className: "rs63-post-menu-options" },
+              u?.id === selected.user_id
+                ? H("button", { type: "button", onClick: editPost, disabled: busy }, "수정")
+                : null,
+              u?.id === selected.user_id
+                ? H("button", { type: "button", onClick: removePost, disabled: busy, className: "rc-delete" }, "삭제")
+                : H("button", {
                     type: "button",
-                    onClick: removePost,
-                    disabled: busy,
-                    className: "rc-delete",
-                  },
-                  "삭제",
-                )
-              : H(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () =>
-                      u ? setReporting((value) => !value) : login(),
+                    onClick: () => u ? setReporting((value) => !value) : login(),
                     "aria-expanded": reporting,
-                  },
-                  "신고",
-                ),
+                  }, "신고"),
+            ),
           ),
         ),
         reporting
