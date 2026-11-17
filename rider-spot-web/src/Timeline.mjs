@@ -590,14 +590,14 @@ export function createTimeline(S, Zo) {
               ? rs33J(
                   "div",
                   { className: "rs43-revisit-key" },
-                  "청록 경로 · 오렌지 겹선은 재통과 추정 (2회/3회/4회 이상)",
+                  "주황색은 출발 구간 · 회색 외곽선은 재통과 추정 (2회/3회/4회 이상)",
                 )
               : null,
             rs33J(
               "div",
               { className: "rs33-course-legend" },
               rs33J("span", { "aria-hidden": true }),
-              rs33J("small", null, "출발 → 마지막 기록"),
+              rs33J("small", null, "주황색 출발 → 진한 녹색 마지막 기록"),
               showStamps && focused
                 ? rs33J(
                     "b",
@@ -1115,9 +1115,9 @@ export function createTimeline(S, Zo) {
                       className: "rs56-gradient-key",
                       "aria-hidden": true,
                     }),
-                    rs33J("span", null, "연한 민트색 출발 → 진한 녹색 마지막 기록"),
+                    rs33J("span", null, "주황색 출발 → 진한 녹색 마지막 기록"),
                     dailyCourse?.course?.revisitCount
-                      ? rs33J("small", null, "주황색은 재통과 추정")
+                      ? rs33J("small", null, "회색 외곽선은 재통과 추정")
                       : null,
                     showStamps && focused
                       ? rs33J(
