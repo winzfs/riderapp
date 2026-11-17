@@ -6,6 +6,9 @@ on:
       - 'rider-spot-web/**'
       - '.github/workflows/rider-spot-web-checks.yml'
   workflow_dispatch:
+concurrency:
+  group: rider-spot-release-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
@@ -63,6 +66,11 @@ jobs:
           rm -f prebuilt/native-light-map.css
           git add -f -A prebuilt/
           if ! git diff --cached --quiet; then
-            git commit -m "chore(web): stage tested timeline release [skip ci]"
+            git fetch origin feature/rider-spot-native-apk
+            if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/feature/rider-spot-native-apk)" ]]; then
+              echo "Branch advanced during CI. Skip stale prebuilt assets."
+              exit 0
+            fi
+            git commit -m "chore(web): stage tested v61 release [skip ci]"
             git push origin HEAD:feature/rider-spot-native-apk
           fi
