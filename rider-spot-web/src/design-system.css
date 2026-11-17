@@ -264,3 +264,12 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .rc-categories{scroll-padding-inline:12px;overscroll-behavior-inline:contain}
 .rc-row-meta{font-size:12px}
 @media(max-width:360px){.rs61-home-dock{padding-inline:10px;gap:7px}.rs61-home-dock .rs61-ride-actions button{padding-inline:9px}.rs61-home-dock small{font-size:11px}}
+
+/* v61 timeline and outdoor reading refinements. */
+.rs33-week-head .rs61-today{min-height:40px;min-width:48px;font-size:12px;font-weight:700;color:var(--rs-primary);background:var(--rs-soft);padding:7px 8px;border:0;border-radius:9px}
+.rs33-week-head .rs61-today:disabled{opacity:.42}
+.rs33-list-title .rs61-list-actions{display:flex;gap:5px;align-items:center;flex:none}
+.rs61-list-actions button{min-height:44px;padding:6px 7px;font-size:12px;white-space:nowrap}
+.rs33-timeline .rs33-list-title h2{font-size:16px;min-width:0}
+.rs33-timeline .rs56-ride-info strong{white-space:nowrap;word-break:keep-all}
+@media(max-width:360px){.rs33-week-head .rs61-today{min-width:42px}.rs33-timeline .rs33-list-title h2{font-size:14px}.rs61-list-actions button{padding-inline:4px}}
