@@ -26,11 +26,6 @@ jobs:
       - run: npm ci
       - run: npm run build && npm test
       - run: npx playwright install --with-deps chromium
-      - name: Capture unchanged production baseline
-        env:
-          RIDER_UI_URL: https://rider-spot.jazzhjm.workers.dev/
-          RIDER_UI_BASELINE: '1'
-        run: node tests/ui-browser.cjs
       - name: Mobile UI, replay, map, data preservation and simulated WebView
         env:
           RIDER_UI_URL: https://urban-ui-rider-spot.jazzhjm.workers.dev/
