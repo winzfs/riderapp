@@ -1,5 +1,6 @@
 import { openMapSheet } from './ui-overlays.mjs';
 import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
+import { isVisibleFacility } from './facility-visibility.mjs';
 (() => {
   "use strict";
   const RS = {
@@ -223,10 +224,7 @@ import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
     marker.on("remove", () => closeSheet?.());
   }
   function matchesFacilityLayer(filter, category) {
-    if (filter === "places") return true;
-    if (filter === "shelters")
-      return category === "쉼터" || category === "화장실";
-    return filter === "shops" && category === "정비소";
+    return isVisibleFacility(filter, category);
   }
   const facilityPinStyles = new Map([
     [
@@ -317,7 +315,9 @@ import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
               (row) => Date.parse(row.expires_at) > Date.now(),
             )
           : RS.reports.places.filter((row) =>
-              matchesFacilityLayer(filter, row.category),
+              matchesFacilityLayer(filter, row.category) ||
+              // Explicitly opening a saved/user-submitted facility still works.
+              window.__rs33MapTarget?.id === row.id,
             );
     const stateKey = JSON.stringify([
       filter,
@@ -613,7 +613,7 @@ import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
       const legend = document.createElement("div");
       legend.id = "rs-report-legend";
       legend.innerHTML =
-        '<span class="rs-dot-green"></span> 시설 <span class="rs-dot-amber"></span> 도로';
+        '<span class="rs-dot-green"></span> 화장실 <span class="rs-dot-amber"></span> 도로';
       wrap.append(legend);
     }
     if (RS.picker) buildPicker(map);
