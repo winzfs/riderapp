@@ -113,6 +113,14 @@ test("profile and recap components are read-only with accessible XP progress", (
   assert.equal(profileNodes.filter(node => node.props.className === "rs-game-badge-pick").length, 1,
     "only unlocked badges offer profile decoration; nothing appears on active map");
   const recap = DayRideCard({history, day:"2026-11-15", celebrate:true});
+  const dateNodes = collect(recap).filter(node => node.props.className === "rs-game-recap-date");
+  assert.equal(dateNodes.length, 1, "recap shows a single date");
+  assert.match(dateNodes[0].children.join(""), /2026년 11월 15일.*토요일/, "calendar date is Asia/Seoul");
+  const another = DayRideCard({history:[ride("other",SECOND)],day:"2026-11-16"});
+  assert.match(collect(another).find(node => node.props.className === "rs-game-recap-date").children.join(""),
+    /2026년 11월 16일.*월요일/, "selected day changes the displayed recap date");
+  assert.equal(collect(recap).some(node => node.props.className === "rs-game-recap-date" &&
+    node.children.join("").includes("TODAY")), false, "English filler subtitle is replaced");
   assert.ok(collect(recap).some(node => node.props.className?.includes("rs-game-xp-earned")));
   assert.equal(collect(recap).filter(node => node.props.className === "rs-game-copy").length, 0, "recap no longer shows copy actions");
   assert.equal(DayRideCard({history, day:"2026-11-16"}), null);

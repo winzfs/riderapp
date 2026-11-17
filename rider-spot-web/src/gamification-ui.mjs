@@ -6,6 +6,18 @@ export function createGamificationUI(React) {
   const h = React.createElement;
   const km = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 });
   const amount = (value) => km.format(Math.max(0, Number(value) || 0));
+  const dateLabel = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
+  const recapDate = (day) => {
+    if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return "";
+    const date = new Date(day + "T12:00:00+09:00");
+    return Number.isNaN(date.getTime()) ? "" : dateLabel.format(date);
+  };
 
   function Medal({ badge, small = false }) {
     return h("span", {
@@ -105,7 +117,7 @@ export function createGamificationUI(React) {
       h("div", { className: "rs-game-recap-heading" },
         h("span", { className: "rs-game-recap-flare", "aria-hidden": true }, "✦"),
         h("div", null,
-          h("small", null, celebrate ? "RIDE COMPLETE" : "TODAY'S JOURNEY"),
+          h("small", { className: "rs-game-recap-date" }, recapDate(day)),
           h("h2", null, celebrate ? "운행 기록 완료!" : "오늘의 라이딩 결산")),
         h("span", { className: "rs-game-xp-earned" }, "+" + result.earnedXp + " XP"),
       ),

@@ -1070,7 +1070,7 @@ svg.rs-icon{flex:none;vertical-align:middle}
   display:flex;align-items:center;justify-content:center;
 }
 .rs-game-recap-heading>div{flex:1;min-width:0}
-.rs-game-recap-heading small{display:block;font-size:10px;letter-spacing:.11em;color:#795b37;font-weight:800}
+.rs-game-recap-heading small{display:block;font-size:11px;letter-spacing:-.015em;color:#795b37;font-weight:750;font-variant-numeric:tabular-nums}
 .rs-game-recap-heading h2{font-size:17px;letter-spacing:-.035em;margin:3px 0 0;font-weight:800;line-height:1.3;color:#20473b;word-break:keep-all}
 .rs-game-xp-earned{
   flex:none;display:inline-flex;align-items:center;justify-content:center;
