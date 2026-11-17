@@ -107,10 +107,16 @@ def admin_names(geojson):
             names.append([round(lon, 6), round(lat, 6), name, "region"])
     return sorted(names, key=lambda item: item[2])
 
-def build(shops, admin):
+def build(shops, admin, source_metadata=None):
     records, counts = read_shops(shops)
     admins = admin_names(admin)
     counts["region"] = len(admins)
+    if counts["shop"] < 50_000 or counts["apartment"] < 100 or len(admins) < 150:
+        raise ValueError("Missing substantial public labels; retain current release")
+    metadata = json.loads(Path(source_metadata).read_text(encoding="utf-8")) if source_metadata else {}
+    period = metadata.get("shops_snapshot", "202506")
+    if not re.fullmatch(r"20\\d{4}", period):
+        raise ValueError("Invalid source snapshot period")
     OUT.mkdir(parents=True, exist_ok=True)
     for path in OUT.glob("t*.json"):
         path.unlink()
@@ -122,7 +128,7 @@ def build(shops, admin):
         "tiles": sorted(records), "counts": dict(counts),
         "sources": {
             "region": "V-World administrative polygons, 2023-07-29 (via KnellBalm/kr-admin-geojson; KOGI 1 attribution)",
-            "shop": "SEMAS business locations, 2025-06 (via ginipick/market; public data portal open reuse)",
+            "shop": f"SEMAS business locations, {period[:4]}-{period[4:]} (via ginipick/market; public data portal open reuse)" if metadata.get("shops_source", "").startswith("SEMAS public CSV mirror") or not metadata else f"SEMAS business locations, {period[:4]}-{period[4:]} (approved public CSV)",
             "building": "SEMAS store-linked road-name building names, 2025-06 (not a complete building inventory)"
         }
     }
@@ -158,5 +164,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--shops", required=True)
     parser.add_argument("--admin", required=True)
+    parser.add_argument("--source-metadata", required=False)
     args = parser.parse_args()
-    build(Path(args.shops), Path(args.admin))
+    build(Path(args.shops), Path(args.admin), args.source_metadata)
