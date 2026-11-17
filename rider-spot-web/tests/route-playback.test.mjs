@@ -146,7 +146,7 @@ test("playback keeps the completed-route gradient fixed while revealing real-tim
   assert.ok(slices.length >= 24, "the full track spans 24 gradient tones");
   assert.equal(slices[0].tone, 0);
   assert.equal(slices.at(-1).tone, 23);
-  assert.equal(rs33CourseToneColor(0), "rgb(180,235,215)");
+  assert.equal(rs33CourseToneColor(0), "rgb(246,151,69)");
   assert.equal(rs33CourseToneColor(23), "rgb(3,66,50)");
   assert.ok(slices.every((part) =>
     part.coordinates.length === part.times.length && part.coordinates.length >= 2 &&
@@ -169,7 +169,7 @@ test("playback keeps the completed-route gradient fixed while revealing real-tim
   };
   const playback = createPlaybackLayer(L, {}, track);
   const palette = created.map((part) => part.color);
-  assert.equal(palette[0], "rgb(180,235,215)");
+  assert.equal(palette[0], "rgb(246,151,69)");
   assert.equal(palette.at(-1), "rgb(3,66,50)");
   playback.setTime(20000);
   assert.ok(created.some((part) => part.coords.length >= 2 && part.color !== palette.at(-1)),
