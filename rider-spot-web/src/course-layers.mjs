@@ -7,6 +7,18 @@ const line = {
   smoothFactor: 1,
 };
 
+// Shared by the completed-route map and the animated playback overlay.
+// Tone 0 is pale mint; tone 23 is the dark green finish.
+export function rs33CourseToneColor(tone) {
+  const progress = Math.max(0, Math.min(23, Number(tone) || 0)) / 23;
+  const p = progress * progress * (3 - 2 * progress);
+  return (
+    "rgb(" +
+    [180 - 177 * p, 235 - 169 * p, 215 - 165 * p].map(Math.round).join(",") +
+    ")"
+  );
+}
+
 export function rs33DrawCourse(L, map, geometry) {
   const group = L.layerGroup().addTo(map);
   for (let level = 3; level >= 1; level--) {
@@ -42,13 +54,9 @@ export function rs33DrawCourse(L, map, geometry) {
     // Smoothly transition from a pale mint at departure to deep green at
     // arrival. Keep every segment derived from the existing route geometry;
     // recoloring must never mutate or interpolate the stored GPS samples.
-    const progress = tone / 23;
-    const p = progress * progress * (3 - 2 * progress);
-    const color =
-      "rgb(" +
-      [180 - 177 * p, 235 - 169 * p, 215 - 165 * p].map(Math.round).join(",") +
-      ")";
-    L.polyline(coordinates, { ...line, color, weight: 6 }).addTo(group);
+    L.polyline(coordinates, {
+      ...line, color: rs33CourseToneColor(tone), weight: 6,
+    }).addTo(group);
   });
   return () => group.remove();
 }
