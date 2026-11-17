@@ -43,13 +43,16 @@ jobs:
           assert b'rs47-gwangsan-overview' not in app
           assert b'within' in app
           info=json.loads(get('/mapdata/manifest.json'))
-          assert info['counts']['shop']==74938
-          assert info['counts']['apartment']==507
-          assert info['counts']['region']==196
+          assert info['counts']['shop']==76391, info['counts']
+          assert info['counts']['building']==5106, info['counts']
+          assert info['counts']['apartment']==546, info['counts']
+          assert info['counts']['region']==196, info['counts']
+          assert '2026-09' in info['sources']['shop']
+          assert '2026-09' in info['sources']['building']
           assert len(json.loads(get('/mapdata/admin.json'))) >= 100
           assert any(row[3]=='shop' for row in json.loads(get('/mapdata/t3170-879.json')))
           assert len(get('/assets/rider-spot-868d827d5727/app.mjs'))>500000
-          print('PASS production data and previous deployed PWA assets')
+          print('PASS 2026-09 official SEMAS production data and PWA compatibility')
           PY
       - run: npx playwright install --with-deps chromium
       - name: Verify live mobile map, timelines and screen navigation
