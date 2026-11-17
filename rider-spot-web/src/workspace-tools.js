@@ -1,6 +1,7 @@
 import { completedRideRows, dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
 import { createWorkDrafts } from "./work-drafts.mjs";
+import { upcomingMaintenance } from "./maintenance-due.mjs";
 (function () {
   "use strict";
   const TABS = [
@@ -531,6 +532,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
   function renderMaintenance() {
     const all = Array.isArray(S.data.maintenance) ? S.data.maintenance : [];
     const latest = all[0] || null;
+    const dueAdvisory = upcomingMaintenance(all, S.data.fuel);
     const recent = all.slice(0, 6).map((row) =>
       '<div class="rs64-maint-item"><div><strong>' + H(row.item) + '</strong><small>' +
       H(row.serviced_on) + ' · ' + M(row.cost_won) + '</small></div>' +
@@ -566,6 +568,15 @@ import { createWorkDrafts } from "./work-drafts.mjs";
       '</div></details><button type="submit" class="rs-primary">정비 기록 저장</button></form>' +
       (latest ? '<p class="rs63-maint-last">최근 정비 · ' + H(latest.serviced_on) +
         ' · ' + H(latest.item) + '</p>' : '') + '</section>' +
+      (dueAdvisory.due.length
+        ? '<section class="rs64-maint-due" role="status"><strong>교체 시기 확인</strong><small>마지막 입력 계기판 ' +
+          new Intl.NumberFormat("ko-KR").format(dueAdvisory.odometerKm) +
+          'km 기준 · 차량 계기판을 확인하세요</small>' +
+          dueAdvisory.due.slice(0, 4).map((item) =>
+            '<p>' + H(item.item) + ' · 교체 예정 ' +
+            new Intl.NumberFormat("ko-KR").format(item.nextDueKm) + 'km</p>'
+          ).join("") + '</section>'
+        : '') +
       (recent ? '<section class="rs64-maint-history"><h3>최근 정비 기록</h3>' + recent + '</section>' : '') +
       '<section id="rs-maint-ui"></section>'
     );
