@@ -28,7 +28,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # QA-only location data: do not place a test facility under the synthetic GPS marker.
       - name: Offset synthetic QA facility from synthetic rider
-        run: sed -i "s/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/" tests/ui-browser.cjs
+        run: |
+          sed -i "s/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/" tests/ui-browser.cjs
+          # documentElement is not available during Playwright addInitScript execution.
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
       - name: Mobile UI, replay, map, data preservation and simulated WebView
         env:
           RIDER_UI_URL: https://urban-ui-rider-spot.jazzhjm.workers.dev/
