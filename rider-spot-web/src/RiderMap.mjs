@@ -63,6 +63,7 @@ export function createRiderMap(React, L, fallback) {
     const marker = React.useRef(null);
     const accuracy = React.useRef(null);
     const startMarker = React.useRef(null);
+    const endMarker = React.useRef(null);
     const peers = React.useRef(null);
     const player = React.useRef(null);
     const originalFocus = React.useRef(focus);
@@ -80,7 +81,7 @@ export function createRiderMap(React, L, fallback) {
       peers.current = L.layerGroup().addTo(map);
       return () => {
         controller.current = null;
-        peers.current = marker.current = accuracy.current = startMarker.current = null;
+        peers.current = marker.current = accuracy.current = startMarker.current = endMarker.current = null;
         player.current = null;
         if (window.__rsMap === map) window.__rsMap = null;
         removeBasemap();
@@ -196,6 +197,33 @@ export function createRiderMap(React, L, fallback) {
         layer.remove();
       };
     }, [cameraId, course?.startPoint?.lat, course?.startPoint?.lng]);
+
+    React.useEffect(() => {
+      const point=course?.endPoint;
+      if(!course || course.live || !validPosition(point))return;
+      const origin=course.startPoint;
+      const near=validPosition(origin) &&
+        Math.hypot(
+          (Number(origin.lat)-Number(point.lat))*111000,
+          (Number(origin.lng)-Number(point.lng))*111000*
+            Math.cos(Number(point.lat)*Math.PI/180)
+        )<35;
+      const icon=L.divIcon({
+        className:"rs-course-end-pin"+(near?" rs-end-near-start":""),
+        html:'<span class="rs-end-flag" aria-hidden="true">⚑</span><span class="rs-end-label">종료</span>',
+        iconSize:[82,42],iconAnchor:[19,36]
+      });
+      const layer=L.marker([Number(point.lat),Number(point.lng)],{
+        icon,zIndexOffset:5200,title:"운행 종료 지점",
+        interactive:false,keyboard:false
+      }).addTo(controller.current.map);
+      endMarker.current=layer;
+      return ()=>{
+        if(endMarker.current===layer)endMarker.current=null;
+        layer.remove();
+      };
+    },[cameraId,course?.live,course?.endPoint?.lat,course?.endPoint?.lng,
+       course?.startPoint?.lat,course?.startPoint?.lng]);
 
     React.useEffect(() => {
       if (!course?.live || !course.follow || !validPosition(position)) return;
