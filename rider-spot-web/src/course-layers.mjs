@@ -7,16 +7,30 @@ const line = {
   smoothFactor: 1,
 };
 
-// Shared by the completed-route map and the animated playback overlay.
-// Tone 0 is pale mint; tone 23 is the dark green finish.
+// Shared by the completed route and GPS-time playback overlays.
+// Deliberate color landmarks: orange departure -> sage middle -> forest finish.
+// The original GPS samples, timing and route geometry are never modified.
 export function rs33CourseToneColor(tone) {
-  const progress = Math.max(0, Math.min(23, Number(tone) || 0)) / 23;
-  const p = progress * progress * (3 - 2 * progress);
-  return (
-    "rgb(" +
-    [180 - 177 * p, 235 - 169 * p, 215 - 165 * p].map(Math.round).join(",") +
-    ")"
-  );
+  const value = Number(tone);
+  const progress = Number.isFinite(value)
+    ? Math.max(0, Math.min(23, value)) / 23 : 0;
+  const stops = [
+    [0, [246, 151, 69]],        // warm orange: clear departure
+    [0.27, [238, 185, 110]],   // amber, reducing intensity
+    [0.50, [174, 199, 146]],   // light sage transition
+    [0.72, [76, 150, 124]],    // teal green
+    [1, [3, 66, 50]],          // deep green: latest position
+  ];
+  for (let i = 1; i < stops.length; i++) {
+    const [end, to] = stops[i];
+    if (progress > end) continue;
+    const [begin, from] = stops[i - 1];
+    const fraction = (progress - begin) / (end - begin);
+    const eased = fraction * fraction * (3 - 2 * fraction);
+    return "rgb(" + from.map((channel, j) =>
+      Math.round(channel + (to[j] - channel) * eased)).join(",") + ")";
+  }
+  return "rgb(3,66,50)";
 }
 
 export function rs33DrawCourse(L, map, geometry) {
@@ -51,7 +65,7 @@ export function rs33DrawCourse(L, map, geometry) {
   // Their visual markers made sparse and noisy GPS samples look like stops.
   geometry.gradient.forEach((coordinates, tone) => {
     if (!coordinates.length) return;
-    // Smoothly transition from a pale mint at departure to deep green at
+    // Smoothly transition from orange at departure to deep green at
     // arrival. Keep every segment derived from the existing route geometry;
     // recoloring must never mutate or interpolate the stored GPS samples.
     L.polyline(coordinates, {
