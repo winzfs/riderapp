@@ -120,6 +120,13 @@ def build(shops, admin, source_metadata=None):
     period = metadata.get("shops_snapshot", "202506")
     if not re.fullmatch(r"20\d{4}", period):
         raise ValueError("Invalid source snapshot period")
+    # Keep last verified public-government snapshot through the business
+    # import; it is updated independently after the new SEMAS tiles are built.
+    previous_manifest_file = OUT / "manifest.json"
+    previous_manifest = json.loads(previous_manifest_file.read_text(encoding="utf-8")) if previous_manifest_file.exists() else {}
+    verified_government = (OUT / "government.json").exists()
+    if verified_government and previous_manifest.get("counts", {}).get("government", 0) >= 8:
+        counts["government"] = previous_manifest["counts"]["government"]
     OUT.mkdir(parents=True, exist_ok=True)
     for path in OUT.glob("t*.json"):
         path.unlink()
@@ -133,6 +140,7 @@ def build(shops, admin, source_metadata=None):
             "region": "V-World administrative polygons, 2023-07-29 (via KnellBalm/kr-admin-geojson; KOGI 1 attribution)",
             "shop": f"SEMAS business locations, {period[:4]}-{period[4:]} ({metadata.get('shops_source', 'public CSV snapshot')})",
             "building": f"SEMAS store-linked road-name building names, {period[:4]}-{period[4:]} (not a complete building inventory)"
+            **({"government": previous_manifest["sources"]["government"]} if verified_government and previous_manifest.get("sources", {}).get("government") else {})
         }
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
