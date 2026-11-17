@@ -5,6 +5,21 @@ const scripts = [
   "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js",
   "https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js",
 ];
+// The rider-facing basemap must not supply a second source of facility pins.
+// Toilets come only from the separately filtered public/user POI overlays.
+export function hideBasemapPoiLabels(gl) {
+  const layers = gl.getStyle?.()?.layers;
+  if (!Array.isArray(layers)) return;
+  for (const layer of layers) {
+    if (layer["source-layer"] !== "poi" && !/^rs-poi-/.test(layer.id)) continue;
+    try {
+      gl.setLayoutProperty(layer.id, "visibility", "none");
+    } catch (error) {
+      console.warn("RiderSpot POI layer suppression:", layer.id, error?.message || error);
+    }
+  }
+}
+
 let loading = null;
 function script(src) {
   return new Promise((ok, bad) => {
@@ -371,75 +386,15 @@ export function addBasemap(L, map) {
         try {
           const design = gl.getStyle();
           if (!design?.sources?.openmaptiles) return;
-          const before = design.layers?.find((x) => x.id === "label_other")?.id;
-          const textField = [
-            "coalesce",
-            ["get", "name:ko"],
-            ["get", "name:nonlatin"],
-            ["get", "name"],
-            ["get", "name:latin"],
-          ];
-          const tiers = [
-            { id: "rs-poi-major", rankMin: 1, rankMax: 7, minzoom: 14.3 },
-            { id: "rs-poi-medium", rankMin: 7, rankMax: 20, minzoom: 15.5 },
-            { id: "rs-poi-local", rankMin: 20, rankMax: null, minzoom: 16.5 },
-          ];
-          for (const tier of tiers) {
-            if (gl.getLayer(tier.id)) continue;
-            const filter = [
-              "all",
-              [
-                "match",
-                ["geometry-type"],
-                ["Point", "MultiPoint"],
-                true,
-                false,
-              ],
-              [">=", ["get", "rank"], tier.rankMin],
-            ];
-            if (tier.rankMax !== null)
-              filter.push(["<", ["get", "rank"], tier.rankMax]);
-            const layer = {
-              id: tier.id,
-              type: "symbol",
-              source: "openmaptiles",
-              "source-layer": "poi",
-              minzoom: tier.minzoom,
-              filter,
-              layout: {
-                "text-field": textField,
-                "text-font": ["Noto Sans Regular"],
-                "text-size": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  14,
-                  10,
-                  16,
-                  11.5,
-                  19,
-                  12.5,
-                ],
-                "text-max-width": 11,
-                "text-anchor": "center",
-                "text-letter-spacing": 0.015,
-                "text-optional": true,
-                "symbol-sort-key": ["coalesce", ["get", "rank"], 30],
-              },
-              paint: {
-                "text-color": "#53635f",
-                "text-halo-color": "#ffffff",
-                "text-halo-width": 1.4,
-                "text-halo-blur": 0.1,
-              },
-            };
-            gl.addLayer(layer, before);
-          }
+          // Positron intentionally omits POIs; never re-add generic facility
+          // labels from the vector tile source (shelters, fuel, repair, etc.).
+          hideBasemapPoiLabels(gl);
+          // Keep administrative and road names for navigation context.
           rs46LocalLabels();
           rs47MoreNeighbourhoodNames();
           window.__rsPoiLabelsReady = true;
         } catch (e) {
-          console.warn("RiderSpot POI labels:", e?.message || e);
+          console.warn("RiderSpot map labels:", e?.message || e);
         }
       }
       gl.on("style.load", restorePlaceNames);
