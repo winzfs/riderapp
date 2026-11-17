@@ -18,7 +18,7 @@ function manifest() {
   return manifestPromise;
 }
 function tile(name) {
-  if (!/^(admin|t\d+-\d+)$/.test(name)) return Promise.resolve([]);
+  if (!/^(admin|government|t\d+-\d+)$/.test(name)) return Promise.resolve([]);
   if (!tilePromises.has(name)) {
     const task = fetch(DATA_ROOT + name + ".json")
       .then((r) => { if (!r.ok) throw Error("Unavailable map tile"); return r.json(); })
@@ -36,7 +36,7 @@ function toFeature(row) {
   const [lon, lat, name, kind] = row;
   if (!Number.isFinite(lon) || !Number.isFinite(lat) ||
       typeof name !== "string" || name.length > 64 ||
-      !["region", "apartment", "building", "shop"].includes(kind)) return null;
+      !["region", "apartment", "building", "shop", "government"].includes(kind)) return null;
   return {
     type: "Feature",
     properties: { name, kind },
@@ -92,6 +92,8 @@ export function ensurePublicKoreanLayers(gl) {
   if (!gl.getSource(SOURCE)) gl.addSource(SOURCE, { type: "geojson", data: EMPTY });
   addLayer(gl, "rs-public-region-label", "region", 10, "#456c5f",
     [10, 10.6, 12.7, 12, 15, 13], 4);
+  addLayer(gl, "rs-public-government-label", "government", 12.2, "#3b665c",
+    [12.2, 11.3, 14.5, 12.6, 18, 13.8], 2);
   addLayer(gl, "rs-public-apartment-label", "apartment", 14, "#526b64",
     [14, 10, 16, 12, 18, 13], 5);
   addLayer(gl, "rs-public-building-label", "building", 15.5, "#737b76",
@@ -122,10 +124,11 @@ export function mountPublicKoreanLabels(gl) {
         return;
       }
       const keys = zoom >= 14.5 ? visibleTileKeys(info, b) : [];
-      const cacheKey = keys.join(",") + ":admin:" + (zoom >= 9.5);
+      const cacheKey = keys.join(",") + ":admin:" + (zoom >= 9.5) + ":gov:" + (zoom >= 12.2);
       if (cacheKey === lastKey) return;
       const data = await Promise.all([
         zoom >= 9.5 ? tile("admin") : Promise.resolve([]),
+        zoom >= 12.2 ? tile("government") : Promise.resolve([]),
         ...keys.map(tile),
       ]);
       if (!alive || my !== revision || !gl.getSource(SOURCE)) return;
