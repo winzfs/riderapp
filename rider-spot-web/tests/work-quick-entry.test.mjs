@@ -19,9 +19,9 @@ const section = (start, end) => {
 };
 
 test("Maintenance quick entry retains legacy maintenance screen", () => {
-  const render = new Function("S", "H", "formField", "nowDate",
+  const render = new Function("S", "H", "formField", "nowDate", "upcomingMaintenance", "M",
     section("renderMaintenance", "renderAnalysis") + "return renderMaintenance();");
-  const html = render(S, String, field, () => "2026-11-18");
+  const html = render(S, String, field, () => "2026-11-18", upcomingMaintenance, (n) => String(n) + "원");
   for (const expected of [
     'data-rs-form="maintenance"',
     'id="rs-maint-ui"',
