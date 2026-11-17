@@ -51,7 +51,11 @@ jobs:
               req=urllib.request.Request('https://www.data.go.kr/tcs/dss/selectFileDataDownload.do?'+query,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.data.go.kr/data/15083033/fileData.do'})
               with urllib.request.urlopen(req,timeout=30) as response:
                 payload=response.read(15000).decode('utf-8','replace')
-              print('Official download metadata result:',payload[:1000])
+              print('Official download metadata result:',payload[:200])
+              for label in ('atchFileId','fileDetailSn','dataNm','success','resultCode'):
+                found=re.search(r'"'+label+r'"\\s*:\\s*(?:"[^"]*"|[^,}]+)',payload)
+                print('Official file field',label,found.group(0)[:180] if found else 'not found')
+              print('Official metadata size',len(payload))
 
           except Exception as exc:
             print('Official data metadata not currently accessible:',type(exc).__name__,str(exc)[:150])
