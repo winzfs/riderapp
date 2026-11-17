@@ -1,6 +1,7 @@
 import { createUI } from "./ui.mjs";
 import { createRiderMap } from "./RiderMap.mjs";
 import { createTimeline } from "./Timeline.mjs";
+import { createGamificationUI } from "./gamification-ui.mjs";
 import { createUseRide } from "./use-ride.mjs";
 // Existing application behavior extracted verbatim from v59; data contracts unchanged.
 export function mountApplication({
@@ -27,6 +28,7 @@ export function mountApplication({
   Ge,
 }) {
   const { Icon, Metrics, Skeleton, DialogSurface } = createUI(S);
+  const { RiderProgressCard } = createGamificationUI(S);
   function Qo(e, t) {
     let n = Math.PI / 180,
       r =
@@ -1772,6 +1774,7 @@ export function mountApplication({
             ],
           ],
         }),
+        (0, J.jsx)(RiderProgressCard, { history }),
         (0, J.jsx)(ProfileTools, {
           user: e,
           onLogin: t,
