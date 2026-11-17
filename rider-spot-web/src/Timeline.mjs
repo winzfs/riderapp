@@ -193,7 +193,7 @@ export function createTimeline(S, Zo) {
           null,
           player.showing && player.displayTime
             ? "기록 시각 " + rs33Time(player.displayTime)
-            : "실제 GPS 속도 기준",
+            : "",
         ),
         rs33J(
           "span",
@@ -420,7 +420,7 @@ export function createTimeline(S, Zo) {
         setMemoBusy(false);
       }
     }
-    function courseToolbar() {
+    function courseToolbar(isDaily) {
       const toggleStamps = () => {
         setShowStamps((value) => {
           const next = !value;
@@ -458,6 +458,11 @@ export function createTimeline(S, Zo) {
           "aria-label": showStamps ? "시간 끄기" : "시간 켜기",
           onClick: toggleStamps,
         }, showStamps ? "◷ 시간 끄기" : "◷ 시간 켜기"),
+        !isDaily ? rs33J("button", {
+          type: "button", className: "rs38-road-toggle",
+          "aria-pressed": !!activeRoad,
+          disabled: roadBusy || !raw, onClick: rs38MatchRoads,
+        }, roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
       );
     }
     if (current) {
@@ -560,7 +565,7 @@ export function createTimeline(S, Zo) {
               : null,
           ),
           ended ? playbackBar(detailPlayback, "개별 운행 경로") : null,
-          courseToolbar(),
+          courseToolbar(false),
           !analysis
             ? rs33J(
                 "p",
@@ -970,7 +975,7 @@ export function createTimeline(S, Zo) {
                       }, following ? "◉ 추적 중" : "◎ 내 위치")
                     : null,
                   playbackBar(dailyPlayback, "하루 통합 경로"),
-                  courseToolbar(),
+                  courseToolbar(true),
                   dailyCourse?.error
                     ? rs33J(
                         "p",

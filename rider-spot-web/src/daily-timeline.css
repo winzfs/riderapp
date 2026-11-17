@@ -73,3 +73,7 @@
 .rs33-timeline .rs56-day-map{height:clamp(330px,92vw,480px)}
 .rs33-timeline .rs-game-recap::after{pointer-events:none}
 @media(max-width:360px){.rs59-course-tools button{font-size:11px}}
+
+/* Individual trips retain road correction; the daily map stays three-button simple. */
+.rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:360px){.rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(2,minmax(0,1fr))}}
