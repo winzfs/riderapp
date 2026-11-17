@@ -819,9 +819,9 @@ import { iconMarkup } from "./ui.mjs";
         )
         .join("") +
       "</div>" +
+      '<button type="button" class="rs62-analysis-link" data-rs-tab="analysis">월별 수익 분석 <span aria-hidden="true">›</span></button>' +
       '<h2 class="rs-work-group-title">현장 편의 도구</h2><div class="rs33-work-quick rs33-work-utilities" aria-label="추가 업무 메뉴">' +
       [
-        ["analysis", "월별 수익 분석"],
         ["places", "편의시설"],
         ["roads", "도로 제보"],
         ["sos", "라이더 도움"],
