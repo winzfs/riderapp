@@ -40,6 +40,28 @@ def download(url, dest, limit=MAX_BYTES):
     return {"bytes": length, "sha256": digest.hexdigest()}
 
 
+GWANGJU_DISTRICTS = frozenset(("광산구", "동구", "서구", "남구", "북구"))
+GWANGJU_BBOX = (126.68, 34.98, 127.13, 35.36)
+
+def belongs_to_gwangju(row):
+    """Since 2026-09 SEMAS groups Gwangju with Jeonnam.
+    Keep only the five former Gwangju city districts with valid coordinates.
+    """
+    if not isinstance(row, dict):
+        return False
+    province = str(row.get("시도명") or "").strip()
+    district = str(row.get("시군구명") or "").strip()
+    if province not in ("광주광역시", "전남광주통합특별시"):
+        return False
+    if district not in GWANGJU_DISTRICTS:
+        return False
+    try:
+        lon, lat = float(row["경도"]), float(row["위도"])
+    except (ValueError, TypeError, KeyError):
+        return False
+    return GWANGJU_BBOX[0] <= lon <= GWANGJU_BBOX[2] and GWANGJU_BBOX[1] <= lat <= GWANGJU_BBOX[3]
+
+
 def current_official_csv():
     """Try the current unauthenticated national SEMAS ZIP from data.go.kr."""
     page = "https://www.data.go.kr/data/15083033/fileData.do"
@@ -80,7 +102,7 @@ def current_official_csv():
             raise RuntimeError("Unexpected columns in official SEMAS CSV")
         count = 0
         for record in reader:
-            if record.get("시도명") == "광주광역시":
+            if belongs_to_gwangju(record):
                 outwriter.writerow(record)
                 count += 1
         return count
@@ -91,7 +113,7 @@ def current_official_csv():
                           if x.filename.lower().endswith(".csv") and x.file_size < 600_000_000]
             if not candidates:
                 raise RuntimeError("Official archive has no CSV files")
-            print("OFFICIAL ZIP inventory:", [(x.filename, x.file_size) for x in zipped.infolist()[:35]], flush=True)
+            print("OFFICIAL ZIP members:", len(zipped.infolist()), "candidate CSV:", len(candidates), flush=True)
             # Prefer Gwangju CSV, otherwise scan all regional CSVs.
             region_files = [x for x in candidates if "광주" in x.filename]
             files = region_files or candidates
@@ -101,19 +123,19 @@ def current_official_csv():
                     with zipped.open(item) as infile:
                         reader = csv.DictReader(io.TextIOWrapper(infile, encoding="utf-8-sig", newline=""))
                         first = next(reader, None)
-                        print("OFFICIAL CSV sample:", item.filename, "columns:", reader.fieldnames[:50] if reader.fieldnames else None,
-                              "first sido:", repr(first.get("시도명")) if first else None, flush=True)
+                        print("OFFICIAL ZIP city CSV:", item.filename, "region:", repr(first.get("시도명")) if first else None,
+                              "district:", repr(first.get("시군구명")) if first else None, flush=True)
                         if not reader.fieldnames or not {"상호명", "경도", "위도", "시도명"}.issubset(set(reader.fieldnames)):
                             continue
                         if writer is None:
                             writer = csv.DictWriter(dest, fieldnames=reader.fieldnames)
                             writer.writeheader()
                         for row in ([first] if first else []):
-                            if row.get("시도명") == "광주광역시":
+                            if belongs_to_gwangju(row):
                                 writer.writerow(row)
                                 count += 1
                         for row in reader:
-                            if row.get("시도명") == "광주광역시":
+                            if belongs_to_gwangju(row):
                                 writer.writerow(row)
                                 count += 1
     else:
@@ -124,7 +146,7 @@ def current_official_csv():
             writer = csv.DictWriter(dest, fieldnames=reader.fieldnames)
             writer.writeheader()
             for row in reader:
-                if row.get("시도명") == "광주광역시":
+                if belongs_to_gwangju(row):
                     writer.writerow(row)
                     count += 1
     if count < 50_000 or count > 230_000:
