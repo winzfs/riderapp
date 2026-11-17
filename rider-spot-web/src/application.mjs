@@ -136,6 +136,25 @@ export function mountApplication({
       [counts, setCounts] = S.useState([]);
     const [selected, setSelected] = S.useState(null),
       [comments, setComments] = S.useState([]);
+    const draftKey = "rs:community-draft:" + (u?.id || "guest");
+    const draft = (() => {
+      try {
+        const value = JSON.parse(localStorage.getItem(draftKey) || "{}");
+        return value && typeof value === "object" ? value : {};
+      } catch { return {}; }
+    })();
+    function saveDraft(event) {
+      if (editing) return;
+      const data = new FormData(event.currentTarget);
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({
+          title: String(data.get("title") || "").slice(0, 100),
+          body: String(data.get("body") || "").slice(0, 5000),
+          category: String(data.get("category") || writeCategory),
+          scope,
+        }));
+      } catch { /* Private browsing: keep the in-memory form intact. */ }
+    }
     const [compose, setCompose] = S.useState(false),
       [scope, setScope] = S.useState("all");
     const [editing, setEditing] = S.useState(null),
@@ -511,8 +530,8 @@ export function mountApplication({
       if (!u) return login();
       setEditing(null);
       setContext(null);
-      setWriteCategory(cat === "전체" ? "동네 이야기" : cat);
-      setScope(regional && !isNews ? "local" : "all");
+      setWriteCategory(rs.includes(draft.category) ? draft.category : cat === "전체" ? "동네 이야기" : cat);
+      setScope(["all", "local"].includes(draft.scope) ? draft.scope : regional && !isNews ? "local" : "all");
       setPhoto(null);
       setCompose(true);
       setSelected(null);
@@ -633,8 +652,11 @@ export function mountApplication({
         setPhoto(null);
         setCat(category);
         setSearch("");
+        if (!editing) {
+          try { localStorage.removeItem(draftKey); } catch {}
+        }
         await refresh();
-        toast("글을 등록했어요.");
+        toast(editing ? "글을 수정했어요." : "글을 등록했어요.");
       } catch (e) {
         if (path)
           try {
@@ -755,9 +777,12 @@ export function mountApplication({
         datalist,
         back(),
         H("h1", null, editing ? "글 수정" : "글쓰기"),
+        !editing && (draft.title || draft.body)
+          ? H("p", { className: "rs61-draft-note", role: "status" }, "이전에 작성하던 내용이 보관되어 있어요.")
+          : null,
         H(
           "form",
-          { className: "form rc-form", onSubmit: submitPost },
+          { className: "form rc-form", onSubmit: submitPost, onInput: saveDraft },
           context
             ? H(
                 "div",
@@ -831,7 +856,7 @@ export function mountApplication({
               name: "title",
               required: true,
               maxLength: 100,
-              defaultValue: editing?.title || context?.title || "",
+              defaultValue: editing?.title || context?.title || draft.title || "",
               placeholder: "어떤 이야기를 나누고 싶나요?",
             }),
           ),
@@ -844,7 +869,7 @@ export function mountApplication({
               required: true,
               maxLength: 5000,
               rows: 7,
-              defaultValue: editing?.body || "",
+              defaultValue: editing?.body || draft.body || "",
               placeholder: "동료 라이더에게 들려주세요.",
             }),
           ),
@@ -882,7 +907,7 @@ export function mountApplication({
           H(
             "p",
             { className: "rc-safety" },
-            "고객 이름·주소·현관 비밀번호·차량번호가 보이는 사진은 올리지 마세요. 사진의 위치 메타데이터는 업로드 전에 제거됩니다.",
+            "고객 이름·주소·현관 비밀번호·차량번호가 보이는 사진은 올리지 마세요. 사진의 위치 메타데이터는 업로드 전에 제거됩니다. 글 초안은 이 기기에만 보관돼요.",
           ),
           H(
             "button",
