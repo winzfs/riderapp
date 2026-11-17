@@ -1,3 +1,4 @@
+import { createUI } from "./ui.mjs";
 import {
   rs33Zone,
   rs33ISO,
@@ -14,6 +15,7 @@ import { useRoutePlayback } from "./route-playback.mjs";
 
 export function createTimeline(S, Zo) {
   const rs33J = S.createElement;
+  const { Icon, Metrics } = createUI(S);
   const EMPTY = [];
   const thumbnailCache = new WeakMap();
   function rs33Thumb(trip) {
@@ -98,9 +100,12 @@ export function createTimeline(S, Zo) {
     const hours = Math.floor(total / 3600);
     const minutes = Math.floor((total % 3600) / 60);
     const seconds = total % 60;
-    return (hours ? hours + ":" : "") +
-      String(minutes).padStart(2, "0") + ":" +
-      String(seconds).padStart(2, "0");
+    return (
+      (hours ? hours + ":" : "") +
+      String(minutes).padStart(2, "0") +
+      ":" +
+      String(seconds).padStart(2, "0")
+    );
   }
   function playbackBar(player, label) {
     if (!player?.track || player.track.samples < 2 || player.duration < 1)
@@ -117,12 +122,19 @@ export function createTimeline(S, Zo) {
           {
             type: "button",
             className: "rs59-play",
-            "aria-label": player.playing ? "경로 재생 일시정지" :
-              complete ? "경로 처음부터 다시 재생" : "경로 재생 시작",
+            "aria-label": player.playing
+              ? "경로 재생 일시정지"
+              : complete
+                ? "경로 처음부터 다시 재생"
+                : "경로 재생 시작",
             "aria-pressed": player.playing,
             onClick: player.toggle,
           },
-          player.playing ? "Ⅱ 일시정지" : complete ? "↻ 다시 재생" : "▶ 경로 재생",
+          rs33J(Icon, {
+            name: player.playing ? "pause" : complete ? "reset" : "play",
+            size: 17,
+          }),
+          player.playing ? "일시정지" : complete ? "다시 재생" : "경로 재생",
         ),
         rs33J(
           "label",
@@ -136,7 +148,8 @@ export function createTimeline(S, Zo) {
               onChange: (event) => player.setSpeed(event.target.value),
             },
             ...[10, 20, 30, 60].map((speed) =>
-              rs33J("option", { key: speed, value: speed }, speed + "배")),
+              rs33J("option", { key: speed, value: speed }, speed + "배"),
+            ),
           ),
         ),
         player.showing
@@ -152,22 +165,23 @@ export function createTimeline(S, Zo) {
             )
           : null,
       ),
-      rs33J(
-        "input",
-        {
-          className: "rs59-seek",
-          type: "range",
-          min: 0,
-          max: Math.max(1, Math.round(player.duration)),
-          step: 1000,
-          value: Math.min(Math.round(player.elapsed), Math.round(player.duration)),
-          "aria-label": "경로 재생 위치",
-          "aria-valuetext":
-            formatPlaybackClock(player.elapsed) + " / " +
-            formatPlaybackClock(player.duration),
-          onChange: (event) => player.seek(event.target.value),
-        },
-      ),
+      rs33J("input", {
+        className: "rs59-seek",
+        type: "range",
+        min: 0,
+        max: Math.max(1, Math.round(player.duration)),
+        step: 1000,
+        value: Math.min(
+          Math.round(player.elapsed),
+          Math.round(player.duration),
+        ),
+        "aria-label": "경로 재생 위치",
+        "aria-valuetext":
+          formatPlaybackClock(player.elapsed) +
+          " / " +
+          formatPlaybackClock(player.duration),
+        onChange: (event) => player.seek(event.target.value),
+      }),
       rs33J(
         "div",
         { className: "rs59-time-row" },
@@ -181,7 +195,8 @@ export function createTimeline(S, Zo) {
         rs33J(
           "span",
           { className: "rs59-elapsed" },
-          formatPlaybackClock(player.elapsed) + " / " +
+          formatPlaybackClock(player.elapsed) +
+            " / " +
             formatPlaybackClock(player.duration),
         ),
       ),
@@ -231,7 +246,8 @@ export function createTimeline(S, Zo) {
     const ended = Boolean(current?.ended_at);
     const analysis = useRouteAnalysis(S, current);
     const dailyPlayback = useRoutePlayback(
-      S, selected || ride.trip || allDays ? null : daily?.trips,
+      S,
+      selected || ride.trip || allDays ? null : daily?.trips,
     );
     const detailPlayback = useRoutePlayback(S, ended ? current : null);
     const raw = analysis?.course;
@@ -919,32 +935,32 @@ export function createTimeline(S, Zo) {
               ? "오늘 운행"
               : day.slice(5).replace("-", "월 ") + "일 운행",
         ),
-        rs33J(
-          "strong",
-          null,
-          rs33Format.format(km) +
-            " km · " +
-            (entries.length ? rs33Duration(elapsed) : "0분"),
-        ),
-        rs33J("span", null, "운행 " + entries.length + "회 · 비공개 기록"),
+        rs33J(Metrics, {
+          label: "하루 운행 요약",
+          items: [
+            ["거리", rs33Format.format(km), "km"],
+            ["시간", entries.length ? rs33Duration(elapsed) : "0분", ""],
+            ["운행", entries.length, "회"],
+          ],
+        }),
+        rs33J("span", null, "나만 볼 수 있는 운행 기록"),
       ),
       !allDays && daily
         ? rs33J(
             "section",
-            { className: "rs56-day-overview", "aria-label": "하루 통합 운행 경로" },
+            {
+              className: "rs56-day-overview",
+              "aria-label": "하루 통합 운행 경로",
+            },
             rs33J(
               "div",
               { className: "rs56-day-header" },
               rs33J(
                 "div",
                 null,
-                rs33J("small", null, "오늘의 동선을 한눈에"),
+
                 rs33J("h2", null, "하루 전체 경로"),
-                rs33J(
-                  "p",
-                  null,
-                  entries.length + "개 운행을 시간순으로 묶어 표시해요.",
-                ),
+                rs33J("p", null, "출발부터 마지막 기록까지"),
               ),
               rs33J(
                 "span",
@@ -961,7 +977,9 @@ export function createTimeline(S, Zo) {
                       (expanded ? " rs33-course-full" : ""),
                     role: expanded ? "dialog" : undefined,
                     "aria-modal": expanded ? true : undefined,
-                    "aria-label": expanded ? "전체 화면 하루 운행 지도" : undefined,
+                    "aria-label": expanded
+                      ? "전체 화면 하루 운행 지도"
+                      : undefined,
                   },
                   rs33J(
                     "div",
@@ -1053,7 +1071,10 @@ export function createTimeline(S, Zo) {
                   rs33J(
                     "div",
                     { className: "rs56-day-map-footer" },
-                    rs33J("span", { className: "rs56-gradient-key", "aria-hidden": true }),
+                    rs33J("span", {
+                      className: "rs56-gradient-key",
+                      "aria-hidden": true,
+                    }),
                     rs33J("span", null, "연한색 출발 → 진한색 마지막 기록"),
                     dailyCourse?.course?.revisitCount
                       ? rs33J("small", null, "주황색은 재통과 추정")
@@ -1075,7 +1096,7 @@ export function createTimeline(S, Zo) {
             rs33J(
               "p",
               { className: "rs56-day-help" },
-              "운행 사이의 빈 구간은 직선으로 연결하지 않아요. 원본 GPS 기록은 그대로 유지돼요.",
+              "운행 사이의 기록이 없는 구간은 연결하지 않아요.",
             ),
           )
         : null,
@@ -1147,10 +1168,19 @@ export function createTimeline(S, Zo) {
                   rs33J(
                     "small",
                     null,
-                    trip.memo ||
-                      (distance > 0
-                        ? rs33Format.format(distance) + " km · 기록된 경로"
-                        : "0 km · GPS 경로 없음"),
+                    rs33Format.format(distance) +
+                      " km · " +
+                      (!trip.points?.some(
+                        (p) =>
+                          Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
+                      )
+                        ? "GPS 경로 없음"
+                        : distance === 0
+                          ? "이동 거리 없음"
+                          : rs33Duration(
+                              Math.max(0, (tripEnd || tripStart) - tripStart),
+                            )) +
+                      (trip.memo ? " · " + trip.memo : ""),
                   ),
                 ),
                 rs33J(

@@ -1,0 +1,66 @@
+// Browser plugin is unavailable in the build runner; Playwright runs in isolated contexts.
+// All account/record/community writes are intercepted. Never uses production user data.
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {sampleTrip,userId}=require('./fixtures.cjs');
+const URL_BASE=process.env.RIDER_UI_URL||'https://urban-ui-rider-spot.jazzhjm.workers.dev/';
+const baseline=process.env.RIDER_UI_BASELINE==='1';
+const out=process.env.RIDER_SCREENSHOTS||'/tmp/rider-ui-evidence';fs.mkdirSync(out,{recursive:true});
+const trips=[sampleTrip(5000,{started:Date.parse('2026-11-16T00:00:00Z')}),sampleTrip(1000,{id:'22222222-2222-4222-8222-222222222222',started:Date.parse('2026-11-16T03:00:00Z')})];
+trips.push({...trips[1],id:'33333333-3333-4333-8333-333333333333',points:[],events:[],started_at:'2026-11-16T07:00:00Z',ended_at:'2026-11-16T07:00:03Z',distance_km:0,memo:''});
+const posts=[['수완동 픽업할 때 잠깐 쉴 곳 공유해요','오늘 대기하면서 찾은 쉼터예요. 오토바이 세울 공간도 있어서 편했습니다.','동네 이야기'],['비 오는 날 운행할 때 챙기는 것들','우비와 장갑 관리 노하우가 궁금해요. 선배 라이더분들은 어떻게 준비하시나요?','질문·노하우'],['오늘 저녁 첨단 쪽 도로 상황 어때요?','신호 대기 구간이 길어지는 것 같아 동네 소식 나눠 봅니다.','현장 정보']].map(([title,body,category],i)=>({id:'post-'+i,user_id:'other',title,body,category,nickname:['수완라이더','오늘도안전','달리는광주'][i],area_district:'광주 광산구',area_dong:'수완동',created_at:'2026-11-16T09:00:00Z'}));
+const places=[{id:'place-test',title:'테스트 공원 쉼터',category:'쉼터',details:'디자인 검증용 장소입니다. 실제 시설 안내가 아닙니다.',lat:35.17,lng:126.83,nickname:'테스트 라이더',created_at:'2026-11-16T09:00:00Z'}];
+const user={id:userId,aud:'authenticated',email:'ui-qa@example.test',role:'authenticated',app_metadata:{provider:'google'},user_metadata:{nickname:'광산라이더'},created_at:'2026-11-01T00:00:00Z'};
+const jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'+Buffer.from(JSON.stringify({sub:userId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.test';
+const session={access_token:jwt,refresh_token:'qa',expires_at:Math.floor(Date.now()/1000)+3600,token_type:'bearer',user};
+let browser;
+async function check(width,native){
+ const ctx=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,timezoneId:'Asia/Seoul',serviceWorkers:'block',permissions:['geolocation'],geolocation:{latitude:35.17,longitude:126.83,accuracy:8}});
+ await ctx.routeWebSocket('**/realtime/v1/websocket?**',s=>s.close());
+ await ctx.addInitScript(({trips,session,userId,native})=>{if(!sessionStorage.getItem('ui-qa-init')){sessionStorage.setItem('ui-qa-init','1');localStorage.setItem('rs:trips:'+userId,JSON.stringify(trips));localStorage.setItem('rs:trips:guest',JSON.stringify(trips));localStorage.setItem('sb-qkcqzhkvfbymzjdktshp-auth-token',JSON.stringify(session));}if(native){window.__rsNativeInstalled=true;document.documentElement.classList.add('rs-native-shell');}},{trips,session,userId,native});
+ await ctx.route('**/*',async r=>{const u=new URL(r.request().url());if(u.hostname.endsWith('.supabase.co')){
+  if(u.pathname==='/auth/v1/user')return r.fulfill({json:user});
+  if(u.pathname==='/auth/v1/token')return r.fulfill({json:session});
+  if(u.pathname.includes('/rpc/rider_work_stats'))return r.fulfill({json:{last_7_days:[{day:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date()),gross:128500,other_costs:0,fuel_costs:8000,maintenance_costs:0,unclassified_costs:0,entries:1}]}});
+  const table=u.pathname.split('/').at(-1);let data=table==='trips'?trips:table==='posts'?posts:table==='rider_places'?places:table==='rider_profiles'?{nickname:'광산라이더',user_id:userId}:table==='rider_settings'?{}:[];
+  if(r.request().method()!=='GET')return r.fulfill({status:201,json:{}});
+  return r.fulfill({json:data});
+ }if(u.pathname==='/api/industry-news')return r.fulfill({json:{items:[]}});if(u.pathname==='/api/route-match')return r.fulfill({json:{lines:[]}});return r.continue();});
+ const p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));const mode=(baseline?'before':'after')+'-'+width+'-'+(native?'native':'web');
+ const shot=async name=>p.screenshot({path:path.join(out,mode+'-'+name+'.png'),fullPage:false});
+ async function layout(name){await p.waitForTimeout(180);const x=await p.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,body:document.body.scrollWidth}));assert.ok(x.scroll<=width+1&&x.body<=width+1,name+' horizontal overflow '+JSON.stringify(x));await shot(name);const nav=await p.locator('.bottom-nav').boundingBox();assert.ok(nav&&nav.y+nav.height<=845&&nav.y>=760,'navigation safe bounds');}
+ try{
+ await p.goto(URL_BASE,{waitUntil:'domcontentloaded',timeout:35000});await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.match(await p.title(),/라이더스팟/);
+ await p.waitForFunction(()=>window.__rsRideApi?.history?.length>=3);const original=await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId);
+ // Positron is a real vector map. No visual approximation or raster assertion.
+ await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
+ await p.waitForTimeout(800);if(baseline)await shot('map');else await layout('map');
+ if(!baseline){
+ const controls=await p.locator('.rs-gps-state,.locate,#rs-sos-fab,#rs-report-legend,.leaflet-control-zoom').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {name:el.className||el.id,x:r.x,y:r.y,w:r.width,h:r.height}}));
+ for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){const a=controls[i],b=controls[j];assert.ok(!(a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h),'map overlap '+JSON.stringify([a,b]));}
+ await p.waitForSelector('.rs-report-pin');await p.locator('.rs-report-pin').first().click();await p.getByRole('dialog',{name:'테스트 공원 쉼터'}).waitFor();await shot('place-sheet');await p.getByRole('button',{name:'상세 닫기',exact:true}).click();
+ const camera=await p.evaluate(()=>{window.__rsMap.setView([35.18,126.84],11,{animate:false});return {lat:window.__rsMap.getCenter().lat,lng:window.__rsMap.getCenter().lng,z:window.__rsMap.getZoom()};});
+ await p.waitForTimeout(250);assert.equal(await p.evaluate(()=>window.__rsMap.getZoom()),camera.z);
+ }
+ const nav=p.getByRole('navigation',{name:'주 메뉴'});
+ await nav.getByRole('button',{name:'타임라인',exact:true}).click();await p.getByRole('button',{name:'2026-11-16 운행 3회',exact:true}).click();await p.getByRole('heading',{name:'하루 전체 경로'}).waitFor();await p.waitForFunction(()=>document.querySelector('.rs56-day-map .map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
+ if(baseline)await shot('timeline');else {
+ await layout('timeline');assert.equal(await p.locator('.rs56-ride-choice').count(),3);
+ const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
+ await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);
+ await player.locator('.rs59-seek').focus();await player.locator('.rs59-seek').press('End');await player.getByRole('button',{name:'경로 재생 종료하고 전체 경로 보기'}).click();
+ await p.getByRole('button',{name:'크게 보기',exact:true}).click();await p.getByRole('dialog',{name:'전체 화면 하루 운행 지도'}).waitFor();await shot('fullscreen');await p.keyboard.press('Escape');
+ await p.locator('.rs56-ride-choice').first().click();await p.locator('.rs33-trip-detail').waitFor();await layout('trip-detail');await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();await p.locator('.rs56-ride-choice').last().click();assert.match(await p.locator('.rs33-trip-summary').innerText(),/0 km/);await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();
+ }
+ await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
+ await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
+ await layout('community');await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
+ }
+ await nav.getByRole('button',{name:'내 정보',exact:true}).click();await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
+ if(!baseline){await nav.getByRole('button',{name:'지도',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);}
+ console.log('PASS',mode,'five screens, Positron, '+(baseline?'baseline evidence':'sheets, controls, filters, replay, small keyboard viewport, records unchanged'));
+ }catch(e){await shot('FAILURE').catch(()=>{});console.error('FAIL',mode,errors);throw e;}finally{await ctx.close();}
+}
+(async()=>{browser=await chromium.launch({args:['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});try{for(const width of baseline?[390]:[360,390,430])for(const native of baseline?[false]:[false,true])await check(width,native);}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

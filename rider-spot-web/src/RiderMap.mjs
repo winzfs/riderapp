@@ -1,3 +1,5 @@
+import { iconMarkup } from './ui.mjs';
+import { openMapSheet } from './ui-overlays.mjs';
 import { addBasemap } from "./basemap.mjs";
 import { createMapController } from "./map-controller.mjs";
 import { rs33DrawCourse, paintCourseLabels } from "./course-layers.mjs";
@@ -29,7 +31,7 @@ function paintRiders(L, layer, riders) {
       fillColor: "#50c29b",
       fillOpacity: 0.1,
     }).addTo(layer);
-    const html = `<span class="rs-peer-scooter">🛵</span>${badge ? `<span class="rs-peer-presence-badge rs-peer-${status}">${badge[0]}</span>` : ""}`;
+    const html = `<span class="rs-peer-scooter">${iconMarkup("riders",24)}</span>${badge ? `<span class="rs-peer-presence-badge rs-peer-${status}">${badge[0]}</span>` : ""}`;
     const icon = L.divIcon({
       className: "rs-peer-location",
       html,
@@ -45,9 +47,11 @@ function paintRiders(L, layer, riders) {
     const explanation = document.createElement("small");
     explanation.textContent = badge?.[2] || "현재 공개된 상태가 없어요.";
     popup.append(title, text, explanation);
-    L.marker(coordinates, { icon })
-      .addTo(layer)
-      .bindPopup(popup, { offset: [0, -12] });
+    let closeSheet;
+    const peer = L.marker(coordinates, { icon }).addTo(layer);
+    peer.getElement()?.setAttribute("aria-label", rider.nickname + " · " + (badge?.[1] || "라이더"));
+    peer.on("click", () => { closeSheet = openMapSheet(popup, rider.nickname); });
+    peer.on("remove", () => closeSheet?.());
   }
 }
 

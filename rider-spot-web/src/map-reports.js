@@ -1,3 +1,4 @@
+import { openMapSheet } from './ui-overlays.mjs';
 (() => {
   "use strict";
   const RS = {
@@ -211,7 +212,13 @@
         } catch {}
       }
     });
-    marker.bindPopup(el, { maxWidth: 300, autoPanPadding: [22, 36] });
+    marker.bindPopup(el, { maxWidth: 300, autoPan: false });
+    let closeSheet;
+    marker.on("popupopen", () => {
+      closeSheet = openMapSheet(el, record.title);
+      map.closePopup();
+    });
+    marker.on("remove", () => closeSheet?.());
   }
   function matchesFacilityLayer(filter, category) {
     if (filter === "places") return true;

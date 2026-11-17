@@ -1,301 +1,35 @@
-/* Rider Spot v56 — daily-first timeline. Mobile-first, low visual weight. */
-.rs33-timeline .rs56-day-overview {
-  margin: 18px 0 22px;
-  padding: 14px;
-  border: 1px solid #dbeae4;
-  border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 6px 24px rgba(22, 73, 58, .045);
-}
-.rs56-day-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 3px 3px 13px;
-}
-.rs56-day-header small {
-  color: #67837b;
-  font-size: 12px;
-  font-weight: 600;
-}
-.rs56-day-header h2 {
-  margin: 3px 0 0;
-  font-size: clamp(20px, 5.2vw, 25px);
-  line-height: 1.25;
-  letter-spacing: -.04em;
-  font-weight: 800;
-  color: #173b34;
-}
-.rs56-day-header p {
-  margin: 5px 0 0;
-  color: #6f847e;
-  font-size: 12px;
-}
-.rs56-day-badge {
-  flex: none;
-  padding: 8px 11px;
-  border-radius: 999px;
-  background: #e8f5ef;
-  color: #14684f;
-  font-weight: 700;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.rs33-timeline .rs56-day-course {
-  margin: 0;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #f1f6f3;
-  border: 1px solid #e0eae6;
-}
-.rs33-timeline .rs56-day-course .rs56-day-controls {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  align-items: stretch;
-  padding: 9px;
-  margin: 0;
-  background: #fff;
-}
-.rs33-timeline .rs56-day-course .rs56-day-controls button {
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  margin: 0;
-  padding: 8px 4px;
-  white-space: nowrap;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.rs33-timeline .rs56-day-course .rs56-day-map {
-  height: clamp(320px, 94vw, 490px);
-  min-height: 320px;
-  position: relative;
-  overflow: hidden;
-}
-.rs33-timeline .rs56-day-course .rs56-day-map .map {
-  height: 100% !important;
-  min-height: 100% !important;
-  width: 100%;
-  border-radius: 0;
-}
-.rs56-day-map-footer {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  background: #fff;
-  color: #53746b;
-  font-size: 12px;
-}
-.rs56-day-map-footer small {
-  color: #bc7140;
-  font-size: 11px;
-}
-.rs56-gradient-key {
-  display: inline-block;
-  width: 34px;
-  height: 6px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #71d1aa, #065c48);
-  flex: none;
-}
-.rs56-stamp-detail {
-  flex-basis: 100%;
-  font-size: 12px;
-  color: #183e33;
-}
-.rs56-day-help {
-  margin: 11px 2px 0;
-  color: #748780;
-  font-size: 12px;
-  line-height: 1.55;
-}
-.rs56-day-empty {
-  min-height: 174px;
-  border: 1px dashed #d7e4de;
-  border-radius: 15px;
-  background: #f5faf8;
-  color: #688078;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 20px;
-  font-size: 14px;
-}
-.rs33-timeline .rs56-rides {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 5px 0 20px;
-}
-.rs33-timeline .rs56-ride-choice {
-  appearance: none;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 70px;
-  width: 100%;
-  padding: 11px 13px;
-  border: 1px solid #dceae4;
-  border-radius: 15px;
-  background: #fff;
-  text-align: left;
-  color: #173b34;
-  cursor: pointer;
-  box-shadow: 0 2px 9px rgba(16, 70, 51, .025);
-}
-.rs33-timeline .rs56-ride-choice:active {
-  background: #f0faf5;
-  border-color: #8ecbb2;
-}
-.rs33-timeline .rs56-ride-choice:focus-visible {
-  outline: 3px solid #4ab18d;
-  outline-offset: 2px;
-}
-.rs56-ride-number {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: #eaf6f0;
-  color: #26725b;
-  font-weight: 800;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.rs56-ride-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.rs56-ride-info strong {
-  font-size: 14px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  color: #193e35;
-}
-.rs56-ride-info small {
-  font-size: 12px;
-  color: #80918b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rs56-ride-link {
-  color: #367c64;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.rs33-timeline .rs56-day-course.rs33-course-full .rs56-day-map {
-  height: calc(100dvh - 158px) !important;
-  min-height: 260px;
-  flex: 1;
-}
-@media (max-width: 380px) {
-  .rs33-timeline .rs56-day-overview { padding: 10px; }
-  .rs56-day-header p { max-width: 210px; }
-  .rs33-timeline .rs56-ride-choice { gap: 8px; padding: 10px; }
-  .rs56-ride-number { width: 34px; height: 34px; }
-}
-
-
-/* v59 — actual GPS-time route playback. Controls stay out of the map gestures. */
-.rs59-player {
-  border-top: 1px solid #e5eee9;
-  background: #fff;
-  padding: 12px 12px 11px;
-  color: #36574c;
-}
-.rs59-player-top {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-.rs59-player button,
-.rs59-player select {
-  min-height: 40px;
-  border: 1px solid #d5e5de;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 750;
-  white-space: nowrap;
-}
-.rs59-player .rs59-play {
-  padding: 8px 16px;
-  background: #16765e;
-  color: #fff;
-  border-color: #16765e;
-  flex: 1 1 125px;
-}
-.rs59-player .rs59-play[aria-pressed="true"] {
-  background: #e7f4ed;
-  border-color: #b8dbc9;
-  color: #13664d;
-}
-.rs59-speed {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  color: #75887f;
-  font-size: 12px;
-}
-.rs59-speed select {
-  appearance: auto;
-  background: #fff;
-  color: #1c5946;
-  padding: 6px 7px;
-  max-width: 80px;
-}
-.rs59-player .rs59-reset {
-  padding: 7px 10px;
-  background: #fff;
-  color: #567c6b;
-}
-.rs59-seek {
-  display: block;
-  width: 100%;
-  height: 30px;
-  margin: 7px 0 1px;
-  padding: 0;
-  accent-color: #198364;
-  touch-action: pan-y;
-  cursor: pointer;
-}
-.rs59-time-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: #758980;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.rs59-elapsed {
-  white-space: nowrap;
-  color: #285746;
-  font-weight: 700;
-}
-.rs33-trip-detail .rs59-player {
-  padding-inline: 14px;
-}
-.rs33-course-full .rs59-player {
-  flex: none;
-  padding-block: 7px;
-}
-.rs33-course-full .rs59-time-row {
-  font-size: 11px;
-}
-@media (max-width: 355px) {
-  .rs59-player-top { gap: 6px; }
-  .rs59-player .rs59-play { flex-basis: 95px; padding-inline: 8px; }
-}
+/* Daily overview / replay. Shared primitives and tokens live in design-system.css. */
+.rs33-timeline .rs56-day-overview{margin:12px 0 22px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.rs56-day-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 0 12px}
+.rs56-day-header h2{margin:0;font-size:17px;font-weight:650;color:var(--rs-text)}
+.rs56-day-header small,.rs56-day-header p{margin:3px 0 0;font-size:12px;color:var(--rs-muted)}
+.rs56-day-badge{font-size:11px;color:var(--rs-primary);background:var(--rs-soft);border-radius:7px;padding:5px 8px;white-space:nowrap}
+.rs33-timeline .rs56-day-course{margin:0;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rs-line)}
+.rs56-day-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rs33-timeline .rs56-day-map{height:clamp(320px,91vw,460px);min-height:320px;position:relative;overflow:hidden}
+.rs33-timeline .rs56-day-map .map{height:100%;min-height:100%;width:100%;border-radius:0}
+.rs56-day-map-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;font-size:10px;color:var(--rs-muted);background:#fff;min-height:36px}
+.rs56-day-map-footer small{color:var(--rs-warning);font-size:10px}
+.rs56-gradient-key{width:26px;height:5px;flex:none;border-radius:4px;background:linear-gradient(90deg,#71d1aa,#065c48)}
+.rs56-stamp-detail{flex-basis:100%;font-size:12px;color:var(--rs-primary)}
+.rs56-day-help{margin:10px 0 0;font-size:11px;color:var(--rs-muted);line-height:1.6}
+.rs33-timeline .rs56-rides{display:flex;flex-direction:column;gap:0;margin:0 0 20px;border-top:1px solid var(--rs-line)}
+.rs33-timeline .rs56-ride-choice{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;min-height:80px;padding:16px 0;border:0;border-bottom:1px solid var(--rs-line);border-radius:0;background:transparent;text-align:left;box-shadow:none;color:var(--rs-text)}
+.rs56-ride-choice:active{background:var(--rs-soft)}
+.rs56-ride-number{display:grid;place-items:center;width:32px;height:36px;background:var(--rs-soft);color:var(--rs-primary);border-radius:9px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.rs56-ride-info{display:flex;flex-direction:column;gap:5px;min-width:0}.rs56-ride-info strong{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}.rs56-ride-info small{font-size:12px;color:var(--rs-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs56-ride-link{font-size:12px;font-weight:600;color:var(--rs-primary);white-space:nowrap}
+.rs59-player{border-top:1px solid var(--rs-line);background:#fff;padding:12px;color:var(--rs-text);flex:none}
+.rs59-player-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rs59-player button,.rs59-player select{min-height:44px;border:1px solid var(--rs-line);border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
+.rs59-player .rs59-play{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--rs-primary);color:#fff;border-color:var(--rs-primary);padding:10px 12px;min-width:100px}
+.rs59-player .rs59-play[aria-pressed=true]{background:var(--rs-primary-hover)}
+.rs59-speed{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--rs-muted);white-space:nowrap}
+.rs59-speed select{padding:8px 7px;color:var(--rs-primary);background:#fff;max-width:76px;min-width:64px}
+.rs59-player .rs59-reset{background:var(--rs-bg);color:var(--rs-muted);padding:10px;min-width:44px}
+.rs59-seek{display:block;width:100%;min-height:44px;height:44px;margin:0;padding:0;accent-color:var(--rs-primary);touch-action:pan-y;cursor:pointer}
+.rs59-time-row{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;line-height:1.5;color:var(--rs-muted);font-variant-numeric:tabular-nums}
+.rs59-elapsed{white-space:nowrap;color:var(--rs-text);font-weight:500}
+.rs33-timeline .rs56-day-course.rs33-course-full{border-radius:0;border:0;position:fixed;inset:var(--rs-safe-top) 0 var(--rs-safe-bottom);z-index:2500;display:flex;flex-direction:column;max-height:none;margin:0}
+.rs33-timeline .rs56-day-course.rs33-course-full .rs56-day-map{height:auto;min-height:120px;flex:1}
+.rs33-course-full .rs59-player{padding:8px 12px}.rs33-course-full .rs56-day-map-footer{padding-block:6px}

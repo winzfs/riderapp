@@ -19,7 +19,18 @@ const buildOptions = {
   format: "esm",
   target: "chrome110",
 };
-const [app, worker, gps, reports, tabResume, dailyCss, template, previousSw] = await Promise.all([
+const [
+  app,
+  worker,
+  gps,
+  reports,
+  tabResume,
+  dailyCss,
+  template,
+  previousSw,
+  design,
+  workTools,
+] = await Promise.all([
   build({
     ...buildOptions,
     stdin: {
@@ -30,17 +41,29 @@ const [app, worker, gps, reports, tabResume, dailyCss, template, previousSw] = a
   }),
   build({ ...buildOptions, entryPoints: ["src/route-worker.mjs"] }),
   read("src/native-gps.js"),
-  read("src/map-reports.js"),
+  build({
+    ...buildOptions,
+    format: "iife",
+    entryPoints: ["src/map-reports.js"],
+  }),
   read("src/tab-resume.js"),
   read("src/daily-timeline.css"),
   read("legacy/index.html"),
   read("legacy/sw.js"),
+  build({ ...buildOptions, entryPoints: ["src/design-system.css"] }),
+  build({
+    ...buildOptions,
+    format: "iife",
+    entryPoints: ["src/workspace-tools.js"],
+  }),
 ]);
 const encoded = {
   "app.mjs": app.outputFiles[0].text,
   "route-worker.mjs": worker.outputFiles[0].text,
   "native-gps.js": gps,
-  "map-reports.js": reports,
+  "map-reports.js": reports.outputFiles[0].text,
+  "design-system.css": design.outputFiles[0].text,
+  "workspace-tools.js": workTools.outputFiles[0].text,
   "tab-resume.js": tabResume,
   "daily-timeline.css": dailyCss,
 };
@@ -64,6 +87,7 @@ function substitute(value) {
     [oldReports]: `${base}/map-reports.js`,
     [oldGps]: `${base}/native-gps.js`,
     [oldTabResume]: `${base}/tab-resume.js`,
+    "/rider-tools-v35-e84f32f8a5e5.js": `${base}/workspace-tools.js`,
   };
   return values[value] || value;
 }
@@ -73,10 +97,17 @@ const html = template
     "",
   )
   .replace(/\bsrc="([^"]+)"/g, (_, path) => `src="${substitute(path)}"`)
-  .replace("</head>", `<link rel="stylesheet" href="${base}/daily-timeline.css"></head>`);
+  .replace(
+    "</head>",
+    `<link rel="stylesheet" href="${base}/design-system.css"><link rel="stylesheet" href="${base}/daily-timeline.css"></head>`,
+  );
 const oldCore = JSON.parse(previousSw.match(/const CORE=(\[[^\n]+\]);/)[1]);
 const core = [
-  ...oldCore.filter((path) => path !== oldSync).map(substitute),
+  ...oldCore
+    .filter((path) => path !== oldSync && !/^\/[^?]+\.css(?:\?|$)/.test(path))
+    .map(substitute),
+  `${base}/design-system.css`,
+  `${base}/workspace-tools.js`,
   `${base}/route-worker.mjs`,
   `${base}/tab-resume.js`,
   `${base}/daily-timeline.css`,
