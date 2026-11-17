@@ -22,7 +22,7 @@ test("counts only unique completed ride days; no rewards for live rides or sync 
     ride("two", FIRST, { minutes: 40, km: 5 }),
     ride("one", FIRST), // repeated server upsert id
     ride("live", SECOND, { ended: false, km: 500 }),
-    ride("invalid-time", "not a time"),
+    {id:"invalid-time",started_at:"not a time",ended_at:THIRD,distance_km:5},
     ride("end-before-start", THIRD, { minutes: -20 }),
     ride("negative-distance", SECOND, { km: -12 }),
     ride("nan-distance", SECOND, { km: "not-a-number" }),
