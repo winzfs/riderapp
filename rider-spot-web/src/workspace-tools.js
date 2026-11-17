@@ -370,7 +370,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
           fmtFloat(e.hours) +
           "시간 · " +
           fmtFloat(e.distance_km) +
-          'km</small></div><div class="rs-row-actions"><button type="button" class="rs-mini" data-rs-paid="' +
+          'km</small></div><div class="rs-row-actions"><button type="button" class="rs-mini" data-rs-edit="earnings" data-rs-edit-id="' + H(e.id) + '">수정</button><button type="button" class="rs-mini" data-rs-paid="' +
           H(e.id) +
           '" aria-pressed="' +
           Boolean(e.paid_at) +
@@ -461,7 +461,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
           (x.note ? "<p>" + H(x.note) + "</p>" : "") +
           '</div><div class="rs-fuel-end"><strong>' +
           M(x.cost_won) +
-          "</strong>" +
+          '</strong><button type="button" class="rs-mini" data-rs-edit="fuel" data-rs-edit-id="' + H(x.id) + '">수정</button>' +
           delButton("rider_fuel_logs", x.id) +
           "</div></div>",
       )
@@ -529,7 +529,14 @@ import { createWorkDrafts } from "./work-drafts.mjs";
   }
 
   function renderMaintenance() {
-    const latest = Array.isArray(S.data.maintenance) ? S.data.maintenance[0] : null;
+    const all = Array.isArray(S.data.maintenance) ? S.data.maintenance : [];
+    const latest = all[0] || null;
+    const recent = all.slice(0, 6).map((row) =>
+      '<div class="rs64-maint-item"><div><strong>' + H(row.item) + '</strong><small>' +
+      H(row.serviced_on) + ' · ' + M(row.cost_won) + '</small></div>' +
+      '<button type="button" data-rs-edit="maintenance" data-rs-edit-id="' + H(row.id) +
+      '">수정</button></div>'
+    ).join("");
     return (
       '<section class="rs63-maint-fast rs-card" aria-label="빠른 정비 기록"><h3>정비 빠른 기록</h3>' +
       '<p class="rs-small">정비 항목과 금액만 적어도 저장돼요. 날짜는 오늘로 설정됩니다.</p>' +
@@ -559,6 +566,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
       '</div></details><button type="submit" class="rs-primary">정비 기록 저장</button></form>' +
       (latest ? '<p class="rs63-maint-last">최근 정비 · ' + H(latest.serviced_on) +
         ' · ' + H(latest.item) + '</p>' : '') + '</section>' +
+      (recent ? '<section class="rs64-maint-history"><h3>최근 정비 기록</h3>' + recent + '</section>' : '') +
       '<section id="rs-maint-ui"></section>'
     );
   }
