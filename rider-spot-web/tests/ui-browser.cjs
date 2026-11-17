@@ -11,6 +11,7 @@ const out=process.env.RIDER_SCREENSHOTS||'/tmp/rider-ui-evidence';fs.mkdirSync(o
 const trips=[sampleTrip(5000,{started:Date.parse('2026-11-16T00:00:00Z')}),sampleTrip(1000,{id:'22222222-2222-4222-8222-222222222222',started:Date.parse('2026-11-16T03:00:00Z')})];
 trips.push({...trips[1],id:'33333333-3333-4333-8333-333333333333',points:[],events:[],started_at:'2026-11-16T07:00:00Z',ended_at:'2026-11-16T07:00:03Z',distance_km:0,memo:''});
 const posts=[['수완동 픽업할 때 잠깐 쉴 곳 공유해요','오늘 대기하면서 찾은 쉼터예요. 오토바이 세울 공간도 있어서 편했습니다.','동네 이야기'],['비 오는 날 운행할 때 챙기는 것들','우비와 장갑 관리 노하우가 궁금해요. 선배 라이더분들은 어떻게 준비하시나요?','질문·노하우'],['오늘 저녁 첨단 쪽 도로 상황 어때요?','신호 대기 구간이 길어지는 것 같아 동네 소식 나눠 봅니다.','현장 정보']].map(([title,body,category],i)=>({id:'post-'+i,user_id:'other',title,body,category,nickname:['수완라이더','오늘도안전','달리는광주'][i],area_district:'광주 광산구',area_dong:'수완동',created_at:'2026-11-16T09:00:00Z'}));
+posts[0].image_path='qa/community-photo.png';
 const places=[{id:'place-test',title:'테스트 공원 쉼터',category:'쉼터',details:'디자인 검증용 장소입니다. 실제 시설 안내가 아닙니다.',lat:35.17,lng:126.83,nickname:'테스트 라이더',created_at:'2026-11-16T09:00:00Z'}];
 const user={id:userId,aud:'authenticated',email:'ui-qa@example.test',role:'authenticated',app_metadata:{provider:'google'},user_metadata:{nickname:'광산라이더'},created_at:'2026-11-01T00:00:00Z'};
 const jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'+Buffer.from(JSON.stringify({sub:userId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.test';
@@ -21,6 +22,7 @@ async function check(width,native){
  await ctx.routeWebSocket('**/realtime/v1/websocket?**',s=>s.close());
  await ctx.addInitScript(({trips,session,userId,native})=>{if(!sessionStorage.getItem('ui-qa-init')){sessionStorage.setItem('ui-qa-init','1');localStorage.setItem('rs:trips:'+userId,JSON.stringify(trips));localStorage.setItem('rs:trips:guest',JSON.stringify(trips));localStorage.setItem('sb-qkcqzhkvfbymzjdktshp-auth-token',JSON.stringify(session));}if(native){window.__rsNativeInstalled=true;document.documentElement.classList.add('rs-native-shell');}},{trips,session,userId,native});
  await ctx.route('**/*',async r=>{const u=new URL(r.request().url());if(u.hostname.endsWith('.supabase.co')){
+  if(u.pathname.includes('/storage/v1/object/public/community-images/'))return r.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8VkAAAAASUVORK5CYII=','base64')});
   if(u.pathname==='/auth/v1/user')return r.fulfill({json:user});
   if(u.pathname==='/auth/v1/token')return r.fulfill({json:session});
   if(u.pathname.includes('/rpc/rider_work_stats'))return r.fulfill({json:{last_7_days:[{day:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date()),gross:128500,other_costs:0,fuel_costs:8000,maintenance_costs:0,unclassified_costs:0,entries:1}]}});
@@ -56,7 +58,44 @@ async function check(width,native){
  }
  await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
  await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
- await layout('community');await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
+ await layout('community');
+ const feed=await p.locator('.rc-card-list').evaluate(el=>{
+  const cards=[...el.querySelectorAll('.rc-feed-row')].map(row=>{
+    const bounds=row.getBoundingClientRect();
+    const img=row.querySelector('.rc-card-grid img')?.getBoundingClientRect();
+    const footer=row.querySelector('.rc-card-bottom')?.getBoundingClientRect();
+    const like=row.querySelector('.rc-row-like')?.getBoundingClientRect();
+    const meta=row.querySelector('.rc-row-meta')?.getBoundingClientRect();
+    return {top:bounds.top,bottom:bounds.bottom,left:bounds.left,right:bounds.right,
+      border:getComputedStyle(row).borderTopWidth,radius:parseFloat(getComputedStyle(row).borderTopLeftRadius),
+      image:img&&{top:img.top,bottom:img.bottom,left:img.left,right:img.right},
+      footer:footer&&{top:footer.top,bottom:footer.bottom},
+      like:like&&{top:like.top,bottom:like.bottom,left:like.left,right:like.right},
+      meta:meta&&{top:meta.top,bottom:meta.bottom,left:meta.left,right:meta.right}};
+  });
+  return {listBorder:getComputedStyle(el).borderTopWidth,cards};
+ });
+ assert.equal(feed.listBorder,'0px','list wrapper must not be one big post card');
+ assert.ok(feed.cards.length>=2,'need multiple separate post cards');
+ for(let i=0;i<feed.cards.length;i++){
+  const card=feed.cards[i];
+  assert.ok(card.radius>=10&&card.border!=='0px','each post needs own rounded border');
+  assert.ok(card.footer&&card.meta&&card.like,'each post footer must have metadata and like');
+  assert.ok(card.like.left>=card.meta.right-2,'like must not overlay metadata');
+  assert.ok(card.like.top>=card.footer.top-2&&card.like.bottom<=card.footer.bottom+2,
+    'like must remain inside its footer');
+  assert.ok(card.bottom>=card.footer.bottom-1,'footer must fit in card');
+  if(card.image)assert.ok(card.image.left>=card.left&&card.image.right<=card.right&&card.image.bottom<=card.bottom,
+    'thumbnail must remain inside post card');
+  if(i)assert.ok(feed.cards[i-1].bottom+4<=card.top,'posts must not merge into one white rectangle');
+ }
+ assert.ok(feed.cards.some(card=>card.image),'image thumbnail must be covered by layout test');
+ const categories=p.locator('.rc-categories');
+ const initialScroll=await categories.evaluate(el=>el.scrollLeft);
+ await p.getByRole('button',{name:'다음 카테고리 보기'}).click();
+ await p.waitForTimeout(400);
+ assert.ok(await categories.evaluate(el=>el.scrollLeft)>initialScroll,'category next control must scroll the full labels into view');
+ await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
  }
  await nav.getByRole('button',{name:'내 정보',exact:true}).click();await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
  if(!baseline){await nav.getByRole('button',{name:'지도',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);}
