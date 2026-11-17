@@ -21,7 +21,6 @@ export function rs33CourseToneColor(tone) {
     [0.45, [205, 200, 143]],  // yellow-sage
     [0.64, [159, 191, 143]],  // fresh sage
     [0.78, [117, 175, 133]],  // medium green
-    [0.82, [92, 157, 123]],   // green dominates most of the route
     [1, [3, 66, 50]],         // darkest green only near arrival
   ];
   for (let i = 1; i < stops.length; i++) {
