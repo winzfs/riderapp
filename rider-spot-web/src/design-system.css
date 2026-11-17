@@ -567,3 +567,208 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .app .rc-community.rc-home.rc-community-v32 .rc-card-grid img{width:72px;height:72px;flex-basis:72px}
   .app .rc-community.rc-home.rc-community-v32 .rc-row-meta{font-size:11px}
 }
+
+/* Mobile community post detail — v63
+ * Resolve inherited v32 spacing and control styles in the actual WebView.
+ * Preserve the full image (no cropping), stored post body and comment contract.
+ */
+.app .rs63-post-detail{
+  padding-top:14px;
+  padding-bottom:max(28px,calc(var(--shell-nav,68px) + env(safe-area-inset-bottom) + 18px));
+  min-width:0;
+}
+.app .rs63-post-detail .rc-back{
+  display:inline-flex;
+  align-items:center;
+  min-height:44px;
+  margin:0 0 10px;
+  padding:7px 4px;
+  color:var(--rs-primary);
+  font-size:13px;
+  font-weight:700;
+}
+.app .rs63-post-detail .rc-detail-head{
+  padding:0 0 14px;
+  margin:0;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--rs-line);
+  border-radius:0;
+  box-shadow:none;
+}
+.app .rs63-post-detail .rc-tags{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0 0 10px;
+}
+.app .rs63-post-detail .rc-tags :is(.rc-tag,.rc-local-tag){
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.4;
+}
+.app .rs63-post-detail .rc-detail-head h1{
+  margin:0 0 8px;
+  font-size:clamp(21px,5.5vw,26px);
+  font-weight:800;
+  line-height:1.35;
+  letter-spacing:-.035em;
+  color:var(--rs-text);
+}
+.app .rs63-post-detail .rc-author{
+  margin:0;
+  color:var(--rs-muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.app .rs63-post-detail .rc-detail-body{
+  margin:16px 0 18px;
+  padding:0;
+  font-size:15px;
+  line-height:1.7;
+  color:var(--rs-text);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.app .rs63-post-detail .rs33-link-context{
+  margin:0 0 16px;
+}
+.app .rs63-post-detail .rc-detail-photo{
+  display:block;
+  width:auto;
+  max-width:100%;
+  max-height:360px;
+  height:auto;
+  margin:0 auto 18px;
+  border-radius:12px;
+  object-fit:contain;
+  background:transparent;
+}
+.app .rs63-post-detail .rc-detail-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px 10px;
+  margin:0 0 20px;
+  padding:9px 0;
+  border-top:1px solid var(--rs-line);
+  border-bottom:1px solid var(--rs-line);
+}
+.app .rs63-post-detail :is(.rs63-post-primary-actions,.rs63-post-manage-actions){
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+}
+.app .rs63-post-detail .rs63-post-manage-actions{
+  margin-left:auto;
+}
+.app .rs63-post-detail .rc-detail-actions button{
+  min-height:44px;
+  padding:8px 10px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--rs-text);
+  font-size:13px;
+  font-weight:600;
+  white-space:nowrap;
+  box-shadow:none;
+}
+.app .rs63-post-detail .rc-detail-actions button:focus-visible{
+  outline:2px solid var(--rs-primary);
+  outline-offset:2px;
+}
+.app .rs63-post-detail .rs63-comment-jump{
+  color:var(--rs-muted);
+}
+.app .rs63-post-detail .rc-detail-actions .rc-delete{
+  margin-left:0;
+  color:#a34242;
+  background:#fff4f1;
+}
+.app .rs63-post-detail .rc-detail-actions .rc-liked{
+  color:var(--rs-primary);
+  background:var(--rs-soft);
+}
+.app .rs63-post-detail .rc-comments-title{
+  margin:0 0 6px;
+  scroll-margin-top:82px;
+  font-size:17px;
+  line-height:1.45;
+  color:var(--rs-text);
+}
+.app .rs63-post-detail .rc-comment{
+  padding:14px 0;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--rs-line);
+  border-radius:0;
+}
+.app .rs63-post-detail .rc-comment-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px;
+  line-height:1.45;
+  color:var(--rs-muted);
+}
+.app .rs63-post-detail .rc-comment-meta strong{
+  font-size:13px;
+  color:var(--rs-text);
+}
+.app .rs63-post-detail .rc-comment p{
+  margin:8px 0 0;
+  font-size:14px;
+  line-height:1.6;
+  color:var(--rs-text);
+  overflow-wrap:anywhere;
+}
+.app .rs63-post-detail .rc-comment-form{
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+  margin:12px 0 0;
+  padding:4px 0 18px;
+  border:0;
+  background:transparent;
+}
+.app .rs63-post-detail .rc-comment-form textarea{
+  flex:1 1 auto;
+  width:0;
+  min-width:0;
+  min-height:56px;
+  max-height:150px;
+  resize:vertical;
+  padding:12px;
+  font:inherit;
+  font-size:14px;
+  line-height:1.5;
+  color:var(--rs-text);
+  background:#fff;
+  border:1px solid var(--rs-line);
+  border-radius:12px;
+  outline-offset:2px;
+}
+.app .rs63-post-detail .rc-comment-form button{
+  flex:0 0 auto;
+  align-self:flex-end;
+  min-height:48px;
+  min-width:64px;
+  padding:9px 12px;
+  border:0;
+  border-radius:11px;
+  background:var(--rs-primary);
+  color:#fff;
+  font-weight:700;
+}
+@media(max-width:360px){
+  .app .rs63-post-detail .rc-detail-actions{gap:3px}
+  .app .rs63-post-detail .rc-detail-actions button{padding-inline:7px;font-size:12px}
+  .app .rs63-post-detail .rc-detail-photo{max-height:320px}
+}
