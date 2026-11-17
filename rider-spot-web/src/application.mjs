@@ -2643,7 +2643,6 @@ export function mountApplication({
                                       disabled: p.busy,
                                       onClick: () => Promise.resolve(p.togglePause()).catch(err => f(err?.message || "휴식 상태를 변경하지 못했어요.")),
                                       className: "rs61-dock-pause",
-                                      "aria-label": p.paused ? "운행 재개" : "운행 휴식",
                                       children: p.paused ? "재개" : "휴식",
                                     }),
                                     (0, J.jsx)("button", {

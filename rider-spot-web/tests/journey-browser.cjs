@@ -11,7 +11,10 @@ fs.mkdirSync(output, { recursive: true });
   try {
     for (const width of [320, 390, 768]) {
       const ctx = await browser.newContext({ viewport: { width, height: 844 }, isMobile: width < 761, hasTouch: true, timezoneId: 'Asia/Seoul', serviceWorkers: 'block' });
-      const trip = sampleTrip(60);
+      // Synthetic trip belongs to this KST date even right after midnight.
+      const currentKstDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      const dayStart = Date.parse(currentKstDay + 'T00:00:00+09:00');
+      const trip = sampleTrip(1, { started: Math.max(dayStart, Date.now() - 30000) });
       await ctx.addInitScript(trip => {
         if (!sessionStorage.getItem('journey-qa')) {
           localStorage.setItem('rs:trips:guest', JSON.stringify([trip]));
