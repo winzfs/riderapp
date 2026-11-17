@@ -1,5 +1,6 @@
 import { completedRideRows, dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
+import { createWorkDrafts } from "./work-drafts.mjs";
 (function () {
   "use strict";
   const TABS = [
@@ -34,8 +35,67 @@ import { iconMarkup } from "./ui.mjs";
     busy: false,
     lastError: "",
     mapEnabled: true,
+    editing: null,
   };
   const $ = (s, root = document) => root.querySelector(s);
+  const workDrafts = createWorkDrafts({
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key),
+  });
+  const editableTypes = new Set(["earnings", "fuel", "maintenance"]);
+  function captureWorkDraft() {
+    if (!root || !S.active || !S.user) return;
+    const form = root.querySelector('form[data-rs-form="earnings"],form[data-rs-form="fuel"],form[data-rs-form="maintenance"]');
+    if (form && S.editing?.type !== form.dataset.rsForm)
+      workDrafts.save(S.user.id, form);
+  }
+  function hydrateWorkForm() {
+    if (!editableTypes.has(S.tab) || !S.user || !root) return;
+    const type = S.tab;
+    const form = root.querySelector('form[data-rs-form="' + type + '"]');
+    if (!form) return;
+    const editing = S.editing?.type === type
+      ? S.data[type].find((row) => row.id === S.editing.id && row.user_id === S.user.id)
+      : null;
+    if (S.editing?.type === type && !editing) S.editing = null;
+    if (editing) {
+      workDrafts.fill(form, type, editing, true);
+      const note = document.createElement("div");
+      note.className = "rs64-editing-note";
+      note.textContent = "기존 기록 수정 중 · " + (editing.work_date || editing.fueled_on || editing.serviced_on);
+      form.prepend(note);
+      form.querySelector('[type="submit"]').textContent = "수정 내용 저장";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "rs64-edit-cancel";
+      cancel.dataset.rsEditCancel = "";
+      cancel.textContent = "수정 취소";
+      form.append(cancel);
+    } else {
+      const draft = workDrafts.read(S.user.id, type);
+      if (!draft) return;
+      workDrafts.fill(form, type, draft.values, draft.expanded);
+      const note = document.createElement("div");
+      note.className = "rs64-draft-note";
+      note.textContent = "작성 중이던 내용을 복원했어요.";
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.dataset.rsClearDraft = "";
+      clear.textContent = "초기화";
+      note.append(clear);
+      form.append(note);
+    }
+  }
+  function editWorkRecord(type, id) {
+    if (!editableTypes.has(type) || !S.user) return;
+    const row = S.data[type]?.find((item) => item.id === id && item.user_id === S.user.id);
+    if (!row) return msg("기록을 찾을 수 없어요. 다시 조회해 주세요.", true);
+    captureWorkDraft();
+    S.editing = { type, id };
+    open(type);
+    root.querySelector('form[data-rs-form="' + type + '"]')?.scrollIntoView({block:"start"});
+  }
   const H = (v) =>
     String(v == null ? "" : v).replace(
       /[&<>"']/g,
@@ -930,6 +990,7 @@ import { iconMarkup } from "./ui.mjs";
           "로그인이 필요해요",
           '<p class="rs-small">수익 기록·도로 제보·SOS를 안전하게 저장하려면 먼저 계정으로 로그인해 주세요.</p><button class="rs-primary" data-rs-login>로그인 화면으로 이동</button>',
         );
+    captureWorkDraft();
     root.innerHTML =
       (S.tab === "hub"
         ? renderHub()
@@ -938,9 +999,12 @@ import { iconMarkup } from "./ui.mjs";
           content +
           "</div>") +
       '<div id="rs-message" class="rs-toast" hidden role="status"></div>';
+    hydrateWorkForm();
     if (S.lastError) msg(S.lastError);
   }
   function open(tab, id) {
+    captureWorkDraft();
+    if (S.editing && S.editing.type !== tab) S.editing = null;
     S.tab = tab || "hub";
     window.scrollTo(0, 0);
     S.selectedSOS = id || null;
@@ -963,6 +1027,8 @@ import { iconMarkup } from "./ui.mjs";
   }
   window.__rsOpenTool = open;
   function close() {
+    captureWorkDraft();
+    S.editing = null;
     S.active = false;
     root.hidden = true;
     S.lastError = "";
@@ -1659,6 +1725,7 @@ import { iconMarkup } from "./ui.mjs";
           const previous = S.user?.id;
           S.user = session?.user || null;
           if (previous !== S.user?.id) {
+            S.editing = null;
             S.dataLoaded = false;
             S.platform = "";
             S.lastError = "";
