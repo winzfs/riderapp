@@ -36,7 +36,7 @@ on a provider-approved cadence and verify source dates.
 Do **not** put the full nationwide business data into `app.mjs`, query an
 external geocoding endpoint on every pan, or expose a V-World/data.go.kr API
 key to the Android WebView. The POI vector layer shipped in this change is
-the no-key first step; the government records are **not** ingested yet.
+the no-key first step; the approved **Gwangju** government records are now ingested (SEMAS 2026-09); nationwide independent public-data coverage is not yet ingested.
 
 ## Implemented offline importer
 
@@ -55,10 +55,18 @@ The schedule lives on the GitHub **default branch** `main`, in
 cron schedules on feature branches. It checks out
 `feature/rider-spot-native-apk` and runs each **Monday at 04:17 KST**.
 
-- Select the latest dated public Gwangju SEMAS CSV available from the
-  `ginipick/market` mirror; no API token is required. **This mirror currently
-  exposes 2025-06, so a successful weekly job does not imply that SEMAS has
-  published a more recent snapshot in the mirror.**
+- Discover the current official SEMAS attachment from
+  `data.go.kr/data/15083033/fileData.do`, download its ZIP and validate the
+  edition date. **2026-09** is the successfully imported edition as of
+  2026-11-18 KST (76,391 shops; 5,106 general buildings; 546 apartments).
+  The new source is a combined `전남광주` CSV, with province value
+  `전남광주통합특별시`; retain only `동구`, `서구`, `남구`, `북구` and `광산구`
+  records inside the city coordinate guard. Region name labels still come from
+  V-World's independent 2023 administrative polygon snapshot.
+- If the official source is unavailable, fail without updating any production
+  tiles. An explicitly configured `KOREAN_ALLOW_OLD_MIRROR_FALLBACK=1` permits
+  the 2025-06 third-party mirror, but the CI snapshot regression guard will
+  reject downgrading already published 2026 records.
 - Optional recommended direct official data feed: set repository variables
   `KOREAN_SHOPS_CSV_URL` (approved HTTPS CSV endpoint) and
   `KOREAN_SHOPS_SNAPSHOT` (YYYYMM). If the source is a ZIP, extract the Gwangju
@@ -70,7 +78,7 @@ cron schedules on feature branches. It checks out
   Refuse suspicious decreases, malformed data or source download errors.
 - If and only if the generated files change, commit the derived labels (not
   the source CSV) to the app branch. The Worker reads the active branch at
-  `/mapdata/*.json` with a bounded 30-minute edge/browser cache. Existing
+  `/mapdata/*.json` with a bounded edge/browser cache. Existing
   app bundles do not need rebuilding just for new source records.
 - Existing users receive refreshed data on a subsequent map visit/reload;
   the app does **not** interrupt an active ride or refresh all tile data
@@ -85,9 +93,9 @@ cron schedules on feature branches. It checks out
 
 The Actions run must show `Selected SEMAS public snapshot`, `PASS safe
 source change`, and either `No changed names` or a validated data commit.
-The first end-to-end weekly refresh dry-run completed successfully on
-2026-11-18 KST. A 2025-06 source merely produces a no-change check, not
-a false claim of fresher data.
+The verified official 2026-09 extraction and conversion succeeded in GitHub
+Actions run `44181112267` (2026-11-18 KST). A 2025-06 mirror result is not a
+valid substitute for a failing 2026 official download.
 
 For live data integrity, see the deployed `/mapdata/manifest.json`; confirm
 `counts`, `sources` and tile availability. The app release path still
