@@ -65,7 +65,15 @@ async function check(width,native){
  await p.locator('.rs56-ride-choice').first().click();await p.locator('.rs33-trip-detail').waitFor();await layout('trip-detail');await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();await p.locator('.rs56-ride-choice').last().click();assert.match(await p.locator('.rs33-trip-summary').innerText(),/0 km/);await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();
 
  }
- await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
+ await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="earnings"]').first().click();
+await p.locator('form[data-rs-form="earnings"]').waitFor();
+await p.locator('input[name="work_date"]').fill('2026-11-16');
+await p.locator('[data-rs-fill-ride]').click();
+const copiedHours=Number(await p.locator('input[name="hours"]').inputValue());
+const copiedKm=Number(await p.locator('input[name="distance_km"]').inputValue());
+assert.ok(copiedHours>0&&copiedKm>0,'existing GPS history fills manual earnings form without syncing financial data');
+await p.getByRole('button',{name:'‹ 업무 목록'}).click();
+await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
  await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
  await layout('community');
  assert.equal(await p.locator('.rs-lounge-quick .rs-lounge-actions button').count(),2,'existing community offers local quick prompts');

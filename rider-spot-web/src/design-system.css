@@ -1167,3 +1167,20 @@ svg.rs-icon{flex:none;vertical-align:middle}
 @media(max-width:360px){
   .rs-public-poi-credit{bottom:88px;max-width:calc(100% - 24px);flex-wrap:wrap}
 }
+
+/* Everyday Rider UX: native sections, not extra dashboards. */
+.app .rs-lounge-quick{margin:0 0 15px;padding:14px 15px;border:1px solid #e5eae4;border-radius:16px;background:linear-gradient(116deg,#f0f7f1,#fffaf2);box-shadow:0 3px 14px #18433108}
+.app .rs-lounge-title strong{display:block;color:#244a3c;font-size:14px;letter-spacing:-.02em}
+.app .rs-lounge-title small{display:block;margin-top:3px;color:#7b8377;font-size:11px}
+.app .rs-lounge-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.app .rs-lounge-actions button{min-height:44px;min-width:0;padding:9px 8px;border:1px solid #dae8dc;border-radius:11px;background:#fff;color:#255944;box-shadow:none;font-size:12px;font-weight:700;word-break:keep-all}
+.app .rs-lounge-actions button:last-child{background:#fdf5e8;border-color:#f0dfc4;color:#8b612e}
+.app .rs-lounge-actions button:focus-visible{outline:2px solid #216d55;outline-offset:2px}
+#rs-tools .rs-ride-prefill{width:100%;min-height:46px;margin:10px 0 4px;padding:11px 13px;border:1px solid #cfe5da;border-radius:12px;background:#eef7f1;color:#155a41;font-size:12px;line-height:1.5;font-weight:750;text-align:left;box-shadow:none}
+#rs-tools .rs-work-efficiency{display:grid;gap:8px;margin:12px 0;padding:14px;border:1px solid #dee9df;border-radius:14px;background:linear-gradient(125deg,#f7faf5,#fdfcf7)}
+#rs-tools .rs-work-efficiency>small{font-size:10px;color:#597568;font-weight:700}
+#rs-tools .rs-work-efficiency>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#rs-tools .rs-work-efficiency>div span{display:grid;gap:3px;min-width:0;font-size:11px;color:#76817b}
+#rs-tools .rs-work-efficiency strong{font-size:17px;line-height:1.2;color:#225743;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+#rs-tools .rs-work-efficiency p{margin:0;font-size:10px;line-height:1.65;color:#7e8174;word-break:keep-all}
+@media(max-width:360px){.app .rs-lounge-quick{padding:12px}.app .rs-lounge-actions{gap:6px}.app .rs-lounge-actions button{font-size:11px;padding:8px 6px}}
