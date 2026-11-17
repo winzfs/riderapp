@@ -381,3 +381,6 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .rc-community .rc-feed-status{flex-wrap:wrap}
 .rc-community .rc-feed-status button{max-width:none}
 }
+
+.rs62-analysis-link{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:48px;border:0;border-top:1px solid var(--rs-line);border-bottom:1px solid var(--rs-line);background:transparent;padding:10px 2px;text-align:left;color:var(--rs-primary);font-size:14px;font-weight:650;margin:-8px 0 18px}
+.rs62-analysis-link span{font-size:20px;color:var(--rs-muted)}
