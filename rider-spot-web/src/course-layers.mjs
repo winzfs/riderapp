@@ -57,7 +57,7 @@ export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
   );
   let frame = 0;
   function priorityFor(kind) {
-    return kind === "stop" ? 0 : kind === "stamp" ? 2 : 1;
+    return kind === "start" || kind === "end" ? 0 : kind === "stop" ? 1 : 2;
   }
   function schedule() {
     if (!frame) frame = requestAnimationFrame(paint);
@@ -67,7 +67,13 @@ export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
     overlays.clearLayers();
     const size = map.getSize();
     const occupied = new Set();
+    const zoom = map.getZoom();
+    const cellWidth = zoom < 12 ? 124 : zoom < 14 ? 94 : zoom < 16 ? 72 : 60;
+    const cellHeight = zoom < 13 ? 43 : 33;
+    const maxLabels = Math.max(3, Math.min(24, Math.floor(size.x * size.y / 18000)));
+    let rendered = 0;
     for (const stamp of priority) {
+      if (rendered >= maxLabels) break;
       const point = map.latLngToContainerPoint([stamp.lat, stamp.lng]);
       if (
         point.x < -30 ||
@@ -76,9 +82,10 @@ export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
         point.y > size.y + 25
       )
         continue;
-      const cell = `${Math.floor(point.x / 57)},${Math.floor(point.y / 28)}`;
+      const cell = `${Math.floor(point.x / cellWidth)},${Math.floor(point.y / cellHeight)}`;
       if (occupied.has(cell)) continue;
       occupied.add(cell);
+      rendered++;
       const badge = document.createElement("span");
       badge.textContent = rs33Time(stamp.time);
       badge.className = "rs33-stamp-label " + stamp.kind;
