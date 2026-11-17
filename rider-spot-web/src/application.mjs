@@ -2000,19 +2000,13 @@ export function mountApplication({
   }
   const rs33LayerItems = [
     ["riders", "라이더"],
-    ["shelters", "쉼터·화장실"],
-    ["shops", "정비소"],
+    ["shelters", "화장실"],
     ["roads", "도로 제보"],
-    ["places", "시설 전체"],
   ];
   function rs33LayerFor(kind, category) {
-    return kind === "roads"
-      ? "roads"
-      : category === "쉼터" || category === "화장실"
-        ? "shelters"
-        : category === "정비소"
-          ? "shops"
-          : "places";
+    // Every facility opens from the same map layer; only WC pins are visible
+    // by default. Explicit facility links may still focus their own record.
+    return kind === "roads" ? "roads" : "shelters";
   }
   function MapBar({ layer, choose, sharing, busy, toggle }) {
     return rs33J(
