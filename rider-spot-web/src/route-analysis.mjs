@@ -214,14 +214,48 @@ export function rs33Paths(points) {
   return groups;
 }
 
+// Read-only best-effort GPS stops. Only sustained stationary clusters qualify;
+// inferred stops are never persisted as native-recorded events.
+export function rs33InferredStops(groups) {
+  const found = [];
+  for (const group of groups) {
+    let i = 0;
+    while (i < group.length - 3) {
+      const anchor = group[i];
+      if (!Number.isFinite(anchor.time)) { i++; continue; }
+      let j = i + 1;
+      while (j < group.length &&
+        Number.isFinite(group[j].time) &&
+        group[j].time >= anchor.time &&
+        group[j].time - anchor.time <= 60 * 60000 &&
+        rs43Meters(anchor, group[j]) <= 32) j++;
+      const last = group[j - 1];
+      const durationMs = last.time - anchor.time;
+      if (j - i >= 4 && durationMs >= 90000) {
+        const cluster = group.slice(i, j);
+        const lat = cluster.map((p) => p.lat).sort((a, b) => a - b);
+        const lng = cluster.map((p) => p.lng).sort((a, b) => a - b);
+        found.push({
+          lat: lat[Math.floor(lat.length / 2)],
+          lng: lng[Math.floor(lng.length / 2)],
+          time: anchor.time,
+          durationMs,
+          label: "정차 추정 · " + Math.max(2, Math.round(durationMs / 60000)) + "분",
+          kind: "stop", inferred: true,
+        });
+        i = j;
+      } else i++;
+    }
+  }
+  return found;
+}
+
 export function rs33Stamps(groups, events) {
   const points = groups.flat().filter((p) => p.time != null);
   if (!points.length) return [];
-  const first = points[0],
-    last = points.at(-1),
-    duration = Math.max(0, last.time - first.time);
-  const step =
-    (duration > 6 * 3600000 ? 60 : duration > 2 * 3600000 ? 30 : 15) * 60000;
+  const first = points[0], last = points.at(-1);
+  const duration = Math.max(0, last.time - first.time);
+  const step = (duration > 6 * 3600000 ? 60 : duration > 2 * 3600000 ? 30 : 15) * 60000;
   const result = [{ ...first, label: "출발", kind: "start" }];
   let next = Math.floor(first.time / step) * step + step;
   for (let i = 1; i < points.length - 1; i++) {
@@ -232,26 +266,27 @@ export function rs33Stamps(groups, events) {
         result.push({ ...p, label: "기록 위치", kind: "stamp" });
     }
   }
-  if (last.time !== first.time)
-    result.push({ ...last, label: "마지막 기록", kind: "end" });
-  const stops = (Array.isArray(events) ? events : [])
-    .filter(
-      (e) =>
-        e?.source === "riderspot-native-stop-v1" &&
-        rs33Timestamp(e.at) != null &&
-        Number.isFinite(Number(e.lat)) &&
-        Number.isFinite(Number(e.lng)) &&
-        Math.abs(Number(e.lat)) <= 90 &&
-        Math.abs(Number(e.lng)) <= 180,
-    )
-    .map((e) => ({
-      lat: Number(e.lat),
-      lng: Number(e.lng),
-      time: rs33Timestamp(e.at),
-      label: e.type || "정차",
-      kind: "stop",
-    }));
-  return [...result, ...stops].sort((a, b) => a.time - b.time);
+  if (last.time !== first.time) result.push({ ...last, label: "마지막 기록", kind: "end" });
+  const explicit = (Array.isArray(events) ? events : []).flatMap((e) => {
+    if (!e || !(e.source === "riderspot-native-stop-v1" || /정차|휴식/.test(String(e.type || "")))) return [];
+    const time = rs33Timestamp(e.at);
+    if (time == null) return [];
+    const valid = Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng)) &&
+      Math.abs(Number(e.lat)) <= 90 && Math.abs(Number(e.lng)) <= 180;
+    // Manual break events are time-only. Locate them on the nearest actual GPS
+    // fix only if one exists, without inventing a coordinate.
+    const nearest = valid ? null : points.reduce((best, point) =>
+      Math.abs(point.time - time) < Math.abs((best?.time ?? Infinity) - time) ? point : best, null);
+    if (!valid && (!nearest || Math.abs(nearest.time - time) > 120000)) return [];
+    return [{ lat: valid ? Number(e.lat) : nearest.lat,
+      lng: valid ? Number(e.lng) : nearest.lng,
+      time, label: e.type || "정차", kind: "stop", inferred: false }];
+  });
+  const inferred = rs33InferredStops(groups).filter((candidate) =>
+    !explicit.some((stop) =>
+      Math.abs(stop.time - candidate.time) <= 6 * 60000 &&
+      rs43Meters(stop, candidate) <= 75));
+  return [...result, ...explicit, ...inferred].sort((a, b) => a.time - b.time);
 }
 
 // Shared by the route map and time-proportional playback. Avoid visual banding on long rides.

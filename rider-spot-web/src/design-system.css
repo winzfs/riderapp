@@ -1257,3 +1257,7 @@ svg.rs-icon{flex:none;vertical-align:middle}
     bottom:calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 104px);
   }
 }
+
+/* Tighter recap after removing redundant copy/disclaimer action area. */
+.rs33-timeline .rs-game-recap::after{pointer-events:none}
+.rs33-stamp-label.stop{min-width:58px;width:max-content;max-width:94px;padding-inline:5px;font-weight:800;color:#fff;background:#af713e;border-color:#fff}

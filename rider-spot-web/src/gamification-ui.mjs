@@ -1,4 +1,3 @@
-import { rideRecapText } from "./ride-insights.mjs";
 import { riderDayResult, riderProgress } from "./gamification.mjs";
 
 // Optional, presentation-only components. No hooks, dialogs, route collection,
@@ -93,18 +92,6 @@ export function createGamificationUI(React) {
   }
 
   function DayRideCard({ history, day, celebrate = false }) {
-    const [copyNotice, setCopyNotice] = React.useState("");
-    const result = riderDayResult(history, day);
-    const copySummary = async () => {
-      const text = rideRecapText(history, day);
-      if (!text) return;
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopyNotice("결산 문구를 복사했어요. 위치와 상세 경로는 포함되지 않아요.");
-      } catch {
-        setCopyNotice("자동 복사가 안 되는 환경이에요. 기록은 그대로 보관돼요.");
-      }
-    };
     if (!result.completedTrips) return null;
     const mins = Math.round(result.durationMs / 60000);
     const time = mins >= 60
@@ -134,13 +121,7 @@ export function createGamificationUI(React) {
                 h(Medal, { badge: { ...badge, unlocked: true }, small: true }),
                 badge.title)),
           )
-        : h("p", { className: "rs-game-recap-message" },
-            "오늘의 기록이 한 걸음 더 쌓였어요."),
-      h("div", { className: "rs-game-recap-actions" },
-        h("button", { type: "button", className: "rs-game-copy", onClick: copySummary }, "결산 문구 복사 ↗"),
-        h("small", { role: "status" }, copyNotice || "위치·좌표 없이 기록만 공유할 수 있어요.")),
-      h("p", { className: "rs-game-recap-note" },
-        "완료된 기록이 있는 날에만 XP가 한 번 지급돼요. 배달 속도나 거리 경쟁은 없어요."),
+        : null,
     );
   }
   return { RiderProgressCard, DayRideCard };

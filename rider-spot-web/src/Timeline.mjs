@@ -405,6 +405,40 @@ export function createTimeline(S, Zo) {
         setMemoBusy(false);
       }
     }
+    function courseToolbar(bounds, isDaily) {
+      const toggleStamps = () => {
+        setShowStamps((value) => {
+          const next = !value;
+          try { localStorage.setItem("rs:route-time-stamps", next ? "1" : "0"); } catch {}
+          return next;
+        });
+        setFocused(null);
+      };
+      return rs33J(
+        "div",
+        { className: "rs59-course-tools", role: "group", "aria-label": "경로 지도 설정" },
+        rs33J("button", {
+          type: "button", disabled: !bounds,
+          onClick: () => { setFocused(null); setReset((value) => value + 1); },
+        }, "⌖ 전체 경로"),
+        !isDaily ? rs33J("button", {
+          type: "button", className: "rs38-road-toggle",
+          "aria-pressed": !!activeRoad, disabled: roadBusy || !raw,
+          onClick: rs38MatchRoads,
+        }, roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
+        rs33J("button", {
+          type: "button", className: "rs33-expand",
+          "aria-expanded": expanded,
+          onClick: () => setExpanded((value) => !value),
+        }, expanded ? "↙ 닫기" : "⛶ 크게"),
+        rs33J("button", {
+          type: "button", className: "rs45-stamp-toggle",
+          "aria-pressed": showStamps,
+          "aria-label": showStamps ? "지도 시간 표시 숨기기" : "지도 시간 표시 켜기",
+          onClick: toggleStamps,
+        }, showStamps ? "◷ 시간 끄기" : "◷ 시간 켜기"),
+      );
+    }
     if (current) {
       const path = rs33J(Zo, {
         key: current.id,
@@ -476,68 +510,6 @@ export function createTimeline(S, Zo) {
           },
           rs33J(
             "div",
-            { className: "rs33-course-controls" },
-            rs33J(
-              "button",
-              {
-                type: "button",
-                disabled: !shown?.bounds,
-                onClick: () => {
-                  setFocused(null);
-                  setReset((value) => value + 1);
-                },
-              },
-              "전체 경로",
-            ),
-            rs33J(
-              "button",
-              {
-                type: "button",
-                className: "rs38-road-toggle",
-                "aria-pressed": !!activeRoad,
-                disabled: roadBusy || !raw,
-                onClick: rs38MatchRoads,
-              },
-              roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정",
-            ),
-            rs33J(
-              "button",
-              {
-                type: "button",
-                className: "rs33-expand",
-                "aria-expanded": expanded,
-                onClick: () => setExpanded((value) => !value),
-              },
-              expanded ? "닫기" : "크게 보기",
-            ),
-            rs33J(
-              "button",
-              {
-                type: "button",
-                className: "rs45-stamp-toggle",
-                "aria-pressed": showStamps,
-                "aria-label": showStamps
-                  ? "경로 시간 표시 숨기기"
-                  : "경로 시간 표시 켜기",
-                onClick: () => {
-                  setShowStamps((value) => {
-                    const next = !value;
-                    try {
-                      localStorage.setItem(
-                        "rs:route-time-stamps",
-                        next ? "1" : "0",
-                      );
-                    } catch {}
-                    return next;
-                  });
-                  setFocused(null);
-                },
-              },
-              showStamps ? "시간 숨기기" : "시간 켜기",
-            ),
-          ),
-          rs33J(
-            "div",
             { className: "trip-map rs33-course-map" },
             path,
             !ended
@@ -567,6 +539,7 @@ export function createTimeline(S, Zo) {
               : null,
           ),
           ended ? playbackBar(detailPlayback, "개별 운행 경로") : null,
+          courseToolbar(shown?.bounds, false),
           !analysis
             ? rs33J(
                 "p",
@@ -973,6 +946,7 @@ export function createTimeline(S, Zo) {
         }),
         rs33J("span", null, "나만 볼 수 있는 운행 기록"),
       ),
+      !allDays ? rs33J(DayRideCard, { history: ride.history, day }) : null,
       !allDays && daily
         ? rs33J(
             "section",
@@ -1009,54 +983,6 @@ export function createTimeline(S, Zo) {
                       ? "전체 화면 하루 운행 지도"
                       : undefined,
                   },
-                  rs33J(
-                    "div",
-                    { className: "rs33-course-controls rs56-day-controls" },
-                    rs33J(
-                      "button",
-                      {
-                        type: "button",
-                        disabled: !dailyCourse?.course?.bounds,
-                        onClick: () => {
-                          setFocused(null);
-                          setReset((value) => value + 1);
-                        },
-                      },
-                      "전체 경로",
-                    ),
-                    rs33J(
-                      "button",
-                      {
-                        type: "button",
-                        className: "rs33-expand",
-                        "aria-expanded": expanded,
-                        onClick: () => setExpanded((value) => !value),
-                      },
-                      expanded ? "닫기" : "크게 보기",
-                    ),
-                    rs33J(
-                      "button",
-                      {
-                        type: "button",
-                        className: "rs45-stamp-toggle",
-                        "aria-pressed": showStamps,
-                        onClick: () => {
-                          setShowStamps((value) => {
-                            const next = !value;
-                            try {
-                              localStorage.setItem(
-                                "rs:route-time-stamps",
-                                next ? "1" : "0",
-                              );
-                            } catch {}
-                            return next;
-                          });
-                          setFocused(null);
-                        },
-                      },
-                      showStamps ? "시간 숨기기" : "시간 켜기",
-                    ),
-                  ),
                   rs33J(
                     "div",
                     { className: "trip-map rs33-course-map rs56-day-map" },
@@ -1108,6 +1034,7 @@ export function createTimeline(S, Zo) {
                       }, following ? "◉ 추적 중" : "◎ 내 위치")
                     : null,
                   playbackBar(dailyPlayback, "하루 통합 경로"),
+                  courseToolbar(dailyCourse?.course?.bounds, true),
                   dailyCourse?.error
                     ? rs33J(
                         "p",
@@ -1139,7 +1066,29 @@ export function createTimeline(S, Zo) {
                           rs33Time(focused.time) + " · " + focused.label,
                         )
                       : null,
-                  ),
+                  ),,
+                  dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
+                    ? rs33J("details", { className: "rs56-stop-events" },
+                        rs33J("summary", null,
+                          "정차 이벤트 ",
+                          rs33J("strong", null, dailyCourse.course.stamps.filter((stamp) => stamp.kind === "stop").length + "건"),
+                          rs33J("span", { "aria-hidden": true }, "⌄")),
+                        rs33J("div", { className: "rs56-stop-list" },
+                          dailyCourse.course.stamps.filter((stamp) => stamp.kind === "stop").map((stamp, index) =>
+                            rs33J("button", {
+                              type: "button", key: "stop:" + stamp.time + ":" + index,
+                              onClick: () => setFocused(stamp),
+                              "aria-label": rs33Time(stamp.time) + " " + stamp.label,
+                            },
+                              rs33J("time", null, rs33Time(stamp.time)),
+                              rs33J("span", null, stamp.label),
+                              stamp.inferred ? rs33J("small", null, "GPS 추정") : null,
+                            ),
+                          ),
+                        ),
+                      )
+                    : null,
+
                 )
               : rs33J(
                   "div",
@@ -1153,7 +1102,7 @@ export function createTimeline(S, Zo) {
             ),
           )
         : null,
-      !allDays ? rs33J(DayRideCard, { history: ride.history, day }) : null,
+
       rs33J(
         "div",
         { className: "rs33-list-title" },

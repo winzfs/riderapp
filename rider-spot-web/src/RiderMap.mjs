@@ -3,7 +3,7 @@ import { openMapSheet } from './ui-overlays.mjs';
 import { addBasemap } from "./basemap.mjs";
 import { createMapController } from "./map-controller.mjs";
 import { rs33DrawCourse, paintCourseLabels } from "./course-layers.mjs";
-import { createPlaybackLayer } from "./route-playback.mjs";
+import { createPlaybackLayer, playbackTimestamp } from "./route-playback.mjs";
 import { timelineFixStale, timelineHeading } from "./timeline-location.mjs";
 
 const EMPTY = [];
@@ -237,6 +237,20 @@ export function createRiderMap(React, L, fallback) {
         course.onStamp,
       );
     }, [cameraId, course?.geometry, course?.stamps, course?.onStamp, course?.playback?.showing]);
+
+    // The regular label layer is hidden during replay. Keep already-passed
+    // stops visible without painting future route labels or full-route arrows.
+    const stopPlaybackBucket = course?.playback?.showing
+      ? Math.floor((Number(course.playback.elapsed) || 0) / 30000) : -1;
+    React.useEffect(() => {
+      if (!course?.playback?.showing || !course?.geometry || !course.playback.track) return;
+      const at = playbackTimestamp(course.playback.track, course.playback.elapsed);
+      const stops = (course.stamps || []).filter((stamp) =>
+        stamp.kind === "stop" && at != null && stamp.time <= at);
+      if (!stops.length) return;
+      return paintCourseLabels(L, controller.current.map, { paths: [] }, stops, course.onStamp);
+    }, [cameraId, course?.geometry, course?.stamps, course?.onStamp,
+      course?.playback?.showing, course?.playback?.track, stopPlaybackBucket]);
 
     React.useEffect(() => {
       if (!course?.playback?.showing || !course.playback.track) return;
