@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_UI_URL: https://6b833aa2-rider-spot.jazzhjm.workers.dev/
+      RIDER_UI_URL: https://da25a7e5-rider-spot.jazzhjm.workers.dev/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,7 +31,7 @@ jobs:
       - name: Diagnose preview HTTP responses
         shell: bash
         run: |
-          for target in https://6b833aa2-rider-spot.jazzhjm.workers.dev/ https://a8340454-rider-spot.jazzhjm.workers.dev/ https://6b833aa2-rider-spot.jazzhjm.workers.dev/mapdata/manifest.json; do
+          for target in https://da25a7e5-rider-spot.jazzhjm.workers.dev/ https://a8340454-rider-spot.jazzhjm.workers.dev/ https://da25a7e5-rider-spot.jazzhjm.workers.dev/mapdata/manifest.json; do
             echo "Probe: $target"
             curl -sSL --max-time 20 -A 'Mozilla/5.0 RiderSpot-QA' -D /tmp/rs-headers -o /tmp/rs-body "$target" || true
             head -n 12 /tmp/rs-headers
@@ -42,7 +42,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, urllib.request
-          root = 'https://6b833aa2-rider-spot.jazzhjm.workers.dev'
+          root = 'https://da25a7e5-rider-spot.jazzhjm.workers.dev'
           def load(path):
             request = urllib.request.Request(root + path, headers={'User-Agent':'Mozilla/5.0 RiderSpot-QA','Accept':'application/json,text/html,*/*'})
             with urllib.request.urlopen(request, timeout=30) as response:
@@ -53,7 +53,7 @@ jobs:
                 return json.loads(payload)
               return payload.decode('utf-8')
           html = load('/')
-          assert '7b9151a5e772' in html, 'Expected new release missing'
+          assert '77c6e9330124' in html, 'Expected new release missing'
           manifest = load('/mapdata/manifest.json')
           assert manifest['coverage'] == '광주광역시'
           assert manifest['counts']['shop'] == 76391, manifest['counts']
@@ -65,8 +65,16 @@ jobs:
           assert len(admin) >= 100
           shops = load('/mapdata/t3170-879.json')
           assert any(row[3] == 'shop' for row in shops)
-          app = load('/assets/rider-spot-7b9151a5e772/app.mjs')
+          offices = load('/mapdata/government.json')
+          assert len(offices) == 241, ('Unexpected government label count', len(offices))
+          assert any(x[2]=='광산구청' and x[3]=='government' for x in offices)
+          assert not any('가사문학면' in x[2] for x in offices), 'Outside city boundary'
+          assert not any('KT&G' in x[2] for x in offices), 'Private company mislabeled'
+          assert manifest['counts']['government'] == len(offices)
+          app = load('/assets/rider-spot-77c6e9330124/app.mjs')
           assert 'rs-public-apartment-label' in app
+          assert 'rs-public-government-label' in app
+          assert 'rs-korean-government-names' in app
           assert 'rs47-gwangsan-overview' not in app, 'Legacy manual dong names still bundled'
           assert 'within' in app, 'Missing geographic label de-duplication'
           print('PASS preview: regions',len(admin),'businesses',manifest['counts']['shop'],'tile samples',len(shops))
