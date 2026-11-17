@@ -27,6 +27,20 @@ class GovernmentNamesTests(unittest.TestCase):
         self.assertEqual({x[2] for x in rows},{"광산구청","광주경찰서"})
         self.assertTrue(all(x[3]=="government" for x in rows))
 
+    def test_city_boundary_excludes_damyang_and_private_offices(self):
+        poly=[((126.68,35.05,126.90,35.27),[[
+            [126.68,35.05],[126.90,35.05],[126.90,35.27],[126.68,35.27],[126.68,35.05]
+        ]])]
+        payload={"elements":[
+            {"lat":35.13,"lon":126.82,"tags":{"name":"광산구청","office":"government"}},
+            {"lat":35.175,"lon":127.03,"tags":{"name":"가사문학면사무소","office":"government"}},
+            {"lat":35.14,"lon":126.80,"tags":{"name":"민간관리사무소","office":"government"}},
+        ]}
+        records=gov.osm_rows(payload,poly)
+        self.assertEqual([r[2] for r in records],["광산구청"])
+        self.assertFalse(gov.inside_gwangju(127.03,35.175,poly))
+        self.assertTrue(gov.inside_gwangju(126.82,35.13,poly))
+
     def test_duplicate_nearby_same_name_collapses(self):
         rows=gov.unique([
             [126.82000,35.1700,"광산구청","government"],
