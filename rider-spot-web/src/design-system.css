@@ -964,3 +964,11 @@ svg.rs-icon{flex:none;vertical-align:middle}
     transition: none;
   }
 }
+
+/* Individual ride legends match the combined timeline and playback palette. */
+.app .rs33-course-legend>span:first-child{
+  background:linear-gradient(90deg,
+    #f69745 0%,#eeb96e 27%,#aec792 50%,#4c967c 72%,#034232 100%);
+  width:44px;
+  height:7px;
+}
