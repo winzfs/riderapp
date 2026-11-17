@@ -91,6 +91,7 @@ def current_official_csv():
                           if x.filename.lower().endswith(".csv") and x.file_size < 600_000_000]
             if not candidates:
                 raise RuntimeError("Official archive has no CSV files")
+            print("OFFICIAL ZIP inventory:", [(x.filename, x.file_size) for x in zipped.infolist()[:35]], flush=True)
             # Prefer Gwangju CSV, otherwise scan all regional CSVs.
             region_files = [x for x in candidates if "광주" in x.filename]
             files = region_files or candidates
@@ -99,11 +100,18 @@ def current_official_csv():
                 for item in files:
                     with zipped.open(item) as infile:
                         reader = csv.DictReader(io.TextIOWrapper(infile, encoding="utf-8-sig", newline=""))
+                        first = next(reader, None)
+                        print("OFFICIAL CSV sample:", item.filename, "columns:", reader.fieldnames[:50] if reader.fieldnames else None,
+                              "first sido:", repr(first.get("시도명")) if first else None, flush=True)
                         if not reader.fieldnames or not {"상호명", "경도", "위도", "시도명"}.issubset(set(reader.fieldnames)):
                             continue
                         if writer is None:
                             writer = csv.DictWriter(dest, fieldnames=reader.fieldnames)
                             writer.writeheader()
+                        for row in ([first] if first else []):
+                            if row.get("시도명") == "광주광역시":
+                                writer.writerow(row)
+                                count += 1
                         for row in reader:
                             if row.get("시도명") == "광주광역시":
                                 writer.writerow(row)
