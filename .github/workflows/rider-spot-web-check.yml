@@ -1,0 +1,39 @@
+name: Rider Spot Web checks
+
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - "rider-spot-web/src/**"
+      - "rider-spot-web/scripts/**"
+      - "rider-spot-web/tests/**"
+      - "rider-spot-web/package.json"
+      - "rider-spot-web/package-lock.json"
+      - ".github/workflows/rider-spot-web-check.yml"
+  pull_request:
+    paths:
+      - "rider-spot-web/src/**"
+      - "rider-spot-web/scripts/**"
+      - "rider-spot-web/tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
