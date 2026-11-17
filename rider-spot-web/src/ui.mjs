@@ -23,6 +23,18 @@ export const icons = {
   pause: "M8 4v16M16 4v16",
   reset: "M3 10a9 9 0 1 1 1 8M3 4v6h6",
   lock: "M6 10h12v11H6zM8 10V6a4 4 0 0 1 8 0v4",
+  gauge: "M4 18a9 9 0 1 1 16 0M12 14l4-5M7 18h10M12 18h.01",
+  oil: "M5 8l5-4h6l4 6v8H4V9l5-1m6-3v5m-7 5h8m1-10h3",
+  tire: "M12 2a8 8 0 0 1 8 8v4a8 8 0 0 1-16 0v-4a8 8 0 0 1 8-8zm0 4v12m-5-9h10M7 15h10",
+  brake: "M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM12 3v2m0 14v2",
+  battery: "M3 7h16v12H3V7zm16 4h2v4h-2M7 5h3m4 0h3M7 13h5m-2-2v4m4-2h3",
+  belt: "M8 4a4 4 0 0 0 0 16m8-16a4 4 0 0 1 0 16M8 4h8m-8 16h8m-8-12v8m8-8v8",
+  history: "M3 11a9 9 0 1 1 2 6M3 5v6h6m3-5v6l4 2",
+  edit: "M4 20l5-.5L20 8l-4-4L5 15l-1 5zm9-13 4 4",
+  settings: "M4 7h16M4 17h16M9 4v6m6 4v6",
+  chevron: "M9 5l7 7-7 7",
+  calendar: "M4 6h16v15H4V6zm4-3v6m8-6v6M4 11h16",
+
 };
 export function iconMarkup(name, size = 22) {
   return `<svg class="rs-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name] || icons.work}"/></svg>`;
