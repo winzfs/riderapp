@@ -8,6 +8,7 @@
 
   const KEY = "rs:ui:selected-tab-v54";
   const TABS = {
+    "운행":"nearby", "동네":"community", "내 바이크":"bike",
     "지도": "nearby",
     "타임라인": "trips",
     "업무": "tools",
@@ -23,7 +24,8 @@
       return "nearby";
     }
   }
-  let desired = read();
+  const freshLaunch = window.performance?.getEntriesByType?.("navigation")[0]?.type === "navigate";
+  let desired = freshLaunch ? "nearby" : read();
   let go = typeof window.__rsGoToTab === "function" ? window.__rsGoToTab : null;
   let lastAction = 0;
   let bootedAt = Date.now();
@@ -90,7 +92,7 @@
       }
       return;
     }
-    if (navTab() === desired || typeof go !== "function") return;
+    if (window.__rsActiveTab === desired || navTab() === desired || typeof go !== "function") return;
 
     const now = Date.now();
     if (now - lastRepair > 12000) repairCount = 0;
