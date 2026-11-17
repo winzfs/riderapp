@@ -30,6 +30,35 @@ function libs(L) {
     });
   return loading;
 }
+// v0.1.4's adapter queues a transition animation which can outlive its
+// Leaflet layer: its queued callback then reads this._map.getZoom() after
+// Leaflet has detached it. Keep the standard transition behavior, but check
+// ownership INSIDE the animation frame instead of only when scheduling.
+export function guardMaplibreLayerLifecycle(L, layer) {
+  const originalZoomEnd = layer._zoomEnd;
+  layer._zoomEnd = function (...args) {
+    if (!this._map || !this._glMap) return;
+    return originalZoomEnd.apply(this, args);
+  };
+  layer._transitionEnd = function () {
+    L.Util.requestAnimFrame(function () {
+      const map = this._map;
+      const gl = this._glMap;
+      if (!map || !gl || !gl._actualCanvas) return;
+      const zoom = map.getZoom();
+      const center = map.getCenter();
+      const offset = map.latLngToContainerPoint(map.getBounds().getNorthWest());
+      this._resizeContainer();
+      // A dismissed map must never be resuscitated by a queued resize.
+      if (this._map !== map || this._glMap !== gl) return;
+      L.DomUtil.setTransform(gl._actualCanvas, offset, 1);
+      gl.once("moveend", () => this._zoomEnd());
+      gl.jumpTo({ center, zoom: zoom - 1 });
+    }, this);
+  };
+  return layer;
+}
+
 export function addBasemap(L, map) {
   window.L = L;
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -115,6 +144,7 @@ export function addBasemap(L, map) {
         interactive: false,
         attributionControl: false,
       });
+      guardMaplibreLayerLifecycle(L, layer);
       const removeVector = layer.onRemove;
       layer.onRemove = function (removingMap) {
         const gl = this.getMaplibreMap();
