@@ -14,32 +14,6 @@ export function createJourneyUI(React) {
     }, []);
     return React.useMemo(() => riderJourney(history, now), [history, now]);
   }
-  function JourneyEntry({ history, onOpen, riding = false }) {
-    const { progress, todayResult, days, weekDays } = useJourney(history);
-    const recorded = todayResult.completedTrips > 0;
-    const status = riding ? '운행 종료 후 기록이 완성돼요' : recorded ? '오늘도 기록을 남겼어요' : '오늘의 미션이 기다리고 있어요';
-    const hint = riding ? '안전하게 운행하세요 · 미션은 정차 후 확인' :
-      recorded ? '+' + todayResult.earnedXp + ' XP 획득 · 주간 기록 펼치기' : '하루 3개의 작은 미션 · 주간 스탬프 모으기';
-    return h('button', {
-      type: 'button', className: 'rs-journey-entry', onClick: onOpen,
-      disabled: riding, 'aria-label': '내 성장과 오늘의 미션 보기',
-    },
-      h('span', { className: 'rs-journey-entry-header' },
-        h('span', { className: 'rs-journey-entry-eyebrow' }, '✦ RIDER QUEST'),
-        h('span', { className: 'rs-journey-entry-week' }, '이번 주 ', h('b', null, weekDays), '/7일')),
-      h('span', { className: 'rs-journey-entry-main' },
-        h('span', { className: 'rs-journey-entry-level', 'aria-hidden': true }, 'LV.', h('b', null, progress.level)),
-        h('span', { className: 'rs-journey-entry-copy' },
-          h('strong', null, status),
-          h('small', null, hint)),
-        h('span', { className: 'rs-journey-entry-arrow', 'aria-hidden': true }, riding ? '✦' : '↗')),
-      h('span', { className: 'rs-journey-entry-footer' },
-        h('span', { className: 'rs-journey-entry-progress', 'aria-hidden': true },
-          h('span', { style: { width: progress.percent + '%' } })),
-        h('span', { className: 'rs-journey-entry-xp' }, progress.levelXp + '/' + progress.nextLevelXp + ' XP'),
-        h('span', { className: 'rs-journey-entry-stamps', 'aria-label': '이번 주 기록 ' + weekDays + '일' },
-          ...days.map(d => h('i', { key: d.day, className: d.recorded ? 'is-recorded' : d.today ? 'is-today' : '', 'aria-hidden': true })))));
-  }
   function JourneyPanel({ history, userId, riding = false, onTimeline }) {
     const journey = useJourney(history);
     const { today, days, weekDays, weekKm, weekXp, nextBadge, todayResult } = journey;
@@ -98,5 +72,5 @@ export function createJourneyUI(React) {
         : h('section', { className: 'rs-journey-next' }, h('span', { className: 'rs-journey-next-medal', 'aria-hidden': true }, '★'), h('div', null, h('h2', null, '도감을 모두 채웠어요'), h('p', null, '다섯 개의 배지에 나의 시간이 담겼어요.'))),
       h('button', { type: 'button', className: 'rs-journey-replay', onClick: onTimeline }, h('span', null, '나의 경로, 다시 달려보기', h('small', null, '타임라인에서 하루를 펼쳐 경로를 재생해요')), h('b', { 'aria-hidden': true }, '↗')));
   }
-  return { JourneyEntry, JourneyPanel };
+  return { JourneyPanel };
 }
