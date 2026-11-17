@@ -59,3 +59,30 @@ test("isolated GPS fixes do not appear as orange dots; route and revisit layers 
   dispose();
   assert.equal(detached, true);
 });
+
+
+test("route progress colors are pale mint at the start and deep green at the end", () => {
+  const colors = [];
+  const L = {
+    layerGroup() { return { addTo() { return this; }, remove() {} }; },
+    polyline(coords, style) {
+      return { addTo() {
+        if (style.color.startsWith("rgb(")) colors.push(style.color);
+        return this;
+      }};
+    },
+  };
+  const geometry = routeGeometry([[
+    {lat:35.17,lng:126.81}, {lat:35.19,lng:126.83},
+  ]]);
+  const before = JSON.stringify(geometry);
+  const release = rs33DrawCourse(L, {}, geometry);
+  assert.equal(colors.length, 24, "all route progress tones are displayed");
+  assert.equal(colors[0], "rgb(180,235,215)", "start is pale mint");
+  assert.equal(colors.at(-1), "rgb(3,66,50)", "finish is deep green");
+  const brightness = (color) => color.match(/\d+/g).map(Number).reduce((sum, channel) => sum + channel, 0);
+  assert.ok(brightness(colors[0]) - brightness(colors.at(-1)) > 400,
+    "start/end have a clear color contrast");
+  assert.equal(JSON.stringify(geometry), before, "recoloring must not modify route geometry");
+  release();
+});
