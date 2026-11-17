@@ -1,0 +1,95 @@
+name: Rider Spot Korean map weekly refresh
+on:
+  schedule:
+    # UTC Sunday 19:17 = Monday 04:17 Asia/Seoul, outside peak hours.
+    - cron: '17 19 * * 0'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/rider-spot-korean-map-schedule.yml']
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-weekly-korean-map
+  cancel-in-progress: false
+
+jobs:
+  update-gwangju:
+    if: github.repository == 'winzfs/riderapp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      # Scheduled workflows run ONLY on default branch, but source lives in
+      # feature/rider-spot-native-apk; always check out the active app branch.
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Discover and verify newest approved Gwangju data
+        env:
+          KOREAN_SHOPS_CSV_URL: ${{ vars.KOREAN_SHOPS_CSV_URL }}
+          KOREAN_SHOPS_SNAPSHOT: ${{ vars.KOREAN_SHOPS_SNAPSHOT }}
+        run: python3 scripts/refresh-korean-map.py
+      - name: Normalize and spatially partition data
+        run: |
+          python3 scripts/import-korean-map.py \
+            --shops /tmp/rider-spot-korean-refresh/shops.csv \
+            --admin /tmp/rider-spot-korean-refresh/emd.geojson \
+            --source-metadata /tmp/rider-spot-korean-refresh/source.json
+      - name: Guard against empty, mislocated or dramatically shrunken data
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          current=json.loads(Path('data/korean-map/manifest.json').read_text())
+          previous=json.loads(subprocess.check_output([
+            'git','show','HEAD:rider-spot-web/data/korean-map/manifest.json'
+          ]))
+          for key in ('shop','apartment','building','region'):
+            count=current['counts'].get(key, 0)
+            baseline=previous['counts'].get(key, 0)
+            if not baseline or not (0.7*baseline <= count <= 1.5*baseline):
+              raise SystemExit(f'Refusing suspicious {key} change: {baseline} -> {count}')
+          if current['bbox'] != previous['bbox'] or current['size'] != previous['size']:
+            raise SystemExit('Refusing changed map bounds or grid size')
+          if not current['tiles'] or len(current['tiles']) < 30:
+            raise SystemExit('Missing tiled data')
+          import re
+          def period(src):
+            match=re.search(r'(20\d\d)[-]?(\d\d)',src)
+            return int(''.join(match.groups())) if match else 0
+          if period(current['sources']['shop']) < period(previous['sources']['shop']):
+            raise SystemExit('Refusing older business snapshot')
+          print('PASS safe source change:',previous['counts'],'->',current['counts'])
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Validate resulting full web release
+        run: npm run build && npm test
+      - name: Publish only changed derived tiles to app branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A data/korean-map/
+          if git diff --cached --quiet; then
+            echo 'No changed names: production remains untouched.'
+            exit 0
+          fi
+          git commit -m 'data(map): refresh validated Korean public names [skip ci]'
+          git fetch origin feature/rider-spot-native-apk
+          git rebase origin/feature/rider-spot-native-apk
+          git push origin HEAD:feature/rider-spot-native-apk
+          echo 'New data published. Worker /mapdata route serves the active branch with bounded cache.'
