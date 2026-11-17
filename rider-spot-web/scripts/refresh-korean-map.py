@@ -190,7 +190,9 @@ def main():
             shops, period, source_name, sha = current_official_csv()
             shops_result = {"bytes": shops.stat().st_size, "sha256": sha}
         except Exception as error:
-            print("WARNING: official file unavailable; using dated public mirror:", type(error).__name__, str(error)[:170])
+            if os.environ.get("KOREAN_ALLOW_OLD_MIRROR_FALLBACK") != "1":
+                raise RuntimeError("Official SEMAS snapshot could not be verified; previous map data remains active") from error
+            print("WARNING: official source unavailable; explicitly permitted mirror fallback:", type(error).__name__, str(error)[:170])
             shops_url, period, source_name = select_shops()
             shops = DEST / "shops.csv"
             shops_result = download(shops_url, shops)
