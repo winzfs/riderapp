@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addBasemap } from "../src/basemap.mjs";
+import { addBasemap, hideBasemapPoiLabels } from "../src/basemap.mjs";
 
 test("the installed Android WebView uses the actual OpenFreeMap Positron vector map", async () => {
   const previousWindow = globalThis.window;
@@ -93,4 +93,25 @@ test("WebView does not need a grayscale raster filter to approximate a modern ma
   assert.ok(source.includes("https://tiles.openfreemap.org/styles/positron"));
   assert.doesNotMatch(source, /simple-raster|rs57-native-light-tiles/);
   assert.doesNotMatch(build, /native-light-map\.css/);
+});
+
+
+test("basemap suppresses every POI category while keeping geographic labels", () => {
+  const changes = [];
+  const gl = {
+    getStyle: () => ({ layers: [
+      { id: "poi_label", type: "symbol", "source-layer": "poi" },
+      { id: "rs-poi-major", type: "symbol", "source-layer": "poi" },
+      { id: "poi_points", type: "circle", "source-layer": "poi" },
+      { id: "city_names", type: "symbol", "source-layer": "place" },
+      { id: "road_names", type: "symbol", "source-layer": "transportation_name" },
+    ] }),
+    setLayoutProperty: (...args) => changes.push(args),
+  };
+  hideBasemapPoiLabels(gl);
+  assert.deepEqual(changes, [
+    ["poi_label", "visibility", "none"],
+    ["rs-poi-major", "visibility", "none"],
+    ["poi_points", "visibility", "none"],
+  ]);
 });
