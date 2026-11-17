@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  isTimelineCoordinate, timelineStartPoint, timelineLivePosition,
+  isTimelineCoordinate, timelineStartPoint, timelineEndPoint, timelineLivePosition,
   timelineFixStale, timelineHeading,
 } from "../src/timeline-location.mjs";
 
@@ -44,4 +44,22 @@ test("stale GPS is visually distinguished and heading is optional", () => {
   assert.equal(timelineHeading({heading:315}),315);
   assert.equal(timelineHeading({heading:-1}),null);
   assert.equal(timelineHeading({heading:null}),null);
+});
+
+test("end marker uses latest measured GPS fix rather than simplified map geometry", () => {
+  const trip={points:[
+    {lat:35.14,lng:126.80,t:1000},
+    {lat:35.18,lng:126.85,t:4000},
+    {lat:35.17,lng:126.83,t:3000},
+    {lat:null,lng:null,t:5000}
+  ]};
+  const before=JSON.stringify(trip);
+  assert.equal(timelineEndPoint(trip),trip.points[1]);
+  assert.equal(timelineEndPoint(null),null);
+  assert.equal(timelineEndPoint({points:[]}),null);
+  assert.equal(JSON.stringify(trip),before);
+});
+test("untimed sparse GPS route still produces a finish",()=>{
+  const points=[{lat:35.1,lng:126.8},{lat:35.2,lng:126.9}];
+  assert.equal(timelineEndPoint(points),points[1]);
 });
