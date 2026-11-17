@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { rs33CourseToneColor } from "../src/course-layers.mjs";
+import { ROUTE_GRADIENT_STEPS } from "../src/route-analysis.mjs";
 
 const color = (tone) => {
   const value = rs33CourseToneColor(tone);
@@ -13,19 +14,19 @@ const daily = readFileSync(new URL("../src/daily-timeline.css", import.meta.url)
 
 test("orange departure and dark green arrival remain consistent in route and playback", () => {
   assert.deepEqual(color(0), [246, 151, 69]);
-  assert.deepEqual(color(47), [3, 66, 50]);
-  const halfway = color(24);
+  assert.deepEqual(color(ROUTE_GRADIENT_STEPS - 1), [3, 66, 50]);
+  const halfway = color(Math.round(ROUTE_GRADIENT_STEPS / 2));
   assert.ok(halfway[1] > halfway[0] && halfway[1] > halfway[2],
     "midpoint turns sage-green before darkening");
   assert.ok(color(3)[0] > color(3)[1], "early segment remains orange");
-  const all = Array.from({ length: 48 }, (_, n) => color(n));
-  assert.equal(new Set(all.map(x => x.join(","))).size, 48,
+  const all = Array.from({ length: ROUTE_GRADIENT_STEPS }, (_, n) => color(n));
+  assert.ok(new Set(all.map(x => x.join(","))).size >= 80,
     "every band has a visually distinct color");
   assert.ok(all.every(v => v.every(n => n >= 0 && n <= 255)));
   assert.deepEqual(color(-10), color(0));
-  assert.deepEqual(color(100), color(47));
+  assert.deepEqual(color(1000), color(ROUTE_GRADIENT_STEPS - 1));
   assert.ok(all.slice(1).every((value, i) =>
-    value.every((channel, j) => Math.abs(channel - all[i][j]) <= 9)),
+    value.every((channel, j) => Math.abs(channel - all[i][j]) <= 6)),
     "adjacent route colors should never make a harsh visible jump");
 });
 

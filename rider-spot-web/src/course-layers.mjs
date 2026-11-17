@@ -1,4 +1,5 @@
 import { rs33Time } from "./timeline-dates.mjs";
+import { ROUTE_GRADIENT_STEPS } from "./route-analysis.mjs";
 
 const line = {
   interactive: false,
@@ -13,7 +14,7 @@ const line = {
 export function rs33CourseToneColor(tone) {
   const value = Number(tone);
   const progress = Number.isFinite(value)
-    ? Math.max(0, Math.min(47, value)) / 47 : 0;
+    ? Math.max(0, Math.min(ROUTE_GRADIENT_STEPS - 1, value)) / (ROUTE_GRADIENT_STEPS - 1) : 0;
   const stops = [
     [0, [246, 151, 69]],        // warm orange: clear departure
     [0.27, [238, 185, 110]],   // amber, reducing intensity

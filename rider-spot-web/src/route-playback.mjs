@@ -1,4 +1,4 @@
-import { rs33Paths, rs33Timestamp } from "./route-analysis.mjs";
+import { rs33Paths, rs33Timestamp, ROUTE_GRADIENT_STEPS } from "./route-analysis.mjs";
 import { rs33CourseToneColor } from "./course-layers.mjs";
 
 // A read-only playback view: the real GPS timestamps determine the motion.
@@ -145,8 +145,8 @@ export function buildPlaybackColorSlices(track) {
       const atTime = (fraction) => fromTime + (toTime - fromTime) * fraction;
       let cursor = walked;
       while (cursor < end) {
-        const tone = Math.min(47, Math.floor((cursor / total + 1e-12) * 48));
-        const next = tone === 47 ? end : Math.min(end, ((tone + 1) * total) / 48);
+        const tone = Math.min(ROUTE_GRADIENT_STEPS - 1, Math.floor((cursor / total + 1e-12) * ROUTE_GRADIENT_STEPS));
+        const next = tone === ROUTE_GRADIENT_STEPS - 1 ? end : Math.min(end, ((tone + 1) * total) / ROUTE_GRADIENT_STEPS);
         if (next <= cursor) break;
         const startFraction = (cursor - walked) / edge;
         const endFraction = (next - walked) / edge;

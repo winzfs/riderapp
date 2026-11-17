@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyzeCourse, rs43CleanPaths } from "../src/route-analysis.mjs";
+import { analyzeCourse, rs43CleanPaths, ROUTE_GRADIENT_STEPS } from "../src/route-analysis.mjs";
 import { createTripStorage } from "../src/trip-storage.mjs";
 import { mergeTripPoints, readStoppedTrip } from "../src/native-trip.mjs";
 import fixtures from "./fixtures.cjs";
@@ -20,7 +20,7 @@ for (const count of [100, 1000, 5000, 15000]) {
     );
     assert.equal(
       result.geometry.gradient.filter((parts) => parts.length).length,
-      24,
+      ROUTE_GRADIENT_STEPS,
     );
     if (count > 1000)
       assert.ok(result.geometry.railRuns.slice(2).flat().length > 0);

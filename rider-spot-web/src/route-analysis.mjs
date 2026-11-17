@@ -254,6 +254,9 @@ export function rs33Stamps(groups, events) {
   return [...result, ...stops].sort((a, b) => a.time - b.time);
 }
 
+// Shared by the route map and time-proportional playback. Avoid visual banding on long rides.
+export const ROUTE_GRADIENT_STEPS = 96;
+
 export function rs33Gradient(paths) {
   const lengths = paths.map((path) =>
     path.slice(1).map((p, i) => {
@@ -288,9 +291,9 @@ export function rs33Gradient(paths) {
       ];
       let cursor = walked;
       while (cursor < end) {
-        const tone = Math.min(47, Math.floor((cursor / total + 1e-12) * 48));
+        const tone = Math.min(ROUTE_GRADIENT_STEPS - 1, Math.floor((cursor / total + 1e-12) * ROUTE_GRADIENT_STEPS));
         const next =
-          tone === 47 ? end : Math.min(end, ((tone + 1) * total) / 48);
+          tone === ROUTE_GRADIENT_STEPS - 1 ? end : Math.min(end, ((tone + 1) * total) / ROUTE_GRADIENT_STEPS);
         if (next <= cursor) break;
         if (current !== tone) {
           flush();
@@ -334,7 +337,7 @@ export function routeGeometry(groups, revisits = []) {
     }
     previous = edge;
   }
-  const gradient = Array.from({ length: 48 }, () => []);
+  const gradient = Array.from({ length: ROUTE_GRADIENT_STEPS }, () => []);
   for (const part of rs33Gradient(paths)) gradient[part.tone].push(part.points);
   return {
     paths: paths.map((path) => path.map((p) => [p.lat, p.lng])),

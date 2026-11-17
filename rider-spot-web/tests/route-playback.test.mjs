@@ -5,6 +5,7 @@ import {
   createPlaybackLayer, buildPlaybackColorSlices,
 } from "../src/route-playback.mjs";
 import { rs33CourseToneColor } from "../src/course-layers.mjs";
+import { ROUTE_GRADIENT_STEPS } from "../src/route-analysis.mjs";
 
 const begin = Date.parse("2026-11-16T08:00:00Z");
 function run(id, offset, duration, points) {
@@ -143,11 +144,11 @@ test("playback keeps the completed-route gradient fixed while revealing real-tim
   const original = JSON.stringify([first, second]);
   const track = buildPlaybackTrack([first, second]);
   const slices = buildPlaybackColorSlices(track);
-  assert.ok(slices.length >= 48, "the full track spans 48 gentle gradient tones");
+  assert.ok(slices.length >= ROUTE_GRADIENT_STEPS, "the full track spans all refined gradient tones");
   assert.equal(slices[0].tone, 0);
-  assert.equal(slices.at(-1).tone, 47);
+  assert.equal(slices.at(-1).tone, ROUTE_GRADIENT_STEPS - 1);
   assert.equal(rs33CourseToneColor(0), "rgb(246,151,69)");
-  assert.equal(rs33CourseToneColor(47), "rgb(3,66,50)");
+  assert.equal(rs33CourseToneColor(ROUTE_GRADIENT_STEPS - 1), "rgb(3,66,50)");
   assert.ok(slices.every((part) =>
     part.coordinates.length === part.times.length && part.coordinates.length >= 2 &&
     part.times.every((time) => Number.isFinite(time)) &&

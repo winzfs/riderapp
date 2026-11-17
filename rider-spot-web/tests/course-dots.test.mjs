@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { rs33DrawCourse } from "../src/course-layers.mjs";
-import { routeGeometry } from "../src/route-analysis.mjs";
+import { routeGeometry, ROUTE_GRADIENT_STEPS } from "../src/route-analysis.mjs";
 
 test("isolated GPS fixes do not appear as orange dots; route and revisit layers remain", () => {
   const layers = [];
@@ -77,7 +77,7 @@ test("route progress colors begin orange, transition through sage and end deep g
   ]]);
   const before = JSON.stringify(geometry);
   const release = rs33DrawCourse(L, {}, geometry);
-  assert.equal(colors.length, 24, "all route progress tones are displayed");
+  assert.equal(colors.length, ROUTE_GRADIENT_STEPS, "all route progress tones are displayed");
   assert.equal(colors[0], "rgb(246,151,69)", "start is warm orange");
   assert.equal(colors.at(-1), "rgb(3,66,50)", "finish is deep green");
   assert.ok(colors.some((color) => {
