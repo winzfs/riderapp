@@ -33,3 +33,28 @@
 .rs33-timeline .rs56-day-course.rs33-course-full{border-radius:0;border:0;position:fixed;inset:var(--rs-safe-top) 0 var(--rs-safe-bottom);z-index:2500;display:flex;flex-direction:column;max-height:none;margin:0}
 .rs33-timeline .rs56-day-course.rs33-course-full .rs56-day-map{height:auto;min-height:120px;flex:1}
 .rs33-course-full .rs59-player{padding:8px 12px}.rs33-course-full .rs56-day-map-footer{padding-block:6px}
+
+/* V63: one continuous recap → route → playback/tools panel. */
+.rs33-timeline>.rs-game-recap{margin:13px 0 14px;padding:14px 14px 12px;border-radius:18px;box-shadow:0 3px 14px #174d3410}
+.rs33-timeline>.rs-game-recap .rs-game-recap-heading{margin-bottom:10px}
+.rs33-timeline>.rs-game-recap .rs-game-recap-stats>div{padding:10px 8px}
+.rs33-timeline .rs56-day-overview{margin-top:0}
+.rs59-course-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:9px 12px 11px;border-top:1px solid #edf0ed;background:#fff}
+.rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(4,minmax(0,1fr))}
+.rs59-course-tools button{display:flex;align-items:center;justify-content:center;min-width:0;min-height:42px;padding:8px 4px;border:1px solid #e2e8e3;border-radius:11px;background:#f7f9f6;color:#52645b;font-size:11px;font-weight:700;letter-spacing:-.03em;white-space:nowrap;box-shadow:none}
+.rs59-course-tools button:first-child{color:#14685a;background:#e9f4ef;border-color:#d6e8df}
+.rs59-course-tools button[aria-pressed="true"]{color:#186a56;background:#edf5f0;border-color:#bedfd0}
+.rs59-course-tools button:disabled{opacity:.45}
+.rs59-course-tools button:focus-visible,.rs56-stop-list button:focus-visible{outline:2px solid #0b7663;outline-offset:2px}
+.rs56-stop-events{border-top:1px solid #edf0ed;background:#fcfdfa}
+.rs56-stop-events>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;min-height:42px;padding:8px 13px;font-size:11px;color:#576960;font-weight:650}
+.rs56-stop-events>summary::-webkit-details-marker{display:none}
+.rs56-stop-events>summary strong{color:#146f5c}
+.rs56-stop-events>summary span{margin-left:auto}
+.rs56-stop-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 12px 12px;max-height:184px;overflow-y:auto}
+.rs56-stop-list button{display:flex;align-items:center;gap:5px;min-width:0;min-height:36px;border:1px solid #e5ebe4;border-radius:9px;background:white;padding:7px;font-size:10px;text-align:left;color:#42584e;box-shadow:none}
+.rs56-stop-list time{flex:none;color:#bd723f;font-weight:750;font-variant-numeric:tabular-nums}
+.rs56-stop-list span{min-width:0;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.rs56-stop-list small{flex:none;color:#a47346;font-size:9px}
+@media(max-width:360px){.rs59-course-tools{gap:5px;padding:8px}.rs59-course-tools button{font-size:10px;min-height:40px}.rs56-stop-list{grid-template-columns:1fr}}
+.rs33-course-full .rs59-course-tools{padding:7px 10px}
