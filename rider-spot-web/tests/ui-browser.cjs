@@ -39,6 +39,8 @@ async function check(width,native){
  // Positron is a real vector map. No visual approximation or raster assertion.
  await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
  await p.waitForTimeout(800);if(baseline)await shot('map');else await layout('map');
+ if(!baseline)assert.equal(await p.locator('.rs-game-profile,.rs-game-recap').count(),0,
+   'no game panels or reward animation in live navigation map');
  if(!baseline){
  const controls=await p.locator('.rs-gps-state,.locate,#rs-sos-fab,#rs-report-legend,.leaflet-control-zoom').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {name:el.className||el.id,x:r.x,y:r.y,w:r.width,h:r.height}}));
  for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){const a=controls[i],b=controls[j];assert.ok(!(a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h),'map overlap '+JSON.stringify([a,b]));}
@@ -158,6 +160,8 @@ async function check(width,native){
    });
  },userId);
  await p.locator('.rs33-trip-detail .rs-course-start-pin').waitFor({timeout:12000});
+ assert.equal(await p.locator('.rs33-trip-detail .rs-game-recap').count(),0,
+   'active ride must remain free of gamification and rewards');
  await p.locator('.rs33-trip-detail .rs-nav-live-location').waitFor({timeout:12000});
  await p.locator('.rs33-trip-detail .rs-nav-dot').waitFor();
  assert.equal(await p.locator('.rs33-trip-detail .rs-nav-stale').count(),0,
