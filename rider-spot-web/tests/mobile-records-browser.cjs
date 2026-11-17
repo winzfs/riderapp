@@ -81,7 +81,9 @@ async function run(browser,width,height){
     await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
     await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
     const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");
-    const count=await clocks.count();assert.ok(count>0);
+    await page.getByRole("button",{name:"전체 경로 맞춤",exact:true}).click();
+    await clocks.first().waitFor({state:"attached"});
+    const count=await clocks.count();
     await page.evaluate(()=>{window.__rsMap.setZoom(9);});await page.waitForTimeout(300);
     assert.equal(await clocks.count(),count);assert.equal(await page.evaluate(()=>window.__rsMap.getZoom()),9);
     await page.getByRole("button",{name:"전체 경로 맞춤",exact:true}).click();
