@@ -100,3 +100,29 @@ valid substitute for a failing 2026 official download.
 For live data integrity, see the deployed `/mapdata/manifest.json`; confirm
 `counts`, `sources` and tile availability. The app release path still
 needs a separate tested deployment for application code changes.
+
+## Government and public-office names
+
+Government buildings were missing because the SEMAS 2026-09 store import
+includes only business-linked building names, not a complete government
+facility inventory. The Positron basemap also hides its own POI labels.
+
+The app now renders **text-only** office labels (no markers/icons):
+- OpenMapTiles classes `town_hall`, `police`, `fire_station` and
+  `office` with government/courthouse/public-building subclasses;
+- an independent bounded `/mapdata/government.json` snapshot merged
+  from named SEMAS 2026-09 buildings and current OSM government POIs;
+- each OSM candidate is checked against the V-World Gwangju EMD
+  **polygon boundary**, not just the larger rectangular data bbox;
+- identical names at nearby locations are merged. An OSM outage retains
+  last validated government labels, with count-change protection.
+
+Snapshot validation (2026-11-18 KST): 241 government labels in the
+legacy Gwangju five-gu area, including `광산구청`, validated and stored in
+`data/korean-map/government.json`. The OSM portion is community-maintained,
+not an official government inventory. Only toilet POI **pins** remain;
+government buildings are text on the vector basemap.
+
+Scheduled refresh uses `scripts/refresh-korean-government.py` after the
+business/administrative imports, retaining the previous verified OSM data
+if the Overpass upstream is unavailable.
