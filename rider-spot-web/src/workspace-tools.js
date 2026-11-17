@@ -1575,6 +1575,21 @@ import { createWorkDrafts } from "./work-drafts.mjs";
         return window.__rsRideApi?.startTrip();
       }
       if (x.hasAttribute("data-rs-refresh-work")) return loadAll();
+      if (x.dataset.rsEdit && x.dataset.rsEditId)
+        return editWorkRecord(x.dataset.rsEdit, x.dataset.rsEditId);
+      if (x.hasAttribute("data-rs-edit-cancel")) {
+        const form = x.closest("form");
+        if (form) form.dataset.rsSaved = "1";
+        S.editing = null;
+        return render();
+      }
+      if (x.hasAttribute("data-rs-clear-draft")) {
+        const form = x.closest("form");
+        if (!editableTypes.has(form?.dataset?.rsForm) || !S.user) return;
+        workDrafts.clear(S.user.id, form.dataset.rsForm);
+        form.dataset.rsSaved = "1";
+        return render();
+      }
       if (x.dataset.rsMaintItem) {
         const form = x.closest('form[data-rs-form="maintenance"]');
         const item = form?.elements.namedItem("item");
@@ -1583,6 +1598,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
         form?.querySelectorAll("[data-rs-maint-item]").forEach((button) => {
           button.setAttribute("aria-pressed", String(button === x));
         });
+        if (form && S.editing?.type !== "maintenance") workDrafts.save(S.user?.id, form);
         amount?.focus();
         return;
       }
@@ -1601,6 +1617,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
         const distance = form.elements.namedItem("distance_km");
         if (hours) hours.value = (Math.round(snapshot.durationMs / 360000) / 10).toFixed(1);
         if (distance) distance.value = (Math.round(snapshot.distanceKm * 10) / 10).toFixed(1);
+        if (S.editing?.type !== "earnings") workDrafts.save(S.user?.id, form);
         return msg("완료된 운행 " + snapshot.trips + "회의 시간과 거리를 채웠어요. 플랫폼별 중복 입력에 주의하세요.");
       }
       if (x.hasAttribute("data-rs-income-new")) {
@@ -1702,6 +1719,10 @@ import { createWorkDrafts } from "./work-drafts.mjs";
     });
     root.addEventListener("input", (e) => {
       const el = e.target;
+      const form = el?.closest?.("form[data-rs-form]");
+      if (form && editableTypes.has(form.dataset.rsForm) &&
+          S.editing?.type !== form.dataset.rsForm)
+        workDrafts.save(S.user?.id, form);
       if (el?.matches('form[data-rs-form="sos"] textarea[name="message"]')) {
         const count = Array.from(el.value.trim()).length;
         const label = el.closest("label")?.querySelector("[data-rs-count]");
@@ -1710,6 +1731,12 @@ import { createWorkDrafts } from "./work-drafts.mjs";
           label.classList.toggle("rs-length-short", count < 5);
         }
       }
+    });
+    root.addEventListener("change", (e) => {
+      const form = e.target?.closest?.("form[data-rs-form]");
+      if (form && editableTypes.has(form.dataset.rsForm) &&
+          S.editing?.type !== form.dataset.rsForm)
+        workDrafts.save(S.user?.id, form);
     });
     root.addEventListener("submit", (e) => {
       const form = e.target.closest("form[data-rs-form]");
