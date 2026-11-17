@@ -4,6 +4,7 @@ import { addBasemap } from "./basemap.mjs";
 import { createMapController } from "./map-controller.mjs";
 import { rs33DrawCourse, paintCourseLabels } from "./course-layers.mjs";
 import { createPlaybackLayer } from "./route-playback.mjs";
+import { timelineFixStale, timelineHeading } from "./timeline-location.mjs";
 
 const EMPTY = [];
 const presence = {
@@ -61,6 +62,7 @@ export function createRiderMap(React, L, fallback) {
     const controller = React.useRef(null);
     const marker = React.useRef(null);
     const accuracy = React.useRef(null);
+    const startMarker = React.useRef(null);
     const peers = React.useRef(null);
     const player = React.useRef(null);
     const originalFocus = React.useRef(focus);
@@ -78,7 +80,7 @@ export function createRiderMap(React, L, fallback) {
       peers.current = L.layerGroup().addTo(map);
       return () => {
         controller.current = null;
-        peers.current = marker.current = accuracy.current = null;
+        peers.current = marker.current = accuracy.current = startMarker.current = null;
         player.current = null;
         if (window.__rsMap === map) window.__rsMap = null;
         removeBasemap();
@@ -98,6 +100,7 @@ export function createRiderMap(React, L, fallback) {
       if (cameraId === "main") {
         window.__rsMapPosition = position;
       }
+      if (course && !course.live) return;
       if (!validPosition(position)) return;
       const map = current.map;
       const coordinates = [Number(position.lat), Number(position.lng)];
@@ -108,19 +111,37 @@ export function createRiderMap(React, L, fallback) {
         } else current.initialLocation(position);
       }
       if (!marker.current) {
-        const icon = L.divIcon({
-          className: "rs-self-location",
-          html: '<span class="rs-self-halo"></span><span class="rs-self-arrow"></span><span class="rs-self-dot"></span>',
-          iconSize: [38, 38],
-          iconAnchor: [19, 19],
-        });
-        marker.current = L.marker(coordinates, { icon, zIndexOffset: 6500 })
+        const live = Boolean(course?.live);
+        const icon = L.divIcon(live
+          ? {
+              className: "rs-nav-live-location",
+              html: '<span class="rs-nav-bearing"><span class="rs-nav-cone"></span></span><span class="rs-nav-halo"></span><span class="rs-nav-dot"></span>',
+              iconSize: [48, 48],
+              iconAnchor: [24, 24],
+            }
+          : {
+              className: "rs-self-location",
+              html: '<span class="rs-self-halo"></span><span class="rs-self-arrow"></span><span class="rs-self-dot"></span>',
+              iconSize: [38, 38],
+              iconAnchor: [19, 19],
+            });
+        marker.current = L.marker(coordinates, {
+          icon, zIndexOffset: live ? 7600 : 6500,
+          title: live ? "운행 중 현재 위치" : "내 위치",
+        })
           .addTo(map)
-          .bindTooltip("내 위치 · 나에게만 표시", {
-            direction: "top",
-            offset: [0, -19],
+          .bindTooltip(live ? "현재 위치 · 이 기기에만 표시" : "내 위치 · 나에게만 표시", {
+            direction: "top", offset: [0, -23],
           });
       } else marker.current.setLatLng(coordinates);
+      if (course?.live) {
+        const icon = marker.current.getElement();
+        const stale = timelineFixStale(position);
+        icon?.classList.toggle("rs-nav-stale", stale);
+        const heading = timelineHeading(position);
+        icon?.classList.toggle("rs-nav-has-heading", !stale && heading != null);
+        if (heading != null) icon?.style.setProperty("--rs-nav-heading", heading + "deg");
+      }
       const radius = Number(position.accuracy);
       if (radius > 0 && radius <= 200) {
         if (!accuracy.current)
@@ -139,7 +160,59 @@ export function createRiderMap(React, L, fallback) {
         accuracy.current.remove();
         accuracy.current = null;
       }
-    }, [cameraId, position, focus]);
+    }, [cameraId, position, focus, course?.live]);
+
+    // Keep staleness feedback correct when location updates stop without a
+    // React re-render (screen lock, GPS outage, browser throttling).
+    React.useEffect(() => {
+      if (!course?.live) return;
+      const refresh = () => {
+        const element = marker.current?.getElement();
+        element?.classList.toggle("rs-nav-stale", timelineFixStale(position));
+        element?.classList.toggle("rs-nav-has-heading",
+          !timelineFixStale(position) && timelineHeading(position) != null);
+      };
+      refresh();
+      const timer = window.setInterval(refresh, 10000);
+      return () => window.clearInterval(timer);
+    }, [cameraId, course?.live, position]);
+
+    React.useEffect(() => {
+      const point = course?.startPoint;
+      if (!course || !validPosition(point)) return;
+      const icon = L.divIcon({
+        className: "rs-course-start-pin",
+        html: '<span class="rs-start-flag" aria-hidden="true">⚑</span><span class="rs-start-label">시작</span>',
+        iconSize: [66, 42],
+        iconAnchor: [19, 36],
+      });
+      const layer = L.marker([Number(point.lat), Number(point.lng)], {
+        icon, zIndexOffset: 5000, title: "운행 시작 지점",
+        interactive: false, keyboard: false,
+      }).addTo(controller.current.map);
+      startMarker.current = layer;
+      return () => {
+        if (startMarker.current === layer) startMarker.current = null;
+        layer.remove();
+      };
+    }, [cameraId, course?.startPoint?.lat, course?.startPoint?.lng]);
+
+    React.useEffect(() => {
+      if (!course?.live || !course.follow || !validPosition(position)) return;
+      const controllerNow = controller.current;
+      if (!controllerNow) return;
+      const zoom = Math.max(16, controllerNow.map.getZoom());
+      controllerNow.moveTo(position, zoom);
+    }, [cameraId, course?.live, course?.follow, position?.lat, position?.lng]);
+
+    React.useEffect(() => {
+      if (!course?.live || !course.onUnfollow) return;
+      const map = controller.current?.map;
+      if (!map) return;
+      const onDrag = () => course.onUnfollow();
+      map.on("dragstart", onDrag);
+      return () => map.off("dragstart", onDrag);
+    }, [cameraId, course?.live, course?.onUnfollow]);
 
     React.useEffect(() => {
       if (!course?.bounds) return;
