@@ -126,6 +126,7 @@ export function addBasemap(L, map) {
       state.glMap = null;
     }
     state.hasGl = false;
+    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire("riderspot:vector-lost");}
     paint();
   }
   async function update() {
@@ -190,6 +191,8 @@ export function addBasemap(L, map) {
         if (done || !state.alive || state.gl !== layer) return;
         done = true;
         state.hasGl = true;
+        map.__rsVectorGl = gl;
+        map.fire("riderspot:vector-ready", { gl });
         if (!state.creditAdded && map.attributionControl) {
           map.attributionControl.addAttribution(CREDIT);
           state.creditAdded = true;
@@ -207,13 +210,13 @@ export function addBasemap(L, map) {
           if (!gl.getLayer(id)) continue;
           try {
             if (id === "rs46-district-labels") {
-              gl.setLayerZoomRange(id, 10.1, 24);
+              gl.setLayerZoomRange(id, 9.3, 24);
               gl.setLayoutProperty(id, "text-padding", 3);
               gl.setLayoutProperty(id, "text-allow-overlap", true);
               gl.setLayoutProperty(id, "text-ignore-placement", true);
             } else {
-              gl.setLayerZoomRange(id, 11, 24);
-              gl.setLayoutProperty(id, "text-padding", 2);
+              gl.setLayerZoomRange(id, 9.8, 24);
+              gl.setLayoutProperty(id, "text-padding", 1);
               gl.setLayoutProperty(id, "text-variable-anchor", [
                 "top",
                 "bottom",
@@ -258,7 +261,7 @@ export function addBasemap(L, map) {
             id: labelId,
             type: "symbol",
             source: sourceId,
-            minzoom: 10.7,
+            minzoom: 9.5,
             maxzoom: 13.8,
             layout: {
               "text-field": ["get", "name"],
@@ -267,8 +270,8 @@ export function addBasemap(L, map) {
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                10.7,
-                10.5,
+                9.5,
+                10.3,
                 12.5,
                 12,
                 13.8,
@@ -309,19 +312,19 @@ export function addBasemap(L, map) {
             id: "rs46-district-labels",
             source: "place",
             classes: ["suburb", "borough", "town"],
-            minzoom: 10.7,
+            minzoom: 9.3,
             color: "#405d57",
             size: [11, 11.5, 13, 13, 16, 14],
-            pad: 8,
+            pad: 3,
           },
           {
             id: "rs46-neighbourhood-labels",
             source: "place",
             classes: ["quarter", "neighbourhood", "village", "hamlet"],
-            minzoom: 11.6,
+            minzoom: 9.8,
             color: "#556e67",
             size: [11, 10.3, 13, 11.7, 16, 13],
-            pad: 5,
+            pad: 2,
           },
           {
             id: "rs46-major-road-labels",
@@ -352,6 +355,8 @@ export function addBasemap(L, map) {
               "text-padding": tier.pad,
               "text-optional": true,
               "text-allow-overlap": false,
+              "text-variable-anchor": ["top","bottom","left","right"],
+              "text-radial-offset": 0.3,
               "symbol-sort-key": ["coalesce", ["get", "rank"], 30],
             },
             paint: {
@@ -435,6 +440,7 @@ export function addBasemap(L, map) {
   paint();
   if (state.mode === "simple") update();
   return () => {
+    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire("riderspot:vector-lost");}
     state.alive = false;
     clearTimeout(readyTimer);
     clearTimeout(fallbackTimer);
