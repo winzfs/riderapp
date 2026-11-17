@@ -1296,6 +1296,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
       v = (k) => String(fd.get(k) || "").trim();
     const client = S.client,
       user = S.user;
+    const editing = editableTypes.has(type) && S.editing?.type === type ? S.editing : null;
     const submit = form.querySelector('[type="submit"],button.rs-primary');
     S.busy = true;
     if (submit) submit.disabled = true;
@@ -1335,22 +1336,22 @@ import { createWorkDrafts } from "./work-drafts.mjs";
         const amount = Number(v("gross_won"));
         if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000)
           throw Error("수입 금액을 정확하게 입력해 주세요.");
-        await db(
-          client
-            .from("rider_earnings")
-            .insert({
-              user_id: user.id,
-              work_date: v("work_date"),
-              platform: v("platform"),
-              deliveries: N(v("deliveries")),
-              gross_won: amount,
-              expenses_won: N(v("expenses_won")),
-              expense_scope: "other_only",
-              hours: N(v("hours")),
-              distance_km: N(v("distance_km")),
-              note: v("note"),
-            }),
-        );
+        if (N(v("expenses_won")) < 0 || N(v("hours")) < 0 ||
+            N(v("distance_km")) < 0 || N(v("deliveries")) < 0)
+          throw Error("건수·시간·거리·비용은 음수로 입력할 수 없어요.");
+        const values = {
+          work_date: v("work_date"), platform: v("platform"),
+          deliveries: N(v("deliveries")), gross_won: amount,
+          expenses_won: N(v("expenses_won")), expense_scope: "other_only",
+          hours: N(v("hours")), distance_km: N(v("distance_km")), note: v("note"),
+        };
+        if (editing) {
+          const updated = await db(client.from("rider_earnings").update(values)
+            .eq("id", editing.id).eq("user_id", user.id).select("id").maybeSingle());
+          if (!updated?.id) throw Error("수정할 수익 기록을 찾지 못했어요.");
+        } else {
+          await db(client.from("rider_earnings").insert({ ...values, user_id: user.id }));
+        }
       } else if (type === "fuel") {
         const cost = Number(v("cost_won")),
           liters = v("liters") === "" ? null : Number(v("liters")),
@@ -1364,36 +1365,36 @@ import { createWorkDrafts } from "./work-drafts.mjs";
           throw Error("주유량을 확인해 주세요.");
         if (km !== null && (!Number.isInteger(km) || km < 0 || km > 9999999))
           throw Error("계기판 거리를 확인해 주세요.");
-        await db(
-          client
-            .from("rider_fuel_logs")
-            .insert({
-              user_id: user.id,
-              fueled_on: v("fueled_on") || nowDate(),
-              cost_won: cost,
-              liters,
-              odometer_km: km,
-              full_tank: fd.get("full_tank") === "on",
-              note: v("note"),
-            }),
-        );
+        const values = {
+          fueled_on: v("fueled_on") || nowDate(), cost_won: cost,
+          liters, odometer_km: km, full_tank: fd.get("full_tank") === "on",
+          note: v("note"),
+        };
+        if (editing) {
+          const updated = await db(client.from("rider_fuel_logs").update(values)
+            .eq("id", editing.id).eq("user_id", user.id).select("id").maybeSingle());
+          if (!updated?.id) throw Error("수정할 주유 기록을 찾지 못했어요.");
+        } else {
+          await db(client.from("rider_fuel_logs").insert({ ...values, user_id: user.id }));
+        }
       } else if (type === "maintenance") {
         const amount = Number(v("cost_won"));
         if (!v("item") || !Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000)
           throw Error("정비 항목과 금액을 정확하게 입력해 주세요.");
-        await db(
-          client
-            .from("maintenance_logs")
-            .insert({
-              user_id: user.id,
-              item: v("item"),
-              serviced_on: v("serviced_on"),
-              odometer_km: v("odometer_km") ? N(v("odometer_km")) : null,
-              cost_won: amount,
-              next_due_km: v("next_due_km") ? N(v("next_due_km")) : null,
-              note: v("note"),
-            }),
-        );
+        const values = {
+          item: v("item"), serviced_on: v("serviced_on") || nowDate(),
+          odometer_km: v("odometer_km") ? N(v("odometer_km")) : null,
+          cost_won: amount,
+          next_due_km: v("next_due_km") ? N(v("next_due_km")) : null,
+          note: v("note"),
+        };
+        if (editing) {
+          const updated = await db(client.from("maintenance_logs").update(values)
+            .eq("id", editing.id).eq("user_id", user.id).select("id").maybeSingle());
+          if (!updated?.id) throw Error("수정할 정비 기록을 찾지 못했어요.");
+        } else {
+          await db(client.from("maintenance_logs").insert({ ...values, user_id: user.id }));
+        }
       } else if (type === "sos") {
         const message = v("message");
         const chars = Array.from(message).length;
@@ -1454,10 +1455,15 @@ import { createWorkDrafts } from "./work-drafts.mjs";
         );
       }
       S.lastError = "";
+      if (editableTypes.has(type)) {
+        if (!editing) workDrafts.clear(user.id, type);
+        form.dataset.rsSaved = "1";
+        S.editing = null;
+      }
       await loadAll();
       if (type === "reply") await refreshReplies(v("sos_id"));
       if (S.active && type !== "reply") render();
-      msg("기록을 저장했어요.");
+      msg(editing ? "기록을 수정했어요." : "기록을 저장했어요.");
     } catch (e) {
       const raw = String(e?.message || "잠시 후 다시 시도해 주세요.");
       const friendly = raw.includes("sos_requests_message_check")
