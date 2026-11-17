@@ -12,7 +12,7 @@ const trips=[sampleTrip(5000,{started:Date.parse('2026-11-16T00:00:00Z')}),sampl
 trips.push({...trips[1],id:'33333333-3333-4333-8333-333333333333',points:[],events:[],started_at:'2026-11-16T07:00:00Z',ended_at:'2026-11-16T07:00:03Z',distance_km:0,memo:''});
 const posts=[['수완동 픽업할 때 잠깐 쉴 곳 공유해요','오늘 대기하면서 찾은 쉼터예요. 오토바이 세울 공간도 있어서 편했습니다.','동네 이야기'],['비 오는 날 운행할 때 챙기는 것들','우비와 장갑 관리 노하우가 궁금해요. 선배 라이더분들은 어떻게 준비하시나요?','질문·노하우'],['오늘 저녁 첨단 쪽 도로 상황 어때요?','신호 대기 구간이 길어지는 것 같아 동네 소식 나눠 봅니다.','현장 정보']].map(([title,body,category],i)=>({id:'post-'+i,user_id:'other',title,body,category,nickname:['수완라이더','오늘도안전','달리는광주'][i],area_district:'광주 광산구',area_dong:'수완동',created_at:'2026-11-16T09:00:00Z'}));
 posts[0].image_path='qa/community-photo.png';
-const places=[{id:'place-test',title:'테스트 공원 쉼터',category:'쉼터',details:'디자인 검증용 장소입니다. 실제 시설 안내가 아닙니다.',lat:35.17,lng:126.83,nickname:'테스트 라이더',created_at:'2026-11-16T09:00:00Z'}];
+const places=[{id:'place-test',title:'테스트 공중화장실',category:'화장실',details:'디자인 검증용 장소입니다. 실제 시설 안내가 아닙니다.',lat:35.17,lng:126.83,nickname:'테스트 라이더',created_at:'2026-11-16T09:00:00Z'}, {id:'place-hidden',title:'테스트 공원 쉼터',category:'쉼터',details:'지도 표시 제외 검증용',lat:35.171,lng:126.831,nickname:'테스트 라이더',created_at:'2026-11-16T09:00:00Z'}];
 const user={id:userId,aud:'authenticated',email:'ui-qa@example.test',role:'authenticated',app_metadata:{provider:'google'},user_metadata:{nickname:'광산라이더'},created_at:'2026-11-01T00:00:00Z'};
 const jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'+Buffer.from(JSON.stringify({sub:userId,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.test';
 const session={access_token:jwt,refresh_token:'qa',expires_at:Math.floor(Date.now()/1000)+3600,token_type:'bearer',user};
@@ -44,7 +44,7 @@ async function check(width,native){
  if(!baseline){
  const controls=await p.locator('.rs-gps-state,.locate,#rs-sos-fab,#rs-report-legend,.leaflet-control-zoom').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {name:el.className||el.id,x:r.x,y:r.y,w:r.width,h:r.height}}));
  for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){const a=controls[i],b=controls[j];assert.ok(!(a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h),'map overlap '+JSON.stringify([a,b]));}
- await p.waitForSelector('.rs-report-pin');await p.locator('.rs-report-pin').first().click();await p.getByRole('dialog',{name:'테스트 공원 쉼터'}).waitFor();await shot('place-sheet');await p.getByRole('button',{name:'상세 닫기',exact:true}).click();
+ await p.waitForSelector('.rs-report-pin');assert.equal(await p.locator('.rs-report-pin').count(),1,'only toilet marker must appear, not shelter');await p.locator('.rs-report-pin').first().click();await p.getByRole('dialog',{name:'테스트 공중화장실'}).waitFor();await shot('place-sheet');await p.getByRole('button',{name:'상세 닫기',exact:true}).click();
  const camera=await p.evaluate(()=>{window.__rsMap.setView([35.18,126.84],11,{animate:false});return {lat:window.__rsMap.getCenter().lat,lng:window.__rsMap.getCenter().lng,z:window.__rsMap.getZoom()};});
  await p.waitForTimeout(250);assert.equal(await p.evaluate(()=>window.__rsMap.getZoom()),camera.z);
  }
