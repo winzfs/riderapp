@@ -8,7 +8,7 @@ validation. Not all places are mapped in OpenStreetMap.
 ## Data flow (no end-user OSM API traffic)
 
 1. GitHub Actions in the repository's **default `main` branch** runs
-   [rider-spot-public-pois.yml](../.github/workflows/rider-spot-public-pois.yml)
+   [rider-spot-public-pois.yml](https://github.com/winzfs/riderapp/blob/main/.github/workflows/rider-spot-public-pois.yml)
    every Sunday at 02:00 UTC. It checks out the *feature branch* and downloads
    the public Geofabrik South Korea OSM extract (approx. 280 MB).
 2. Pinned `osmium==4.3.2` reads the PBF and
@@ -28,7 +28,7 @@ validation. Not all places are mapped in OpenStreetMap.
    `public.public_pois` table. It never deletes missing records automatically.
    Failed imports leave existing rows in place.
 5. On the facilities map, `public-pois-overlay.mjs` makes a bounded,
-   read-only Supabase query at zoom **14+**, displays up to 45/95/190 pins
+   read-only Supabase query at zoom **13+**, displays up to 20/45/95/190 pins
    by zoom, and hides matching OSM pins when nearby rider reports exist.
    It is entirely separate from GPS, SQLite, location sharing, rider reports,
    bookmarks, community and timeline playback.
