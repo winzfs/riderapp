@@ -214,6 +214,7 @@ export function createTimeline(S, Zo) {
     const [memoBusy, setMemoBusy] = S.useState(false);
     const [finished, setFinished] = S.useState(false);
     const [allDays, setAllDays] = S.useState(false);
+    const [ridesOpen, setRidesOpen] = S.useState(true);
     const [eventOpen, setEventOpen] = S.useState(() => {
       try {
         return localStorage.getItem("rs:trip-events-open") === "1";
@@ -888,6 +889,13 @@ export function createTimeline(S, Zo) {
           null,
           Number(day.slice(0, 4)) + "년 " + Number(day.slice(5, 7)) + "월",
         ),
+        rs33J("button", {
+          type: "button",
+          className: "rs61-today",
+          "aria-label": "오늘로 이동",
+          onClick: () => choose(today),
+          disabled: day === today && !allDays,
+        }, "오늘"),
         rs33J(
           "button",
           {
@@ -1106,16 +1114,26 @@ export function createTimeline(S, Zo) {
         { className: "rs33-list-title" },
         rs33J("h2", null, allDays ? "모든 운행 기록" : "개별 운행 선택"),
         rs33J(
-          "button",
-          {
-            type: "button",
-            className: "back",
-            onClick: () => setAllDays((value) => !value),
-          },
-          allDays ? "선택한 날짜 보기" : "전체 기록 보기",
+          "div",
+          { className: "rs61-list-actions" },
+          rs33J(
+            "button",
+            { type: "button", className: "back", onClick: () => setAllDays((value) => !value) },
+            allDays ? "선택 날짜" : "전체 기록",
+          ),
+          rs33J(
+            "button",
+            {
+              type: "button", className: "back",
+              "aria-expanded": ridesOpen,
+              "aria-label": "개별 운행 목록 " + (ridesOpen ? "접기" : "펼치기"),
+              onClick: () => setRidesOpen((v) => !v),
+            },
+            ridesOpen ? "접기 ⌃" : "펼치기 ⌄",
+          ),
         ),
       ),
-      entries.length
+      entries.length && ridesOpen
         ? rs33J(
             "div",
             {
@@ -1192,11 +1210,13 @@ export function createTimeline(S, Zo) {
               );
             }),
           )
-        : rs33J(
-            "p",
-            { className: "rs33-empty" },
-            "이날 저장된 운행 기록이 없어요.",
-          ),
+        : entries.length
+          ? null
+          : rs33J(
+              "p",
+              { className: "rs33-empty" },
+              "이날 저장된 운행 기록이 없어요.",
+            ),
     );
   }
   return ss;
