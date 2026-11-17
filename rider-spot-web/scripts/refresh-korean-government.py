@@ -198,7 +198,12 @@ def main():
     if len(all_rows) < len(official):
         raise RuntimeError("Government label count decreased below official source")
     old_count = len(previously)
-    if old_count > 30 and len(all_rows) < old_count * 0.7:
+    # The first polygon-boundary cleanup intentionally removes candidates that
+    # used to fall within the large rectangle but outside Gwangju. On subsequent
+    # refreshes require stronger coverage stability.
+    boundary_verified = "verified within V-World" in manifest["sources"].get("government", "")
+    min_fraction = 0.7 if boundary_verified else 0.35
+    if old_count > 30 and len(all_rows) < old_count * min_fraction:
         raise RuntimeError(f"Government coverage dropped unexpectedly: {old_count} -> {len(all_rows)}")
     old_file.write_text(json.dumps(all_rows, ensure_ascii=False, separators=(",", ":")) + "\n",
                         encoding="utf-8")
