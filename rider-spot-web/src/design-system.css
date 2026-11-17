@@ -273,3 +273,13 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .rs33-timeline .rs33-list-title h2{font-size:16px;min-width:0}
 .rs33-timeline .rs56-ride-info strong{white-space:nowrap;word-break:keep-all}
 @media(max-width:360px){.rs33-week-head .rs61-today{min-width:42px}.rs33-timeline .rs33-list-title h2{font-size:14px}.rs61-list-actions button{padding-inline:4px}}
+
+/* v61: reduce duplicated tools and keep copy actions accessible without sign-in. */
+.rs61-shortcuts-link{display:block;width:100%;text-align:left;font-size:13px;min-height:48px;margin:8px 0 22px;padding:12px 14px}
+.rs61-draft-note{padding:10px 12px;border-radius:10px;background:var(--rs-soft);color:var(--rs-primary);font-size:13px;margin:8px 0}
+.rs-work-group-title{font-size:15px;letter-spacing:-.03em;font-weight:700;margin:25px 0 10px;color:var(--rs-text)}
+.rc-categories{position:relative}
+.rc-categories button{white-space:nowrap;flex:none;min-height:44px}
+.rc-card-grid h2{font-size:16px;line-height:1.45;font-weight:700;letter-spacing:-.025em}
+.rc-card-grid p{font-size:13px;line-height:1.55}
+.rc-card-main{min-height:88px}
