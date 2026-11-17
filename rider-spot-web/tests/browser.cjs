@@ -503,6 +503,12 @@ async function timelineTest(count) {
 async function nativeTest() {
   const app = await open({ native: true, account: true });
   const { context, page, received, records, errors, failNetwork } = app;
+  // Native ride completion is intentional: accept only the explicit confirmation.
+  page.on("dialog", (dialog) =>
+    dialog.type() === "confirm" && dialog.message().includes("운행 기록을 종료")
+      ? dialog.accept()
+      : dialog.dismiss()
+  );
   try {
     await page.waitForFunction(() => Boolean(window.__rsGPS42NativeRead));
     await tab(page, "타임라인").click();
