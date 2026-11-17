@@ -39,10 +39,14 @@ export function rs33DrawCourse(L, map, geometry) {
   // Their visual markers made sparse and noisy GPS samples look like stops.
   geometry.gradient.forEach((coordinates, tone) => {
     if (!coordinates.length) return;
-    const p = tone / 23;
+    // Smoothly transition from a pale mint at departure to deep green at
+    // arrival. Keep every segment derived from the existing route geometry;
+    // recoloring must never mutate or interpolate the stored GPS samples.
+    const progress = tone / 23;
+    const p = progress * progress * (3 - 2 * progress);
     const color =
       "rgb(" +
-      [106 - 91 * p, 206 - 115 * p, 172 - 104 * p].map(Math.round).join(",") +
+      [180 - 177 * p, 235 - 169 * p, 215 - 165 * p].map(Math.round).join(",") +
       ")";
     L.polyline(coordinates, { ...line, color, weight: 6 }).addTo(group);
   });
