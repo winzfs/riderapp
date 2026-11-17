@@ -1367,3 +1367,62 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .record-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.record-sheet summary{padding:12px 0}
 .record-sheet>footer{display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;gap:4px;padding-bottom:max(12px,env(safe-area-inset-bottom));border-top:1px solid #e1e6e2}
 .record-sheet footer p{color:#a32a18;margin:0}
+
+
+/* Unified bike cockpit — one entry point for odometer, service history and cycles. */
+.app .bike-page{padding:14px 16px calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 28px)}
+.bike-page .bike-heading:first-child h1{font-size:25px}
+.bike-page .bike-heading{min-width:0}
+.bike-quiet-action{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;font-size:12px;font-weight:650;color:#54645f!important;padding:8px!important;border-radius:10px}
+.bike-quiet-action .rs-icon{flex:none}
+.app .bike-page .bike-vehicle{background:linear-gradient(135deg,#f1f4f0 0%,#f7f5ef 100%);border:1px solid #e2e7df;min-height:152px;padding:17px 16px;border-radius:18px;margin:13px 0 10px;align-items:center;overflow:hidden}
+.bike-vehicle-data{min-width:0;flex:1}
+.bike-vehicle-data h2{font-size:19px;line-height:1.25;margin:3px 0 13px;overflow-wrap:anywhere}
+.bike-odometer-label{display:flex;align-items:center;gap:5px;font-size:12px;color:#586c63;font-weight:650}
+.bike-vehicle-data strong{font-size:clamp(21px,5vw,27px);font-weight:800;letter-spacing:-.055em;white-space:nowrap;line-height:1.3;color:#243631}
+.bike-vehicle-data>small:last-child{font-size:11px;line-height:1.35;color:#63716d}
+.bike-page .bike-vehicle img{flex:none;width:35%;max-width:144px;height:auto;object-fit:contain;filter:drop-shadow(0 7px 8px #273d2d1c)}
+.bike-vehicle-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bike-page .bike-vehicle-actions .bike-outline-action{display:inline-flex;gap:7px;align-items:center;justify-content:center;min-width:0;min-height:46px;background:#fff;border:1px solid #dce4de;border-radius:12px;font-size:13px;font-weight:700;color:#2d4c43}
+.bike-page .bike-vehicle-actions .bike-outline-action:active{background:#edf4ed}
+.bike-page .bike-actions{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:8px;margin-top:12px}
+.bike-page .bike-actions button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:52px;border-radius:13px;font-weight:750;font-size:14px;padding:9px 10px}
+.bike-page .bike-actions .record-primary{background:#ad471b;color:white}
+.bike-page .bike-actions button+button{background:#edf0eb;border:1px solid #e0e6df;color:#35584b}
+.bike-page .bike-section-head{margin:27px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bike-page .bike-section-head h2{font-size:19px}
+.bike-page .bike-row{align-items:center;gap:7px;padding:12px 3px;min-height:66px;border-bottom:1px solid #e1e7e2;background:transparent}
+.bike-row-main{display:flex;align-items:center;gap:11px;min-width:0}
+.bike-row-main>span:last-child{min-width:0}
+.bike-row-main b{font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.bike-row-main small{font-size:11px;margin-top:3px;line-height:1.4}
+.bike-item-icon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;color:#8e492c;background:#f9ede5}
+.bike-item-icon.subtle{background:#eff3f0;color:#5a756a}
+.bike-row-meta{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:none;text-align:right;max-width:47%}
+.bike-row-meta>b{font-size:11px;line-height:1.4;color:#426254;white-space:normal}
+.bike-row-meta>small{font-size:11px}
+.bike-row-meta>.rs-icon{flex:none;color:#8c9992}
+.bike-page .bike-row[aria-pressed=true]{padding-inline:8px;border-radius:12px;color:#a34518;background:#fff5ed}
+.bike-page .bike-history-head{margin-top:27px;display:flex;align-items:center}
+.bike-history-head h2{display:flex;align-items:center;gap:8px}
+.bike-page .bike-history-row{min-height:58px}
+.bike-page .bike-history-row .bike-row-meta>b{color:#394842}
+.bike-page .bike-links{display:flex;justify-content:center;margin-top:22px;padding-top:12px}
+.bike-page .bike-links button{display:flex;align-items:center;gap:7px;padding:10px 12px;font-size:12px;color:#5b6a62;border-radius:10px}
+.bike-empty{padding:18px 10px;background:#f4f6f3;color:#6b7770;border-radius:12px;text-align:center;font-size:13px}
+.record-sheet .record-help{font-size:12px;line-height:1.55;color:#697771;margin:13px 0 8px}
+.record-sheet .bike-cycle-editor{padding:13px 0;border-bottom:1px solid #e5e9e4}
+.record-sheet .bike-cycle-editor>strong{display:flex;align-items:center;gap:8px;font-size:14px}
+.record-sheet .bike-cycle-editor .record-pair label{min-width:0}
+.record-sheet .bike-cycle-editor .record-pair input{width:100%;min-width:0}
+@media(max-width:380px){
+  .app .bike-page{padding-inline:12px}
+  .bike-page .bike-vehicle{padding:13px 12px;min-height:138px}
+  .bike-page .bike-vehicle img{width:32%;max-width:110px}
+  .bike-vehicle-data strong{font-size:22px}
+  .bike-page .bike-vehicle-actions .bike-outline-action{gap:5px;font-size:12px}
+  .bike-item-icon{width:35px;height:35px}
+  .bike-row-main{gap:7px}
+  .bike-page .bike-actions button{font-size:13px}
+  .bike-row-meta{max-width:45%}
+}
