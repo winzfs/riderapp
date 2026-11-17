@@ -20,6 +20,19 @@ export function timelineStartPoint(tripOrPoints) {
   return points.find(isTimelineCoordinate) || null;
 }
 
+export function timelineEndPoint(tripOrPoints) {
+  const points=Array.isArray(tripOrPoints)?tripOrPoints:tripOrPoints?.points;
+  if(!Array.isArray(points))return null;
+  let latest=-Infinity,last=null;
+  for(const point of points){
+    if(!isTimelineCoordinate(point))continue;
+    const at=pointTime(point);
+    if(at!=null && at>=latest){latest=at;last=point;}
+    else if(at==null && latest===-Infinity)last=point;
+  }
+  return last;
+}
+
 export function timelineLivePosition(position, trip) {
   const points = Array.isArray(trip?.points) ? trip.points : [];
   const last = points.findLast(isTimelineCoordinate) || null;
