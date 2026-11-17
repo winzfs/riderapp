@@ -12,19 +12,19 @@ export function rs33DrawCourse(L, map, geometry) {
   for (let level = 3; level >= 1; level--) {
     const coordinates = geometry.railRuns.slice(level + 1).flat();
     if (!coordinates.length) continue;
-    const weight = 9 + 6 * level;
+    const weight = 7 + 4 * level;
     L.polyline(coordinates, {
       ...line,
-      color: "#ff9a50",
+      color: "#da9666",
       weight,
-      opacity: 0.92,
+      opacity: 0.65,
     }).addTo(group);
     if (level > 1)
       L.polyline(coordinates, {
         ...line,
         color: "#fff7f0",
-        weight: weight - 3,
-        opacity: 0.98,
+        weight: Math.max(5, weight - 4),
+        opacity: 0.74,
       }).addTo(group);
   }
   if (geometry.paths.length)
