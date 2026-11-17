@@ -1,20 +1,15 @@
 // Optional OSM public-facility overlay. Public POIs stay independent from
 // rider_places, road reports, live location sharing and GPS/SQLite timelines.
 // The overlay uses bounded, read-only Supabase queries and never remounts a map.
+import { isVisibleFacility, VISIBLE_FACILITY } from "./facility-visibility.mjs";
+
 export function createPublicPoiOverlay(openMapSheet) {
   const state = { map: null, group: null, seq: 0, credit: null };
-  const icons = {
-    "화장실": { type: "toilet", glyph: "WC" },
-    "주유소": { type: "fuel", glyph: "⛽" },
-    "쉼터": { type: "shelter", glyph: "⌂" },
-    "주요시설": { type: "landmark", glyph: "▦" },
-  };
+  const toiletIcon = { type: "toilet", glyph: "WC" };
   const valid = (place) => place &&
     Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng)) &&
     Math.abs(Number(place.lat)) <= 90 && Math.abs(Number(place.lng)) <= 180;
-  const allowed = (filter, category) =>
-    filter === "places" ||
-    (filter === "shelters" && (category === "화장실" || category === "쉼터"));
+  const allowed = isVisibleFacility;
   const nearRiderReport = (poi, reported) =>
     reported.some((r) => r.category === poi.category && valid(r) &&
       Math.abs(Number(r.lat) - Number(poi.lat)) < 0.00023 &&
@@ -118,8 +113,9 @@ export function createPublicPoiOverlay(openMapSheet) {
     try {
       let query = client.from("public_pois")
         .select("id,source,source_id,category,title,details,lat,lng,osm_url,imported_at")
-        .eq("active", true).gte("lat", south).lte("lat", north)
-        .order("imported_at", { ascending: false }).limit(260);
+        .eq("active", true).eq("category", VISIBLE_FACILITY)
+        .gte("lat", south).lte("lat", north)
+        .order("source_id", { ascending: true }).limit(150);
       if (west >= -180 && east <= 180 && east >= west && east - west < 360)
         query = query.gte("lng", west).lte("lng", east);
       const { data, error } = await query;
@@ -131,20 +127,11 @@ export function createPublicPoiOverlay(openMapSheet) {
         p.source === "osm" && valid(p) && allowed(filter, p.category) &&
         !nearRiderReport(p, riderPlaces)
       );
-      // Rotate across categories so city zoom does not become a wall of
-      // toilet pins while all fuel stations and landmarks disappear.
-      const queues = ["화장실", "쉼터", "주유소", "주요시설"]
-        .map((category) => filtered.filter((poi) => poi.category === category)
-          .sort((a, b) => String(a.source_id).localeCompare(String(b.source_id))));
-      const visible = [];
-      while (visible.length < cap && queues.some((queue) => queue.length)) {
-        for (const queue of queues) {
-          if (queue.length && visible.length < cap) visible.push(queue.shift());
-        }
-      }
+      // Toilet-only display: preserve other public records for a future opt-in.
+      const visible = filtered.slice(0, cap);
       state.group.clearLayers();
       for (const poi of visible) {
-        const kind = icons[poi.category] || icons["주요시설"];
+        const kind = toiletIcon;
         const icon = L.divIcon({
           className: "rs-public-marker rs-public-marker--" + kind.type,
           html: '<span class="rs-public-marker-face" aria-hidden="true">' + kind.glyph + "</span>",
@@ -160,7 +147,7 @@ export function createPublicPoiOverlay(openMapSheet) {
       if (credit) {
         credit.hidden = !filtered.length;
         credit.querySelector(".rs-public-poi-count").textContent =
-          "공공시설 " + visible.length + "곳";
+          "화장실 " + visible.length + "곳";
       }
     } catch (error) {
       if (token !== state.seq) return;
