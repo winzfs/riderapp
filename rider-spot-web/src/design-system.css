@@ -1305,3 +1305,18 @@ svg.rs-icon{flex:none;vertical-align:middle}
   #rs-tools .rs63-maint-presets button{padding-inline:10px}
   #rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button{min-height:65px}
 }
+
+/* Rider Spot work record editing and device-scoped drafts */
+#rs-tools .rs64-editing-note{padding:11px 13px;border-radius:11px;background:#eaf4f0;border:1px solid #bbd7c8;color:#166247;font-weight:750;font-size:12px}
+#rs-tools .rs64-edit-cancel{width:100%;background:#fff;border:1px solid #d5ded9;color:#536c61;min-height:44px}
+#rs-tools .rs64-draft-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px;color:#6d7d74;font-size:11px}
+#rs-tools .rs64-draft-note button{min-height:36px;font-size:11px;padding:7px 11px;border-radius:9px}
+#rs-tools .rs64-maint-history{padding:12px 0 15px;border-top:1px solid var(--rs-line);margin:0 0 8px}
+#rs-tools .rs64-maint-history>h3{font-size:14px;font-weight:700;margin:4px 0 8px;color:var(--rs-text)}
+#rs-tools .rs64-maint-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--rs-line)}
+#rs-tools .rs64-maint-item>div{display:grid;gap:3px;min-width:0}
+#rs-tools .rs64-maint-item strong{font-size:13px;font-weight:650}
+#rs-tools .rs64-maint-item small{font-size:11px;color:var(--rs-muted)}
+#rs-tools .rs64-maint-item button{flex:none;min-width:54px;min-height:40px;padding:7px 10px;font-size:12px}
+#rs-tools .rs-list-row .rs-row-actions{gap:6px;flex-wrap:wrap}
+#rs-tools .rs-fuel-end button{min-height:38px;font-size:12px}
