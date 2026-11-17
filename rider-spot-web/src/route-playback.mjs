@@ -1,4 +1,5 @@
 import { rs33Paths, rs33Timestamp } from "./route-analysis.mjs";
+import { rs33CourseToneColor } from "./course-layers.mjs";
 
 // A read-only playback view: the real GPS timestamps determine the motion.
 // Sessions are concatenated on the playback clock WITHOUT inventing a route
@@ -103,18 +104,85 @@ export function playbackFrame(track, position) {
   return { lines, point };
 }
 
+// Keep the color of a GPS edge fixed throughout playback. Every slice is
+// assigned a tone using its distance along the COMPLETE route, rather than
+// regrading the portion already drawn on each animation frame.
+export function buildPlaybackColorSlices(track) {
+  if (!track?.segments?.length) return [];
+  const length = (a, b) => {
+    const scale = Math.cos(((a[0] + b[0]) * Math.PI) / 360);
+    return Math.hypot(b[0] - a[0], (b[1] - a[1]) * scale);
+  };
+  let total = 0;
+  for (const segment of track.segments) {
+    for (let i = 1; i < segment.coordinates.length; i++) {
+      total += length(segment.coordinates[i - 1], segment.coordinates[i]);
+    }
+  }
+  if (!(total > 0)) return [];
+
+  const slices = [];
+  let walked = 0;
+  for (let segmentIndex = 0; segmentIndex < track.segments.length; segmentIndex++) {
+    const segment = track.segments[segmentIndex];
+    let slice = null;
+    const flush = () => {
+      if (slice?.coordinates.length > 1) slices.push(slice);
+      slice = null;
+    };
+    for (let i = 1; i < segment.coordinates.length; i++) {
+      const from = segment.coordinates[i - 1];
+      const to = segment.coordinates[i];
+      const fromTime = segment.times[i - 1];
+      const toTime = segment.times[i];
+      const edge = length(from, to);
+      if (!(edge > 0)) continue;
+      const end = walked + edge;
+      const at = (fraction) => [
+        from[0] + (to[0] - from[0]) * fraction,
+        from[1] + (to[1] - from[1]) * fraction,
+      ];
+      const atTime = (fraction) => fromTime + (toTime - fromTime) * fraction;
+      let cursor = walked;
+      while (cursor < end) {
+        const tone = Math.min(23, Math.floor((cursor / total + 1e-12) * 24));
+        const next = tone === 23 ? end : Math.min(end, ((tone + 1) * total) / 24);
+        if (next <= cursor) break;
+        const startFraction = (cursor - walked) / edge;
+        const endFraction = (next - walked) / edge;
+        if (slice?.tone !== tone) {
+          flush();
+          slice = {
+            tone, segmentIndex,
+            coordinates: [at(startFraction)],
+            times: [atTime(startFraction)],
+          };
+        }
+        slice.coordinates.push(at(endFraction));
+        slice.times.push(atTime(endFraction));
+        cursor = next;
+      }
+      walked = end;
+    }
+    flush(); // Never connect separate rides or GPS outage fragments.
+  }
+  return slices;
+}
+
 export function createPlaybackLayer(L, map, track) {
   const group = L.layerGroup().addTo(map);
-  const lines = track.segments.map(() =>
+  const slices = buildPlaybackColorSlices(track);
+  const lines = slices.map((slice) =>
     L.polyline([], {
-      color: "#0b8066",
+      color: rs33CourseToneColor(slice.tone),
       weight: 6,
-      opacity: 0.98,
+      opacity: 1,
       lineCap: "round",
       lineJoin: "round",
       interactive: false,
       className: "rs59-playback-route",
     }).addTo(group));
+  const completed = slices.map(() => false);
   const marker = L.circleMarker([0, 0], {
     radius: 8,
     color: "#ffffff",
@@ -129,10 +197,40 @@ export function createPlaybackLayer(L, map, track) {
   return {
     setTime(position) {
       const frame = playbackFrame(track, position);
+      const time = Math.max(0, Math.min(track.duration, Number(position) || 0));
       for (let i = 0; i < lines.length; i++) {
-        // Separate Leaflet line layers prevent jumps over GPS outages and
-        // between saved runs, including at seek and playback boundaries.
-        lines[i].setLatLngs(frame.lines[i]);
+        const slice = slices[i];
+        const first = slice.times[0];
+        const last = slice.times[slice.times.length - 1];
+        if (time < first) {
+          if (completed[i] !== null) lines[i].setLatLngs([]);
+          completed[i] = null;
+          continue;
+        }
+        if (time >= last) {
+          if (completed[i] !== true) lines[i].setLatLngs(slice.coordinates);
+          completed[i] = true;
+          continue;
+        }
+        const index = upperBound(slice.times, time) - 1;
+        const coords = slice.coordinates.slice(0, index + 1);
+        const next = index + 1;
+        if (
+          next < slice.times.length &&
+          time > slice.times[index] &&
+          slice.times[next] > slice.times[index]
+        ) {
+          const fraction =
+            (time - slice.times[index]) /
+            (slice.times[next] - slice.times[index]);
+          const from = slice.coordinates[index], to = slice.coordinates[next];
+          coords.push([
+            from[0] + (to[0] - from[0]) * fraction,
+            from[1] + (to[1] - from[1]) * fraction,
+          ]);
+        }
+        lines[i].setLatLngs(coords);
+        completed[i] = false;
       }
       if (frame.point) {
         marker.setLatLng(frame.point);
