@@ -1,0 +1,57 @@
+name: Rider Spot public POI snapshot weekly
+on:
+  # GitHub schedules run from the default branch, while app code stays on the
+  # dedicated Rider Spot feature branch.
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rider-spot-public-pois.yml'
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-public-poi-import
+  cancel-in-progress: false
+jobs:
+  update-public-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned OSM parser
+        run: python -m pip install --disable-pip-version-check osmium==4.3.2
+      - name: Download weekly South Korea OSM extract
+        run: |
+          curl --fail --location --retry 1 --retry-delay 30 \
+            --connect-timeout 30 --max-time 500 \
+            --user-agent "RiderSpotWeeklyPOI/1.0 (https://rider-spot.jazzhjm.workers.dev/)" \
+            --output /tmp/south-korea.osm.pbf \
+            https://download.geofabrik.de/asia/south-korea-latest.osm.pbf
+          test "$(stat -c %s /tmp/south-korea.osm.pbf)" -gt 1000000
+      - name: Extract and validate Gwangsan area facilities
+        run: |
+          python rider-spot-web/scripts/sync-public-pois.py \
+            /tmp/south-korea.osm.pbf rider-spot-web/data/gwangsan-osm-pois.json
+          python -m json.tool rider-spot-web/data/gwangsan-osm-pois.json >/dev/null
+      - name: Commit snapshot only after successful complete extraction
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f rider-spot-web/data/gwangsan-osm-pois.json
+          if git diff --cached --quiet; then
+            echo "POI snapshot unchanged."
+            exit 0
+          fi
+          git fetch origin feature/rider-spot-native-apk
+          git rebase origin/feature/rider-spot-native-apk
+          git commit -m "data(poi): refresh Gwangsan OSM facilities [skip ci]"
+          git push origin HEAD:feature/rider-spot-native-apk
