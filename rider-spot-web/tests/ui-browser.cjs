@@ -100,21 +100,21 @@ async function check(width,native){
  await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);
  await player.locator('.rs59-seek').focus();await player.locator('.rs59-seek').press('End');await player.getByRole('button',{name:'경로 재생 종료하고 전체 경로 보기'}).click();
  await p.getByRole('button',{name:'크게 보기',exact:true}).click();await p.getByRole('dialog',{name:'전체 화면 하루 운행 지도'}).waitFor();await shot('fullscreen');await p.keyboard.press('Escape');
- await p.locator('.rs56-ride-choice').first().click();await p.locator('.rs33-trip-detail').waitFor();await layout('trip-detail');await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();await p.locator('.rs56-ride-choice').last().click();assert.match(await p.locator('.rs33-trip-summary').innerText(),/0 km/);await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();
+ await p.locator('.rs56-ride-choice').first().click();await p.locator('.rs33-trip-detail').waitFor();await layout('trip-detail');await p.getByRole('button',{name:'‹ 하루 전체',exact:true}).click();await p.locator('.rs56-ride-choice').last().click();assert.match(await p.locator('.rs33-trip-summary').innerText(),/0 km/);await p.getByRole('button',{name:'‹ 하루 전체',exact:true}).click();
 
  }
- await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="earnings"]').first().click();
+ if(baseline) await nav.getByRole('button',{name:'업무',exact:true}).click(); else {await nav.getByRole('button',{name:'내 바이크',exact:true}).click();await p.getByRole('button',{name:'전체 업무 도구 ›'}).click();}await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="earnings"]').first().click();
 await p.locator('form[data-rs-form="earnings"]').waitFor();
 await p.locator('input[name="work_date"]').fill('2026-11-16');
-await p.locator('[data-rs-fill-ride]').click();
+await p.locator('.rs63-earnings-more summary').click();await p.locator('[data-rs-fill-ride]').click();
 const copiedHours=Number(await p.locator('input[name="hours"]').inputValue());
 const copiedKm=Number(await p.locator('input[name="distance_km"]').inputValue());
 assert.ok(copiedHours>0&&copiedKm>0,'existing GPS history fills manual earnings form without syncing financial data');
 await p.getByRole('button',{name:'‹ 업무 목록'}).click();
 await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
- await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
+ await nav.getByRole('button',{name:baseline?'커뮤니티':'동네',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
  await layout('community');
- assert.equal(await p.locator('.rs-lounge-quick .rs-lounge-actions button').count(),2,'existing community offers local quick prompts');
+ assert.equal(await p.locator('.rc-categories').count(),1,'local stories and industry news share a single category row');
  const feed=await p.locator('.rc-card-list').evaluate(el=>{
   const cards=[...el.querySelectorAll('.rc-feed-row')].map(row=>{
     const bounds=row.getBoundingClientRect();
@@ -180,7 +180,7 @@ await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르
  assert.ok(await categories.evaluate(el=>el.scrollLeft)>initialScroll,'category next control must scroll the full labels into view');
  await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
  }
- await nav.getByRole('button',{name:'내 정보',exact:true}).click();await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');
+ if(baseline) await nav.getByRole('button',{name:'내 정보',exact:true}).click(); else {await nav.getByRole('button',{name:'내 바이크',exact:true}).click();await p.getByRole('button',{name:'프로필·설정 ›'}).click();}await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');
  assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);
  const game=p.locator('.rs-game-profile');
  await game.waitFor();
@@ -195,7 +195,7 @@ await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르
  assert.equal(await game.locator('.rs-game-achievement').count(),5,'all collectible badges visible');
  assert.equal(await game.locator('.rs-game-achievement.rs-game-earned').count(),1);
  await shot('profile-achievements');await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
- if(!baseline){await nav.getByRole('button',{name:'지도',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);
+ if(!baseline){await nav.getByRole('button',{name:'운행',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);
  // Verify the new live map after validating previously saved data, so
  // simulated active-trip recovery cannot change the legacy snapshot assertion.
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();

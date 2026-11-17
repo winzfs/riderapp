@@ -195,7 +195,7 @@ const fixtures = [
       document.querySelector(".rs33-trip-detail .map")?.dataset.rsBasemap === "positron",
       null, { timeout: 30000 }
     );
-    await page.getByRole("button", { name: "‹ 운행 목록" }).click();
+    await page.getByRole("button", { name: "‹ 하루 전체" }).click();
     await page.getByRole("heading", { name: "하루 전체 경로" }).waitFor();
     await page.waitForFunction(() =>
       document.querySelector(".rs56-day-overview .map")?.dataset.rsBasemap === "positron",
