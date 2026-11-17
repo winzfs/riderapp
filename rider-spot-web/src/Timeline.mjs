@@ -13,7 +13,7 @@ import { useRouteAnalysis } from "./use-route-analysis.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
 import { useRoutePlayback } from "./route-playback.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
-import { timelineStartPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
+import { timelineStartPoint, timelineEndPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
 
 export function createTimeline(S, Zo) {
   const rs33J = S.createElement;
@@ -472,6 +472,7 @@ export function createTimeline(S, Zo) {
         course: {
           id: current.id,
           startPoint: timelineStartPoint(current),
+          endPoint: ended ? timelineEndPoint(current) : null,
           live: isLive,
           follow: following && isLive,
           onUnfollow,
@@ -937,6 +938,8 @@ export function createTimeline(S, Zo) {
                       course: {
                         id: daily.route.id,
                         startPoint: timelineStartPoint(daily.route),
+                        endPoint: daily.trips.every(trip => Boolean(trip.ended_at))
+                          ? timelineEndPoint(daily.route) : null,
                         live: day === today && Boolean(ride.trip && !ride.trip.ended_at),
                         follow: following && day === today && Boolean(ride.trip && !ride.trip.ended_at),
                         onUnfollow,
