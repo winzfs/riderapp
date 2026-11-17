@@ -45,9 +45,10 @@ test("no external OSM queries or map remounts; only bounded Supabase reads", asy
   assert.equal(mock.calls.reads, 2);
   assert.equal(mock.calls.writes, 0);
   assert.ok(mock.conditions.some((e) => e[0] === "eq" && e[1] === "active" && e[2] === true));
+  assert.ok(mock.conditions.some((e) => e[0] === "eq" && e[1] === "category" && e[2] === "화장실"), "filter non-toilets at the database");
   assert.ok(mock.conditions.some((e) => e[0] === "gte" && e[1] === "lat"));
   assert.ok(mock.conditions.some((e) => e[0] === "lte" && e[1] === "lng"));
-  assert.ok(mock.conditions.some((e) => e[0] === "limit" && e[1] === 260));
+  assert.ok(mock.conditions.some((e) => e[0] === "limit" && e[1] === 150));
 });
 
 test("road reports, riders and low-zoom maps never query the POI database", async () => {
@@ -62,4 +63,17 @@ test("road reports, riders and low-zoom maps never query the POI database", asyn
   const city = fixture(13);
   await createPublicPoiOverlay(() => {}).refresh({ ...city, filter: "places" });
   assert.equal(city.calls.reads, 1, "default city zoom should show sampled facilities");
+});
+
+// Feature flag is intentionally display-only; all existing data stays stored.
+import { isVisibleFacility } from "../src/facility-visibility.mjs";
+
+test("only toilets appear on facility map; other facilities remain available in storage", () => {
+  for (const layer of ["places", "shelters"]) {
+    assert.equal(isVisibleFacility(layer, "화장실"), true);
+    for (const category of ["쉼터", "주유소", "정비소", "주요시설", "기타"])
+      assert.equal(isVisibleFacility(layer, category), false, category);
+  }
+  for (const layer of ["roads", "riders", "shops"])
+    assert.equal(isVisibleFacility(layer, "화장실"), false);
 });
