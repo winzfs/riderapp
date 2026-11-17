@@ -97,3 +97,33 @@ test("Leaflet playback renderer updates and cleans its layers with no raw-record
   assert.ok(layers.some(entry => Array.isArray(entry) && entry.length === 2 && Array.isArray(entry[0])));
   assert.equal(layers.at(-1),"destroy");
 });
+
+
+test("100x replay is selectable without changing GPS time interpolation", async () => {
+  const { useRoutePlayback } = await import("../src/route-playback.mjs");
+  const source = run("speed", 0, 100000, [
+    [35.1, 126.8, 0], [35.101, 126.801, 50000], [35.102, 126.802, 100000],
+  ]);
+  const original = JSON.stringify(source);
+  let state;
+  const React = {
+    useMemo(factory) { return factory(); },
+    useState(initial) {
+      if (state === undefined) state = initial;
+      return [state, (change) => {
+        state = typeof change === "function" ? change(state) : change;
+      }];
+    },
+    useEffect() {},
+  };
+  const controller = useRoutePlayback(React, source);
+  assert.equal(controller.speed, 20, "existing speed default remains 20x");
+  controller.setSpeed(100);
+  assert.equal(useRoutePlayback(React, source).speed, 100);
+  const track = buildPlaybackTrack(source);
+  assert.equal(playbackTimestamp(track, 50000), begin + 50000);
+  assert.deepEqual(playbackFrame(track, 50000).point, [35.101, 126.801]);
+  assert.equal(JSON.stringify(source), original, "100x option never alters GPS points");
+  useRoutePlayback(React, source).setSpeed(999);
+  assert.equal(useRoutePlayback(React, source).speed, 100, "invalid speeds are rejected");
+});
