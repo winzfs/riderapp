@@ -1,7 +1,8 @@
 // Read-only GPS projection for route map overlays. It never writes to SQLite,
 // localStorage, Supabase or the underlying trip points.
 export function isTimelineCoordinate(point) {
-  return point != null &&
+  return point != null && point.lat != null && point.lng != null &&
+    point.lat !== "" && point.lng !== "" &&
     Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng)) &&
     Math.abs(Number(point.lat)) <= 90 && Math.abs(Number(point.lng)) <= 180;
 }
@@ -37,7 +38,8 @@ export function timelineFixStale(position, now = Date.now()) {
 }
 
 export function timelineHeading(position) {
-  const value = Number(position?.heading);
+  if (position?.heading == null || position.heading === "") return null;
+  const value = Number(position.heading);
   return Number.isFinite(value) && value >= 0 && value <= 360
     ? value : null;
 }
