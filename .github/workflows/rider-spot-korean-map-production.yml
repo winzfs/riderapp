@@ -1,0 +1,62 @@
+name: Rider Spot Korean map production acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-korean-map-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://rider-spot.jazzhjm.workers.dev/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Check deployed Korean data and PWA compatibility assets
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request
+          root='https://rider-spot.jazzhjm.workers.dev'
+          def get(path):
+            req=urllib.request.Request(root+path,headers={'User-Agent':'Mozilla/5.0 RiderSpot-ProductionQA'})
+            with urllib.request.urlopen(req,timeout=30) as r:
+              assert r.status==200,(path,r.status)
+              return r.read()
+          page=get('/').decode()
+          assert '/assets/rider-spot-d115d01665eb/app.mjs' in page
+          assert b'rs-public-apartment-label' in get('/assets/rider-spot-d115d01665eb/app.mjs')
+          info=json.loads(get('/mapdata/manifest.json'))
+          assert info['counts']['shop']==74938
+          assert info['counts']['apartment']==507
+          assert info['counts']['region']==196
+          assert len(json.loads(get('/mapdata/admin.json'))) >= 100
+          assert any(row[3]=='shop' for row in json.loads(get('/mapdata/t3170-879.json')))
+          assert len(get('/assets/rider-spot-868d827d5727/app.mjs'))>500000
+          print('PASS production data and previous deployed PWA assets')
+          PY
+      - run: npx playwright install --with-deps chromium
+      - name: Verify live mobile map, timelines and screen navigation
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-production-map-qa
+          path: /tmp/rider-ui-evidence
+          retention-days: 14
