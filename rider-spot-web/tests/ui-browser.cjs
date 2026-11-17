@@ -52,6 +52,22 @@ async function check(width,native){
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();await p.getByRole('button',{name:'2026-11-16 운행 3회',exact:true}).click();await p.locator('.rs56-day-overview .rs56-day-map').waitFor();await p.waitForFunction(()=>document.querySelector('.rs56-day-map .map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
  if(baseline)await shot('timeline');else {
  await layout('timeline');
+ // GPS routes must be inside MapLibre BELOW street and dong text,
+ // not a Leaflet canvas obscuring the base-map names.
+ await p.waitForFunction(() => Boolean(window.__rsMap?.__rsVectorGl?.getLayer?.('rs-course-gradient')),
+   null, {timeout:25000});
+ const vectorOrder = await p.evaluate(() => {
+   const layers=window.__rsMap.__rsVectorGl.getStyle().layers;
+   const route=layers.findIndex(x=>x.id==='rs-course-gradient');
+   const label=layers.findIndex(x=>x.type==='symbol');
+   const neighbourhood=layers.find(x=>x.id==='rs46-neighbourhood-labels');
+   const district=layers.find(x=>x.id==='rs46-district-labels');
+   return {route,label,neighbourhoodMin:neighbourhood?.minzoom,districtMin:district?.minzoom};
+ });
+ assert.ok(vectorOrder.route>=0 && vectorOrder.route<vectorOrder.label,
+   'GPS route beneath map symbols: '+JSON.stringify(vectorOrder));
+ assert.ok(vectorOrder.neighbourhoodMin<=9.1 && vectorOrder.districtMin<=8.5,
+   'wider citywide neighbourhood label range');
  await p.locator('.rs56-day-map .rs-course-end-pin .rs-end-label').waitFor();
  assert.equal(await p.locator('.rs56-day-map .rs-course-end-pin .rs-end-label').innerText(),'종료');
  const recap=p.locator('.rs33-timeline .rs-game-recap');
