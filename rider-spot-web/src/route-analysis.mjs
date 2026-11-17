@@ -250,37 +250,59 @@ export function rs33InferredStops(groups) {
   return found;
 }
 
-export function rs33Stamps(groups, events) {
-  const points = groups.flat().filter((p) => p.time != null);
-  if (!points.length) return [];
-  const first = points[0], last = points.at(-1);
-  const duration = Math.max(0, last.time - first.time);
-  const step = (duration > 6 * 3600000 ? 60 : duration > 2 * 3600000 ? 30 : 15) * 60000;
-  const result = [{ ...first, label: "출발", kind: "start" }];
-  let next = Math.floor(first.time / step) * step + step;
-  for (let i = 1; i < points.length - 1; i++) {
-    const p = points[i];
-    if (p.time >= next) {
-      next = Math.floor(p.time / step) * step + step;
-      if (p.time - first.time >= step / 4 && last.time - p.time >= step / 4)
-        result.push({ ...p, label: "기록 위치", kind: "stamp" });
+// Hour labels are based on the actual Korea Standard Time clock (UTC+09:00).
+// Each hour must be covered by continuous recorded GPS samples; no marker is
+// fabricated across missing fixes, pauses, or separate ride sessions.
+export function rs33HourlyStamps(groups) {
+  const hours = [];
+  const hourMs = 60 * 60 * 1000;
+  for (const group of groups) {
+    const first = group[0], last = group.at(-1);
+    if (!Number.isFinite(first?.time) || !Number.isFinite(last?.time)) continue;
+    let hour = Math.floor(first.time / hourMs) * hourMs + hourMs;
+    for (; hour <= last.time; hour += hourMs) {
+      for (let i = 1; i < group.length; i++) {
+        const a = group[i - 1], b = group[i];
+        if (a.time > hour || b.time < hour) continue;
+        const gap = b.time - a.time;
+        if (gap < 0 || gap > 120000) break;
+        const ratio = gap ? (hour - a.time) / gap : 0;
+        hours.push({
+          time: hour,
+          lat: a.lat + (b.lat - a.lat) * ratio,
+          lng: a.lng + (b.lng - a.lng) * ratio,
+          label: "정각", kind: "hour",
+        });
+        break;
+      }
     }
   }
-  if (last.time !== first.time) result.push({ ...last, label: "마지막 기록", kind: "end" });
-  const explicit = (Array.isArray(events) ? events : []).flatMap((e) => {
-    if (!e || !(e.source === "riderspot-native-stop-v1" || /정차|휴식/.test(String(e.type || "")))) return [];
-    const time = rs33Timestamp(e.at);
+  return hours;
+}
+
+export function rs33Stamps(groups, events) {
+  const points = groups.flat().filter((p) => Number.isFinite(p.time));
+  if (!points.length) return [];
+  const first = points.reduce((a, b) => b.time < a.time ? b : a);
+  const result = [{ ...first, label: "출발", kind: "start" }, ...rs33HourlyStamps(groups)];
+  const explicit = (Array.isArray(events) ? events : []).flatMap((event) => {
+    if (!event ||
+      !(event.source === "riderspot-native-stop-v1" || /정차|휴식/.test(String(event.type || ""))))
+      return [];
+    const time = rs33Timestamp(event.at);
     if (time == null) return [];
-    const valid = Number.isFinite(Number(e.lat)) && Number.isFinite(Number(e.lng)) &&
-      Math.abs(Number(e.lat)) <= 90 && Math.abs(Number(e.lng)) <= 180;
-    // Manual break events are time-only. Locate them on the nearest actual GPS
-    // fix only if one exists, without inventing a coordinate.
-    const nearest = valid ? null : points.reduce((best, point) =>
+    const valid = Number.isFinite(Number(event.lat)) && Number.isFinite(Number(event.lng)) &&
+      Math.abs(Number(event.lat)) <= 90 && Math.abs(Number(event.lng)) <= 180;
+    // Time-only manual rest events may use a nearby actual fix, but never
+    // invent a location if no GPS was captured around the event.
+    const closest = valid ? null : points.reduce((best, point) =>
       Math.abs(point.time - time) < Math.abs((best?.time ?? Infinity) - time) ? point : best, null);
-    if (!valid && (!nearest || Math.abs(nearest.time - time) > 120000)) return [];
-    return [{ lat: valid ? Number(e.lat) : nearest.lat,
-      lng: valid ? Number(e.lng) : nearest.lng,
-      time, label: e.type || "정차", kind: "stop", inferred: false }];
+    if (!valid && (!closest || Math.abs(closest.time - time) > 120000)) return [];
+    return [{
+      lat: valid ? Number(event.lat) : closest.lat,
+      lng: valid ? Number(event.lng) : closest.lng,
+      time, label: event.type || "정차", kind: "stop", inferred: false,
+    }];
   });
   const inferred = rs33InferredStops(groups).filter((candidate) =>
     !explicit.some((stop) =>

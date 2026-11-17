@@ -16,11 +16,13 @@ export function rs33CourseToneColor(tone) {
   const progress = Number.isFinite(value)
     ? Math.max(0, Math.min(ROUTE_GRADIENT_STEPS - 1, value)) / (ROUTE_GRADIENT_STEPS - 1) : 0;
   const stops = [
-    [0, [246, 151, 69]],        // warm orange: clear departure
-    [0.27, [238, 185, 110]],   // amber, reducing intensity
-    [0.50, [174, 199, 146]],   // light sage transition
-    [0.72, [76, 150, 124]],    // teal green
-    [1, [3, 66, 50]],          // deep green: latest position
+    [0, [246, 151, 69]],       // orange at departure
+    [0.21, [238, 184, 108]],  // warm amber
+    [0.45, [205, 200, 143]],  // yellow-sage
+    [0.64, [159, 191, 143]],  // fresh sage
+    [0.78, [117, 175, 133]],  // medium green
+    [0.82, [92, 157, 123]],   // green dominates most of the route
+    [1, [3, 66, 50]],         // darkest green only near arrival
   ];
   for (let i = 1; i < stops.length; i++) {
     const [end, to] = stops[i];
@@ -78,14 +80,14 @@ export function rs33DrawCourse(L, map, geometry) {
 }
 
 export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
-  if (!stamps?.length) return undefined;
+  if (!stamps?.length && !geometry?.paths?.length) return undefined;
   const overlays = L.layerGroup().addTo(map);
-  const priority = [...stamps].sort(
+  const priority = [...(stamps || [])].sort(
     (a, b) => priorityFor(a.kind) - priorityFor(b.kind),
   );
   let frame = 0;
   function priorityFor(kind) {
-    return kind === "start" || kind === "end" ? 0 : kind === "stop" ? 1 : 2;
+    return kind === "start" ? 0 : kind === "stop" ? 1 : 2;
   }
   function schedule() {
     if (!frame) frame = requestAnimationFrame(paint);

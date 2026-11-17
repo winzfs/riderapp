@@ -246,7 +246,7 @@ export function createRiderMap(React, L, fallback) {
       if (!course?.playback?.showing || !course?.geometry || !course.playback.track) return;
       const at = playbackTimestamp(course.playback.track, course.playback.elapsed);
       const stops = (course.stamps || []).filter((stamp) =>
-        stamp.kind === "stop" && at != null && stamp.time <= at);
+        at != null && stamp.time <= at);
       if (!stops.length) return;
       return paintCourseLabels(L, controller.current.map, { paths: [] }, stops, course.onStamp);
     }, [cameraId, course?.geometry, course?.stamps, course?.onStamp,
