@@ -772,3 +772,20 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .app .rs63-post-detail .rc-detail-actions button{padding-inline:7px;font-size:12px}
   .app .rs63-post-detail .rc-detail-photo{max-height:320px}
 }
+
+/* v63 post detail: remove inherited oversized panel and give owner actions a compact menu. */
+.app .rs63-post-detail .rc-detail-head{padding:0 0 13px;margin:0 0 0;background:transparent;border:0;border-bottom:1px solid var(--rs-line);box-shadow:none;border-radius:0}
+.app .rs63-post-detail .rc-detail-body{margin:16px 0 16px;min-height:0}
+.app .rs63-post-detail .rc-detail-photo{display:block;width:auto;max-width:100%;max-height:none;height:auto;object-fit:contain;margin:0 auto 17px;border-radius:12px}
+.app .rs63-post-detail .rc-detail-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;min-width:0;padding:7px 0;margin-bottom:20px}
+.app .rs63-post-detail .rs63-post-primary-actions{display:flex;flex:1 1 auto;flex-wrap:wrap;align-items:center;gap:2px;min-width:0}
+.app .rs63-post-detail .rs63-post-manage-menu{position:relative;flex:0 0 auto;margin-left:auto}
+.app .rs63-post-detail .rs63-post-manage-menu summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:11px;cursor:pointer;list-style:none;font-size:23px;color:var(--rs-text);background:var(--rs-soft)}
+.app .rs63-post-detail .rs63-post-manage-menu summary::-webkit-details-marker{display:none}
+.app .rs63-post-detail .rs63-post-manage-menu summary:focus-visible{outline:2px solid var(--rs-primary);outline-offset:2px}
+.app .rs63-post-detail .rs63-post-menu-options{position:absolute;z-index:20;right:0;top:calc(100% + 5px);display:grid;min-width:116px;padding:5px;border:1px solid var(--rs-line);border-radius:12px;background:#fff;box-shadow:0 7px 24px #132b2029}
+.app .rs63-post-detail .rs63-post-menu-options button{display:block;width:100%;min-height:44px;text-align:left;padding:10px 13px;background:transparent;border:0;border-radius:8px;font-size:14px}
+.app .rs63-post-detail .rs63-post-menu-options button.rc-delete{color:#a34242;background:transparent}
+.app .rs63-post-detail .rc-comments-title{margin:0 0 7px}
+.app .rs63-post-detail .rc-comment-form{margin-top:14px}
+@media(max-width:360px){.app .rs63-post-detail .rc-detail-photo{max-height:none}.app .rs63-post-detail .rs63-post-primary-actions{gap:0}}
