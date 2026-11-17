@@ -10,7 +10,7 @@
 .rs33-timeline .rs56-day-map .map{height:100%;min-height:100%;width:100%;border-radius:0}
 .rs56-day-map-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;font-size:10px;color:var(--rs-muted);background:#fff;min-height:36px}
 .rs56-day-map-footer small{color:var(--rs-warning);font-size:10px}
-.rs56-gradient-key{width:26px;height:5px;flex:none;border-radius:4px;background:linear-gradient(90deg,#71d1aa,#065c48)}
+.rs56-gradient-key{width:26px;height:5px;flex:none;border-radius:4px;background:linear-gradient(90deg,#b4ebd7 0%,#5b9784 50%,#034232 100%)}
 .rs56-stamp-detail{flex-basis:100%;font-size:12px;color:var(--rs-primary)}
 .rs56-day-help{margin:10px 0 0;font-size:11px;color:var(--rs-muted);line-height:1.6}
 .rs33-timeline .rs56-rides{display:flex;flex-direction:column;gap:0;margin:0 0 20px;border-top:1px solid var(--rs-line)}
