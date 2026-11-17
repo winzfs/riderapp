@@ -1,20 +1,15 @@
 // Rider Spot public POI importer — isolated from rider_places and ride history.
 // OSM ODbL attribution: https://www.openstreetmap.org/copyright
-// Triggered weekly by Supabase Cron via a vaulted token; no browser may invoke it.
-// A failed or truncated Overpass request must never erase last-known-good records.
+// Weekly Geofabrik snapshot, imported by Supabase Cron with a vaulted token.
+// A failed or partial upstream import never erases last-known-good records.
 import { createClient } from "npm:@supabase/supabase-js@2.49.8";
 
 const REGION = "gwangsan";
 const BOUNDS = { south: 35.08, west: 126.67, north: 35.25, east: 126.92 };
-const OVERPASS = "https://overpass-api.de/api/interpreter";
-const PREFIX = `(${BOUNDS.south},${BOUNDS.west},${BOUNDS.north},${BOUNDS.east})`;
-const QUERY = `[out:json][timeout:55];
-(
-  nwr["amenity"~"^(toilets|fuel|shelter|library|hospital|townhall|police|community_centre)$"]${PREFIX};
-  nwr["leisure"="park"]${PREFIX};
-  nwr["tourism"="attraction"]${PREFIX};
-);
-out center tags;`;
+// A GitHub Actions snapshot is generated weekly from Geofabrik OSM extracts.
+// OSM public Overpass hosts block many cloud/serverless IPs (HTTP 406); never
+// send requests to their public API from end-user clients or this function.
+const SNAPSHOT = "https://raw.githubusercontent.com/winzfs/riderapp/refs/heads/feature/rider-spot-native-apk/rider-spot-web/data/gwangsan-osm-pois.json";
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -103,35 +98,22 @@ Deno.serve(async (request) => {
   if (diff !== 0) return json({ error: "Unauthorized" }, 401);
 
   try {
-    // Some public Overpass mirrors return 406 for POST traffic from shared
-    // serverless IP ranges. Try one small GET on each of two instances.
-    // There is never a retry loop and the schedule runs only once per week.
-    let raw = "";
-    const errors: string[] = [];
-    for (const endpoint of [OVERPASS, "https://overpass.private.coffee/api/interpreter"]) {
-      try {
-        const response = await fetch(endpoint + "?data=" + encodeURIComponent(QUERY), {
-          method: "GET",
-          headers: {
-            "User-Agent": "RiderSpotPublicPOI/1.0 (https://rider-spot.jazzhjm.workers.dev/)",
-            "Accept": "application/json",
-          },
-          signal: AbortSignal.timeout(65000),
-        });
-        if (!response.ok) {
-          const summary = (await response.text()).slice(0, 130).replace(/[^ a-zA-Z0-9.:_-]/g, " ");
-          throw new Error("HTTP " + response.status + " " + summary);
-        }
-        raw = await response.text();
-        break;
-      } catch (error) {
-        errors.push(new URL(endpoint).host + ": " + String(error instanceof Error ? error.message : error).slice(0, 150));
-      }
-    }
-    if (!raw) throw new Error("OSM mirrors unavailable (" + errors.join("; ").slice(0, 200) + ")");
+    const snapshot = await fetch(SNAPSHOT, {
+      headers: { "Accept": "application/json", "User-Agent": "RiderSpotPublicPOI/1.0" },
+      signal: AbortSignal.timeout(25000),
+      cache: "no-store",
+    });
+    if (!snapshot.ok) throw new Error("Snapshot unavailable HTTP " + snapshot.status);
+    const raw = await snapshot.text();
     if (raw.length > 6_000_000) throw new Error("OSM response too large");
     const payload = JSON.parse(raw);
     if (!Array.isArray(payload.elements)) throw new Error("OSM elements missing");
+    if (payload.region !== REGION || !payload.generated_at)
+      throw new Error("Invalid snapshot metadata");
+    const timestamp = Date.parse(payload.generated_at);
+    if (!Number.isFinite(timestamp) || Date.now() - timestamp > 21 * 86400_000 ||
+        timestamp > Date.now() + 86400_000)
+      throw new Error("POI snapshot expired; last-known-good data preserved");
     const unique = new Map<string, ReturnType<typeof normalize>>();
     for (const item of payload.elements as Element[]) {
       const entry = normalize(item);
