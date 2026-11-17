@@ -789,3 +789,52 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .app .rs63-post-detail .rc-comments-title{margin:0 0 7px}
 .app .rs63-post-detail .rc-comment-form{margin-top:14px}
 @media(max-width:360px){.app .rs63-post-detail .rc-detail-photo{max-height:none}.app .rs63-post-detail .rs63-post-primary-actions{gap:0}}
+
+/* Timeline live GPS / start markers. Dedicated overlays stay above vector
+   route canvases without replacing the app's existing position sharing UI. */
+.rs-nav-live-location,
+.rs-course-start-pin{background:transparent!important;border:0!important;pointer-events:none}
+.rs-nav-live-location{z-index:7800}
+.rs-nav-live-location .rs-nav-halo{
+  position:absolute;left:5px;top:5px;width:38px;height:38px;
+  border-radius:50%;background:rgba(24,119,231,.13);
+  border:1px solid rgba(26,120,236,.16);
+}
+.rs-nav-live-location .rs-nav-dot{
+  position:absolute;left:15px;top:15px;width:18px;height:18px;
+  border-radius:50%;background:#1976e8;border:3px solid #fff;
+  box-shadow:0 2px 6px #12365e55,0 0 0 1px rgba(16,91,187,.25);
+}
+.rs-nav-live-location .rs-nav-bearing{
+  display:none;position:absolute;left:14px;top:-3px;
+  width:20px;height:36px;transform-origin:50% 27px;
+  transform:rotate(var(--rs-nav-heading,0deg));
+}
+.rs-nav-live-location.rs-nav-has-heading .rs-nav-bearing{display:block}
+.rs-nav-live-location .rs-nav-cone{
+  display:block;width:20px;height:25px;background:rgba(25,118,232,.67);
+  clip-path:polygon(50% 0,95% 100%,50% 80%,5% 100%);
+  filter:drop-shadow(0 1px 2px #fff);
+}
+.rs-nav-live-location.rs-nav-stale .rs-nav-dot{background:#8b989d}
+.rs-nav-live-location.rs-nav-stale .rs-nav-halo{
+  background:rgba(117,129,135,.12);border-color:rgba(117,129,135,.23);
+}
+.rs-nav-live-location.rs-nav-stale .rs-nav-bearing{display:none}
+.rs-course-start-pin .rs-start-flag{
+  position:absolute;left:5px;top:5px;display:grid;place-items:center;
+  width:29px;height:29px;border:3px solid #fff;border-radius:50%;
+  background:#0c6753;color:#fff;font-size:18px;font-weight:700;
+  box-shadow:0 2px 8px #1a493d55;
+}
+.rs-course-start-pin .rs-start-label{
+  position:absolute;left:36px;top:7px;height:25px;
+  display:flex;align-items:center;padding:0 7px;border-radius:7px;
+  background:#fff;color:#075440;font-weight:750;font-size:12px;
+  white-space:nowrap;box-shadow:0 2px 7px #17443535;
+}
+.rs33-course-map>.rs43-current-position.rs-nav-following{
+  background:#126a58;border-color:#126a58;color:white;
+  box-shadow:0 3px 12px #104e4260;
+}
+.rs33-course-map>.rs43-current-position{min-width:98px;min-height:48px}
