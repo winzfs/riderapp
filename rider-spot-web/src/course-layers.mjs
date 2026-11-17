@@ -41,14 +41,14 @@ export function rs33DrawCourse(L, map, geometry) {
     const weight = 7 + 4 * level;
     L.polyline(coordinates, {
       ...line,
-      color: "#da9666",
+      color: "#95a5a0",
       weight,
-      opacity: 0.65,
+      opacity: 0.6,
     }).addTo(group);
     if (level > 1)
       L.polyline(coordinates, {
         ...line,
-        color: "#fff7f0",
+        color: "#f1f5f3",
         weight: Math.max(5, weight - 4),
         opacity: 0.74,
       }).addTo(group);
