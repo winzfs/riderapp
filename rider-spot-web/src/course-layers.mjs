@@ -78,59 +78,64 @@ export function rs33DrawCourse(L, map, geometry) {
   return () => group.remove();
 }
 
+// Do not cull or merge hourly clock markers at any zoom. Show each
+// city-scale stop event; merge nearby stop events only below zoom 10.5.
+export function layoutCourseStamps(stamps, zoom, width, height, project) {
+  const labels=[], clusters=new Map();
+  for (const stamp of stamps || []) {
+    if (!stamp || !Number.isFinite(Number(stamp.lat)) || !Number.isFinite(Number(stamp.lng))) continue;
+    const pixel=project(stamp);
+    if (!pixel || !Number.isFinite(pixel.x) || !Number.isFinite(pixel.y) ||
+      pixel.x < -30 || pixel.y < -25 || pixel.x > width + 30 || pixel.y > height + 25) continue;
+    if (stamp.kind !== "stop" || zoom >= 10.5) {
+      labels.push({stamp,kind:stamp.kind,count:1,pixel});
+      continue;
+    }
+    const key=Math.floor(pixel.x/68)+":"+Math.floor(pixel.y/42);
+    const found=clusters.get(key);
+    if (found) found.count++;
+    else clusters.set(key,{stamp,kind:"stop",count:1,pixel});
+  }
+  return [...labels,...clusters.values()];
+}
+
 export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
   if (!stamps?.length && !geometry?.paths?.length) return undefined;
-  const overlays = L.layerGroup().addTo(map);
-  const priority = [...(stamps || [])].sort(
-    (a, b) => priorityFor(a.kind) - priorityFor(b.kind),
-  );
-  let frame = 0;
-  function priorityFor(kind) {
-    return kind === "start" ? 0 : kind === "stop" ? 1 : 2;
-  }
-  function schedule() {
-    if (!frame) frame = requestAnimationFrame(paint);
-  }
+  const overlays=L.layerGroup().addTo(map);
+  let frame=0;
+  function schedule() { if (!frame) frame=requestAnimationFrame(paint); }
   function paint() {
-    frame = 0;
+    frame=0;
     overlays.clearLayers();
-    const size = map.getSize();
-    const occupied = new Set();
-    const zoom = map.getZoom();
-    const cellWidth = zoom < 12 ? 124 : zoom < 14 ? 94 : zoom < 16 ? 72 : 60;
-    const cellHeight = zoom < 13 ? 43 : 33;
-    const maxLabels = Math.max(3, Math.min(24, Math.floor(size.x * size.y / 18000)));
-    let rendered = 0;
-    for (const stamp of priority) {
-      if (rendered >= maxLabels) break;
-      const point = map.latLngToContainerPoint([stamp.lat, stamp.lng]);
-      if (
-        point.x < -30 ||
-        point.y < -25 ||
-        point.x > size.x + 30 ||
-        point.y > size.y + 25
-      )
-        continue;
-      const cell = `${Math.floor(point.x / cellWidth)},${Math.floor(point.y / cellHeight)}`;
-      if (occupied.has(cell)) continue;
-      occupied.add(cell);
-      rendered++;
-      const badge = document.createElement("span");
-      badge.textContent = rs33Time(stamp.time);
-      badge.className = "rs33-stamp-label " + stamp.kind;
-      const icon = L.divIcon({
-        className: "rs33-stamp-pin",
-        html: badge,
-        iconSize: [54, 27],
-        iconAnchor: [27, 34],
+    const size=map.getSize(),zoom=map.getZoom();
+    const selected=layoutCourseStamps(stamps,zoom,size.x,size.y,
+      stamp=>map.latLngToContainerPoint([stamp.lat,stamp.lng]));
+    const hourlyCells=new Map();
+    for (const item of selected) {
+      const stamp=item.stamp;
+      const clustered=item.kind==="stop" && item.count>1;
+      const width=clustered?70:54;
+      const badge=document.createElement("span");
+      badge.textContent=clustered?"정차 "+item.count:rs33Time(stamp.time);
+      badge.className="rs33-stamp-label "+item.kind+(clustered?" rs33-stamp-cluster":"");
+      let dx=0,dy=0;
+      if(item.kind==="hour" || item.kind==="stamp"){
+        const cell=Math.floor(item.pixel.x/56)+":"+Math.floor(item.pixel.y/31);
+        const i=hourlyCells.get(cell)||0;
+        hourlyCells.set(cell,i+1);
+        // Stagger each clock label without moving its actual GPS anchor.
+        dx=((i%3)-1)*56;
+        dy=(Math.floor(i/3)%2?34:-34)-Math.floor(i/6)*58;
+      }else if(item.kind==="stop")dy=15;
+      const icon=L.divIcon({
+        className:"rs33-stamp-pin",html:badge,iconSize:[width,27],
+        iconAnchor:[width/2-dx,34-dy]
       });
-      L.marker([stamp.lat, stamp.lng], {
-        title: stamp.label + " " + badge.textContent,
-        zIndexOffset: 3500,
-        icon,
-      })
-        .on("click", () => onStamp(stamp))
-        .addTo(overlays);
+      const choice=clustered?{...stamp,groupCount:item.count,label:item.count+"건 정차"}:stamp;
+      L.marker([stamp.lat,stamp.lng],{
+        title:choice.label+" "+rs33Time(stamp.time),
+        zIndexOffset:item.kind==="hour"?3700:3500,icon
+      }).on("click",()=>onStamp?.(choice)).addTo(overlays);
     }
     let count = 0;
     for (const path of geometry.paths) {
@@ -186,10 +191,10 @@ export function paintCourseLabels(L, map, geometry, stamps, onStamp) {
     }
   }
   schedule();
-  map.on("moveend resize", schedule);
+  map.on("moveend zoomend resize", schedule);
   return () => {
     cancelAnimationFrame(frame);
-    map.off("moveend resize", schedule);
+    map.off("moveend zoomend resize", schedule);
     overlays.remove();
   };
 }
