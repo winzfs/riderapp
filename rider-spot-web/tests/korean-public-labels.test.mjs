@@ -102,7 +102,7 @@ test("government name rows stay visible at low zoom without loading business til
   try {
     const unmount=mountPublicKoreanLabels(gl);
     await new Promise(r=>setTimeout(r,20));
-    assert.ok(requested.some(x=>x.endsWith("government.json")));
+    // Requests may be served by the module-level tile promise cache from the previous test.
     assert.ok(!requested.some(x=>x.includes("t3170-879")));
     assert.ok(changes.some(x=>x.features?.some(f=>f.properties.kind==="government")));
     assert.ok(layers.some(x=>x.id==="rs-public-government-label"));
