@@ -184,12 +184,12 @@ def main():
     if len(official) < 8:
         raise RuntimeError("Too few official named government buildings; refusing update")
     old_file = DATA / "government.json"
+    polygons = read_gwangju_polygons()
     previously = []
     if old_file.exists():
         previously = [row(x[0], x[1], x[2]) for x in json.loads(old_file.read_text(encoding="utf-8"))
                       if isinstance(x, list) and len(x) == 4 and x[3] == "government"]
-        previously = [x for x in previously if x and inside_gwangju(x[0], x[1], read_gwangju_polygons())]
-    polygons = read_gwangju_polygons()
+        previously = [x for x in previously if x and inside_gwangju(x[0], x[1], polygons)]
     osm = fetch_osm(polygons)
     if osm is None:
         osm = previously
@@ -203,7 +203,7 @@ def main():
     old_file.write_text(json.dumps(all_rows, ensure_ascii=False, separators=(",", ":")) + "\n",
                         encoding="utf-8")
     manifest["counts"]["government"] = len(all_rows)
-    period = re.search(r"20\\d{2}-\\d{2}", manifest["sources"].get("shop", ""))
+    period = re.search(r"20\d{2}-\d{2}", manifest["sources"].get("shop", ""))
     snapshot = period.group() if period else "latest"
     manifest["sources"]["government"] = (
         f"SEMAS {snapshot} named government buildings + OpenStreetMap government POIs "
