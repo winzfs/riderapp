@@ -49,7 +49,12 @@ async function check(width,native){
  const nav=p.getByRole('navigation',{name:'주 메뉴'});
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();await p.getByRole('button',{name:'2026-11-16 운행 3회',exact:true}).click();await p.getByRole('heading',{name:'하루 전체 경로'}).waitFor();await p.waitForFunction(()=>document.querySelector('.rs56-day-map .map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
  if(baseline)await shot('timeline');else {
- await layout('timeline');assert.equal(await p.locator('.rs56-ride-choice').count(),3);
+ await layout('timeline');
+ const recap=p.locator('.rs33-timeline .rs-game-recap');
+ assert.equal(await recap.count(),1,'completed day should render one passive result card');
+ assert.match(await recap.innerText(),/\+40 XP/,'same-day rides award XP once');
+ assert.equal(await recap.locator('.rs-game-recap-award').count(),1,'first ride achievement unlocks only once');
+ assert.equal(await p.locator('.rs56-ride-choice').count(),3);
  const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60','100'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
  await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);
  await player.locator('.rs59-seek').focus();await player.locator('.rs59-seek').press('End');await player.getByRole('button',{name:'경로 재생 종료하고 전체 경로 보기'}).click();
@@ -125,7 +130,16 @@ async function check(width,native){
  assert.ok(await categories.evaluate(el=>el.scrollLeft)>initialScroll,'category next control must scroll the full labels into view');
  await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
  }
- await nav.getByRole('button',{name:'내 정보',exact:true}).click();await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
+ await nav.getByRole('button',{name:'내 정보',exact:true}).click();await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');
+ assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);
+ const game=p.locator('.rs-game-profile');
+ await game.waitFor();
+ assert.match(await game.innerText(),/첫 출발/);
+ assert.equal(await game.getByRole('progressbar',{name:'다음 라이더 레벨까지 경험치'}).getAttribute('aria-valuenow'),'40');
+ await game.locator('.rs-game-collection summary').click();
+ assert.equal(await game.locator('.rs-game-achievement').count(),5,'all collectible badges visible');
+ assert.equal(await game.locator('.rs-game-achievement.rs-game-earned').count(),1);
+ await shot('profile-achievements');await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
  if(!baseline){await nav.getByRole('button',{name:'지도',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);
  // Verify the new live map after validating previously saved data, so
  // simulated active-trip recovery cannot change the legacy snapshot assertion.
