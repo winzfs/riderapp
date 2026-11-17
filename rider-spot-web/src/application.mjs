@@ -919,7 +919,7 @@ export function mountApplication({
     if (selected)
       return H(
         "section",
-        { className: "page narrow rc-community rc-detail" },
+        { className: "page narrow rc-community rc-detail rs63-post-detail" },
         back(),
         H(
           "div",
@@ -982,43 +982,64 @@ export function mountApplication({
         H(
           "div",
           { className: "rc-detail-actions rs33-detail-actions" },
-          like(selected),
-          H("span", null, "댓글 ", count(selected, "comments")),
-          H(BookmarkButton, {
-            user: u,
-            kind: "post",
-            id: selected.id,
-            onLogin: login,
-            notify: toast,
-          }),
-          u?.id === selected.user_id
-            ? H(
-                "button",
-                { type: "button", onClick: editPost, disabled: busy },
-                "수정",
-              )
-            : null,
-          u?.id === selected.user_id
-            ? H(
-                "button",
-                {
-                  type: "button",
-                  onClick: removePost,
-                  disabled: busy,
-                  className: "rc-delete",
-                },
-                "삭제",
-              )
-            : H(
-                "button",
-                {
-                  type: "button",
-                  onClick: () =>
-                    u ? setReporting((value) => !value) : login(),
-                  "aria-expanded": reporting,
-                },
-                "신고",
-              ),
+          H(
+            "div",
+            { className: "rs63-post-primary-actions" },
+            like(selected),
+            H(
+              "button",
+              {
+                type: "button",
+                className: "rs63-comment-jump",
+                onClick: () =>
+                  document.getElementById("rs-community-comments")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  }),
+              },
+              "댓글 ",
+              count(selected, "comments"),
+            ),
+            H(BookmarkButton, {
+              user: u,
+              kind: "post",
+              id: selected.id,
+              onLogin: login,
+              notify: toast,
+            }),
+          ),
+          H(
+            "div",
+            { className: "rs63-post-manage-actions" },
+            u?.id === selected.user_id
+              ? H(
+                  "button",
+                  { type: "button", onClick: editPost, disabled: busy },
+                  "수정",
+                )
+              : null,
+            u?.id === selected.user_id
+              ? H(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: removePost,
+                    disabled: busy,
+                    className: "rc-delete",
+                  },
+                  "삭제",
+                )
+              : H(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () =>
+                      u ? setReporting((value) => !value) : login(),
+                    "aria-expanded": reporting,
+                  },
+                  "신고",
+                ),
+          ),
         ),
         reporting
           ? H(
@@ -1039,7 +1060,7 @@ export function mountApplication({
               ),
             )
           : null,
-        H("h3", { className: "rc-comments-title" }, "댓글 ", comments.length),
+        H("h2", { className: "rc-comments-title", id: "rs-community-comments" }, "댓글 ", comments.length),
         H(
           "div",
           { className: "rc-comments" },
@@ -1066,9 +1087,10 @@ export function mountApplication({
         H(
           "form",
           { className: "rc-comment-form", onSubmit: submitComment },
-          H("input", {
+          H("textarea", {
             name: "comment",
             required: true,
+            rows: 2,
             maxLength: 1000,
             placeholder: "댓글을 남겨주세요.",
             "aria-label": "댓글",
