@@ -51,7 +51,7 @@ jobs:
             echo "POI snapshot unchanged."
             exit 0
           fi
+          git commit -m "data(poi): refresh Gwangsan OSM facilities [skip ci]"
           git fetch origin feature/rider-spot-native-apk
           git rebase origin/feature/rider-spot-native-apk
-          git commit -m "data(poi): refresh Gwangsan OSM facilities [skip ci]"
           git push origin HEAD:feature/rider-spot-native-apk
