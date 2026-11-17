@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_UI_URL: https://5bc46df5-rider-spot.jazzhjm.workers.dev/
+      RIDER_UI_URL: https://a0c8b1be-rider-spot.jazzhjm.workers.dev/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,7 +31,7 @@ jobs:
       - name: Diagnose preview HTTP responses
         shell: bash
         run: |
-          for target in https://5bc46df5-rider-spot.jazzhjm.workers.dev/ https://a8340454-rider-spot.jazzhjm.workers.dev/ https://5bc46df5-rider-spot.jazzhjm.workers.dev/mapdata/manifest.json; do
+          for target in https://a0c8b1be-rider-spot.jazzhjm.workers.dev/ https://a8340454-rider-spot.jazzhjm.workers.dev/ https://a0c8b1be-rider-spot.jazzhjm.workers.dev/mapdata/manifest.json; do
             echo "Probe: $target"
             curl -sSL --max-time 20 -A 'Mozilla/5.0 RiderSpot-QA' -D /tmp/rs-headers -o /tmp/rs-body "$target" || true
             head -n 12 /tmp/rs-headers
@@ -42,7 +42,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, urllib.request
-          root = 'https://5bc46df5-rider-spot.jazzhjm.workers.dev'
+          root = 'https://a0c8b1be-rider-spot.jazzhjm.workers.dev'
           def load(path):
             request = urllib.request.Request(root + path, headers={'User-Agent':'Mozilla/5.0 RiderSpot-QA','Accept':'application/json,text/html,*/*'})
             with urllib.request.urlopen(request, timeout=30) as response:
@@ -53,7 +53,7 @@ jobs:
                 return json.loads(payload)
               return payload.decode('utf-8')
           html = load('/')
-          assert 'd115d01665eb' in html, 'Expected new release missing'
+          assert '7b9151a5e772' in html, 'Expected new release missing'
           manifest = load('/mapdata/manifest.json')
           assert manifest['coverage'] == '광주광역시'
           assert manifest['counts']['shop'] > 50000
@@ -62,8 +62,10 @@ jobs:
           assert len(admin) >= 100
           shops = load('/mapdata/t3170-879.json')
           assert any(row[3] == 'shop' for row in shops)
-          app = load('/assets/rider-spot-d115d01665eb/app.mjs')
+          app = load('/assets/rider-spot-7b9151a5e772/app.mjs')
           assert 'rs-public-apartment-label' in app
+          assert 'rs47-gwangsan-overview' not in app, 'Legacy manual dong names still bundled'
+          assert 'within' in app, 'Missing geographic label de-duplication'
           print('PASS preview: regions',len(admin),'businesses',manifest['counts']['shop'],'tile samples',len(shops))
           PY
       - run: npx playwright install --with-deps chromium
