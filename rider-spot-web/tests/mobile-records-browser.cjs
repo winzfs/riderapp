@@ -18,11 +18,30 @@ async function run(browser,width,height){
     localStorage.setItem("rs:trips:"+userId,JSON.stringify(trips));
   },{session,trips,userId});
   const records=[{id:"11111111-1111-4111-8111-111111111113",serviced_on:date,item:"엔진오일",odometer_km:24500,cost_won:24000,user_id:userId}];
-  const totals={};let fail=true;
+  const totals={};let fail=true,failVehicle=true;
+  const vehicle={user_id:userId,vehicle_name:"PCX125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
+  const cycles=[{user_id:userId,item_key:"엔진오일",interval_km:3000,interval_days:null}];
+  const vehicleChanges=[];
   await context.routeWebSocket("**/realtime/**",socket=>socket.close());
   await context.route("**/*",async route=>{
     const url=new URL(route.request().url()),table=url.pathname.split("/").pop();
     if(url.hostname.endsWith(".supabase.co")){
+      if(table==="rider_vehicle_profiles" && route.request().method()!=="GET"){
+        const payload=route.request().postDataJSON();
+        vehicleChanges.push(payload);
+        if(failVehicle){failVehicle=false;return route.fulfill({status:503,json:{message:"테스트 계기판 저장 실패"}});}
+        if(payload.odometer_km!==undefined && payload.odometer_km!==vehicle.odometer_km)
+          vehicle.odometer_recorded_on="2026-11-17";
+        Object.assign(vehicle,payload);
+        return route.fulfill({json:{user_id:userId}});
+      }
+      if(table==="rider_maintenance_cycles" && route.request().method()!=="GET"){
+        for(const payload of route.request().postDataJSON()){
+          const old=cycles.find(x=>x.item_key===payload.item_key);
+          if(old)Object.assign(old,payload);else cycles.push(payload);
+        }
+        return route.fulfill({json:cycles});
+      }
       if(table==="set_rider_daily_income"){
         if(fail){fail=false;return route.fulfill({status:503,json:{message:"테스트 연결 오류"}});}
         const data=route.request().postDataJSON();assert.equal(data.p_date,date);Object.assign(totals,data.p_values);return route.fulfill({status:204});
@@ -34,7 +53,7 @@ async function run(browser,width,height){
       }
       const data={user,trips,maintenance_logs:[...records].sort((a,b)=>b.serviced_on.localeCompare(a.serviced_on)),
         rider_earnings:Object.entries(totals).map(([platform,amount])=>({platform,gross_won:amount||0,gross_entered:amount!=null})),
-        rider_vehicle_profiles:{vehicle_name:"PCX125"},rider_maintenance_cycles:[{item_key:"엔진오일",interval_km:3000}]}[table]??[];
+        rider_vehicle_profiles:vehicle,rider_maintenance_cycles:cycles}[table]??[];
       return route.fulfill({json:data});
     }
     if(["tiles.openfreemap.org","cdn.jsdelivr.net","tile.openstreetmap.org"].includes(url.hostname))return route.continue();
@@ -58,8 +77,31 @@ async function run(browser,width,height){
     await page.locator(".ride-launch button").waitFor();
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
-    await shot("bike");await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
+    await shot("bike");
+    assert.ok(await page.locator(".bike-item-icon svg").count()>=4,"maintenance icons render");
     const dialog=page.getByRole("dialog");
+    await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
+    await dialog.getByLabel("현재 계기판 (km)").fill("25700");
+    await dialog.getByRole("button",{name:"계기판 저장"}).click();
+    await dialog.getByRole("alert").waitFor();
+    assert.equal(await dialog.getByLabel("현재 계기판 (km)").inputValue(),"25700");
+    await dialog.getByRole("button",{name:"계기판 저장"}).click();
+    await page.getByText("25,700 km",{exact:true}).first().waitFor();
+    assert.equal(vehicle.odometer_recorded_on,"2026-11-17");
+    await page.getByRole("button",{name:"차량명 수정",exact:true}).click();
+    await dialog.getByLabel("차량명").fill("PCX125 라이더");
+    await dialog.getByRole("button",{name:"차량명 저장"}).click();
+    await page.getByRole("heading",{name:"PCX125 라이더"}).waitFor();
+    assert.equal(vehicle.odometer_km,25700);
+    assert.equal(vehicle.odometer_recorded_on,"2026-11-17","renaming preserves odometer date");
+    assert.deepEqual(vehicleChanges.at(-1),{vehicle_name:"PCX125 라이더"},"name-only update payload");
+    await page.getByRole("button",{name:"교체 주기 설정",exact:true}).click();
+    await dialog.getByLabel("교체 거리 (km)").first().fill("4000");
+    await dialog.getByRole("button",{name:"교체 주기 저장"}).click();
+    await page.getByText("다음 28,500 km",{exact:true}).waitFor();
+    assert.equal(cycles[0].interval_km,4000);
+    await shot("bike-updated");
+    await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     await dialog.getByRole("button",{name:"앞 타이어",exact:true}).click();
     await dialog.getByLabel("정비 날짜").fill("2026-11-15");
     await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
@@ -102,6 +144,9 @@ async function run(browser,width,height){
     await page.getByRole("button",{name:"경로 재생 시작"}).first().click();
     await page.getByRole("button",{name:"‹ 하루 전체"}).click();await page.locator(".rs56-day-map").waitFor();
     assert.deepEqual(totals,{"쿠팡이츠":120000,"배민":null});
+    await page.evaluate(()=>window.__rsOpenTool("maintenance"));
+    await page.locator(".bike-vehicle").waitFor();
+    assert.equal(await page.locator("section#rs-tools:not([hidden])").count(),0,"legacy maintenance route is redirected");
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
