@@ -1332,7 +1332,7 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .app .bottom-nav button.active{color:#a34518;font-weight:800}
 .app .bottom-nav button.active:before{content:"";position:absolute;top:1px;width:24px;height:3px;border-radius:3px;background:currentColor}
 .ride-launch{padding:7px 16px;background:white;text-align:center}
-.ride-launch button,.app .record-primary{background:#ad471b;color:white;border:0;border-radius:12px;min-height:48px;font-size:16px;font-weight:750;padding:9px 18px}
+.ride-launch button,.record-primary{background:#ad471b;color:white;border:0;border-radius:12px;min-height:48px;font-size:16px;font-weight:750;padding:9px 18px}
 .ride-launch button{width:min(100%,540px)}
 .ride-launch.active button{width:auto;min-height:44px;background:#fff2e6;color:#92380d}
 .ride-launch.active button:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#df692e;margin-right:8px}
@@ -1353,7 +1353,9 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .bike-row[aria-pressed=true]{color:#a44116;background:#fff5ed}
 .bike-links{border-top:1px solid #d9dfdb;margin-top:18px;flex-wrap:wrap}
 .app .record-income{width:100%;border-top:1px solid #dde3df;padding:8px 2px;margin-top:5px;color:#293830}.record-income strong{color:#a44116}
-.modal-backdrop:has(.record-sheet){z-index:12000;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.record-surface[open]{position:fixed;inset:0 0 auto;display:flex;align-items:flex-end;justify-content:center;width:100%;max-width:100%;max-height:none;margin:0;border:0;padding:0;background:transparent;color:inherit}
+.record-surface::backdrop{background:#15242266}
+.record-surface .record-sheet{max-height:96%;box-shadow:0 -8px 32px #17251c1a}
 .record-sheet{display:flex;flex-direction:column;background:#fff;width:min(100%,560px);max-height:96dvh;border-radius:20px 20px 0 0;color:#243034;overflow:hidden}
 .record-sheet>header,.record-sheet>footer{position:static;display:flex;flex:none;align-items:center;justify-content:space-between;padding:10px 18px;background:white;height:auto}
 .record-sheet h2{font-size:20px;margin:0}.record-sheet button,.record-sheet summary{min-height:44px}

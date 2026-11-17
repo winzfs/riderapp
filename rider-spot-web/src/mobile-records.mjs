@@ -1,5 +1,4 @@
 import { rs33ISO } from "./timeline-dates.mjs";
-import { createUI } from "./ui.mjs";
 import scooter from "./scooter.svg";
 
 const platforms = ["쿠팡이츠", "배민"];
@@ -22,13 +21,21 @@ async function pages(query) {
 }
 export function createRecords(R, client) {
   const h = R.createElement;
-  const { DialogSurface } = createUI(R);
+
   const field = (label, props) => h("label", null, label, h("input", props));
   const btn = (label, click, props = {}) => h("button", {type:"button", onClick:click, ...props}, label);
   function Sheet({title, date, close, save, submit, children}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
     const lock = R.useRef(false);
+    const surface=R.useRef(null);
+    R.useLayoutEffect(()=>{
+      const node=surface.current, viewport=window.visualViewport;
+      node.showModal();
+      const size=()=>{node.style.height=(viewport?.height||innerHeight)+"px";node.style.top=(viewport?.offsetTop||0)+"px";};
+      size(); viewport?.addEventListener("resize",size); viewport?.addEventListener("scroll",size);
+      return ()=>{viewport?.removeEventListener("resize",size);viewport?.removeEventListener("scroll",size);node.close();};
+    },[]);
     const dismiss = () => { if (!lock.current) close(); };
     const latest = R.useRef(dismiss);
     latest.current = dismiss;
@@ -42,7 +49,7 @@ export function createRecords(R, client) {
         if(history.state?.recordSheet === marker) history.back();
       };
     }, []);
-    return h(DialogSurface,{onClose:dismiss},h("form",{className:"record-sheet",role:"dialog","aria-modal":true,"aria-label":title,
+    return h("dialog",{ref:surface,className:"record-surface","aria-label":title,onCancel:e=>{e.preventDefault();dismiss();},onClick:e=>{if(e.target===e.currentTarget)dismiss();}},h("form",{className:"record-sheet",
       onSubmit:async event=>{
         event.preventDefault();
         if(lock.current) return;
