@@ -46,6 +46,10 @@ jobs:
             --shops /tmp/rider-spot-korean-refresh/shops.csv \
             --admin /tmp/rider-spot-korean-refresh/emd.geojson \
             --source-metadata /tmp/rider-spot-korean-refresh/source.json
+      - name: Validate public government name extraction
+        run: python3 -m unittest discover -s tests -p 'test_korean_government.py' -v
+      - name: Refresh public government text labels
+        run: python3 scripts/refresh-korean-government.py
       - name: Guard against empty, mislocated or dramatically shrunken data
         run: |
           python3 - <<'PY'
@@ -55,7 +59,7 @@ jobs:
           previous=json.loads(subprocess.check_output([
             'git','show','HEAD:rider-spot-web/data/korean-map/manifest.json'
           ]))
-          for key in ('shop','apartment','building','region'):
+          for key in ('shop','apartment','building','region','government'):
             count=current['counts'].get(key, 0)
             baseline=previous['counts'].get(key, 0)
             if not baseline or not (0.7*baseline <= count <= 1.5*baseline):
