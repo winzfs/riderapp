@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile, readdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -67,8 +67,14 @@ const encoded = {
   "tab-resume.js": tabResume,
   "daily-timeline.css": dailyCss,
 };
+const mapDataDir = join(root, "data/korean-map");
+const mapNames = await readdir(mapDataDir).catch(() => []);
+const publicMapData = Object.fromEntries(await Promise.all(
+  mapNames.filter((name) => /^(?:admin|manifest|t\d+-\d+)\.json$/.test(name))
+    .map(async (name) => ["/mapdata/" + name, await readFile(join(mapDataDir, name), "utf8")]),
+));
 const hash = createHash("sha256")
-  .update(JSON.stringify([encoded, template, previousSw]))
+  .update(JSON.stringify([encoded, template, previousSw, publicMapData]))
   .digest("hex")
   .slice(0, 12);
 const base = `/assets/rider-spot-${hash}`;
@@ -115,7 +121,7 @@ const core = [
 const serviceWorker = previousSw
   .replace(/^const CACHE=.*$/m, `const CACHE='rider-spot-shell-${hash}';`)
   .replace(/^const CORE=.*$/m, `const CORE=${JSON.stringify(core)};`);
-const files = { ...versioned, "/index.html": html, "/sw.js": serviceWorker };
+const files = { ...versioned, ...publicMapData, "/index.html": html, "/sw.js": serviceWorker };
 for (const [path, contents] of Object.entries(files)) {
   const target = join(out, path);
   await mkdir(resolve(target, ".."), { recursive: true });
