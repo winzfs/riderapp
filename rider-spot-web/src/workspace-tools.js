@@ -1088,6 +1088,7 @@ import { iconMarkup } from "./ui.mjs";
           q
             .from("rider_earnings")
             .select("*")
+            .eq("user_id", S.user.id)
             .order("work_date", { ascending: false })
             .limit(300),
       ],
@@ -1107,6 +1108,7 @@ import { iconMarkup } from "./ui.mjs";
           q
             .from("maintenance_logs")
             .select("*")
+            .eq("user_id", S.user.id)
             .order("serviced_on", { ascending: false })
             .limit(150),
       ],
