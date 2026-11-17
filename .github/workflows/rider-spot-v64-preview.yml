@@ -1,4 +1,4 @@
-name: Rider Spot v64 preview live browser acceptance
+name: Rider Spot v65 preview browser acceptance
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -29,16 +29,16 @@ jobs:
           sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
       - name: Verify actual deployed candidate at mobile widths and WebView
         env:
-          RIDER_UI_URL: https://56492d53-rider-spot.jazzhjm.workers.dev/
+          RIDER_UI_URL: https://cc559935-rider-spot.jazzhjm.workers.dev/
         run: node tests/ui-browser.cjs
       - name: Journey regression at production candidate
         env:
-          RIDER_UI_URL: https://56492d53-rider-spot.jazzhjm.workers.dev/
+          RIDER_UI_URL: https://cc559935-rider-spot.jazzhjm.workers.dev/
         run: node tests/journey-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rider-v64-preview-evidence
+          name: rider-v65-preview-evidence
           path: |
             /tmp/rider-ui-evidence
             /tmp/rider-journey-evidence
