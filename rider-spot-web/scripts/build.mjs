@@ -70,7 +70,7 @@ const encoded = {
 const mapDataDir = join(root, "data/korean-map");
 const mapNames = await readdir(mapDataDir).catch(() => []);
 const publicMapData = Object.fromEntries(await Promise.all(
-  mapNames.filter((name) => /^(?:admin|manifest|t\d+-\d+)\.json$/.test(name))
+  mapNames.filter((name) => /^(?:admin|government|manifest|t\d+-\d+)\.json$/.test(name))
     .map(async (name) => ["/mapdata/" + name, await readFile(join(mapDataDir, name), "utf8")]),
 ));
 const hash = createHash("sha256")
