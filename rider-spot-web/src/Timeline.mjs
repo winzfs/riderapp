@@ -368,7 +368,8 @@ export function createTimeline(S, Zo) {
       setReset((value) => value + 1);
     }
     async function finish() {
-      if (!ride.trip) return;
+      if (!ride.trip || ride.busy) return;
+      if (!window.confirm("운행 기록을 종료하고 이 기기에 저장할까요?")) return;
       const currentId = ride.trip.id;
       try {
         await ride.finish();
@@ -681,8 +682,8 @@ export function createTimeline(S, Zo) {
                 ),
                 rs33J(
                   "button",
-                  { type: "button", className: "primary", onClick: finish },
-                  "운행 종료",
+                  { type: "button", className: "primary", onClick: finish, disabled: ride.busy },
+                  ride.busy ? "저장 중…" : "운행 종료",
                 ),
               )
             : null,
