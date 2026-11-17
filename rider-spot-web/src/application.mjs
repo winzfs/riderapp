@@ -2311,6 +2311,15 @@ export function mountApplication({
     window.__rsRideApi = p;
     window.__rsGoToTab = t;
     window.__rsActiveTab = e;
+    const rs61Scroll = S.useRef(Object.create(null));
+    S.useEffect(() => {
+      const target = rs61Scroll.current[e] || 0;
+      const frame = requestAnimationFrame(() => window.scrollTo(0, target));
+      return () => {
+        cancelAnimationFrame(frame);
+        rs61Scroll.current[e] = window.scrollY;
+      };
+    }, [e]);
     (0, S.useEffect)(() => {
       const listener = (event) => {
         if (rs33LayerItems.some(([id]) => id === event.detail))
@@ -2332,7 +2341,6 @@ export function mountApplication({
     }
     ((0, S.useEffect)(() => {
       window.dispatchEvent(new Event("riderspot:screen"));
-      window.scrollTo(0, 0);
     }, [e]),
       (0, S.useEffect)(() => {
         if (e !== `nearby`) return;
@@ -2534,6 +2542,49 @@ export function mountApplication({
                                 p.locate().catch((e) => f(e.message)),
                               children: (0, J.jsx)(ge, { size: 23 }),
                             }),
+                          ],
+                        }),
+                        (0, J.jsxs)("div", {
+                          className: "rs61-home-dock",
+                          "aria-label": "운행 기록 제어",
+                          children: [
+                            (0, J.jsxs)("div", {
+                              children: [
+                                (0, J.jsx)("strong", {
+                                  children: p.trip ? (p.paused ? "휴식 중" : "운행 기록 중") : "오늘의 운행을 기록하세요",
+                                }),
+                                (0, J.jsx)("small", {
+                                  children: p.trip
+                                    ? (Math.max(0, Math.floor((Date.now() - Date.parse(p.trip.started_at || Date.now())) / 60000)) + "분 · " +
+                                       (Number(p.trip.distance_km) || 0).toFixed(1) + "km · " +
+                                       (p.gpsStatus === "ready" ? "GPS 정상" : "GPS 확인 필요"))
+                                    : "공유 설정과 별개로 내 기록만 저장돼요",
+                                }),
+                              ],
+                            }),
+                            p.trip
+                              ? (0, J.jsxs)("div", {
+                                  className: "rs61-ride-actions",
+                                  children: [
+                                    (0, J.jsx)("button", {
+                                      type: "button",
+                                      disabled: p.busy,
+                                      onClick: () => Promise.resolve(p.togglePause()).catch(err => f(err?.message || "휴식 상태를 변경하지 못했어요.")),
+                                      children: p.paused ? "재개" : "휴식",
+                                    }),
+                                    (0, J.jsx)("button", {
+                                      type: "button",
+                                      onClick: () => t("trips"),
+                                      children: "기록 보기",
+                                    }),
+                                  ],
+                                })
+                              : (0, J.jsx)("button", {
+                                  type: "button",
+                                  disabled: p.busy,
+                                  onClick: () => Promise.resolve(p.startTrip()).catch(err => f(err?.message || "운행을 시작하지 못했어요.")),
+                                  children: p.busy ? "확인 중…" : "운행 시작",
+                                }),
                           ],
                         }),
                       ],
