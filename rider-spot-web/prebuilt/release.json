@@ -1,14 +1,14 @@
 {
-  "hash": "160c9dd1794d",
+  "hash": "57490940f560",
   "files": [
-    "/assets/rider-spot-160c9dd1794d/app.mjs",
-    "/assets/rider-spot-160c9dd1794d/route-worker.mjs",
-    "/assets/rider-spot-160c9dd1794d/native-gps.js",
-    "/assets/rider-spot-160c9dd1794d/map-reports.js",
-    "/assets/rider-spot-160c9dd1794d/design-system.css",
-    "/assets/rider-spot-160c9dd1794d/workspace-tools.js",
-    "/assets/rider-spot-160c9dd1794d/tab-resume.js",
-    "/assets/rider-spot-160c9dd1794d/daily-timeline.css",
+    "/assets/rider-spot-57490940f560/app.mjs",
+    "/assets/rider-spot-57490940f560/route-worker.mjs",
+    "/assets/rider-spot-57490940f560/native-gps.js",
+    "/assets/rider-spot-57490940f560/map-reports.js",
+    "/assets/rider-spot-57490940f560/design-system.css",
+    "/assets/rider-spot-57490940f560/workspace-tools.js",
+    "/assets/rider-spot-57490940f560/tab-resume.js",
+    "/assets/rider-spot-57490940f560/daily-timeline.css",
     "/index.html",
     "/sw.js"
   ]
