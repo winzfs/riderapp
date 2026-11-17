@@ -245,3 +245,22 @@ svg.rs-icon{flex:none;vertical-align:middle}
 @media(max-width:760px){.desktop-nav{display:none}.workspace{display:block}.desktop-tag{display:none}}
 @media(min-width:761px){:root{--rs-nav-height:0px;--rs-space:28px;--rs-header-height:64px}.bottom-nav{display:none}.workspace{display:grid;grid-template-columns:210px minmax(0,1fr)}.desktop-nav{padding:24px 14px;border-right:1px solid var(--rs-line);background:#fff}.desktop-nav>p{font-size:10px;color:var(--rs-muted);letter-spacing:.1em;margin:0 12px 18px}.desktop-nav>button{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px;border:0;border-radius:12px;background:transparent;color:var(--rs-muted);font-size:13px;margin-bottom:5px}.desktop-nav>button.active{color:var(--rs-primary);background:var(--rs-soft)}.sidebar-bottom{background:var(--rs-bg);border:0;border-radius:12px;font-size:12px}.nearby.nearby-full{height:calc(100dvh - var(--rs-header-height))}.rs33-map-bar{padding:12px 24px 0}.modal-backdrop{align-items:center;padding:24px}.modal,.rs-map-sheet{border-radius:22px}.rs-sheet-backdrop{align-items:center;padding:24px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* v61: GPS tracking stays visible at the map home without hiding map gestures. */
+.rs61-home-dock{flex:none;display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--rs-line);background:#fff;min-height:72px;box-shadow:0 -2px 12px #15332b08;position:relative;z-index:950}
+.rs61-home-dock>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs61-home-dock strong{font-weight:700;color:var(--rs-text);font-size:15px;line-height:1.3}
+.rs61-home-dock small{font-size:12px;line-height:1.45;color:var(--rs-muted);font-variant-numeric:tabular-nums;word-break:keep-all}
+.rs61-home-dock button{min-height:48px;flex:none;font-weight:700;padding:10px 16px;background:var(--rs-primary);border-color:var(--rs-primary);color:#fff}
+.rs61-home-dock .rs61-ride-actions{display:flex;gap:6px;align-items:center}
+.rs61-home-dock .rs61-ride-actions button{padding-inline:12px;font-size:12px}
+.rs61-home-dock .rs61-ride-actions button:first-child{background:#f4f8f6;color:var(--rs-primary);border-color:#e1eae4}
+.rs61-home-dock button:focus-visible{outline:3px solid #1c7c6e}
+.rs61-home-dock button:disabled{opacity:.55}
+.rs33-course-map>.rs43-current-position{position:absolute;right:12px;bottom:12px;top:auto;left:auto;z-index:1250;min-width:48px;min-height:48px;padding:10px 13px;background:#fff;border:1px solid var(--rs-line);border-radius:12px;box-shadow:var(--rs-shadow);color:var(--rs-primary);font-size:13px;font-weight:700;pointer-events:auto}
+.rs33-course-map>.rs43-current-position:active{background:var(--rs-soft)}
+.rs33-trip-summary .rs-metrics dd,.rs33-timeline .rs-metrics dd{white-space:nowrap;word-break:keep-all;font-size:clamp(17px,4.8vw,25px)}
+.rs33-trip-summary .rs-metrics dd small,.rs33-timeline .rs-metrics dd small{white-space:nowrap}
+.rc-categories{scroll-padding-inline:12px;overscroll-behavior-inline:contain}
+.rc-row-meta{font-size:12px}
+@media(max-width:360px){.rs61-home-dock{padding-inline:10px;gap:7px}.rs61-home-dock .rs61-ride-actions button{padding-inline:9px}.rs61-home-dock small{font-size:11px}}
