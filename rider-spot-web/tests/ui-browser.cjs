@@ -28,7 +28,7 @@ async function check(width,native){
   if(r.request().method()!=='GET')return r.fulfill({status:201,json:{}});
   return r.fulfill({json:data});
  }if(u.pathname==='/api/industry-news')return r.fulfill({json:{items:[]}});if(u.pathname==='/api/route-match')return r.fulfill({json:{lines:[]}});return r.continue();});
- const p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));const mode=(baseline?'before':'after')+'-'+width+'-'+(native?'native':'web');
+ const p=await ctx.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.stack||e.message));const mode=(baseline?'before':'after')+'-'+width+'-'+(native?'native':'web');
  const shot=async name=>p.screenshot({path:path.join(out,mode+'-'+name+'.png'),fullPage:false});
  async function layout(name){await p.waitForTimeout(180);const x=await p.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,body:document.body.scrollWidth}));assert.ok(x.scroll<=width+1&&x.body<=width+1,name+' horizontal overflow '+JSON.stringify(x));await shot(name);const nav=await p.locator('.bottom-nav').boundingBox();assert.ok(nav&&nav.y+nav.height<=845&&nav.y>=760,'navigation safe bounds');}
  try{
