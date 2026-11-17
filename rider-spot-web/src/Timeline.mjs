@@ -1066,7 +1066,7 @@ export function createTimeline(S, Zo) {
                           rs33Time(focused.time) + " · " + focused.label,
                         )
                       : null,
-                  ),,
+                  ),
                   dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
                     ? rs33J("details", { className: "rs56-stop-events" },
                         rs33J("summary", null,
