@@ -530,12 +530,13 @@ export function mountApplication({
       });
       setEditArea(false);
     }
-    function write() {
+    function write(preferredCategory) {
       if (!u) return login();
       setEditing(null);
       setContext(null);
-      setWriteCategory(rs.includes(draft.category) ? draft.category : cat === "전체" ? "동네 이야기" : cat);
-      setScope(["all", "local"].includes(draft.scope) ? draft.scope : regional && !isNews ? "local" : "all");
+      const directCategory = typeof preferredCategory === "string" && rs.includes(preferredCategory) ? preferredCategory : null;
+      setWriteCategory(directCategory || (rs.includes(draft.category) ? draft.category : cat === "전체" ? "동네 이야기" : cat));
+      setScope(directCategory ? (regional ? "local" : "all") : (["all", "local"].includes(draft.scope) ? draft.scope : regional && !isNews ? "local" : "all"));
       setPhoto(null);
       setCompose(true);
       setSelected(null);
@@ -1301,6 +1302,12 @@ export function mountApplication({
           "＋ 글쓰기",
         ),
       ),
+      H("section", { className: "rs-lounge-quick", "aria-label": "동네 라이더 라운지" },
+        H("div", { className: "rs-lounge-title" },
+          H("div", null, H("strong", null, "동네 라이더 라운지"), H("small", null, areaLabel + " · 기존 게시판에서 이어져요"))),
+        H("div", { className: "rs-lounge-actions" },
+          H("button", { type: "button", onClick: () => write("질문·노하우") }, "동네에 질문하기 ↗"),
+          H("button", { type: "button", onClick: () => write("현장 정보") }, "현장 정보 나누기 ↗"))),
       H(
         "div",
         { className: "rc-controls" },
@@ -1778,7 +1785,7 @@ export function mountApplication({
             ],
           ],
         }),
-        (0, J.jsx)(RiderProgressCard, { history }),
+        (0, J.jsx)(RiderProgressCard, { history, userId: e?.id }),
         (0, J.jsx)(JourneyPanel, { history, userId: e?.id, riding, onTimeline }, e?.id || "guest"),
         (0, J.jsx)(ProfileTools, {
           user: e,

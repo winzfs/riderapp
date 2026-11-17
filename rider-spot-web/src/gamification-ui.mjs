@@ -1,3 +1,4 @@
+import { rideRecapText } from "./ride-insights.mjs";
 import { riderDayResult, riderProgress } from "./gamification.mjs";
 
 // Optional, presentation-only components. No hooks, dialogs, route collection,
@@ -16,10 +17,22 @@ export function createGamificationUI(React) {
     }, badge.icon);
   }
 
-  function RiderProgressCard({ history }) {
+  function RiderProgressCard({ history, userId }) {
     const progress = riderProgress(history);
+    const key = "riderspot:profile-badge:v1:" + (userId || "guest");
+    const [chosen, setChosen] = React.useState(() => {
+      try { return window.localStorage.getItem(key) || ""; } catch { return ""; }
+    });
+    React.useEffect(() => {
+      try { setChosen(window.localStorage.getItem(key) || ""); } catch { setChosen(""); }
+    }, [key]);
+    const chosenBadge = progress.badges.find(b => b.id === chosen && b.unlocked);
+    const selectBadge = id => {
+      setChosen(id);
+      try { if (id) window.localStorage.setItem(key, id); else window.localStorage.removeItem(key); } catch {}
+    };
     return h("section", {
-      className: "rs-game-profile",
+      className: "rs-game-profile" + (chosenBadge ? " rs-game-profile-featured" : ""),
       "aria-label": "내 라이더 성장 기록",
     },
       h("div", { className: "rs-game-profile-top" },
@@ -29,8 +42,8 @@ export function createGamificationUI(React) {
         h("div", { className: "rs-game-profile-title" },
           h("small", null, "MY RIDER JOURNEY"),
           h("strong", null, progress.title),
-          h("span", null, "오늘도 쌓이는 나만의 운행 기록")),
-        h("span", { className: "rs-game-profile-star", "aria-hidden": true }, "✦"),
+          h("span", null, chosenBadge ? "대표 배지 · " + chosenBadge.title : "오늘도 쌓이는 나만의 운행 기록")),
+        h("span", { className: "rs-game-profile-star", "aria-hidden": true }, chosenBadge?.icon || "✦"),
       ),
       h("div", { className: "rs-game-xp-head" },
         h("span", null, "LEVEL PROGRESS"),
@@ -67,7 +80,10 @@ export function createGamificationUI(React) {
               h(Medal, { badge }),
               h("div", null,
                 h("strong", null, badge.title),
-                  h("small", null, badge.unlocked ? badge.detail : badge.kind === "days" ? "기록한 날 " + progress.activeDays + " / " + badge.need + "일" : amount(progress.distanceKm) + " / " + badge.need + " km")),
+                h("small", null, badge.unlocked ? badge.detail : badge.kind === "days" ? "기록한 날 " + progress.activeDays + " / " + badge.need + "일" : amount(progress.distanceKm) + " / " + badge.need + " km"),
+                badge.unlocked ? h("button", { type: "button", className: "rs-game-badge-pick", "aria-pressed": chosenBadge?.id === badge.id,
+                    onClick: () => selectBadge(chosenBadge?.id === badge.id ? "" : badge.id) },
+                  chosenBadge?.id === badge.id ? "대표 배지 사용 중 ✓" : "대표 배지로 꾸미기") : null),
             )),
         ),
         h("p", { className: "rs-game-footnote" },
@@ -77,7 +93,18 @@ export function createGamificationUI(React) {
   }
 
   function DayRideCard({ history, day, celebrate = false }) {
+    const [copyNotice, setCopyNotice] = React.useState("");
     const result = riderDayResult(history, day);
+    const copySummary = async () => {
+      const text = rideRecapText(history, day);
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopyNotice("결산 문구를 복사했어요. 위치와 상세 경로는 포함되지 않아요.");
+      } catch {
+        setCopyNotice("자동 복사가 안 되는 환경이에요. 기록은 그대로 보관돼요.");
+      }
+    };
     if (!result.completedTrips) return null;
     const mins = Math.round(result.durationMs / 60000);
     const time = mins >= 60
@@ -91,7 +118,7 @@ export function createGamificationUI(React) {
         h("span", { className: "rs-game-recap-flare", "aria-hidden": true }, "✦"),
         h("div", null,
           h("small", null, celebrate ? "RIDE COMPLETE" : "TODAY'S JOURNEY"),
-          h("h2", null, celebrate ? "운행 기록 완료!" : "이날의 라이더 기록")),
+          h("h2", null, celebrate ? "운행 기록 완료!" : "오늘의 라이딩 결산")),
         h("span", { className: "rs-game-xp-earned" }, "+" + result.earnedXp + " XP"),
       ),
       h("div", { className: "rs-game-recap-stats" },
@@ -109,6 +136,9 @@ export function createGamificationUI(React) {
           )
         : h("p", { className: "rs-game-recap-message" },
             "오늘의 기록이 한 걸음 더 쌓였어요."),
+      h("div", { className: "rs-game-recap-actions" },
+        h("button", { type: "button", className: "rs-game-copy", onClick: copySummary }, "결산 문구 복사 ↗"),
+        h("small", { role: "status" }, copyNotice || "위치·좌표 없이 기록만 공유할 수 있어요.")),
       h("p", { className: "rs-game-recap-note" },
         "완료된 기록이 있는 날에만 XP가 한 번 지급돼요. 배달 속도나 거리 경쟁은 없어요."),
     );

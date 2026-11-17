@@ -1,3 +1,4 @@
+import { dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
 (function () {
   "use strict";
@@ -277,6 +278,7 @@ import { iconMarkup } from "./ui.mjs";
     );
   }
   function renderEarnings() {
+    const recordedRide = dailyRideSnapshot(window.__rsRideApi?.history, nowDate());
     const all = S.data.earnings,
       month = nowDate().slice(0, 7),
       selected = all.filter((e) => String(e.work_date).startsWith(month));
@@ -335,12 +337,15 @@ import { iconMarkup } from "./ui.mjs";
       "</div>" +
       card(
         "수익 기록",
-        '<p class="rs-small">배민·쿠팡 수입을 따로 입력해도 합산돼요. 앱 내 자동 정산 연동은 아직 아니에요. 주유비는 주유 기록에, 정비비는 정비 관리에 적어 주세요.</p><form class="rs-form" data-rs-form="earnings">' +
+        '<p class="rs-small">배민·쿠팡 수입을 따로 입력해도 합산돼요. 자동 정산 연동은 아니에요. 주유비와 정비비는 각 기록 메뉴에서 관리해요.</p><form class="rs-form" data-rs-form="earnings">' +
           formField("날짜", "work_date", "date", {
             required: true,
             value: nowDate(),
           }) +
           selectField("플랫폼", "platform", ["쿠팡이츠", "배민", "기타"]) +
+          (recordedRide.trips
+            ? '<button type="button" class="rs-ride-prefill" data-rs-fill-ride>↗ 운행 기록에서 시간·거리 가져오기</button><p class="rs-small">선택 날짜의 완료된 운행 전체 기준이에요. 플랫폼별로 수익을 나눠 적을 때는 중복되지 않게 조정하세요.</p>'
+            : "") +
           '<div class="rs-two">' +
           formField("배달 건수", "deliveries", "number", {
             required: true,
@@ -739,6 +744,10 @@ import { iconMarkup } from "./ui.mjs";
     }
     const complete =
       [...platforms.values()].reduce((n, v) => n + v, 0) === total.gross;
+    const rideDates = today ? [nowDate()] : all.map(row => row.day);
+    const rideRows = rideDates.map(day => dailyRideSnapshot(window.__rsRideApi?.history, day));
+    const ride = { trips: rideRows.reduce((n,r) => n + r.trips,0), distanceKm: rideRows.reduce((n,r) => n + r.distanceKm,0), durationMs: rideRows.reduce((n,r) => n + r.durationMs,0) };
+    const efficiency = total.unclassified ? null : rideEfficiency(total.gross - total.cost, ride);
     return (
       '<section class="rs33-work-overview" aria-label="기간별 수익 요약"><div class="rs33-work-summary-head"><h2>수익 요약</h2><div class="rs33-work-period">' +
       ["today", "week"]
@@ -781,6 +790,12 @@ import { iconMarkup } from "./ui.mjs";
             .join("") +
           "</div>"
         : "") +
+      (efficiency && (efficiency.perHour !== null || efficiency.perKm !== null)
+        ? '<div class="rs-work-efficiency" aria-label="기록 기준 수익 효율"><small>완료된 GPS 운행 기록과 입력 수익 기준 · 추정치</small><div>' +
+          (efficiency.perHour !== null ? '<span>시간당 <strong>' + M(efficiency.perHour) + '</strong></span>' : '') +
+          (efficiency.perKm !== null ? '<span>km당 <strong>' + M(efficiency.perKm) + '</strong></span>' : '') +
+          '</div><p>미입력 플랫폼 수익·휴식·비용 등에 따라 실제 시급과 다를 수 있어요.</p></div>'
+        : '') +
       '<button type="button" class="rs-primary" data-rs-income-new>＋ 수익 기록</button></section>'
     );
   }
@@ -1464,6 +1479,17 @@ import { iconMarkup } from "./ui.mjs";
         render();
         root.querySelector('[data-rs-work-period="' + S.period + '"]')?.focus();
         return;
+      }
+      if (x.hasAttribute("data-rs-fill-ride")) {
+        const form = root.querySelector('form[data-rs-form="earnings"]');
+        const when = form?.elements.namedItem("work_date")?.value || nowDate();
+        const snapshot = dailyRideSnapshot(window.__rsRideApi?.history, when);
+        if (!snapshot.trips) return msg("선택한 날짜에 완료된 운행 기록이 없어요.");
+        const hours = form.elements.namedItem("hours");
+        const distance = form.elements.namedItem("distance_km");
+        if (hours) hours.value = (Math.round(snapshot.durationMs / 360000) / 10).toFixed(1);
+        if (distance) distance.value = (Math.round(snapshot.distanceKm * 10) / 10).toFixed(1);
+        return msg("완료된 운행 " + snapshot.trips + "회의 시간과 거리를 채웠어요. 플랫폼별 중복 입력에 주의하세요.");
       }
       if (x.hasAttribute("data-rs-income-new")) {
         S.platform = "";

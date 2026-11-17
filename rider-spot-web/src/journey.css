@@ -67,3 +67,19 @@
  .rs-journey-next-medal{width:51px;height:61px;font-size:28px}.rs-journey-panel .rs-journey-next{gap:11px}
 }
 @media(prefers-reduced-motion:no-preference){.rs-journey-mission.is-done .rs-journey-mission-icon{animation:rs-journey-check .25s ease-out}@keyframes rs-journey-check{from{transform:scale(.86)}to{transform:scale(1)}}}
+
+/* Rider Spot useful-first game layer v2: all cards stay in existing tabs. */
+.rs-rhythm{background:linear-gradient(140deg,#f7faf6,#fff)!important;border-color:#e0eae1!important}
+.rs-rhythm-icon{flex:none;display:grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#e9f2e9;color:#256348;font-size:24px}
+.rs-rhythm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rs-rhythm-stats>div{display:grid;gap:5px;min-width:0;padding:12px 9px;background:#fff;border:1px solid #e7ede4;border-radius:12px}
+.rs-rhythm-stats small{font-size:10px;color:#718077;word-break:keep-all}
+.rs-rhythm-stats strong{font-size:16px;color:#22533e;letter-spacing:-.04em;word-break:keep-all}
+.rs-rhythm-note,.rs-rhythm-empty{margin:12px 0 0;font-size:11px;line-height:1.7;color:#6d7a6e;word-break:keep-all}
+.rs-game-badge-pick{display:inline-flex;align-items:center;min-height:31px;margin:8px 0 0;padding:5px 9px;border:1px solid #c8d8cc;border-radius:8px;background:#f0f5ef;color:#215b45;font-size:11px;font-weight:750;box-shadow:none}
+.rs-game-badge-pick[aria-pressed="true"]{background:#f5e4c6;color:#674b23;border-color:#dbb987}
+.rs-game-profile-featured .rs-game-profile-star{color:#ffde9b;filter:drop-shadow(0 2px 5px #f1be8770)}
+.rs-game-recap-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:13px 0 6px}
+.rs-game-recap-actions .rs-game-copy{min-height:44px;padding:10px 13px;border-radius:11px;background:#215d4a;color:white;border:0;font-size:12px;font-weight:750}
+.rs-game-recap-actions small{flex:1;min-width:120px;font-size:10px;color:#68786c;line-height:1.55}
+@media(max-width:360px){.rs-rhythm-stats{gap:5px}.rs-rhythm-stats>div{padding:10px 6px}.rs-rhythm-stats strong{font-size:13px}}

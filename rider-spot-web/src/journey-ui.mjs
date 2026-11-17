@@ -1,3 +1,4 @@
+import { riderRhythm } from "./ride-insights.mjs";
 import { riderJourney, readRoutine, writeRoutine, routineKey, ROUTINES } from './journey.mjs';
 
 export function createJourneyUI(React) {
@@ -17,6 +18,7 @@ export function createJourneyUI(React) {
   function JourneyPanel({ history, userId, riding = false, onTimeline }) {
     const journey = useJourney(history);
     const { today, days, weekDays, weekKm, weekXp, nextBadge, todayResult } = journey;
+    const rhythm = React.useMemo(() => riderRhythm(history), [history]);
     const [saved, setSaved] = React.useState(() => {
       let state; try { state = readRoutine(window.localStorage, userId, today); } catch { state = {}; }
       return { day: today, user: userId, state };
@@ -52,6 +54,17 @@ export function createJourneyUI(React) {
             h('span', null, d.label), h('b', { 'aria-hidden': true }, d.recorded ? '✦' : d.day.slice(-2)), h('small', null, d.today ? '오늘' : d.recorded ? '완료' : '')))),
         h('div', { className: 'rs-journey-week-stats' }, h('span', null, '주간 기록 ', h('b', null, number(weekKm) + ' km')), h('span', null, '모은 경험치 ', h('b', null, '+' + weekXp + ' XP'))),
         h('p', null, weekDays ? '쉬는 날이 있어도 괜찮아요. 쌓인 경험치는 그대로예요.' : '첫 운행을 마치면 이번 주 첫 스탬프가 찍혀요.')),
+      h('section', { className: 'rs-rhythm', 'aria-label': '나의 라이딩 리듬' },
+        h('div', { className: 'rs-journey-section-head' },
+          h('div', null, h('small', null, 'MY ROUTINE · LAST 28 DAYS'), h('h2', null, '나의 라이딩 리듬')),
+          h('span', { className: 'rs-rhythm-icon', 'aria-hidden': true }, '◷')),
+        rhythm.sessions
+          ? h('div', { className: 'rs-rhythm-stats' },
+              h('div', null, h('small', null, '자주 출발한 시간대'), h('strong', null, rhythm.favorite)),
+              h('div', null, h('small', null, '하루 평균 기록 시간'), h('strong', null, rhythm.averageMinutes + '분')),
+              h('div', null, h('small', null, '최근 28일 기록'), h('strong', null, rhythm.activeDays + '일')))
+          : h('p', { className: 'rs-rhythm-empty' }, '운행 기록이 쌓이면 내 활동 패턴을 보여줘요.'),
+        h('p', { className: 'rs-rhythm-note' }, '늘 같은 동네여도 괜찮아요. 운행 시작 시간과 완료 기록만으로 계산하며 경로는 공유하지 않아요.')),
       h('section', { className: 'rs-journey-routines', 'aria-label': '오늘의 라이더 루틴' },
         h('div', { className: 'rs-journey-section-head' }, h('div', null, h('small', null, today.replaceAll('-', '.')), h('h2', null, '오늘의 작은 미션')), h('span', { className: 'rs-journey-counter' }, done + ' / 3')),
         h('div', { className: 'rs-journey-mission' + (todayResult.completedTrips ? ' is-done' : '') },
