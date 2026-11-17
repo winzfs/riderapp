@@ -1320,3 +1320,8 @@ svg.rs-icon{flex:none;vertical-align:middle}
 #rs-tools .rs64-maint-item button{flex:none;min-width:54px;min-height:40px;padding:7px 10px;font-size:12px}
 #rs-tools .rs-list-row .rs-row-actions{gap:6px;flex-wrap:wrap}
 #rs-tools .rs-fuel-end button{min-height:38px;font-size:12px}
+
+#rs-tools .rs64-maint-due{margin:8px 0 14px;padding:13px 14px;border:1px solid #e8d8b2;border-radius:13px;background:#fff9ed;color:#5c4c2f}
+#rs-tools .rs64-maint-due strong{display:block;font-size:13px;font-weight:800}
+#rs-tools .rs64-maint-due small{display:block;font-size:11px;margin:3px 0 9px;line-height:1.5;color:#806f50}
+#rs-tools .rs64-maint-due p{margin:5px 0;font-size:12px;line-height:1.5}
