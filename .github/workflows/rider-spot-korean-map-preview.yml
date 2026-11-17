@@ -39,13 +39,13 @@ jobs:
             echo
           done
       - name: Check live preview, region names and real store tiles
-        continue-on-error: true
         run: |
           python3 - <<'PY'
           import json, urllib.request
           root = 'https://9a2344b8-rider-spot.jazzhjm.workers.dev'
           def load(path):
-            with urllib.request.urlopen(root + path, timeout=30) as response:
+            request = urllib.request.Request(root + path, headers={'User-Agent':'Mozilla/5.0 RiderSpot-QA','Accept':'application/json,text/html,*/*'})
+            with urllib.request.urlopen(request, timeout=30) as response:
               assert response.status == 200, (path, response.status)
               payload = response.read()
               if path.endswith('.json'):
