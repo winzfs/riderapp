@@ -72,7 +72,7 @@ async function run(browser,width,height){
     await dialog.getByLabel("총비용").fill("140000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByText("140,000원",{exact:true}).waitFor();assert.equal(records.length,3);
     await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
-    await page.locator(".rs56-day-map").waitFor();await shot("timeline");
+    await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();await shot("timeline");
     await page.locator(".record-income").click();
     const coupang=dialog.getByLabel("쿠팡이츠"),baemin=dialog.getByLabel("배민");
     await coupang.fill("50000");await coupang.press("Enter");assert.equal(await baemin.evaluate(el=>el===document.activeElement),true);

@@ -505,8 +505,8 @@ async function nativeTest() {
   const { context, page, received, records, errors, failNetwork } = app;
   try {
     await page.waitForFunction(() => Boolean(window.__rsGPS42NativeRead));
-    await tab(page, "타임라인").click();
-    await page.getByRole("button", { name: "운행 시작" }).click();
+    await page.locator(".ride-launch button").click();
+    await page.locator(".ride-launch.active button").click();
     await page.waitForFunction(() => Boolean(__riderDevice.activeId));
     const id = await page.evaluate(() => __riderDevice.activeId);
     const source = sampleTrip(5000, { active: true, id });

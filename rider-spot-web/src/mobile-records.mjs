@@ -58,7 +58,7 @@ export function createRecords(R, client) {
         catch(err){ setError(err.message || "저장하지 못했어요. 다시 시도해 주세요."); }
         finally {lock.current=false; setBusy(false);}
       }},
-      h("header",null,h("h2",null,title),btn("닫기",dismiss,{disabled:busy})),
+      h("div",{className:"record-heading"},h("strong",null,title),btn("닫기",dismiss,{disabled:busy})),
       h("section",null,date && h("small",null,date),children),
       h("footer",null,error && h("p",{role:"alert"},error),h("button",{className:"record-primary",disabled:busy},busy?"저장 중…":submit))));
   }

@@ -43,6 +43,25 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           node tests/mobile-records-browser.cjs
+      - name: Verify native bridge finish, skipped income and offline retry
+        env:
+          RIDER_TEST_CASE: native
+          RIDER_APK_BRIDGE: /tmp/rider-native-bridge.js
+          RIDER_BASELINE_DIR: /tmp/rider-legacy-assets
+        run: |
+          tar -xOf ../rider-spot-android/source.tar.xz ./app/src/main/assets/native-bridge.js > "$RIDER_APK_BRIDGE"
+          mkdir -p "$RIDER_BASELINE_DIR"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          const html=await fs.readFile('dist/index.html','utf8');
+          for(const [,path] of html.matchAll(/src="(\/[^"]+\.js)"/g)){
+            if(path.startsWith('/assets/'))continue;
+            const res=await fetch(new URL(path,'https://rider-spot.jazzhjm.workers.dev'));
+            if(!res.ok)throw Error(path+' '+res.status);
+            await fs.writeFile(process.env.RIDER_BASELINE_DIR+path,await res.text());
+          }
+          NODE
+          node tests/browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
