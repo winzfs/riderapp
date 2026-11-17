@@ -2617,13 +2617,13 @@ export function mountApplication({
                           ],
                         }),
                         (0, J.jsxs)("div", {
-                          className: "rs61-home-dock",
+                          className: "rs61-home-dock" + (p.trip ? (p.paused ? " rs61-home-paused" : " rs61-home-active") : " rs61-home-idle"),
                           "aria-label": "운행 기록 제어",
                           children: [
                             (0, J.jsxs)("div", {
                               children: [
                                 (0, J.jsx)("strong", {
-                                  children: p.trip ? (p.paused ? "휴식 중" : "운행 기록 중") : "오늘의 운행을 기록하세요",
+                                  children: p.trip ? (p.paused ? "휴식 중" : "운행 중") : "운행을 기록해 보세요",
                                 }),
                                 (0, J.jsx)("small", {
                                   children: p.trip
@@ -2642,11 +2642,14 @@ export function mountApplication({
                                       type: "button",
                                       disabled: p.busy,
                                       onClick: () => Promise.resolve(p.togglePause()).catch(err => f(err?.message || "휴식 상태를 변경하지 못했어요.")),
+                                      className: "rs61-dock-pause",
+                                      "aria-label": p.paused ? "운행 재개" : "운행 휴식",
                                       children: p.paused ? "재개" : "휴식",
                                     }),
                                     (0, J.jsx)("button", {
                                       type: "button",
                                       onClick: () => t("trips"),
+                                      className: "rs61-dock-detail",
                                       children: "기록 보기",
                                     }),
                                   ],

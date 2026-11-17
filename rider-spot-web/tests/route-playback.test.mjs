@@ -143,11 +143,11 @@ test("playback keeps the completed-route gradient fixed while revealing real-tim
   const original = JSON.stringify([first, second]);
   const track = buildPlaybackTrack([first, second]);
   const slices = buildPlaybackColorSlices(track);
-  assert.ok(slices.length >= 24, "the full track spans 24 gradient tones");
+  assert.ok(slices.length >= 48, "the full track spans 48 gentle gradient tones");
   assert.equal(slices[0].tone, 0);
-  assert.equal(slices.at(-1).tone, 23);
+  assert.equal(slices.at(-1).tone, 47);
   assert.equal(rs33CourseToneColor(0), "rgb(246,151,69)");
-  assert.equal(rs33CourseToneColor(23), "rgb(3,66,50)");
+  assert.equal(rs33CourseToneColor(47), "rgb(3,66,50)");
   assert.ok(slices.every((part) =>
     part.coordinates.length === part.times.length && part.coordinates.length >= 2 &&
     part.times.every((time) => Number.isFinite(time)) &&

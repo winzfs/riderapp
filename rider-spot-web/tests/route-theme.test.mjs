@@ -13,17 +13,20 @@ const daily = readFileSync(new URL("../src/daily-timeline.css", import.meta.url)
 
 test("orange departure and dark green arrival remain consistent in route and playback", () => {
   assert.deepEqual(color(0), [246, 151, 69]);
-  assert.deepEqual(color(23), [3, 66, 50]);
-  const halfway = color(12);
+  assert.deepEqual(color(47), [3, 66, 50]);
+  const halfway = color(24);
   assert.ok(halfway[1] > halfway[0] && halfway[1] > halfway[2],
     "midpoint turns sage-green before darkening");
   assert.ok(color(3)[0] > color(3)[1], "early segment remains orange");
-  const all = Array.from({ length: 24 }, (_, n) => color(n));
-  assert.equal(new Set(all.map(x => x.join(","))).size, 24,
+  const all = Array.from({ length: 48 }, (_, n) => color(n));
+  assert.equal(new Set(all.map(x => x.join(","))).size, 48,
     "every band has a visually distinct color");
   assert.ok(all.every(v => v.every(n => n >= 0 && n <= 255)));
   assert.deepEqual(color(-10), color(0));
-  assert.deepEqual(color(100), color(23));
+  assert.deepEqual(color(100), color(47));
+  assert.ok(all.slice(1).every((value, i) =>
+    value.every((channel, j) => Math.abs(channel - all[i][j]) <= 9)),
+    "adjacent route colors should never make a harsh visible jump");
 });
 
 test("route legends, orange start flag and restrained accents share brand color", () => {

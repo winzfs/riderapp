@@ -145,8 +145,8 @@ export function buildPlaybackColorSlices(track) {
       const atTime = (fraction) => fromTime + (toTime - fromTime) * fraction;
       let cursor = walked;
       while (cursor < end) {
-        const tone = Math.min(23, Math.floor((cursor / total + 1e-12) * 24));
-        const next = tone === 23 ? end : Math.min(end, ((tone + 1) * total) / 24);
+        const tone = Math.min(47, Math.floor((cursor / total + 1e-12) * 48));
+        const next = tone === 47 ? end : Math.min(end, ((tone + 1) * total) / 48);
         if (next <= cursor) break;
         const startFraction = (cursor - walked) / edge;
         const endFraction = (next - walked) / edge;

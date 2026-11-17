@@ -13,7 +13,7 @@ const line = {
 export function rs33CourseToneColor(tone) {
   const value = Number(tone);
   const progress = Number.isFinite(value)
-    ? Math.max(0, Math.min(23, value)) / 23 : 0;
+    ? Math.max(0, Math.min(47, value)) / 47 : 0;
   const stops = [
     [0, [246, 151, 69]],        // warm orange: clear departure
     [0.27, [238, 185, 110]],   // amber, reducing intensity
@@ -25,10 +25,11 @@ export function rs33CourseToneColor(tone) {
     const [end, to] = stops[i];
     if (progress > end) continue;
     const [begin, from] = stops[i - 1];
+    // Linear interpolation avoids the small plateaus caused by
+    // smoothstep easing at each color stop, especially on long GPS rides.
     const fraction = (progress - begin) / (end - begin);
-    const eased = fraction * fraction * (3 - 2 * fraction);
     return "rgb(" + from.map((channel, j) =>
-      Math.round(channel + (to[j] - channel) * eased)).join(",") + ")";
+      Math.round(channel + (to[j] - channel) * fraction)).join(",") + ")";
   }
   return "rgb(3,66,50)";
 }

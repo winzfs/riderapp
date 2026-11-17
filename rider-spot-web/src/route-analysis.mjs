@@ -288,9 +288,9 @@ export function rs33Gradient(paths) {
       ];
       let cursor = walked;
       while (cursor < end) {
-        const tone = Math.min(23, Math.floor((cursor / total + 1e-12) * 24));
+        const tone = Math.min(47, Math.floor((cursor / total + 1e-12) * 48));
         const next =
-          tone === 23 ? end : Math.min(end, ((tone + 1) * total) / 24);
+          tone === 47 ? end : Math.min(end, ((tone + 1) * total) / 48);
         if (next <= cursor) break;
         if (current !== tone) {
           flush();
@@ -334,7 +334,7 @@ export function routeGeometry(groups, revisits = []) {
     }
     previous = edge;
   }
-  const gradient = Array.from({ length: 24 }, () => []);
+  const gradient = Array.from({ length: 48 }, () => []);
   for (const part of rs33Gradient(paths)) gradient[part.tone].push(part.points);
   return {
     paths: paths.map((path) => path.map((p) => [p.lat, p.lng])),

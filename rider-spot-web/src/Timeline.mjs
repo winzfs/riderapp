@@ -433,7 +433,7 @@ export function createTimeline(S, Zo) {
         end = rs33Timestamp(current.ended_at);
       return rs33J(
         "section",
-        { className: "trip-page rs33-trip-detail" },
+        { className: "trip-page rs33-trip-detail" + (!ended ? " rs33-trip-live" : "") },
         rs33J(
           "div",
           { className: "trip-heading" },
@@ -461,7 +461,7 @@ export function createTimeline(S, Zo) {
           ),
           rs33J(
             "span",
-            { className: "rs33-state" },
+            { className: "rs33-state" + (!ended ? (ride.paused ? " rs33-state-rest" : " rs33-state-live") : "") },
             ended ? "나만 보기" : ride.paused ? "휴식 중" : "기록 중",
           ),
         ),
@@ -651,7 +651,7 @@ export function createTimeline(S, Zo) {
           { className: "trip-details rs33-trip-body" },
           rs33J(
             "div",
-            { className: "rs33-trip-summary" },
+            { className: "rs33-trip-summary" + (!ended ? " rs33-trip-summary-live" : "") },
             rs33J(
               "strong",
               null,
@@ -681,19 +681,20 @@ export function createTimeline(S, Zo) {
           !ended
             ? rs33J(
                 "div",
-                { className: "actions" },
+                { className: "actions rs-ride-control-bar", "aria-label": "운행 조작" },
                 rs33J(
                   "button",
                   {
                     type: "button",
-                    className: "secondary",
-                    onClick: ride.togglePause,
+                    className: "secondary rs-ride-pause",
+                    onClick: () => Promise.resolve(ride.togglePause()).catch(error => notify(error?.message || "휴식 상태를 바꾸지 못했어요.")),
+                    disabled: ride.busy,
                   },
                   ride.paused ? "운행 재개" : "휴식",
                 ),
                 rs33J(
                   "button",
-                  { type: "button", className: "primary", onClick: finish, disabled: ride.busy },
+                  { type: "button", className: "primary rs-ride-finish", onClick: finish, disabled: ride.busy },
                   ride.busy ? "저장 중…" : "운행 종료",
                 ),
               )
