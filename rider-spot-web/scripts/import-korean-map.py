@@ -115,7 +115,7 @@ def build(shops, admin, source_metadata=None):
         raise ValueError("Missing substantial public labels; retain current release")
     metadata = json.loads(Path(source_metadata).read_text(encoding="utf-8")) if source_metadata else {}
     period = metadata.get("shops_snapshot", "202506")
-    if not re.fullmatch(r"20\\d{4}", period):
+    if not re.fullmatch(r"20\d{4}", period):
         raise ValueError("Invalid source snapshot period")
     OUT.mkdir(parents=True, exist_ok=True)
     for path in OUT.glob("t*.json"):
