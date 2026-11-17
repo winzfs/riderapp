@@ -1022,6 +1022,17 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
     if (S.lastError) msg(S.lastError);
   }
   function open(tab, id) {
+    // Legacy workshop links all open the single canonical Bike screen.
+    // Keep the old records/table untouched for backward compatibility.
+    if (tab === "maintenance") {
+      captureWorkDraft();
+      S.editing = null;
+      S.active = false;
+      if (root) root.hidden = true;
+      window.__rsGoToTab?.("bike");
+      window.scrollTo(0, 0);
+      return;
+    }
     captureWorkDraft();
     if (S.editing && S.editing.type !== tab) S.editing = null;
     S.tab = tab || "hub";
