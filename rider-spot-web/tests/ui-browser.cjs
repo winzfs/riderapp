@@ -90,6 +90,33 @@ async function check(width,native){
   if(i)assert.ok(feed.cards[i-1].bottom+4<=card.top,'posts must not merge into one white rectangle');
  }
  assert.ok(feed.cards.some(card=>card.image),'image thumbnail must be covered by layout test');
+ // The real Android screenshot showed oversized detail photo, misplaced actions
+ // and the reply field below the navigation. Exercise the detail WITH a photo.
+ await p.locator('.rc-feed-row').filter({hasText:'수완동 픽업할 때 잠깐 쉴 곳 공유해요'}).locator('.rc-card-main').click();
+ await p.locator('.rs63-post-detail').waitFor();
+ const detail=await p.locator('.rs63-post-detail').evaluate(el=>{
+   const bb=selector=>{const node=el.querySelector(selector);const r=node?.getBoundingClientRect();return r?{top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:r.height,width:r.width}:null;};
+   return {title:bb('.rc-detail-head'),body:bb('.rc-detail-body'),image:bb('.rc-detail-photo'),
+     actions:bb('.rc-detail-actions'),comments:bb('.rc-comments-title'),
+     form:bb('.rc-comment-form'),footer:bb('.rs63-post-primary-actions'),
+     manage:bb('.rs63-post-manage-actions'),composer:bb('.rc-comment-form textarea'),
+     scrollWidth:document.documentElement.scrollWidth};
+ });
+ assert.ok(detail.image&&detail.image.height<=361,'detail image must fit compact height without cropping');
+ assert.ok(detail.title.bottom<=detail.body.top+1,'post header should precede body');
+ assert.ok(detail.body.bottom<=detail.image.top+1,'photo must follow body without overlap');
+ assert.ok(detail.image.bottom<=detail.actions.top+1,'actions must follow image');
+ assert.ok(detail.actions.bottom<=detail.comments.top+1,'comments must follow actions');
+ assert.ok(detail.footer&&detail.manage&&detail.footer.bottom<=detail.actions.bottom+1
+   &&detail.manage.bottom<=detail.actions.bottom+1,'post actions must remain inside toolbar');
+ assert.ok(detail.composer&&detail.composer.height>=48,'reply field must be accessible and multiline');
+ assert.ok(detail.scrollWidth<=width+1,'post detail must not overflow horizontally');
+ await layout('community-photo-detail');
+ await p.locator('.rs63-comment-jump').click();
+ await p.locator('.rc-comments-title').waitFor();
+ await p.locator('.rc-comment-form textarea').fill('전송하지 않는 QA 댓글');
+ assert.equal(await p.locator('.rc-comment-form textarea').inputValue(),'전송하지 않는 QA 댓글');
+ await p.getByRole('button',{name:'‹ 커뮤니티'}).click();
  const categories=p.locator('.rc-categories');
  const initialScroll=await categories.evaluate(el=>el.scrollLeft);
  await p.getByRole('button',{name:'다음 카테고리 보기'}).click();
