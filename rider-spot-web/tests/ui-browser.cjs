@@ -127,7 +127,7 @@ async function check(width,native){
    return {title:bb('.rc-detail-head'),body:bb('.rc-detail-body'),image:bb('.rc-detail-photo'),
      actions:bb('.rc-detail-actions'),comments:bb('.rc-comments-title'),
      form:bb('.rc-comment-form'),footer:bb('.rs63-post-primary-actions'),
-     manage:bb('.rs63-post-manage-actions'),composer:bb('.rc-comment-form textarea'),
+     manage:bb('.rs63-post-manage-menu'),composer:bb('.rc-comment-form textarea'),
      scrollWidth:document.documentElement.scrollWidth};
  });
  assert.ok(detail.image&&detail.image.height<=361,'detail image must fit compact height without cropping');
