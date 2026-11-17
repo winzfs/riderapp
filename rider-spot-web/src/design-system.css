@@ -1261,3 +1261,24 @@ svg.rs-icon{flex:none;vertical-align:middle}
 /* Tighter recap after removing redundant copy/disclaimer action area. */
 .rs33-timeline .rs-game-recap::after{pointer-events:none}
 .rs33-stamp-label.stop{min-width:58px;width:max-content;max-width:94px;padding-inline:5px;font-weight:800;color:#fff;background:#af713e;border-color:#fff}
+
+/* V65: finish flag matches the start marker without altering real GPS anchors. */
+.rs-course-end-pin{background:transparent!important;border:0!important;pointer-events:none}
+.app .rs-course-end-pin .rs-end-flag{
+  position:absolute;left:5px;top:5px;display:grid;place-items:center;
+  width:29px;height:29px;border:3px solid #fff;border-radius:50%;
+  background:#075c49;color:#fff;font-size:18px;font-weight:700;
+  box-shadow:0 2px 9px #0a453e61
+}
+.app .rs-course-end-pin .rs-end-label{
+  position:absolute;left:36px;top:7px;height:25px;
+  display:flex;align-items:center;padding:0 8px;border-radius:7px;
+  background:#e7f3ed;color:#0a5949;font-weight:750;font-size:12px;
+  white-space:nowrap;box-shadow:0 2px 7px #123a2e36
+}
+.app .rs-course-end-pin.rs-end-near-start .rs-end-flag{top:40px}
+.app .rs-course-end-pin.rs-end-near-start .rs-end-label{top:42px}
+.rs33-stamp-label.rs33-stamp-cluster{
+  width:70px;max-width:70px;padding:0 4px;border-color:#9ecfba;
+  background:#e7f2eb;color:#116653;font-size:11px;font-weight:800
+}
