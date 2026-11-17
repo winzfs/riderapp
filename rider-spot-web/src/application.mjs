@@ -1124,6 +1124,10 @@ export function mountApplication({
                 })
               : null,
           ),
+        ),
+        H(
+          "div",
+          { className: "rc-card-bottom" },
           H(
             "small",
             { className: "rc-row-meta" },
@@ -1139,8 +1143,8 @@ export function mountApplication({
               .filter(Boolean)
               .join(" · "),
           ),
+          H("div", { className: "rc-row-like" }, like(post)),
         ),
-        H("div", { className: "rc-row-like" }, like(post)),
       );
     const articles =
       isNews || cat === "전체"
@@ -1389,23 +1393,41 @@ export function mountApplication({
         ),
         H(
           "div",
-          {
-            className: "rc-categories",
-            role: "group",
-            "aria-label": "게시글 카테고리",
-          },
-          ...rs.map((category) =>
-            H(
-              "button",
-              {
-                type: "button",
-                key: category,
-                className: category === cat ? "selected" : "",
-                "aria-pressed": category === cat,
-                onClick: () => setCat(category),
-              },
-              categoryLabel(category),
+          { className: "rc-category-wrap" },
+          H(
+            "div",
+            {
+              className: "rc-categories",
+              role: "group",
+              "aria-label": "게시글 카테고리",
+            },
+            ...rs.map((category) =>
+              H(
+                "button",
+                {
+                  type: "button",
+                  key: category,
+                  className: category === cat ? "selected" : "",
+                  "aria-pressed": category === cat,
+                  onClick: () => setCat(category),
+                },
+                categoryLabel(category),
+              ),
             ),
+          ),
+          H(
+            "button",
+            {
+              type: "button",
+              className: "rc-category-next",
+              "aria-label": "다음 카테고리 보기",
+              onClick: (event) =>
+                event.currentTarget.previousElementSibling?.scrollBy({
+                  left: Math.max(160, Math.round(event.currentTarget.previousElementSibling.clientWidth * 0.72)),
+                  behavior: "smooth",
+                }),
+            },
+            "›",
           ),
         ),
       ),
