@@ -1,0 +1,63 @@
+name: Rider Spot v62 Android Insets Build
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v62-android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-v62-android
+  cancel-in-progress: false
+jobs:
+  safe-insets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack and patch native app
+        run: |
+          mkdir -p /tmp/rider-v62-android
+          tar -xf rider-spot-android/source.tar.xz -C /tmp/rider-v62-android
+          cp rider-spot-android/v62-patch-source.py /tmp/rider-v62-android/v62-patch-source.py
+          python3 /tmp/rider-v62-android/v62-patch-source.py
+          grep -q 'setContentView(safeRoot)' /tmp/rider-v62-android/app/src/main/java/com/riderspot/android/MainActivity.java
+          ! grep -q 'webView.setOnApplyWindowInsetsListener' /tmp/rider-v62-android/app/src/main/java/com/riderspot/android/MainActivity.java
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Install Android 36 SDK
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Regression tests for native GPS and bridge
+        working-directory: /tmp/rider-v62-android
+        run: node --test tests/*.test.cjs
+      - name: Compile debug APK with target SDK 36
+        working-directory: /tmp/rider-v62-android
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Package patched source
+        run: |
+          set -euo pipefail
+          rm /tmp/rider-v62-android/v62-patch-source.py
+          tar -cJf rider-spot-android/source.tar.xz -C /tmp/rider-v62-android .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rider-spot-android/source.tar.xz
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(android): apply v62 safe WebView layout without altering GPS storage"
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - name: Upload debug APK (requires matching signing key to update installed app)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-Android-1.0.7-v62-insets-debug
+          path: /tmp/rider-v62-android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
