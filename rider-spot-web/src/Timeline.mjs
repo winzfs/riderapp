@@ -12,6 +12,7 @@ import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
 import { useRouteAnalysis } from "./use-route-analysis.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
 import { useRoutePlayback } from "./route-playback.mjs";
+import { timelineStartPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
 
 export function createTimeline(S, Zo) {
   const rs33J = S.createElement;
@@ -215,6 +216,8 @@ export function createTimeline(S, Zo) {
     const [finished, setFinished] = S.useState(false);
     const [allDays, setAllDays] = S.useState(false);
     const [ridesOpen, setRidesOpen] = S.useState(true);
+    const [following, setFollowing] = S.useState(false);
+    const onUnfollow = S.useCallback(() => setFollowing(false), []);
     const [eventOpen, setEventOpen] = S.useState(() => {
       try {
         return localStorage.getItem("rs:trip-events-open") === "1";
@@ -245,6 +248,9 @@ export function createTimeline(S, Zo) {
     const current =
       ride.history.find((row) => row?.id === selected) || ride.trip;
     const ended = Boolean(current?.ended_at);
+    const isLive = Boolean(ride.trip && current?.id === ride.trip.id && !ended);
+    const livePosition = isLive ? timelineLivePosition(ride.position, current) : null;
+    S.useEffect(() => setFollowing(false), [current?.id]);
     const analysis = useRouteAnalysis(S, current);
     const dailyPlayback = useRoutePlayback(
       S,
@@ -398,9 +404,13 @@ export function createTimeline(S, Zo) {
     if (current) {
       const path = rs33J(Zo, {
         key: current.id,
-        position: ended ? null : ride.position || current.points?.at(-1),
+        position: livePosition,
         course: {
           id: current.id,
+          startPoint: timelineStartPoint(current),
+          live: isLive,
+          follow: following && isLive,
+          onUnfollow,
           geometry: shown?.geometry,
           stamps: showStamps ? stamps : EMPTY,
           bounds: shown?.bounds,
@@ -531,28 +541,24 @@ export function createTimeline(S, Zo) {
                   "button",
                   {
                     type: "button",
-                    className: "rs43-current-position",
-                    "aria-label": "지도에서 내 현재 위치로 이동",
+                    className: "rs43-current-position" + (following ? " rs-nav-following" : ""),
+                    "aria-label": following ? "현재 위치 자동 추적 끄기" : "지도에서 내 현재 위치로 이동",
+                    "aria-pressed": following,
                     onClick: () => {
-                      const pos = ride.position || current?.points?.at(-1);
-                      if (
-                        !pos ||
-                        !Number.isFinite(Number(pos.lat)) ||
-                        !Number.isFinite(Number(pos.lng))
-                      ) {
+                      if (following) {
+                        setFollowing(false);
+                        return;
+                      }
+                      if (!isTimelineCoordinate(livePosition)) {
                         notify("현재 위치를 확인하는 중이에요.");
                         ride.locate?.().catch(() => {});
                         return;
                       }
                       setFocused(null);
-                      const map = window.__rsMap;
-                      if (map)
-                        map.setView([Number(pos.lat), Number(pos.lng)], 17, {
-                          animate: true,
-                        });
+                      setFollowing(true);
                     },
                   },
-                  "◎ 내 위치",
+                  following ? "◉ 추적 중" : "◎ 내 위치",
                 )
               : null,
           ),
@@ -1046,6 +1052,7 @@ export function createTimeline(S, Zo) {
                       position: null,
                       course: {
                         id: daily.route.id,
+                        startPoint: timelineStartPoint(daily.route),
                         geometry: dailyCourse?.course?.geometry,
                         stamps: showStamps
                           ? dailyCourse?.course?.stamps || EMPTY
