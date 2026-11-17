@@ -41,7 +41,7 @@ test("isolated GPS fixes do not appear as orange dots; route and revisit layers 
 
   assert.equal(JSON.stringify(geometry), before, "rendering must not modify GPS geometry");
   assert.ok(layers.some((layer) => layer.color.startsWith("rgb(")), "gradient remains");
-  assert.ok(layers.some((layer) => layer.color === "#ff9a50"), "revisit highlight remains");
+  assert.ok(layers.some((layer) => layer.color === "#da9666"), "revisit highlight remains");
   assert.ok(
     layers.every((layer) => layer.color !== "#178f78"),
     "isolated-point green-orange circles should be absent",
