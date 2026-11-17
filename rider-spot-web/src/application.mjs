@@ -2,6 +2,7 @@ import { createUI } from "./ui.mjs";
 import { createRiderMap } from "./RiderMap.mjs";
 import { createTimeline } from "./Timeline.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
+import { createJourneyUI } from "./journey-ui.mjs";
 import { createUseRide } from "./use-ride.mjs";
 // Existing application behavior extracted verbatim from v59; data contracts unchanged.
 export function mountApplication({
@@ -29,6 +30,7 @@ export function mountApplication({
 }) {
   const { Icon, Metrics, Skeleton, DialogSurface } = createUI(S);
   const { RiderProgressCard } = createGamificationUI(S);
+  const { JourneyEntry, JourneyPanel } = createJourneyUI(S);
   function Qo(e, t) {
     let n = Math.PI / 180,
       r =
@@ -1695,6 +1697,9 @@ export function mountApplication({
     sharing,
     toggle,
     history = [],
+    riding = false,
+    onTimeline,
+    onJourney,
   }) {
     let i = `notes:` + (e?.id || `guest`),
       [a, o] = (0, S.useState)(() => Go(i, [])),
@@ -1775,6 +1780,7 @@ export function mountApplication({
           ],
         }),
         (0, J.jsx)(RiderProgressCard, { history }),
+        (0, J.jsx)("button", { type: "button", className: "rs-journey-replay", onClick: onJourney, children: "오늘의 미션과 주간 기록 보기 ↗" }),
         (0, J.jsx)(ProfileTools, {
           user: e,
           onLogin: t,
@@ -2004,8 +2010,7 @@ export function mountApplication({
     ["roads", "도로 제보"],
   ];
   function rs33LayerFor(kind) {
-    // Every facility opens from the same map layer; only WC pins are visible
-    // by default. Explicit facility links may still focus their own record.
+    // Facility links use the same toilet-only policy as the rendered map.
     return kind === "roads" ? "roads" : "shelters";
   }
   function MapBar({ layer, choose, sharing, busy, toggle }) {
@@ -2053,6 +2058,7 @@ export function mountApplication({
     );
   }
   function rs33OpenMap(record, kind = "places") {
+    if (kind !== "roads" && record?.category !== "화장실") return;
     if (!record || !Number.isFinite(record.lat) || !Number.isFinite(record.lng))
       return;
     const layer = rs33LayerFor(kind);
@@ -2604,6 +2610,11 @@ export function mountApplication({
                             }),
                           ],
                         }),
+                        (0, J.jsx)(JourneyEntry, {
+                          history: p.history,
+                          riding: Boolean(p.trip && !p.paused),
+                          onOpen: () => t("journey"),
+                        }),
                         (0, J.jsxs)("div", {
                           className: "rs61-home-dock",
                           "aria-label": "운행 기록 제어",
@@ -2649,6 +2660,17 @@ export function mountApplication({
                         }),
                       ],
                     })
+                  : e === "journey"
+                    ? (0, J.jsxs)("section", {
+                        className: "page narrow rs-profile-page rs-journey-page",
+                        children: [
+                          (0, J.jsx)("button", { type: "button", className: "back", onClick: () => t("nearby"), children: "‹ 지도로 돌아가기" }),
+                          (0, J.jsx)("h1", { children: "나의 라이더 여정" }),
+                          (0, J.jsx)("p", { className: "muted", children: "평소처럼 달리고, 나만의 기록을 모아요." }),
+                          (0, J.jsx)(RiderProgressCard, { history: p.history }),
+                          (0, J.jsx)(JourneyPanel, { history: p.history, userId: n?.id, riding: Boolean(p.trip && !p.paused), onTimeline: () => t("trips") }, n?.id || "guest"),
+                        ],
+                      })
                   : e === `tools`
                     ? (0, J.jsx)(`section`, {
                         key: `route-tools`,
@@ -2673,6 +2695,9 @@ export function mountApplication({
                               sharing: p.sharing,
                               toggle: h,
                               history: p.history,
+                              riding: Boolean(p.trip && !p.paused),
+                              onTimeline: () => t("trips"),
+                              onJourney: () => t("journey"),
                             },
                             n?.id || `guest`,
                           ),

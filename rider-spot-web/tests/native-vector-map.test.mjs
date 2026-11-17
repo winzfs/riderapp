@@ -103,6 +103,7 @@ test("basemap suppresses every POI category while keeping geographic labels", ()
       { id: "poi_label", type: "symbol", "source-layer": "poi" },
       { id: "rs-poi-major", type: "symbol", "source-layer": "poi" },
       { id: "poi_points", type: "circle", "source-layer": "poi" },
+      { id: "poi-shelter", type: "symbol" },
       { id: "city_names", type: "symbol", "source-layer": "place" },
       { id: "road_names", type: "symbol", "source-layer": "transportation_name" },
     ] }),
@@ -113,5 +114,6 @@ test("basemap suppresses every POI category while keeping geographic labels", ()
     ["poi_label", "visibility", "none"],
     ["rs-poi-major", "visibility", "none"],
     ["poi_points", "visibility", "none"],
+    ["poi-shelter", "visibility", "none"],
   ]);
 });

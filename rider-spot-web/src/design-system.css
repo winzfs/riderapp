@@ -1,4 +1,5 @@
 @import './legacy-components.css';
+@import './journey.css';
 /* Rider Spot — Premium Urban Mobility. Unlayered tokens/primitives are authoritative. */
 :root{color-scheme:light;--rs-primary:#0b655b;--rs-primary-hover:#084e47;--rs-soft:#eaf4f0;--rs-bg:#f7f8f6;--rs-surface:#fff;--rs-text:#202d2b;--rs-muted:#67736f;--rs-line:#e5eae6;--rs-warning:#a75d21;--rs-warning-bg:#fff3e7;--rs-danger:#b44343;--rs-radius:16px;--rs-shadow:0 4px 18px #15332b0d;--rs-safe-top:env(safe-area-inset-top,0px);--rs-safe-bottom:env(safe-area-inset-bottom,0px);--rs-nav-height:70px;--rs-header-height:56px;--rs-space:20px;--green:var(--rs-primary);--green-deep:var(--rs-primary-hover);--ink:var(--rs-text);--muted:var(--rs-muted);--border:var(--rs-line);--paper:var(--rs-surface);--canvas:var(--rs-bg);--rc-ink:var(--rs-text);--rs33-ink:var(--rs-text);--rs33-muted:var(--rs-muted);--rs33-accent:var(--rs-primary);--rs33-line:var(--rs-line)}
 /* The installed APK already pads its WebView using systemBars insets. */

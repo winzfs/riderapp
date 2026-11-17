@@ -253,8 +253,8 @@ import { iconMarkup } from "./ui.mjs";
     return (
       card(
         "라이더 편의시설",
-        '<p class="rs-small">쉼터·화장실, 주유소, 정비소를 서로 제보해요. 검증되지 않은 사용자 제보예요.</p><form data-rs-form="places" class="rs-form">' +
-          '<label class="rs-field"><span>시설 종류</span><select name="category"><optgroup label="쉼터·화장실"><option>화장실</option><option>쉼터</option></optgroup><option>주유소</option><option>정비소</option><option>기타</option></select></label>' +
+        '<p class="rs-small">라이더가 이용할 수 있는 화장실을 알려주세요. 지도에는 화장실만 표시돼요.</p><form data-rs-form="places" class="rs-form">' +
+          '<label class="rs-field"><span>시설 종류</span><select name="category"><option>화장실</option></select></label>' +
           formField("장소 이름", "title", "text", {
             required: true,
             maxLength: 80,

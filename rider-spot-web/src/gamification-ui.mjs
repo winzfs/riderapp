@@ -67,7 +67,7 @@ export function createGamificationUI(React) {
               h(Medal, { badge }),
               h("div", null,
                 h("strong", null, badge.title),
-                h("small", null, badge.unlocked ? badge.detail : "아직 잠겨 있어요")),
+                  h("small", null, badge.unlocked ? badge.detail : badge.kind === "days" ? "기록한 날 " + progress.activeDays + " / " + badge.need + "일" : amount(progress.distanceKm) + " / " + badge.need + " km")),
             )),
         ),
         h("p", { className: "rs-game-footnote" },

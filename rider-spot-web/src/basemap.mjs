@@ -11,7 +11,7 @@ export function hideBasemapPoiLabels(gl) {
   const layers = gl.getStyle?.()?.layers;
   if (!Array.isArray(layers)) return;
   for (const layer of layers) {
-    if (layer["source-layer"] !== "poi" && !/^rs-poi-/.test(layer.id)) continue;
+    if (layer["source-layer"] !== "poi" && !/^(?:rs-poi-|poi(?:[_-]|$))/.test(layer.id)) continue;
     try {
       gl.setLayoutProperty(layer.id, "visibility", "none");
     } catch (error) {
