@@ -164,6 +164,7 @@ import { iconMarkup } from "./ui.mjs";
       (opts.min != null ? 'min="' + opts.min + '" ' : "") +
       (opts.max != null ? 'max="' + opts.max + '" ' : "") +
       (opts.step ? 'step="' + opts.step + '" ' : "") +
+      (type === "number" ? 'inputmode="decimal" ' : "") +
       (opts.maxLength ? 'maxlength="' + opts.maxLength + '" ' : "") +
       'placeholder="' +
       H(opts.placeholder || "") +
@@ -354,19 +355,14 @@ import { iconMarkup } from "./ui.mjs";
           }) +
           "</div>" +
           '<div class="rs-two">' +
-          formField("기타 비용 (주유·정비 제외)", "expenses_won", "number", {
-            required: true,
-            min: 0,
-            value: 0,
-          }) +
-          formField("운행 시간", "hours", "number", {
+          formField("운행 시간 (시간)", "hours", "number", {
             required: true,
             min: 0,
             max: 24,
             step: "0.1",
             value: "",
+            placeholder: "예: 3.5",
           }) +
-          "</div>" +
           formField("주행 거리 (km)", "distance_km", "number", {
             required: true,
             min: 0,
@@ -374,11 +370,18 @@ import { iconMarkup } from "./ui.mjs";
             step: "0.1",
             value: 0,
           }) +
+          "</div>" +
+          '<details class="rs62-income-extra"><summary>기타 비용 · 메모 (선택)</summary><div class="rs62-income-extra-body">' +
+          formField("기타 비용 (주유·정비 제외)", "expenses_won", "number", {
+            min: 0,
+            value: 0,
+          }) +
           formField("메모", "note", "text", {
             maxLength: 300,
             placeholder: "선택 사항",
           }) +
-          '<button class="rs-primary" type="submit">수익 기록 저장</button></form>',
+          '</div></details>' +
+          '<button class="rs-primary rs62-save-income" type="submit">수익 기록 저장</button></form>',
       ) +
       '<button type="button" class="rs-fuel-analysis" data-rs-tab="fuel">⛽ 주유비 빠르게 기록하기</button>' +
       card("최근 수익 기록", rows || empty("아직 수익 기록이 없어요."))
@@ -752,7 +755,7 @@ import { iconMarkup } from "./ui.mjs";
         .join("") +
       "</div></div>" +
       '<div class="rs33-work-amount"><small>기록한 수입</small><strong>' +
-      M(total.gross) +
+      (total.entries ? M(total.gross) : "기록 없음") +
       "</strong>" +
       "<div><span>기록한 비용<strong>" +
       M(total.cost) +
@@ -762,7 +765,7 @@ import { iconMarkup } from "./ui.mjs";
       (total.unclassified
         ? '<p class="rs33-muted">기존 비용이 주유·정비비와 겹치는지 확인이 필요해요.</p>'
         : "") +
-      (complete
+      (complete && total.entries > 0
         ? '<div class="rs33-work-platforms">' +
           [...platforms.entries()]
             .map(
