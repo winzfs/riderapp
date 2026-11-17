@@ -1,10 +1,7 @@
 name: Rider Spot Korean public map import
+# Historical snapshot regeneration is manual only. Scheduled production refresh
+# is controlled by main:.github/workflows/rider-spot-korean-map-schedule.yml.
 on:
-  push:
-    branches: [feature/rider-spot-native-apk]
-    paths:
-      - '.github/workflows/rider-spot-korean-map-data.yml'
-      - 'rider-spot-web/scripts/import-korean-map.py'
   workflow_dispatch:
 permissions:
   contents: write
