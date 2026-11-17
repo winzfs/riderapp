@@ -92,6 +92,7 @@ export function createGamificationUI(React) {
   }
 
   function DayRideCard({ history, day, celebrate = false }) {
+    const result = riderDayResult(history, day);
     if (!result.completedTrips) return null;
     const mins = Math.round(result.durationMs / 60000);
     const time = mins >= 60
