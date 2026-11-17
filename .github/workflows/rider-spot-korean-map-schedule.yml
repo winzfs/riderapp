@@ -32,6 +32,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Inspect official public CSV file download metadata (non-blocking)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re, urllib.request
+          url='https://www.data.go.kr/data/15083033/fileData.do'
+          try:
+            with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}), timeout=25) as response:
+              html=response.read(3_000_000).decode('utf-8','replace')
+            for expression in [r'fileDataDown.{0,400}',r'FILE_[0-9]{10,}',r'selectFileDataDownload.{0,300}',r'2026[0-9]{4}']:
+              hits=re.findall(expression,html,re.I)
+              print('Official file link pattern:',expression,'matches:',len(hits),'examples:',hits[:3])
+          except Exception as exc:
+            print('Official data metadata not currently accessible:',type(exc).__name__,str(exc)[:150])
+          PY
       - name: Discover and verify newest approved Gwangju data
         env:
           KOREAN_SHOPS_CSV_URL: ${{ vars.KOREAN_SHOPS_CSV_URL }}
