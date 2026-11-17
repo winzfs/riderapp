@@ -661,7 +661,8 @@ import { iconMarkup } from "./ui.mjs";
       "도착했습니다. 수령 가능한 장소를 알려주세요.",
     ];
     return (
-      card(
+      (S.user
+        ? card(
         "내 연락 도구",
         '<p class="rs-small">문자 전송은 직접 확인 후 보내며, 연락처는 본인만 조회할 수 있도록 수익 기록 저장해요.</p><form data-rs-form="settings" class="rs-form">' +
           formField("긴급 연락처 번호", "emergency_phone", "tel", {
@@ -671,6 +672,7 @@ import { iconMarkup } from "./ui.mjs";
           }) +
           '<button class="rs-primary">연락처 저장</button></form><button class="rs-secondary" data-rs-sms>현재 위치 문자 준비</button>',
       ) +
+      : card("내 연락 도구", '<p class="rs-small">계정으로 로그인하면 긴급 연락처를 등록할 수 있어요.</p><button type="button" data-rs-login class="rs-primary">로그인</button>')) +
       card(
         "빠른 배달 문구",
         phrases
@@ -795,11 +797,12 @@ import { iconMarkup } from "./ui.mjs";
       ">" +
       (tracking ? "운행 보기 · 종료" : "운행 시작") +
       "</button></div>" +
-      '<div class="rs33-work-quick" aria-label="업무 기록">' +
+      workOverview() +
+      '<h2 class="rs-work-group-title">수익·차량 관리</h2><div class="rs33-work-quick" aria-label="업무 기록">' +
       [
         ["earnings", "수익"],
-        ["maintenance", "정비"],
         ["fuel", "주유"],
+        ["maintenance", "정비"],
       ]
         .map(
           ([id, label]) =>
@@ -813,13 +816,12 @@ import { iconMarkup } from "./ui.mjs";
         )
         .join("") +
       "</div>" +
-      workOverview() +
-      '<h2 class="rs-work-group-title">현장에서 필요한 도구</h2><div class="rs33-work-quick rs33-work-utilities" aria-label="추가 업무 메뉴">' +
+      '<h2 class="rs-work-group-title">현장 편의 도구</h2><div class="rs33-work-quick rs33-work-utilities" aria-label="추가 업무 메뉴">' +
       [
         ["analysis", "월별 수익 분석"],
         ["places", "편의시설"],
         ["roads", "도로 제보"],
-        ["sos", "도움 요청"],
+        ["sos", "라이더 도움"],
         ["shortcuts", "빠른 도구"],
       ]
         .map(
@@ -880,7 +882,7 @@ import { iconMarkup } from "./ui.mjs";
       sos: "도움 요청과 라이더 간 답글",
       shortcuts: "배달 중 자주 쓰는 기능 모음",
     };
-    const content = S.user
+    const content = S.user || S.tab === "shortcuts" || S.tab === "places"
       ? (
           {
             places: renderPlaces,
