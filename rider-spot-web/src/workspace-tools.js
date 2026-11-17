@@ -337,56 +337,38 @@ import { iconMarkup } from "./ui.mjs";
       "</div>" +
       card(
         "수익 기록",
-        '<p class="rs-small">배민·쿠팡 수입을 따로 입력해도 합산돼요. 자동 정산 연동은 아니에요. 주유비와 정비비는 각 기록 메뉴에서 관리해요.</p><form class="rs-form" data-rs-form="earnings">' +
-          formField("날짜", "work_date", "date", {
-            required: true,
-            value: nowDate(),
-          }) +
+        '<p class="rs-small">플랫폼별 수입만 입력해도 저장돼요. 배달 건수·운행 시간·거리는 필요할 때 추가하세요. 자동 정산 연동은 아니에요.</p><form class="rs-form rs63-earnings-form" data-rs-form="earnings">' +
+          formField("날짜", "work_date", "date", { required: true, value: nowDate() }) +
           selectField("플랫폼", "platform", ["쿠팡이츠", "배민", "기타"]) +
+          '<div class="rs63-earnings-amount">' +
+          formField("수입 (원)", "gross_won", "number", {
+            required: true,
+            min: 0,
+            max: 1000000000,
+            value: "",
+            placeholder: "예: 85000",
+          }) +
+          '</div>' +
+          '<details class="rs62-income-extra rs63-earnings-more"><summary>건수 · 시간 · 거리 · 비용 · 메모 (선택)</summary><div class="rs62-income-extra-body">' +
           (hasSavedRides
-            ? '<button type="button" class="rs-ride-prefill" data-rs-fill-ride>↗ 운행 기록에서 시간·거리 가져오기</button><p class="rs-small">선택 날짜의 완료된 운행 전체 기준이에요. 플랫폼별로 수익을 나눠 적을 때는 중복되지 않게 조정하세요.</p>'
+            ? '<button type="button" class="rs-ride-prefill" data-rs-fill-ride>↗ 운행 기록에서 시간·거리 가져오기</button><p class="rs-small">선택 날짜의 전체 운행 기준이에요. 플랫폼별로 나눠 기록할 때 운행 시간과 거리를 중복 반영하지 마세요.</p>'
             : "") +
           '<div class="rs-two">' +
-          formField("배달 건수", "deliveries", "number", {
-            required: true,
-            min: 0,
-            max: 300,
-            value: 0,
-          }) +
-          formField("매출 (원)", "gross_won", "number", {
-            required: true,
-            min: 0,
-            value: "",
-          }) +
-          "</div>" +
-          '<div class="rs-two">' +
+          formField("배달 건수", "deliveries", "number", { min: 0, max: 300, value: 0 }) +
           formField("운행 시간 (시간)", "hours", "number", {
-            required: true,
-            min: 0,
-            max: 24,
-            step: "0.1",
-            value: "",
-            placeholder: "예: 3.5",
+            min: 0, max: 24, step: "0.1", value: "", placeholder: "예: 3.5",
           }) +
+          '</div><div class="rs-two">' +
           formField("주행 거리 (km)", "distance_km", "number", {
-            required: true,
-            min: 0,
-            max: 1500,
-            step: "0.1",
-            value: 0,
+            min: 0, max: 1500, step: "0.1", value: 0,
           }) +
-          "</div>" +
-          '<details class="rs62-income-extra"><summary>기타 비용 · 메모 (선택)</summary><div class="rs62-income-extra-body">' +
-          formField("기타 비용 (주유·정비 제외)", "expenses_won", "number", {
-            min: 0,
-            value: 0,
-          }) +
+          formField("기타 비용 (원)", "expenses_won", "number", { min: 0, value: 0 }) +
+          '</div>' +
           formField("메모", "note", "text", {
-            maxLength: 300,
-            placeholder: "선택 사항",
+            maxLength: 300, placeholder: "주유·정비비는 다른 메뉴에 입력",
           }) +
           '</div></details>' +
-          '<button class="rs-primary rs62-save-income" type="submit">수익 기록 저장</button></form>',
+          '<button class="rs-primary rs62-save-income" type="submit">수익 저장</button></form>',
       ) +
       '<button type="button" class="rs-fuel-analysis" data-rs-tab="fuel">⛽ 주유비 빠르게 기록하기</button>' +
       card("최근 수익 기록", rows || empty("아직 수익 기록이 없어요."))
@@ -487,7 +469,38 @@ import { iconMarkup } from "./ui.mjs";
   }
 
   function renderMaintenance() {
-    return "<section id=rs-maint-ui></section>";
+    const latest = Array.isArray(S.data.maintenance) ? S.data.maintenance[0] : null;
+    return (
+      '<section class="rs63-maint-fast rs-card" aria-label="빠른 정비 기록"><h3>정비 빠른 기록</h3>' +
+      '<p class="rs-small">정비 항목과 금액만 적어도 저장돼요. 날짜는 오늘로 설정됩니다.</p>' +
+      '<form class="rs-form" data-rs-form="maintenance">' +
+      '<div class="rs63-maint-presets" aria-label="정비 항목 바로 선택">' +
+      ["엔진오일", "타이어", "브레이크", "구동벨트", "배터리"]
+        .map((item) => '<button type="button" data-rs-maint-item="' + H(item) + '">' + H(item) + '</button>')
+        .join("") +
+      '</div>' +
+      formField("정비 항목", "item", "text", {
+        required: true, maxLength: 80, placeholder: "항목을 선택하거나 직접 입력",
+      }) +
+      formField("정비 금액 (원)", "cost_won", "number", {
+        required: true, min: 0, max: 1000000000, placeholder: "예: 15000",
+      }) +
+      '<details class="rs62-income-extra"><summary>날짜 · 계기판 · 다음 교체 · 메모 (선택)</summary><div class="rs62-income-extra-body">' +
+      formField("정비 날짜", "serviced_on", "date", { required: true, value: nowDate() }) +
+      '<div class="rs-two">' +
+      formField("계기판 (km)", "odometer_km", "number", {
+        min: 0, max: 9999999, step: 1, placeholder: "선택",
+      }) +
+      formField("다음 교체 (km)", "next_due_km", "number", {
+        min: 0, max: 9999999, step: 1, placeholder: "선택",
+      }) +
+      '</div>' +
+      formField("메모", "note", "text", { maxLength: 300, placeholder: "정비소·부품 등" }) +
+      '</div></details><button type="submit" class="rs-primary">정비 기록 저장</button></form>' +
+      (latest ? '<p class="rs63-maint-last">최근 정비 · ' + H(latest.serviced_on) +
+        ' · ' + H(latest.item) + '</p>' : '') + '</section>' +
+      '<section id="rs-maint-ui"></section>'
+    );
   }
   function renderAnalysis() {
     return "<section id=rs-analysis-ui></section>";
@@ -815,8 +828,7 @@ import { iconMarkup } from "./ui.mjs";
       ">" +
       (tracking ? "운행 보기 · 종료" : "운행 시작") +
       "</button></div>" +
-      workOverview() +
-      '<h2 class="rs-work-group-title">수익·차량 관리</h2><div class="rs33-work-quick" aria-label="업무 기록">' +
+      '<h2 class="rs-work-group-title">빠른 기록</h2><div class="rs33-work-quick" aria-label="업무 기록">' +
       [
         ["earnings", "수익"],
         ["fuel", "주유"],
@@ -834,6 +846,7 @@ import { iconMarkup } from "./ui.mjs";
         )
         .join("") +
       "</div>" +
+      workOverview() +
       '<button type="button" class="rs62-analysis-link" data-rs-tab="analysis">월별 수익 분석 <span aria-hidden="true">›</span></button>' +
       '<h2 class="rs-work-group-title">현장 편의 도구</h2><div class="rs33-work-quick rs33-work-utilities" aria-label="추가 업무 메뉴">' +
       [
@@ -1243,6 +1256,9 @@ import { iconMarkup } from "./ui.mjs";
           new CustomEvent("riderspot:report-saved", { detail: { type } }),
         );
       } else if (type === "earnings") {
+        const amount = Number(v("gross_won"));
+        if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000)
+          throw Error("수입 금액을 정확하게 입력해 주세요.");
         await db(
           client
             .from("rider_earnings")
@@ -1251,7 +1267,7 @@ import { iconMarkup } from "./ui.mjs";
               work_date: v("work_date"),
               platform: v("platform"),
               deliveries: N(v("deliveries")),
-              gross_won: N(v("gross_won")),
+              gross_won: amount,
               expenses_won: N(v("expenses_won")),
               expense_scope: "other_only",
               hours: N(v("hours")),
@@ -1286,6 +1302,9 @@ import { iconMarkup } from "./ui.mjs";
             }),
         );
       } else if (type === "maintenance") {
+        const amount = Number(v("cost_won"));
+        if (!v("item") || !Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000)
+          throw Error("정비 항목과 금액을 정확하게 입력해 주세요.");
         await db(
           client
             .from("maintenance_logs")
@@ -1294,7 +1313,7 @@ import { iconMarkup } from "./ui.mjs";
               item: v("item"),
               serviced_on: v("serviced_on"),
               odometer_km: v("odometer_km") ? N(v("odometer_km")) : null,
-              cost_won: N(v("cost_won")),
+              cost_won: amount,
               next_due_km: v("next_due_km") ? N(v("next_due_km")) : null,
               note: v("note"),
             }),
@@ -1474,6 +1493,17 @@ import { iconMarkup } from "./ui.mjs";
         return window.__rsRideApi?.startTrip();
       }
       if (x.hasAttribute("data-rs-refresh-work")) return loadAll();
+      if (x.dataset.rsMaintItem) {
+        const form = x.closest('form[data-rs-form="maintenance"]');
+        const item = form?.elements.namedItem("item");
+        const amount = form?.elements.namedItem("cost_won");
+        if (item) item.value = x.dataset.rsMaintItem;
+        form?.querySelectorAll("[data-rs-maint-item]").forEach((button) => {
+          button.setAttribute("aria-pressed", String(button === x));
+        });
+        amount?.focus();
+        return;
+      }
       if (x.dataset.rsWorkPeriod) {
         S.period = x.dataset.rsWorkPeriod;
         render();
@@ -1664,11 +1694,14 @@ import { iconMarkup } from "./ui.mjs";
       }
     });
     setInterval(() => {
-      if (S.user) refreshSos();
+      if (S.user && !document.hidden) refreshSos();
     }, 20000);
     setInterval(() => {
-      if (S.user) loadAll();
+      if (S.user && !document.hidden) loadAll();
     }, 120000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && S.user) loadAll();
+    });
   }
   if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", start, { once: true });
