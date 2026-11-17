@@ -1,4 +1,4 @@
-import { dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
+import { completedRideRows, dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
 (function () {
   "use strict";
@@ -278,7 +278,7 @@ import { iconMarkup } from "./ui.mjs";
     );
   }
   function renderEarnings() {
-    const recordedRide = dailyRideSnapshot(window.__rsRideApi?.history, nowDate());
+    const hasSavedRides = completedRideRows(window.__rsRideApi?.history).length > 0;
     const all = S.data.earnings,
       month = nowDate().slice(0, 7),
       selected = all.filter((e) => String(e.work_date).startsWith(month));
@@ -343,7 +343,7 @@ import { iconMarkup } from "./ui.mjs";
             value: nowDate(),
           }) +
           selectField("플랫폼", "platform", ["쿠팡이츠", "배민", "기타"]) +
-          (recordedRide.trips
+          (hasSavedRides
             ? '<button type="button" class="rs-ride-prefill" data-rs-fill-ride>↗ 운행 기록에서 시간·거리 가져오기</button><p class="rs-small">선택 날짜의 완료된 운행 전체 기준이에요. 플랫폼별로 수익을 나눠 적을 때는 중복되지 않게 조정하세요.</p>'
             : "") +
           '<div class="rs-two">' +

@@ -56,6 +56,7 @@ async function check(width,native){
  assert.equal(await recap.count(),1,'completed day should render one passive result card');
  assert.match(await recap.innerText(),/\+40 XP/,'same-day rides award XP once');
  assert.equal(await recap.locator('.rs-game-recap-award').count(),1,'first ride achievement unlocks only once');
+ assert.equal(await recap.locator('.rs-game-copy').count(),1,'day recap can be shared without GPS coordinates');
  assert.equal(await p.locator('.rs56-ride-choice').count(),3);
  const player=p.locator('.rs56-day-overview .rs59-player');for(const speed of ['10','20','30','60','100'])await player.getByRole('combobox',{name:'경로 재생 배속'}).selectOption(speed);
  await player.getByRole('button',{name:'경로 재생 시작',exact:true}).click();await p.waitForFunction(()=>Number(document.querySelector('.rs59-seek').value)>1000);await player.getByRole('button',{name:'경로 재생 일시정지'}).click();const v=await player.locator('.rs59-seek').inputValue();await p.waitForTimeout(200);assert.equal(await player.locator('.rs59-seek').inputValue(),v);
@@ -67,6 +68,7 @@ async function check(width,native){
  await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
  await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
  await layout('community');
+ assert.equal(await p.locator('.rs-lounge-quick .rs-lounge-actions button').count(),2,'existing community offers local quick prompts');
  const feed=await p.locator('.rc-card-list').evaluate(el=>{
   const cards=[...el.querySelectorAll('.rc-feed-row')].map(row=>{
     const bounds=row.getBoundingClientRect();
@@ -136,9 +138,14 @@ async function check(width,native){
  assert.equal(await p.locator('.rs-profile-page>.rs-metrics').count(),1);
  const game=p.locator('.rs-game-profile');
  await game.waitFor();
+ await p.locator('.rs-journey-panel .rs-rhythm').waitFor();
+ assert.equal(await p.locator('.rs-rhythm-stats>div').count(),3,'personal pace replaces territory conquest');
  assert.match(await game.innerText(),/첫 출발/);
  assert.equal(await game.getByRole('progressbar',{name:'다음 라이더 레벨까지 경험치'}).getAttribute('aria-valuenow'),'40');
  await game.locator('.rs-game-collection summary').click();
+ const feature=game.locator('.rs-game-badge-pick').first();
+ await feature.click();
+ assert.equal(await feature.getAttribute('aria-pressed'),'true','unlocked badge decorates profile');
  assert.equal(await game.locator('.rs-game-achievement').count(),5,'all collectible badges visible');
  assert.equal(await game.locator('.rs-game-achievement.rs-game-earned').count(),1);
  await shot('profile-achievements');await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}

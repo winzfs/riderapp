@@ -39,6 +39,7 @@ fs.mkdirSync(output, { recursive: true });
       assert.equal(await page.locator('.rs-profile-page .rs-game-profile').count(), 1, 'Progress is embedded in My Info');
       await page.waitForFunction(() => document.querySelectorAll('.rs-journey-day.is-recorded').length === 1);
       assert.equal(await page.locator('.rs-journey-counter').innerText(), '1 / 3');
+      assert.equal(await page.locator('.rs-rhythm').count(), 1, 'habit insight stays in My Info');
       await page.getByRole('button', { name: '출발 전 30초 점검' }).click();
       await page.getByRole('button', { name: '나를 위한 쉬는 시간' }).click();
       assert.equal(await page.locator('.rs-journey-counter').innerText(), '3 / 3');
