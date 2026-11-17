@@ -37,3 +37,13 @@ Do **not** put the full nationwide business data into `app.mjs`, query an
 external geocoding endpoint on every pan, or expose a V-World/data.go.kr API
 key to the Android WebView. The POI vector layer shipped in this change is
 the no-key first step; the government records are **not** ingested yet.
+
+## Implemented offline importer
+
+Run `node scripts/import-korean-places.mjs /path/to/authorized-semas.csv /tmp/gwangju-shops.geojson shop`.
+JSON API arrays are also supported. It normalizes the SEMAS `bizesNm`,
+`bizesId`, `lon`, `lat` and `indsSclsNm` fields, rejects out-of-range
+coordinates and duplicate source IDs. The generated GeoJSON is **not** yet
+shipped to the map: nationwide public records require an authorized download,
+spatial tiling and a deployment plan. Do not commit API keys or a raw nationwide
+dataset to GitHub.
