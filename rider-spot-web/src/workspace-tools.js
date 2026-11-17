@@ -1024,12 +1024,12 @@ import { createWorkDrafts } from "./work-drafts.mjs";
     if (S.user && !S.dataLoaded) loadAll();
     setTimeout(() => {
       ensureUI();
-      if (S.active && !document.activeElement?.closest("#rs-tools form"))
+      if (S.active && !S.editing && !document.activeElement?.closest("#rs-tools form"))
         render();
     }, 120);
     setTimeout(() => {
       ensureUI();
-      if (S.active && !document.activeElement?.closest("#rs-tools form"))
+      if (S.active && !S.editing && !document.activeElement?.closest("#rs-tools form"))
         render();
     }, 550);
   }
@@ -1235,7 +1235,7 @@ import { createWorkDrafts } from "./work-drafts.mjs";
     });
     S.dataLoaded = true;
     mapOverlay();
-    if (S.active && !document.activeElement?.closest("form")) render();
+    if (S.active && !S.editing && !document.activeElement?.closest("form")) render();
     if (errors.length)
       msg("일부 데이터 조회 실패: " + errors.join(" · "), true);
   }
