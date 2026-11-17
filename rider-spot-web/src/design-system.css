@@ -849,3 +849,118 @@ svg.rs-icon{flex:none;vertical-align:middle}
 .app .rs56-day-course>.rs56-day-follow.rs-nav-following{
   background:#126a58;color:#fff;border-color:#126a58;
 }
+
+/* Rider Spot | restrained color accents.
+ * Deep green stays the brand/primary-action color. Warm orange signals route
+ * departure and light highlights; clear blue identifies location/info tools.
+ * No semantic warnings/errors or touch targets are redefined by this theme.
+ */
+:root {
+  --rs-accent-orange: #f69745;
+  --rs-accent-orange-ink: #914310;
+  --rs-accent-orange-soft: #fff1e1;
+  --rs-accent-orange-line: #f2d1ad;
+  --rs-accent-blue: #216db3;
+  --rs-accent-blue-soft: #eaf3fc;
+  --rs-accent-blue-line: #cce1f3;
+}
+/* Start flag matches the opening segment of the route gradient. */
+.app .rs-course-start-pin .rs-start-flag {
+  background: var(--rs-accent-orange);
+  color: #2d251e;
+  border-color: #fff;
+  box-shadow: 0 2px 9px #6e3c1647;
+}
+.app .rs-course-start-pin .rs-start-label {
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+}
+/* Timeline: amber record dots and a warm first distance metric guide the eye,
+ * while selected dates, playback and navigation remain the familiar green. */
+.app .rs33-week button span[data-has-record=true]{
+  background: var(--rs-accent-orange);
+  width: 5px;
+  height: 5px;
+  min-height: 5px;
+}
+.app .rs33-week button[aria-pressed=true] span[data-has-record=true]{
+  background: #ffd09c;
+}
+.app .rs33-timeline .rs33-trip-summary .rs-metrics>div:first-child dd{
+  color: var(--rs-accent-orange-ink);
+}
+.app .rs33-timeline .rs56-day-badge{
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+}
+.app .rs33-timeline .rs56-ride-number{
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+}
+.app .rs33-timeline .rs61-today:not(:disabled){
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+}
+.app .rs59-speed select{
+  border-color: var(--rs-accent-orange-line);
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+}
+/* Business: color is deliberately limited to one action tile per category. */
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button:nth-child(1){
+  background: #eef7f1;
+  border-color: #d8e8dd;
+}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button:nth-child(2){
+  background: var(--rs-accent-orange-soft);
+  border-color: var(--rs-accent-orange-line);
+}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button:nth-child(2) .rs-icon{
+  color: var(--rs-accent-orange-ink);
+}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button:nth-child(3){
+  background: var(--rs-accent-blue-soft);
+  border-color: var(--rs-accent-blue-line);
+}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button:nth-child(3) .rs-icon,
+#rs-tools .rs33-work-utilities [data-rs-tab="places"] .rs-icon{
+  color: var(--rs-accent-blue);
+}
+#rs-tools .rs33-work-utilities [data-rs-tab="roads"] .rs-icon{
+  color: var(--rs-accent-orange-ink);
+}
+/* Community: a subtle warm writing affordance; blue geography badge rather
+ * than turning every card and filter a different vivid color. */
+.app .rc-community .rc-head .rc-write{
+  background: var(--rs-accent-orange-soft);
+  color: var(--rs-accent-orange-ink);
+  border-color: var(--rs-accent-orange-line);
+  font-weight: 700;
+}
+.app .rc-community .rc-head .rc-write:active{
+  background: #ffe5ca;
+}
+.app .rc-community .rc-local-tag{
+  background: var(--rs-accent-blue-soft);
+  color: var(--rs-accent-blue);
+  border-color: var(--rs-accent-blue-line);
+}
+/* Profile: two existing facts receive distinct understated accents. */
+.app .rs-profile-page .rs-metrics>div:first-child dd{
+  color: var(--rs-accent-orange-ink);
+}
+.app .rs-profile-page .rs-metrics>div:nth-child(2) dd{
+  color: var(--rs-primary);
+}
+/* Feedback for keyboard users and touch interactions stays visible. */
+.app .rc-community .rc-write:focus-visible,
+#rs-tools .rs33-work-quick button:focus-visible,
+.app .rs33-timeline .rs59-speed select:focus-visible{
+  outline: 2px solid var(--rs-primary);
+  outline-offset: 2px;
+}
+@media(prefers-reduced-motion:reduce){
+  .app .rc-community .rc-head .rc-write{
+    transition: none;
+  }
+}
