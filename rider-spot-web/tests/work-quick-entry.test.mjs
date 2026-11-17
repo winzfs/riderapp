@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createWorkDrafts } from "../src/work-drafts.mjs";
+import { upcomingMaintenance } from "../src/maintenance-due.mjs";
 
 const source = readFileSync(fileURLToPath(new URL("../src/workspace-tools.js", import.meta.url)), "utf8");
 const S = { user: { id: "tester" }, platform: "", period: "today", dataLoaded: true,
@@ -117,4 +118,21 @@ test("Record edits use row-id AND account ownership filters", () => {
     assert.ok(code.includes('.eq("user_id", user.id)'), table + " owner filter");
     assert.ok(code.includes('.select("id").maybeSingle()'), table + " success check");
   }
+});
+
+test("Maintenance reminders use only explicitly recorded service distances", () => {
+  const maintenance = [
+    { item: "엔진오일", serviced_on: "2026-11-10", odometer_km: 14950, next_due_km: 15500 },
+    { item: "엔진오일", serviced_on: "2026-10-01", odometer_km: 12800, next_due_km: 13300 },
+    { item: "타이어", serviced_on: "2026-10-12", odometer_km: 14000, next_due_km: null },
+  ];
+  const fuel = [{ fueled_on: "2026-11-18", odometer_km: 15100 }];
+  const result = upcomingMaintenance(maintenance, fuel);
+  assert.equal(result.odometerKm, 15100);
+  assert.equal(result.due.length, 1);
+  assert.equal(result.due[0].item, "엔진오일");
+  assert.equal(result.due[0].nextDueKm, 15500);
+  assert.deepEqual(upcomingMaintenance(maintenance, [] ).due.length, 0);
+  assert.deepEqual(upcomingMaintenance(maintenance.map((x) => ({ ...x, next_due_km: null })), fuel).due, []);
+  assert.deepEqual(upcomingMaintenance(maintenance, [{ fueled_on: "2026-11-18", odometer_km: null }]).due, []);
 });
