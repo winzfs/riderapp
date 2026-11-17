@@ -384,3 +384,186 @@ svg.rs-icon{flex:none;vertical-align:middle}
 
 .rs62-analysis-link{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:48px;border:0;border-top:1px solid var(--rs-line);border-bottom:1px solid var(--rs-line);background:transparent;padding:10px 2px;text-align:left;color:var(--rs-primary);font-size:14px;font-weight:650;margin:-8px 0 18px}
 .rs62-analysis-link span{font-size:20px;color:var(--rs-muted)}
+
+/* Community layout fix: legacy v32 CSS had turned the whole list into one
+ * rounded white card while the newer feed rendered borderless rows within it.
+ * Each post is now a separate surface, with a stable metadata/like footer. */
+.app .rc-community.rc-home.rc-community-v32 .rc-card-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:0;
+  padding:0;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  overflow:visible;
+  min-width:0;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  padding:15px 15px 10px;
+  margin:0;
+  background:#fff;
+  border:1px solid var(--rs-line);
+  border-radius:14px;
+  box-shadow:0 2px 9px #153f2910;
+  overflow:hidden;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row:last-child{
+  border-bottom:1px solid var(--rs-line);
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-main{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  gap:9px;
+  width:100%;
+  min-height:0;
+  padding:0;
+  margin:0;
+  border:0;
+  text-align:left;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-width:0;
+  width:100%;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid>div{
+  flex:1 1 auto;
+  min-width:0;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid h2{
+  margin:0 0 5px;
+  font-size:16px;
+  line-height:1.42;
+  font-weight:700;
+  overflow-wrap:anywhere;
+  word-break:keep-all;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid p{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  white-space:normal;
+  text-overflow:clip;
+  line-height:1.5;
+  margin:0;
+  font-size:13px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid img{
+  width:80px;
+  height:80px;
+  object-fit:cover;
+  border-radius:10px;
+  flex:0 0 80px;
+  margin:0;
+  align-self:center;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+  width:100%;
+  margin-top:8px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-row-meta{
+  display:block;
+  flex:1 1 auto;
+  min-width:0;
+  margin:0;
+  padding:0;
+  font-size:12px;
+  line-height:1.45;
+  color:var(--rs-muted);
+  overflow-wrap:anywhere;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-row-like{
+  position:static;
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  align-self:center;
+  margin:0 0 0 auto;
+  padding:0;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-row-like button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:44px;
+  min-height:44px;
+  padding:7px 4px;
+  white-space:nowrap;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-wrap{
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  width:100%;
+  min-width:0;
+  margin:0 0 12px;
+  border-bottom:1px solid var(--rs-line);
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-wrap .rc-categories{
+  display:flex;
+  flex:1 1 auto;
+  min-width:0;
+  gap:7px;
+  padding:0 0 11px;
+  margin:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  border:0;
+  mask-image:none;
+  -webkit-mask-image:none;
+  scroll-padding-inline:0;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+  overscroll-behavior-x:contain;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-categories button{
+  flex:none;
+  white-space:nowrap;
+  text-overflow:clip;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-next{
+  flex:0 0 36px;
+  align-self:flex-start;
+  width:36px;
+  height:42px;
+  min-height:42px;
+  padding:0;
+  background:#fff;
+  border:1px solid var(--rs-line);
+  border-radius:11px;
+  color:var(--rs-primary);
+  font-size:26px;
+  line-height:1;
+  font-weight:500;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-next:focus-visible{
+  outline:2px solid var(--rs-primary);
+  outline-offset:2px;
+}
+@media(max-width:360px){
+  .app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{padding:12px 12px 9px}
+  .app .rc-community.rc-home.rc-community-v32 .rc-card-grid img{width:72px;height:72px;flex-basis:72px}
+  .app .rc-community.rc-home.rc-community-v32 .rc-row-meta{font-size:11px}
+}
