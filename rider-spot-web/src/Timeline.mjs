@@ -1049,10 +1049,15 @@ export function createTimeline(S, Zo) {
                     { className: "trip-map rs33-course-map rs56-day-map" },
                     rs33J(Zo, {
                       key: daily.route.id,
-                      position: null,
+                      position: day === today && ride.trip && !ride.trip.ended_at
+                        ? timelineLivePosition(ride.position, ride.trip)
+                        : null,
                       course: {
                         id: daily.route.id,
                         startPoint: timelineStartPoint(daily.route),
+                        live: day === today && Boolean(ride.trip && !ride.trip.ended_at),
+                        follow: following && day === today && Boolean(ride.trip && !ride.trip.ended_at),
+                        onUnfollow,
                         geometry: dailyCourse?.course?.geometry,
                         stamps: showStamps
                           ? dailyCourse?.course?.stamps || EMPTY
@@ -1070,6 +1075,25 @@ export function createTimeline(S, Zo) {
                       },
                     }),
                   ),
+                  day === today && ride.trip && !ride.trip.ended_at
+                    ? rs33J("button", {
+                        type: "button",
+                        className: "rs-nav-follow rs56-day-follow" + (following ? " rs-nav-following" : ""),
+                        "aria-label": following ? "현재 위치 자동 추적 끄기" : "지도에서 내 현재 위치로 이동",
+                        "aria-pressed": following,
+                        onClick: () => {
+                          if (following) { setFollowing(false); return; }
+                          const point = timelineLivePosition(ride.position, ride.trip);
+                          if (!isTimelineCoordinate(point)) {
+                            notify("현재 위치를 확인하는 중이에요.");
+                            ride.locate?.().catch(() => {});
+                            return;
+                          }
+                          setFocused(null);
+                          setFollowing(true);
+                        },
+                      }, following ? "◉ 추적 중" : "◎ 내 위치")
+                    : null,
                   playbackBar(dailyPlayback, "하루 통합 경로"),
                   dailyCourse?.error
                     ? rs33J(
