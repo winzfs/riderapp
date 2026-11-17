@@ -37,8 +37,11 @@ jobs:
               assert r.status==200,(path,r.status)
               return r.read()
           page=get('/').decode()
-          assert '/assets/rider-spot-d115d01665eb/app.mjs' in page
-          assert b'rs-public-apartment-label' in get('/assets/rider-spot-d115d01665eb/app.mjs')
+          assert '/assets/rider-spot-7b9151a5e772/app.mjs' in page
+          app=get('/assets/rider-spot-7b9151a5e772/app.mjs')
+          assert b'rs-public-apartment-label' in app
+          assert b'rs47-gwangsan-overview' not in app
+          assert b'within' in app
           info=json.loads(get('/mapdata/manifest.json'))
           assert info['counts']['shop']==74938
           assert info['counts']['apartment']==507
