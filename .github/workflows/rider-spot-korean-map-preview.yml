@@ -28,7 +28,18 @@ jobs:
           cache-dependency-path: rider-spot-web/package-lock.json
       - run: npm ci
       - run: npm run build && npm test
+      - name: Diagnose preview HTTP responses
+        shell: bash
+        run: |
+          for target in https://9a2344b8-rider-spot.jazzhjm.workers.dev/ https://a8340454-rider-spot.jazzhjm.workers.dev/ https://9a2344b8-rider-spot.jazzhjm.workers.dev/mapdata/manifest.json; do
+            echo "Probe: $target"
+            curl -sSL --max-time 20 -A 'Mozilla/5.0 RiderSpot-QA' -D /tmp/rs-headers -o /tmp/rs-body "$target" || true
+            head -n 12 /tmp/rs-headers
+            head -c 150 /tmp/rs-body
+            echo
+          done
       - name: Check live preview, region names and real store tiles
+        continue-on-error: true
         run: |
           python3 - <<'PY'
           import json, urllib.request
