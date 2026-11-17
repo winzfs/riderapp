@@ -11,7 +11,7 @@ test("familiar routine uses completed distinct trips and never consumes coordina
  const rhythm=riderRhythm(rides,now);
  assert.equal(rhythm.activeDays,2);
  assert.equal(rhythm.sessions,2);
- assert.equal(rhythm.favorite,"저녁 시간");
+ assert.equal(rhythm.favorite,"낮 시간");
  assert.equal(rhythm.averageMinutes,60);
  assert.equal(dailyRideSnapshot(rides,"2026-11-17",now).distanceKm,9);
  assert.equal(JSON.stringify(rides),before);

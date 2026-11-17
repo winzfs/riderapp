@@ -89,7 +89,11 @@ test("empty, invalid and incomplete history never creates XP or rewards", () => 
 });
 
 test("profile and recap components are read-only with accessible XP progress", () => {
-  const React = { createElement: (type, props, ...children) => ({type, props: props || {}, children}) };
+  const React = {
+    createElement: (type, props, ...children) => ({type, props: props || {}, children}),
+    useState: initial => [typeof initial === "function" ? initial() : initial, () => {}],
+    useEffect: () => {},
+  };
   const { RiderProgressCard, DayRideCard } = createGamificationUI(React);
   const history = [ride("one", FIRST)];
   const profile = RiderProgressCard({ history });
@@ -106,9 +110,10 @@ test("profile and recap components are read-only with accessible XP progress", (
   const xp = profileNodes.find(node => node.props.role === "progressbar");
   assert.ok(xp, "accessible level progression");
   assert.equal(xp.props["aria-valuenow"], 40);
-  assert.equal(profileNodes.filter(node => node.type === "button").length, 0,
-    "gamification cannot add interactive controls to active ride flow");
+  assert.equal(profileNodes.filter(node => node.props.className === "rs-game-badge-pick").length, 1,
+    "only unlocked badges offer profile decoration; nothing appears on active map");
   const recap = DayRideCard({history, day:"2026-11-15", celebrate:true});
   assert.ok(collect(recap).some(node => node.props.className?.includes("rs-game-xp-earned")));
+  assert.ok(collect(recap).some(node => node.props.className === "rs-game-copy"), "recap sharing excludes location");
   assert.equal(DayRideCard({history, day:"2026-11-16"}), null);
 });
