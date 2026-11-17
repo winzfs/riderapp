@@ -147,7 +147,7 @@ export function createTimeline(S, Zo) {
               value: player.speed,
               onChange: (event) => player.setSpeed(event.target.value),
             },
-            ...[10, 20, 30, 60].map((speed) =>
+            ...[10, 20, 30, 60, 100].map((speed) =>
               rs33J("option", { key: speed, value: speed }, speed + "배"),
             ),
           ),
@@ -1084,7 +1084,7 @@ export function createTimeline(S, Zo) {
                       className: "rs56-gradient-key",
                       "aria-hidden": true,
                     }),
-                    rs33J("span", null, "연한색 출발 → 진한색 마지막 기록"),
+                    rs33J("span", null, "연한 민트색 출발 → 진한 녹색 마지막 기록"),
                     dailyCourse?.course?.revisitCount
                       ? rs33J("small", null, "주황색은 재통과 추정")
                       : null,
