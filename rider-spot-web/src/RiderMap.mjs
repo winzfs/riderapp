@@ -4,6 +4,7 @@ import { addBasemap } from "./basemap.mjs";
 import { createMapController } from "./map-controller.mjs";
 import { rs33DrawCourse, paintCourseLabels } from "./course-layers.mjs";
 import { createPlaybackLayer, playbackTimestamp } from "./route-playback.mjs";
+import { mountVectorCourse, vectorCourseGeometry, createVectorPlaybackLayer } from "./vector-course.mjs";
 import { timelineFixStale, timelineHeading } from "./timeline-location.mjs";
 
 const EMPTY = [];
@@ -66,6 +67,7 @@ export function createRiderMap(React, L, fallback) {
     const endMarker = React.useRef(null);
     const peers = React.useRef(null);
     const player = React.useRef(null);
+    const [vectorMap, setVectorMap] = React.useState(null);
     const originalFocus = React.useRef(focus);
     const initialFit = React.useRef(course?.fitRequest);
     const cameraId = course?.id || "main";
@@ -77,6 +79,13 @@ export function createRiderMap(React, L, fallback) {
       window.__rsLeaflet = L;
       window.__rsMap = map;
       const removeBasemap = addBasemap(L, map);
+      // Keep Leaflet as the offline fallback; integrate the route into
+      // MapLibre's style only after its vector symbols are initialized.
+      const onVectorReady = (event) => setVectorMap(event.gl);
+      const onVectorLost = () => setVectorMap(null);
+      map.on("riderspot:vector-ready", onVectorReady);
+      map.on("riderspot:vector-lost", onVectorLost);
+      if (map.__rsVectorGl) setVectorMap(map.__rsVectorGl);
       L.control.zoom({ position: "topright" }).addTo(map);
       peers.current = L.layerGroup().addTo(map);
       return () => {
@@ -84,6 +93,8 @@ export function createRiderMap(React, L, fallback) {
         peers.current = marker.current = accuracy.current = startMarker.current = endMarker.current = null;
         player.current = null;
         if (window.__rsMap === map) window.__rsMap = null;
+        map.off("riderspot:vector-ready", onVectorReady);
+        map.off("riderspot:vector-lost", onVectorLost);
         removeBasemap();
         current.destroy();
       };
@@ -249,11 +260,28 @@ export function createRiderMap(React, L, fallback) {
       controller.current.showBounds(course.bounds, explicit);
     }, [cameraId, course?.bounds, course?.fitRequest]);
 
+    const activeVector = vectorMap && controller.current?.map?.__rsVectorGl === vectorMap
+      ? vectorMap : null;
+
+    // Insert route geometry in MapLibre before the first symbol layer.
+    // Leaflet draws the safety fallback only if vector tiles cannot load.
     React.useEffect(() => {
-      if (!course?.geometry || course?.playback?.showing) return;
-      const map = controller.current.map;
+      if (!course?.geometry || course?.playback?.showing || activeVector) return;
+      const map = controller.current?.map;
+      if (!map) return;
       return rs33DrawCourse(L, map, course.geometry);
-    }, [cameraId, course?.geometry, course?.playback?.showing]);
+    }, [cameraId, course?.geometry, course?.playback?.showing, activeVector]);
+
+    React.useEffect(() => {
+      if (!course?.geometry || course?.playback?.showing || !activeVector) return;
+      try {
+        const overlay = mountVectorCourse(activeVector, vectorCourseGeometry(course.geometry));
+        return () => overlay.destroy();
+      } catch (error) {
+        console.warn("RiderSpot vector route fallback:", error?.message || error);
+        return rs33DrawCourse(L, controller.current.map, course.geometry);
+      }
+    }, [cameraId, course?.geometry, course?.playback?.showing, activeVector]);
 
     React.useEffect(() => {
       if (!course?.geometry || course?.playback?.showing) return;
@@ -282,16 +310,22 @@ export function createRiderMap(React, L, fallback) {
 
     React.useEffect(() => {
       if (!course?.playback?.showing || !course.playback.track) return;
-      const renderer = createPlaybackLayer(
-        L, controller.current.map, course.playback.track,
-      );
+      let renderer;
+      try {
+        renderer = activeVector
+          ? createVectorPlaybackLayer(L, controller.current.map, activeVector, course.playback.track)
+          : createPlaybackLayer(L, controller.current.map, course.playback.track);
+      } catch (error) {
+        console.warn("RiderSpot vector playback fallback:", error?.message || error);
+        renderer = createPlaybackLayer(L, controller.current.map, course.playback.track);
+      }
       player.current = renderer;
       renderer.setTime(course.playback.elapsed);
       return () => {
         if (player.current === renderer) player.current = null;
         renderer.destroy();
       };
-    }, [cameraId, course?.playback?.showing, course?.playback?.track]);
+    }, [cameraId, course?.playback?.showing, course?.playback?.track, activeVector]);
 
     React.useEffect(() => {
       if (!course?.playback?.showing) return;
