@@ -56,6 +56,14 @@ jobs:
                 found=re.search(r'"'+label+r'"\\s*:\\s*(?:"[^"]*"|[^,}]+)',payload)
                 print('Official file field',label,found.group(0)[:180] if found else 'not found')
               print('Official metadata size',len(payload))
+              try:
+                data=json.loads(payload)
+                print('Parsed official response keys:',list(data))
+                print('Official attachment metadata:',{k:data.get(k) for k in ('atchFileId','fileDetailSn','dataNm','success','resultCode')})
+                nested=data.get('dataSetFileDetailInfo') or {}
+                print('Nested attachment metadata:',{k:nested.get(k) for k in ('atchFileId','fileDetailSn','dataNm','success','dataSetFileNm')})
+              except Exception as err:
+                print('Official response is not JSON:',str(err)[:200])
 
           except Exception as exc:
             print('Official data metadata not currently accessible:',type(exc).__name__,str(exc)[:150])
