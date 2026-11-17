@@ -68,11 +68,11 @@ async function check(width,native){
  await eventToggle.click();
  await p.getByRole('button',{name:'이벤트 끄기'}).waitFor();
  await p.locator('.rs56-day-map .rs33-stamp-label.stop').first().waitFor();
- await p.evaluate(()=>window.__rsMap.setZoom(11));
+ await p.evaluate(()=>{ window.__rsMap.setZoom(11); });
  await p.waitForTimeout(350);
  const cityStops=await p.locator('.rs56-day-map .rs33-stamp-label.stop').count();
  assert.ok(cityStops>=40,'citywide zoom keeps each recorded stop visible: '+cityStops);
- await p.evaluate(()=>window.__rsMap.setZoom(9));
+ await p.evaluate(()=>{ window.__rsMap.setZoom(9); });
  await p.waitForTimeout(350);
  const distantStops=await p.locator('.rs56-day-map .rs33-stamp-label.stop').count();
  assert.ok(distantStops>0 && distantStops<cityStops,'distant zoom clusters events rather than hides them');
