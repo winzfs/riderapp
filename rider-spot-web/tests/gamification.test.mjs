@@ -114,6 +114,6 @@ test("profile and recap components are read-only with accessible XP progress", (
     "only unlocked badges offer profile decoration; nothing appears on active map");
   const recap = DayRideCard({history, day:"2026-11-15", celebrate:true});
   assert.ok(collect(recap).some(node => node.props.className?.includes("rs-game-xp-earned")));
-  assert.ok(collect(recap).some(node => node.props.className === "rs-game-copy"), "recap sharing excludes location");
+  assert.equal(collect(recap).filter(node => node.props.className === "rs-game-copy").length, 0, "recap no longer shows copy actions");
   assert.equal(DayRideCard({history, day:"2026-11-16"}), null);
 });
