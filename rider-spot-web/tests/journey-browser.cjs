@@ -31,6 +31,8 @@ fs.mkdirSync(output, { recursive: true });
       const entry = () => page.getByRole('button', { name: '내 성장과 오늘의 미션 보기', exact: true });
       const open = async () => { await entry().click(); await page.getByRole('heading', { name: '나의 라이더 여정', exact: true }).waitFor(); };
       await page.goto(url, { waitUntil: 'domcontentloaded' });
+      assert.equal(await page.locator('.rs-journey-entry-eyebrow').count(), 1, 'Quest must be visible on map');
+      assert.equal(await page.locator('.rs-journey-entry-stamps i').count(), 7, 'Seven mini stamps should appear on map');
       await open();
       await page.waitForFunction(() => document.querySelectorAll('.rs-journey-day.is-recorded').length === 1);
       assert.equal(await page.locator('.rs-journey-counter').innerText(), '1 / 3');

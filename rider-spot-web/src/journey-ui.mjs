@@ -15,13 +15,30 @@ export function createJourneyUI(React) {
     return React.useMemo(() => riderJourney(history, now), [history, now]);
   }
   function JourneyEntry({ history, onOpen, riding = false }) {
-    const { progress, todayResult } = useJourney(history);
-    return h('button', { type: 'button', className: 'rs-journey-entry', onClick: onOpen, disabled: riding, 'aria-label': '내 성장과 오늘의 미션 보기' },
-      h('span', { className: 'rs-journey-entry-level', 'aria-hidden': true }, 'LV.', h('b', null, progress.level)),
-      h('span', { className: 'rs-journey-entry-copy' },
-        h('strong', null, riding ? '지금의 운행도 나의 기록으로' : todayResult.completedTrips ? '오늘의 발자국을 남겼어요' : '오늘의 첫 발자국을 남겨보세요'),
-        h('small', null, riding ? '성장과 배지는 운행 후에 확인해요' : todayResult.completedTrips ? '+' + todayResult.earnedXp + ' XP · 이번 주 기록과 배지 보기' : '운행을 마치면 +25 XP · 나의 성장 보기')),
-      h('span', { className: 'rs-journey-entry-arrow', 'aria-hidden': true }, riding ? '✦' : '↗'));
+    const { progress, todayResult, days, weekDays } = useJourney(history);
+    const recorded = todayResult.completedTrips > 0;
+    const status = riding ? '운행 종료 후 기록이 완성돼요' : recorded ? '오늘도 기록을 남겼어요' : '오늘의 미션이 기다리고 있어요';
+    const hint = riding ? '안전하게 운행하세요 · 미션은 정차 후 확인' :
+      recorded ? '+' + todayResult.earnedXp + ' XP 획득 · 주간 기록 펼치기' : '하루 3개의 작은 미션 · 주간 스탬프 모으기';
+    return h('button', {
+      type: 'button', className: 'rs-journey-entry', onClick: onOpen,
+      disabled: riding, 'aria-label': '내 성장과 오늘의 미션 보기',
+    },
+      h('span', { className: 'rs-journey-entry-header' },
+        h('span', { className: 'rs-journey-entry-eyebrow' }, '✦ RIDER QUEST'),
+        h('span', { className: 'rs-journey-entry-week' }, '이번 주 ', h('b', null, weekDays), '/7일')),
+      h('span', { className: 'rs-journey-entry-main' },
+        h('span', { className: 'rs-journey-entry-level', 'aria-hidden': true }, 'LV.', h('b', null, progress.level)),
+        h('span', { className: 'rs-journey-entry-copy' },
+          h('strong', null, status),
+          h('small', null, hint)),
+        h('span', { className: 'rs-journey-entry-arrow', 'aria-hidden': true }, riding ? '✦' : '↗')),
+      h('span', { className: 'rs-journey-entry-footer' },
+        h('span', { className: 'rs-journey-entry-progress', 'aria-hidden': true },
+          h('span', { style: { width: progress.percent + '%' } })),
+        h('span', { className: 'rs-journey-entry-xp' }, progress.levelXp + '/' + progress.nextLevelXp + ' XP'),
+        h('span', { className: 'rs-journey-entry-stamps', 'aria-label': '이번 주 기록 ' + weekDays + '일' },
+          ...days.map(d => h('i', { key: d.day, className: d.recorded ? 'is-recorded' : d.today ? 'is-today' : '', 'aria-hidden': true })))));
   }
   function JourneyPanel({ history, userId, riding = false, onTimeline }) {
     const journey = useJourney(history);
