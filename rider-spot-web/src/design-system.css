@@ -1115,3 +1115,54 @@ svg.rs-icon{flex:none;vertical-align:middle}
 @media(prefers-reduced-motion:reduce){
   .rs-game-chevron,.rs-game-fresh .rs-game-xp-earned{animation:none;transition:none}
 }
+
+/* Optional OSM public facilities. Kept in their own Leaflet layer to prevent
+   interference with rider reports, timeline cameras and live GPS markers. */
+.rs-public-marker{
+  background:transparent!important;
+  border:0!important;
+}
+.rs-public-marker-face{
+  display:grid;place-items:center;
+  width:31px;height:31px;
+  border:2px solid #fff;border-radius:11px 11px 11px 4px;
+  box-shadow:0 3px 10px #132d2240;
+  background:#136c62;color:#fff;
+  font-size:13px;font-weight:800;
+  transform:rotate(-8deg);
+}
+.rs-public-marker--toilet .rs-public-marker-face{
+  background:#286cb1;
+  font-family:system-ui,sans-serif;
+  font-size:12px;
+}
+.rs-public-marker--fuel .rs-public-marker-face{
+  background:#e18735;font-size:17px;
+}
+.rs-public-marker--shelter .rs-public-marker-face{
+  background:#148374;font-size:24px;
+}
+.rs-public-marker--landmark .rs-public-marker-face{
+  background:#6c718e;font-size:21px;
+}
+.rs-public-poi-credit{
+  position:absolute;
+  z-index:890;
+  bottom:86px;
+  left:12px;
+  display:flex;align-items:center;gap:7px;
+  padding:6px 9px;
+  border:1px solid var(--rs-line);
+  border-radius:8px;
+  box-shadow:0 2px 9px #15332b12;
+  background:rgba(255,255,255,.96);
+  color:var(--rs-muted);
+  font-size:10px;
+  line-height:1.4;
+}
+.rs-public-poi-credit[hidden]{display:none!important}
+.rs-public-poi-credit a{color:var(--rs-primary);text-decoration:underline;text-underline-offset:2px}
+.rs-public-poi-popup>small{display:block;margin-top:8px;color:var(--rs-muted);font-size:11px;line-height:1.5}
+@media(max-width:360px){
+  .rs-public-poi-credit{bottom:88px;max-width:calc(100% - 24px);flex-wrap:wrap}
+}
