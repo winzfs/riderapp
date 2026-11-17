@@ -1181,7 +1181,7 @@ export function mountApplication({
               : 0,
         node: card(post),
       })),
-      ...[...articles, ...official].map((article) => ({
+      ...articles.map((article) => ({
         time: Date.parse(article.published_at) || 0,
         score: 0,
         node: H(
@@ -1201,7 +1201,7 @@ export function mountApplication({
             H(
               "span",
               { className: "rc-tag rc-article-tag" },
-              official.includes(article) ? "공식 안내" : "외부 기사",
+              "외부 기사",
             ),
             H(
               "div",
@@ -1429,14 +1429,14 @@ export function mountApplication({
                 ),
               ),
             ),
-            H(
+            !newsErr ? H(
               "button",
               {
                 type: "button",
                 onClick: () => setNewsRev((value) => value + 1),
               },
               "기사 새로고침",
-            ),
+            ) : null,
           )
         : null,
       error
@@ -1477,6 +1477,22 @@ export function mountApplication({
           : !error && (!isNews || !newsErr)
             ? empty
             : null,
+      isNews && official.length
+        ? H(
+            "section",
+            { className: "rc-official-resources", "aria-label": "공식 참고자료" },
+            H("h2", null, "공식 참고자료"),
+            H("p", null, "실시간 기사가 아니라 서비스 이용 안내 문서입니다."),
+            ...official.map((article) =>
+              H(
+                "a",
+                { key: article.link, href: article.link, target: "_blank", rel: "noopener noreferrer" },
+                H("strong", null, article.title),
+                H("small", null, article.source + " · 원문 보기 ↗"),
+              ),
+            ),
+          )
+        : null,
     );
   }
   function AuthDialog({ close: e, notify: t }) {
@@ -1649,7 +1665,14 @@ export function mountApplication({
   }) {
     let i = `notes:` + (e?.id || `guest`),
       [a, o] = (0, S.useState)(() => Go(i, [])),
-      [s, c] = (0, S.useState)(``);
+      [s, c] = (0, S.useState)(``),
+      [rs62EditorOpen, rs62SetEditorOpen] = S.useState(false);
+    S.useEffect(() => {
+      const sync = () => document.getElementById("rs-nickname-settings")?.classList.toggle("rs62-open", rs62EditorOpen);
+      sync();
+      const delayed = window.setTimeout(sync, 1100);
+      return () => window.clearTimeout(delayed);
+    }, [rs62EditorOpen]);
     function l(e) {
       (o(e), Ko(i, e));
     }
@@ -1677,6 +1700,16 @@ export function mountApplication({
                 }),
               ],
             }),
+            e
+              ? (0, J.jsx)(`button`, {
+                  type: `button`,
+                  className: `rs62-profile-edit`,
+                  "aria-controls": `rs-nickname-settings`,
+                  "aria-expanded": rs62EditorOpen,
+                  onClick: () => rs62SetEditorOpen((open) => !open),
+                  children: rs62EditorOpen ? `편집 닫기` : `프로필 수정`,
+                })
+              : null,
             e
               ? (0, J.jsx)(`button`, {
                   "aria-label": `로그아웃`,
