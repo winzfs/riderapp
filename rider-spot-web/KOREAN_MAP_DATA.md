@@ -47,3 +47,48 @@ coordinates and duplicate source IDs. The generated GeoJSON is **not** yet
 shipped to the map: nationwide public records require an authorized download,
 spatial tiling and a deployment plan. Do not commit API keys or a raw nationwide
 dataset to GitHub.
+
+## Automated updates (installed)
+
+The schedule lives on the GitHub **default branch** `main`, in
+`.github/workflows/rider-spot-korean-map-schedule.yml`, because GitHub ignores
+cron schedules on feature branches. It checks out
+`feature/rider-spot-native-apk` and runs each **Monday at 04:17 KST**.
+
+- Select the latest dated public Gwangju SEMAS CSV available from the
+  `ginipick/market` mirror; no API token is required. **This mirror currently
+  exposes 2025-06, so a successful weekly job does not imply that SEMAS has
+  published a more recent snapshot in the mirror.**
+- Optional recommended direct official data feed: set repository variables
+  `KOREAN_SHOPS_CSV_URL` (approved HTTPS CSV endpoint) and
+  `KOREAN_SHOPS_SNAPSHOT` (YYYYMM). If the source is a ZIP, extract the Gwangju
+  CSV before publishing it to this endpoint. Do not put a secret or private API
+  key in either variable or the source URL. Use GitHub Secrets plus a
+  credential-aware fetch implementation instead.
+- Convert selected CSV and V-World administrative GeoJSON to bounded grid
+  files. Confirm counts, source period, geometry, bounds, build and tests.
+  Refuse suspicious decreases, malformed data or source download errors.
+- If and only if the generated files change, commit the derived labels (not
+  the source CSV) to the app branch. The Worker reads the active branch at
+  `/mapdata/*.json` with a bounded 30-minute edge/browser cache. Existing
+  app bundles do not need rebuilding just for new source records.
+- Existing users receive refreshed data on a subsequent map visit/reload;
+  the app does **not** interrupt an active ride or refresh all tile data
+  while a route is in progress.
+- The previously hand-entered Gwangsan overview label layer has been removed.
+  Local OSM place symbols are geographically suppressed in the public-data
+  area; cities, roads and labels outside the coverage remain on OpenFreeMap.
+- Other regions continue to rely on regularly updated OpenFreeMap/OSM data.
+  The scheduled SEMAS import currently covers **Gwangju only**.
+
+### Maintenance checks
+
+The Actions run must show `Selected SEMAS public snapshot`, `PASS safe
+source change`, and either `No changed names` or a validated data commit.
+The first end-to-end weekly refresh dry-run completed successfully on
+2026-11-18 KST. A 2025-06 source merely produces a no-change check, not
+a false claim of fresher data.
+
+For live data integrity, see the deployed `/mapdata/manifest.json`; confirm
+`counts`, `sources` and tile availability. The app release path still
+needs a separate tested deployment for application code changes.
