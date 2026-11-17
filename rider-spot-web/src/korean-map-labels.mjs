@@ -23,8 +23,8 @@ export const KOREAN_POI_TIERS = Object.freeze([
   {
     id: "rs-korean-business-names",
     minzoom: 16.2,
-    classes: ["shop", "cafe", "fast_food", "grocery", "laundry",
-      "ice_cream", "clothing_store", "music", "bar", "office", "lodging"],
+    classes: ["shop", "cafe", "fast_food", "laundry",
+      "ice_cream", "clothing_store", "music", "bar"],
     color: "#737b77",
     size: [16.2, 9.5, 18, 11, 19, 11.8],
     padding: 3,
