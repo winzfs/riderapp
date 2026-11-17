@@ -126,7 +126,7 @@ export function addBasemap(L, map) {
       state.glMap = null;
     }
     state.hasGl = false;
-    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire("riderspot:vector-lost");}
+    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire?.("riderspot:vector-lost");}
     paint();
   }
   async function update() {
@@ -192,7 +192,7 @@ export function addBasemap(L, map) {
         done = true;
         state.hasGl = true;
         map.__rsVectorGl = gl;
-        map.fire("riderspot:vector-ready", { gl });
+        map.fire?.("riderspot:vector-ready", { gl });
         if (!state.creditAdded && map.attributionControl) {
           map.attributionControl.addAttribution(CREDIT);
           state.creditAdded = true;
@@ -440,7 +440,7 @@ export function addBasemap(L, map) {
   paint();
   if (state.mode === "simple") update();
   return () => {
-    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire("riderspot:vector-lost");}
+    if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire?.("riderspot:vector-lost");}
     state.alive = false;
     clearTimeout(readyTimer);
     clearTimeout(fallbackTimer);
