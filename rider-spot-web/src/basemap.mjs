@@ -210,12 +210,12 @@ export function addBasemap(L, map) {
           if (!gl.getLayer(id)) continue;
           try {
             if (id === "rs46-district-labels") {
-              gl.setLayerZoomRange(id, 9.3, 24);
+              gl.setLayerZoomRange(id, 8.5, 24);
               gl.setLayoutProperty(id, "text-padding", 3);
               gl.setLayoutProperty(id, "text-allow-overlap", true);
               gl.setLayoutProperty(id, "text-ignore-placement", true);
             } else {
-              gl.setLayerZoomRange(id, 9.8, 24);
+              gl.setLayerZoomRange(id, 9.1, 24);
               gl.setLayoutProperty(id, "text-padding", 1);
               gl.setLayoutProperty(id, "text-variable-anchor", [
                 "top",
@@ -261,7 +261,7 @@ export function addBasemap(L, map) {
             id: labelId,
             type: "symbol",
             source: sourceId,
-            minzoom: 9.5,
+            minzoom: 8.5,
             maxzoom: 13.8,
             layout: {
               "text-field": ["get", "name"],
@@ -270,7 +270,7 @@ export function addBasemap(L, map) {
                 "interpolate",
                 ["linear"],
                 ["zoom"],
-                9.5,
+                8.5,
                 10.3,
                 12.5,
                 12,
@@ -312,7 +312,7 @@ export function addBasemap(L, map) {
             id: "rs46-district-labels",
             source: "place",
             classes: ["suburb", "borough", "town"],
-            minzoom: 9.3,
+            minzoom: 8.5,
             color: "#405d57",
             size: [11, 11.5, 13, 13, 16, 14],
             pad: 3,
@@ -321,7 +321,7 @@ export function addBasemap(L, map) {
             id: "rs46-neighbourhood-labels",
             source: "place",
             classes: ["quarter", "neighbourhood", "village", "hamlet"],
-            minzoom: 9.8,
+            minzoom: 9.1,
             color: "#556e67",
             size: [11, 10.3, 13, 11.7, 16, 13],
             pad: 2,
