@@ -53,7 +53,10 @@ def read_shops(path):
             if lon is None or lat is None or not valid(lon, lat):
                 continue
             sido = clean(row.get("시도명"))
-            if sido and sido != "광주광역시":
+            district = clean(row.get("시군구명"))
+            if sido and sido not in ("광주광역시", "전남광주통합특별시"):
+                continue
+            if sido == "전남광주통합특별시" and district not in ("광산구", "동구", "서구", "남구", "북구"):
                 continue
             lon, lat = round(lon, 6), round(lat, 6)
             store = clean(row.get("상호명") or row.get("bizesNm"))
@@ -128,7 +131,7 @@ def build(shops, admin, source_metadata=None):
         "tiles": sorted(records), "counts": dict(counts),
         "sources": {
             "region": "V-World administrative polygons, 2023-07-29 (via KnellBalm/kr-admin-geojson; KOGI 1 attribution)",
-            "shop": f"SEMAS business locations, {period[:4]}-{period[4:]} (via ginipick/market; public data portal open reuse)" if metadata.get("shops_source", "").startswith("SEMAS public CSV mirror") or not metadata else f"SEMAS business locations, {period[:4]}-{period[4:]} (approved public CSV)",
+            "shop": f"SEMAS business locations, {period[:4]}-{period[4:]} ({metadata.get('shops_source', 'public CSV snapshot')})",
             "building": "SEMAS store-linked road-name building names, 2025-06 (not a complete building inventory)"
         }
     }
