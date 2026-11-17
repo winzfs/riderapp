@@ -55,6 +55,34 @@ async function check(width,native){
  await player.locator('.rs59-seek').focus();await player.locator('.rs59-seek').press('End');await player.getByRole('button',{name:'경로 재생 종료하고 전체 경로 보기'}).click();
  await p.getByRole('button',{name:'크게 보기',exact:true}).click();await p.getByRole('dialog',{name:'전체 화면 하루 운행 지도'}).waitFor();await shot('fullscreen');await p.keyboard.press('Escape');
  await p.locator('.rs56-ride-choice').first().click();await p.locator('.rs33-trip-detail').waitFor();await layout('trip-detail');await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();await p.locator('.rs56-ride-choice').last().click();assert.match(await p.locator('.rs33-trip-summary').innerText(),/0 km/);await p.getByRole('button',{name:'‹ 운행 목록',exact:true}).click();
+ // Active-ride QA: never write a real user trip or change the production GPS.
+ await p.evaluate((uid)=>{
+   const now=Date.now();
+   window.__rsRideApi.restoreActive({
+     id:'44444444-4444-4444-8444-444444444444',
+     user_id:uid,started_at:new Date(now-60000).toISOString(),
+     ended_at:null,distance_km:0.6,events:[],
+     points:[
+       {lat:35.16,lng:126.82,t:now-30000,accuracy:8},
+       {lat:35.17,lng:126.83,t:now-8000,accuracy:8,heading:70},
+     ],
+   });
+ },userId);
+ await p.locator('.rs33-trip-detail .rs-course-start-pin').waitFor({timeout:12000});
+ await p.locator('.rs33-trip-detail .rs-nav-live-location').waitFor({timeout:12000});
+ await p.locator('.rs33-trip-detail .rs-nav-dot').waitFor();
+ assert.equal(await p.locator('.rs33-trip-detail .rs-nav-stale').count(),0,
+   'fresh native ride fix must be rendered as blue GPS location');
+ await p.getByRole('button',{name:'지도에서 내 현재 위치로 이동'}).click();
+ await p.getByRole('button',{name:'현재 위치 자동 추적 끄기'}).waitFor();
+ const cameraFix=await p.evaluate(()=>window.__rsMap?.getCenter());
+ assert.ok(cameraFix&&Math.abs(cameraFix.lat-35.17)<0.0005&&Math.abs(cameraFix.lng-126.83)<0.0005,
+   'follow button must focus the latest GPS position');
+ await p.evaluate(()=>window.__rsMap.fire('dragstart'));
+ await p.getByRole('button',{name:'지도에서 내 현재 위치로 이동'}).waitFor();
+ await p.getByRole('button',{name:'지도에서 내 현재 위치로 이동'}).click();
+ await p.getByRole('button',{name:'현재 위치 자동 추적 끄기'}).waitFor();
+ await shot('timeline-live-position');
  }
  await nav.getByRole('button',{name:'업무',exact:true}).click();await p.locator('.rs-work-hub').waitFor();await p.waitForTimeout(700);if(baseline)await shot('tools');else {await layout('tools');await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르게 기록',{exact:true}).waitFor();await layout('fuel');await p.getByRole('button',{name:'‹ 업무 목록'}).click();}
  await nav.getByRole('button',{name:'커뮤니티',exact:true}).click();await p.locator('.rc-feed-row').first().waitFor();if(baseline)await shot('community');else {
