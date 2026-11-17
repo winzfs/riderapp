@@ -103,9 +103,10 @@ export function createGamificationUI(React) {
     );
   }
 
-  function DayRideCard({ history, day, celebrate = false }) {
+  function DayRideCard({ history, day, income, celebrate = false }) {
     const result = riderDayResult(history, day);
-    if (!result.completedTrips) return null;
+
+    if (!result.completedTrips && !income) return null;
     const mins = Math.round(result.durationMs / 60000);
     const time = mins >= 60
       ? Math.floor(mins / 60) + "시간 " + (mins % 60 ? mins % 60 + "분" : "")
@@ -126,6 +127,7 @@ export function createGamificationUI(React) {
         h("div", null, h("span", null, "기록 거리"), h("strong", null, amount(result.distanceKm), h("small", null, " km"))),
         h("div", null, h("span", null, "운행 시간"), h("strong", null, time)),
       ),
+      income,
       result.newBadges.length
         ? h("div", { className: "rs-game-recap-badges" },
             h("span", null, "새로운 업적"),

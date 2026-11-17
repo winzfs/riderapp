@@ -386,7 +386,7 @@ async function mapTest() {
     for (let i = 0; i < 5; i++) {
       await tab(page, "타임라인").click();
       await page.getByRole("heading", { name: "타임라인" }).waitFor();
-      await tab(page, "지도").click();
+      await tab(page, baseline ? "지도" : "운행").click();
       await page.getByLabel(mapLabel, { exact: true }).waitFor();
       sameCamera(chosen, await camera(page));
     }
@@ -422,7 +422,7 @@ async function mapTest() {
         window.__rsGoToTab("trips");
       });
       await page.getByRole("heading", { name: "타임라인" }).waitFor();
-      await tab(page, "지도").click();
+      await tab(page, baseline ? "지도" : "운행").click();
       await page.getByLabel(mapLabel, { exact: true }).waitFor();
     }
     await page.waitForTimeout(350);
@@ -481,7 +481,7 @@ async function timelineTest(count) {
         await page.getByText(/최대 5개/).waitFor();
         assert.equal(roadRequests(), 0);
       }
-      await tab(page, "지도").click();
+      await tab(page, baseline ? "지도" : "운행").click();
       await openTrip(page, trip);
       assert.equal(
         await page.evaluate(

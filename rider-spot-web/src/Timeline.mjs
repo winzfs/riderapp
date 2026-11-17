@@ -15,7 +15,7 @@ import { useRoutePlayback } from "./route-playback.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
 import { timelineStartPoint, timelineEndPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
 
-export function createTimeline(S, Zo) {
+export function createTimeline(S, Zo, Income) {
   const rs33J = S.createElement;
   const { Icon, Metrics } = createUI(S);
   const { DayRideCard } = createGamificationUI(S);
@@ -205,7 +205,7 @@ export function createTimeline(S, Zo) {
       ),
     );
   }
-  function ss({ ride, notify }) {
+  function ss({ ride, notify, user, login }) {
     const today = rs33ISO(Date.now());
     const [selected, setSelected] = S.useState(null);
     const [day, setDay] = S.useState(today);
@@ -506,7 +506,7 @@ export function createTimeline(S, Zo) {
               onClick: back,
               disabled: !ended,
             },
-            ended ? "‹ 운행 목록" : "운행 기록 중",
+            ended ? "‹ 하루 전체" : "운행 기록 중",
           ),
           rs33J(
             "h1",
@@ -650,19 +650,8 @@ export function createTimeline(S, Zo) {
             ? rs33J(DayRideCard, {
                 history: ride.history,
                 day: rs33ISO(start),
-                celebrate: true,
+                celebrate: true, income:rs33J(Income,{day:rs33ISO(start),user,login}),
               })
-            : null,
-          finished && ended
-            ? rs33J(
-                "button",
-                {
-                  type: "button",
-                  className: "primary rs33-income-link",
-                  onClick: () => window.__rsOpenTool?.("earnings"),
-                },
-                "이어서 수익 기록",
-              )
             : null,
           ended
             ? rs33J(
@@ -909,7 +898,7 @@ export function createTimeline(S, Zo) {
             }),
           )
         : null,
-      !allDays ? rs33J(DayRideCard, { history: ride.history, day }) : null,
+      !allDays ? rs33J(DayRideCard, { history: ride.history, day, income:rs33J(Income,{key:day,day,user,login}) }) : null,
       !allDays && daily
         ? rs33J("section", {
             className: "rs56-day-overview", "aria-label": "하루 통합 운행 경로",

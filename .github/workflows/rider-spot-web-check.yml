@@ -37,3 +37,14 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: Exercise mobile record forms and timeline
+        env:
+          RIDER_SCREENSHOTS: /tmp/mobile-records
+        run: |
+          npx playwright install --with-deps chromium
+          node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-record-screens
+          path: /tmp/mobile-records/

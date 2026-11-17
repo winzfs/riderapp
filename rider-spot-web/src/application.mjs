@@ -1,3 +1,4 @@
+import { createRecords } from "./mobile-records.mjs";
 import { createUI } from "./ui.mjs";
 import { createRiderMap } from "./RiderMap.mjs";
 import { createTimeline } from "./Timeline.mjs";
@@ -1295,19 +1296,13 @@ export function mountApplication({
       H(
         "div",
         { className: "rc-head" },
-        H("h1", null, "커뮤니티"),
+        H("h1", null, dong || district),
         H(
           "button",
           { className: "primary rc-write", type: "button", onClick: write },
           "＋ 글쓰기",
         ),
       ),
-      H("section", { className: "rs-lounge-quick", "aria-label": "동네 라이더 라운지" },
-        H("div", { className: "rs-lounge-title" },
-          H("div", null, H("strong", null, "동네 라이더 라운지"), H("small", null, areaLabel + " · 기존 게시판에서 이어져요"))),
-        H("div", { className: "rs-lounge-actions" },
-          H("button", { type: "button", onClick: () => write("질문·노하우") }, "동네에 질문하기 ↗"),
-          H("button", { type: "button", onClick: () => write("현장 정보") }, "현장 정보 나누기 ↗"))),
       H(
         "div",
         { className: "rc-controls" },
@@ -2352,14 +2347,14 @@ export function mountApplication({
   }
 
   var ls = [
-    [`nearby`, `지도`, be],
+    [`nearby`, `운행`, be],
     [`trips`, `타임라인`, Ae],
-    [`tools`, `업무`, Pe],
-    [`community`, `커뮤니티`, He],
-    [`account`, `내 정보`, Be],
+    [`community`, `동네`, He],
+    [`bike`, `내 바이크`, Be],
   ];
   const Zo = createRiderMap(S, Jo.default, Xo);
-  const ss = createTimeline(S, Zo);
+  const { Bike, Income } = createRecords(S, q);
+  const ss = createTimeline(S, Zo, Income);
   const cs = createUseRide({
     React: S,
     client: q,
@@ -2404,12 +2399,13 @@ export function mountApplication({
       if (e === "nearby")
         window.dispatchEvent(new Event("riderspot:layer-changed"));
     }, [mapLayer, e]);
+    const navScreen = ["tools","account"].includes(e) ? "bike" : e;
     function navigateTab(n) {
       if (n === `tools` && typeof window.__rsOpenTool === `function`) {
         window.__rsOpenTool(`hub`);
         return;
       }
-      t(n);
+      window.__rsGoToTab(n);
     }
     ((0, S.useEffect)(() => {
       window.dispatchEvent(new Event("riderspot:screen"));
@@ -2474,7 +2470,7 @@ export function mountApplication({
                 (0, J.jsx)(`button`, {
                   "aria-label": `내 계정`,
                   className: `header-user`,
-                  onClick: () => (n ? t(`account`) : a(!0)),
+                  onClick: () => (n ? window.__rsGoToTab(`account`) : a(!0)),
                   children: (0, J.jsx)(Be, { size: 24 }),
                 }),
               ],
@@ -2492,8 +2488,8 @@ export function mountApplication({
                   (0, J.jsxs)(
                     `button`,
                     {
-                      className: e === n ? `active` : ``,
-                      "aria-current": e === n ? "page" : undefined,
+                      className: navScreen === n ? `active` : ``,
+                      "aria-current": navScreen === n ? "page" : undefined,
                       onClick: () => navigateTab(n),
                       children: [
                         (0, J.jsx)(Icon, {
@@ -2502,7 +2498,8 @@ export function mountApplication({
                             trips: "route",
                             tools: "work",
                             community: "community",
-                            account: "user",
+                            bike: "riders",
+                      account: "user",
                           }[n],
                           size: 24,
                         }),
@@ -2616,53 +2613,17 @@ export function mountApplication({
                             }),
                           ],
                         }),
-                        (0, J.jsxs)("div", {
-                          className: "rs61-home-dock" + (p.trip ? (p.paused ? " rs61-home-paused" : " rs61-home-active") : " rs61-home-idle"),
-                          "aria-label": "운행 기록 제어",
-                          children: [
-                            (0, J.jsxs)("div", {
-                              children: [
-                                (0, J.jsx)("strong", {
-                                  children: p.trip ? (p.paused ? "휴식 중" : "운행 중") : "운행을 기록해 보세요",
-                                }),
-                                (0, J.jsx)("small", {
-                                  children: p.trip
-                                    ? (Math.max(0, Math.floor((Date.now() - Date.parse(p.trip.started_at || Date.now())) / 60000)) + "분 · " +
-                                       (Number(p.trip.distance_km) || 0).toFixed(1) + "km · " +
-                                       (p.gpsStatus === "ready" ? "GPS 정상" : "GPS 확인 필요"))
-                                    : "공유 설정과 별개로 내 기록만 저장돼요",
-                                }),
-                              ],
-                            }),
-                            p.trip
-                              ? (0, J.jsxs)("div", {
-                                  className: "rs61-ride-actions",
-                                  children: [
-                                    (0, J.jsx)("button", {
-                                      type: "button",
-                                      disabled: p.busy,
-                                      onClick: () => Promise.resolve(p.togglePause()).catch(err => f(err?.message || "휴식 상태를 변경하지 못했어요.")),
-                                      className: "rs61-dock-pause",
-                                      children: p.paused ? "재개" : "휴식",
-                                    }),
-                                    (0, J.jsx)("button", {
-                                      type: "button",
-                                      onClick: () => t("trips"),
-                                      className: "rs61-dock-detail",
-                                      children: "기록 보기",
-                                    }),
-                                  ],
-                                })
-                              : (0, J.jsx)("button", {
-                                  type: "button",
-                                  disabled: p.busy,
-                                  onClick: () => Promise.resolve(p.startTrip()).catch(err => f(err?.message || "운행을 시작하지 못했어요.")),
-                                  children: p.busy ? "확인 중…" : "운행 시작",
-                                }),
-                          ],
+                        (0, J.jsx)("div", {
+                          className: "ride-launch" + (p.trip ? " active" : ""),
+                          children: (0,J.jsx)("button", {
+                            type:"button", disabled:p.busy,
+                            onClick:()=>p.trip ? navigateTab("trips") : Promise.resolve(p.startTrip()).catch(err=>f(err.message)),
+                            children:p.trip ? (p.paused ? "휴식 중" : "기록 중") + " · " + Math.max(0,Math.floor((Date.now()-Date.parse(p.trip.started_at))/60000)) + "분 ›" : p.busy ? "위치 확인 중…" : "운행 시작",
+                          })
                         }),
                       ],
                     })
+                  : e === "bike" ? (0,J.jsx)(Bike,{user:n,login:()=>a(true),profile:()=>navigateTab("account")},n?.id||"guest")
                   : e === `tools`
                     ? (0, J.jsx)(`section`, {
                         key: `route-tools`,
@@ -2676,7 +2637,7 @@ export function mountApplication({
                           notify: f,
                         })
                       : e === `trips`
-                        ? (0, J.jsx)(ss, { ride: p, notify: f })
+                        ? (0, J.jsx)(ss, { ride: p, notify: f, user:n, login:()=>a(true) })
                         : (0, J.jsx)(
                             Profile,
                             {
@@ -2688,7 +2649,7 @@ export function mountApplication({
                               toggle: h,
                               history: p.history,
                               riding: Boolean(p.trip && !p.paused),
-                              onTimeline: () => t("trips"),
+                              onTimeline: () => navigateTab("trips"),
                             },
                             n?.id || `guest`,
                           ),
@@ -2703,8 +2664,8 @@ export function mountApplication({
             (0, J.jsxs)(
               `button`,
               {
-                className: e === n ? `active` : ``,
-                "aria-current": e === n ? "page" : undefined,
+                className: navScreen === n ? `active` : ``,
+                "aria-current": navScreen === n ? "page" : undefined,
                 onClick: () => navigateTab(n),
                 children: [
                   (0, J.jsx)(Icon, {
@@ -2713,6 +2674,7 @@ export function mountApplication({
                       trips: "route",
                       tools: "work",
                       community: "community",
+                      bike: "riders",
                       account: "user",
                     }[n],
                     size: 24,
