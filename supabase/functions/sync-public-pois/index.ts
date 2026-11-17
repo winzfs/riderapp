@@ -103,18 +103,32 @@ Deno.serve(async (request) => {
   if (diff !== 0) return json({ error: "Unauthorized" }, 401);
 
   try {
-    const response = await fetch(OVERPASS, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "RiderSpotPublicPOI/1.0 (https://rider-spot.jazzhjm.workers.dev/)",
-        "Accept": "application/json",
-      },
-      body: new URLSearchParams({ data: QUERY }).toString(),
-      signal: AbortSignal.timeout(65000),
-    });
-    if (!response.ok) throw new Error("OSM API HTTP " + response.status);
-    const raw = await response.text();
+    // Some public Overpass mirrors return 406 for POST traffic from shared
+    // serverless IP ranges. Try one small GET on each of two instances.
+    // There is never a retry loop and the schedule runs only once per week.
+    let raw = "";
+    const errors: string[] = [];
+    for (const endpoint of [OVERPASS, "https://overpass.private.coffee/api/interpreter"]) {
+      try {
+        const response = await fetch(endpoint + "?data=" + encodeURIComponent(QUERY), {
+          method: "GET",
+          headers: {
+            "User-Agent": "RiderSpotPublicPOI/1.0 (https://rider-spot.jazzhjm.workers.dev/)",
+            "Accept": "application/json",
+          },
+          signal: AbortSignal.timeout(65000),
+        });
+        if (!response.ok) {
+          const summary = (await response.text()).slice(0, 130).replace(/[^ a-zA-Z0-9.:_-]/g, " ");
+          throw new Error("HTTP " + response.status + " " + summary);
+        }
+        raw = await response.text();
+        break;
+      } catch (error) {
+        errors.push(new URL(endpoint).host + ": " + String(error instanceof Error ? error.message : error).slice(0, 150));
+      }
+    }
+    if (!raw) throw new Error("OSM mirrors unavailable (" + errors.join("; ").slice(0, 200) + ")");
     if (raw.length > 6_000_000) throw new Error("OSM response too large");
     const payload = JSON.parse(raw);
     if (!Array.isArray(payload.elements)) throw new Error("OSM elements missing");
