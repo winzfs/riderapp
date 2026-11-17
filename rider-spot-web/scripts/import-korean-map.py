@@ -127,6 +127,29 @@ def build(shops, admin):
         }
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    # The bundles are an optional deployment transport, never browser assets.
+    # This lets a release tool load many small tiles with a few GitHub file reads.
+    bundle_dir = OUT / "bundles"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    for old in bundle_dir.glob("pack-*.json"):
+        old.unlink()
+    buffer, used, index = {}, 0, 0
+    for path in sorted(OUT.glob("*.json")):
+        key = "/mapdata/" + path.name
+        contents = path.read_text(encoding="utf-8")
+        cost = len(json.dumps({key: contents}, ensure_ascii=False).encode("utf-8"))
+        if buffer and used + cost > 900_000:
+            (bundle_dir / f"pack-{index:02d}.json").write_text(
+                json.dumps(buffer, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8"
+            )
+            index += 1
+            buffer, used = {}, 0
+        buffer[key] = contents
+        used += cost
+    if buffer:
+        (bundle_dir / f"pack-{index:02d}.json").write_text(
+            json.dumps(buffer, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8"
+        )
     print("Map-data generated:", manifest["coverage"], dict(counts), "tiles", len(records))
     if not admins or counts["shop"] < 100:
         raise ValueError("Unexpectedly little public map data; refusing to publish")
