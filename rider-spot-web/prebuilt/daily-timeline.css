@@ -58,3 +58,18 @@
 .rs56-stop-list small{flex:none;color:#a47346;font-size:9px}
 @media(max-width:360px){.rs59-course-tools{gap:5px;padding:8px}.rs59-course-tools button{font-size:10px;min-height:40px}.rs56-stop-list{grid-template-columns:1fr}}
 .rs33-course-full .rs59-course-tools{padding:7px 10px}
+
+/* v64: compact journey timeline with distinct clock and event layers */
+.rs33-timeline>.rs-game-recap{margin-bottom:10px}
+.rs33-timeline .rs56-day-overview{margin:0 0 20px}
+.rs33-timeline .rs56-day-course{border-radius:17px}
+.rs59-course-tools,
+.rs59-course-tools:has(.rs38-road-toggle){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:10px 12px;border-top:1px solid #ecf0ed;background:#fff}
+.rs59-course-tools button{min-height:44px;min-width:0;padding:8px 5px;border-radius:11px;border:1px solid #e2eae5;background:#f7f9f7;color:#4c6459;font-size:12px;font-weight:700;white-space:nowrap}
+.rs59-course-tools button:first-child{background:#f7f9f7;color:#4c6459;border-color:#e2eae5}
+.rs59-course-tools button[aria-pressed="true"]{background:#e7f2ed;color:#126a58;border-color:#b9dbcf}
+.rs59-course-tools .rs33-expand{background:#f1f5f3;color:#194f44}
+.rs56-route-focus{padding:10px 14px;border-top:1px solid #edf0ed;background:#f8fbf8;color:#166552;font-size:12px;font-weight:700}
+.rs33-timeline .rs56-day-map{height:clamp(330px,92vw,480px)}
+.rs33-timeline .rs-game-recap::after{pointer-events:none}
+@media(max-width:360px){.rs59-course-tools button{font-size:11px}}
