@@ -44,6 +44,15 @@ jobs:
             for expression in [r'fileDataDown.{0,400}',r'FILE_[0-9]{10,}',r'selectFileDataDownload.{0,300}',r'2026[0-9]{4}']:
               hits=re.findall(expression,html,re.I)
               print('Official file link pattern:',expression,'matches:',len(hits),'examples:',hits[:3])
+            import urllib.parse,json
+            m=re.search(r"fileDataDown\\('([^']+)'\\s*,\\s*'([^']+)'",html)
+            if m:
+              query=urllib.parse.urlencode({'publicDataDetailPk':m.group(2),'publicDataPk':m.group(1),'atchFileId':'','fileDetailSn':'1','url':'/tcs/dss/selectFileDataDownload.do'})
+              req=urllib.request.Request('https://www.data.go.kr/tcs/dss/selectFileDataDownload.do?'+query,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.data.go.kr/data/15083033/fileData.do'})
+              with urllib.request.urlopen(req,timeout=30) as response:
+                payload=response.read(15000).decode('utf-8','replace')
+              print('Official download metadata result:',payload[:1000])
+
           except Exception as exc:
             print('Official data metadata not currently accessible:',type(exc).__name__,str(exc)[:150])
           PY
