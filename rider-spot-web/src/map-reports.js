@@ -1,4 +1,5 @@
 import { openMapSheet } from './ui-overlays.mjs';
+import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
 (() => {
   "use strict";
   const RS = {
@@ -17,6 +18,7 @@ import { openMapSheet } from './ui-overlays.mjs';
     loaded: false,
     hydrated: new WeakSet(),
   };
+  const publicPoiOverlay = createPublicPoiOverlay(openMapSheet);
   const labelFor = { places: "시설 등록", roads: "도로 제보" };
   const esc = (v) =>
     String(v == null ? "" : v).replace(
@@ -306,6 +308,7 @@ import { openMapSheet } from './ui-overlays.mjs';
     if (!map || map !== RS.map || !L || !RS.layer) return;
     const filter =
       map.getContainer().closest(".map-wrap")?.dataset.rs33Layer || "places";
+    if (!["places", "shelters"].includes(filter)) publicPoiOverlay.clear();
     const records =
       filter === "riders"
         ? []
@@ -439,6 +442,11 @@ import { openMapSheet } from './ui-overlays.mjs';
       }
       RS.loaded = true;
       drawReports();
+      publicPoiOverlay.refresh({
+        map, L: window.__rsLeaflet, client: RS.client,
+        riderPlaces: RS.reports.places,
+        filter: map.getContainer().closest(".map-wrap")?.dataset.rs33Layer || "places",
+      });
     } catch (err) {
       console.warn("제보 지도 조회:", err?.message || err);
     }
