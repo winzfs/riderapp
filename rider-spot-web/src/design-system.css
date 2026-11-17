@@ -1282,3 +1282,26 @@ svg.rs-icon{flex:none;vertical-align:middle}
   width:70px;max-width:70px;padding:0 4px;border-color:#9ecfba;
   background:#e7f2eb;color:#116653;font-size:11px;font-weight:800
 }
+
+/* Work entry: focus on the amount first and keep rarely-used fields optional. */
+#rs-tools .rs63-earnings-form .rs63-earnings-amount{padding:5px 0 0}
+#rs-tools .rs63-earnings-amount .rs-field>span{font-weight:750;color:var(--rs-text)}
+#rs-tools .rs63-earnings-amount input[name="gross_won"]{min-height:58px;height:58px;font-size:22px;font-weight:750;font-variant-numeric:tabular-nums;border-color:#b9d7c8;background:#f9fcfa}
+#rs-tools .rs63-earnings-more summary{color:var(--rs-primary);font-weight:650}
+#rs-tools .rs63-maint-fast{padding:16px;margin:0 0 18px;background:#fff;border:1px solid var(--rs-line);border-radius:16px}
+#rs-tools .rs63-maint-fast h3{margin:0 0 4px;font-size:17px;color:var(--rs-text)}
+#rs-tools .rs63-maint-fast p.rs-small{margin:0 0 10px;font-size:12px;line-height:1.5}
+#rs-tools .rs63-maint-fast .rs-form{margin-top:8px}
+#rs-tools .rs63-maint-presets{display:flex;gap:7px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;overscroll-behavior-x:contain}
+#rs-tools .rs63-maint-presets::-webkit-scrollbar{display:none}
+#rs-tools .rs63-maint-presets button{flex:none;min-height:38px;padding:8px 12px;font-size:12px;font-weight:650;border:1px solid var(--rs-line);border-radius:10px;background:#f8faf8;white-space:nowrap}
+#rs-tools .rs63-maint-presets button[aria-pressed="true"]{background:var(--rs-soft);color:var(--rs-primary);border-color:#accfbe}
+#rs-tools .rs63-maint-last{margin:10px 0 0;font-size:11px;color:var(--rs-muted)}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities){margin:8px 0 12px;gap:8px}
+#rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button{min-height:70px;border-radius:12px}
+#rs-tools .rs33-work-overview{margin-top:6px}
+@media(max-width:390px){
+  #rs-tools .rs63-maint-fast{padding:13px}
+  #rs-tools .rs63-maint-presets button{padding-inline:10px}
+  #rs-tools .rs33-work-quick:not(.rs33-work-utilities)>button{min-height:65px}
+}
