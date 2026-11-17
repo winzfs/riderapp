@@ -153,7 +153,7 @@ export function mountPublicKoreanLabels(gl) {
   return () => {
     alive = false;
     revision++;
-    gl.off("style.load", onStyle);
-    gl.off("moveend", refresh);
+    gl.off?.("style.load", onStyle);
+    gl.off?.("moveend", refresh);
   };
 }
