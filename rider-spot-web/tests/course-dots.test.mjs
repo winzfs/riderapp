@@ -61,7 +61,7 @@ test("isolated GPS fixes do not appear as orange dots; route and revisit layers 
 });
 
 
-test("route progress colors are pale mint at the start and deep green at the end", () => {
+test("route progress colors begin orange, transition through sage and end deep green", () => {
   const colors = [];
   const L = {
     layerGroup() { return { addTo() { return this; }, remove() {} }; },
@@ -78,10 +78,14 @@ test("route progress colors are pale mint at the start and deep green at the end
   const before = JSON.stringify(geometry);
   const release = rs33DrawCourse(L, {}, geometry);
   assert.equal(colors.length, 24, "all route progress tones are displayed");
-  assert.equal(colors[0], "rgb(180,235,215)", "start is pale mint");
+  assert.equal(colors[0], "rgb(246,151,69)", "start is warm orange");
   assert.equal(colors.at(-1), "rgb(3,66,50)", "finish is deep green");
+  assert.ok(colors.some((color) => {
+    const [r, g, b] = color.match(/\d+/g).map(Number);
+    return g > r && g > b && r > 60;
+  }), "middle section includes a visibly green transition");
   const brightness = (color) => color.match(/\d+/g).map(Number).reduce((sum, channel) => sum + channel, 0);
-  assert.ok(brightness(colors[0]) - brightness(colors.at(-1)) > 400,
+  assert.ok(brightness(colors[0]) - brightness(colors.at(-1)) > 260,
     "start/end have a clear color contrast");
   assert.equal(JSON.stringify(geometry), before, "recoloring must not modify route geometry");
   release();
