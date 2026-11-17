@@ -1248,3 +1248,12 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .app .rs33-trip-detail .rs-ride-control-bar{gap:7px}
   .app .rs33-trip-detail .rs-ride-control-bar button{min-height:54px;font-size:14px;padding:10px 8px}
 }
+
+/* Non-interactive status toast must never block live ride pause/end actions. */
+.app .toast,.app .rs-toast{pointer-events:none}
+@media(max-width:760px){
+  body:has(.rs33-trip-detail.rs33-trip-live) .toast,
+  body:has(.rs33-trip-detail.rs33-trip-live) .rs-toast{
+    bottom:calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 104px);
+  }
+}
