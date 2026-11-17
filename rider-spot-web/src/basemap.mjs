@@ -1,3 +1,4 @@
+import { addKoreanPoiNameLayers } from "./korean-map-labels.mjs";
 const STYLES = { simple: "https://tiles.openfreemap.org/styles/positron" };
 const CREDIT =
   '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
@@ -11,6 +12,7 @@ export function hideBasemapPoiLabels(gl) {
   const layers = gl.getStyle?.()?.layers;
   if (!Array.isArray(layers)) return;
   for (const layer of layers) {
+    if (layer.id.startsWith("rs-korean-")) continue;
     if (layer["source-layer"] !== "poi" && !/^(?:rs-poi-|poi(?:[_-]|$))/.test(layer.id)) continue;
     try {
       gl.setLayoutProperty(layer.id, "visibility", "none");
@@ -394,6 +396,7 @@ export function addBasemap(L, map) {
           // Positron intentionally omits POIs; never re-add generic facility
           // labels from the vector tile source (shelters, fuel, repair, etc.).
           hideBasemapPoiLabels(gl);
+          addKoreanPoiNameLayers(gl);
           // Keep administrative and road names for navigation context.
           rs46LocalLabels();
           rs47MoreNeighbourhoodNames();
