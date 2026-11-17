@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildPlaybackTrack, playbackFrame, playbackTimestamp,
-  createPlaybackLayer,
+  createPlaybackLayer, buildPlaybackColorSlices,
 } from "../src/route-playback.mjs";
+import { rs33CourseToneColor } from "../src/course-layers.mjs";
 
 const begin = Date.parse("2026-11-16T08:00:00Z");
 function run(id, offset, duration, points) {
@@ -126,4 +127,66 @@ test("100x replay is selectable without changing GPS time interpolation", async 
   assert.equal(JSON.stringify(source), original, "100x option never alters GPS points");
   useRoutePlayback(React, source).setSpeed(999);
   assert.equal(useRoutePlayback(React, source).speed, 100, "invalid speeds are rejected");
+});
+
+
+test("playback keeps the completed-route gradient fixed while revealing real-time GPS positions", () => {
+  const first = run("a", 0, 40000, [
+    [35.1,126.8,0],
+    [35.101,126.801,10000],
+    [35.102,126.802,20000],
+    [35.103,126.803,39000,true],
+  ]);
+  const second = run("b", 3600000, 30000, [
+    [35.2,126.9,0],[35.201,126.901,15000],[35.202,126.902,30000],
+  ]);
+  const original = JSON.stringify([first, second]);
+  const track = buildPlaybackTrack([first, second]);
+  const slices = buildPlaybackColorSlices(track);
+  assert.ok(slices.length >= 24, "the full track spans 24 gradient tones");
+  assert.equal(slices[0].tone, 0);
+  assert.equal(slices.at(-1).tone, 23);
+  assert.equal(rs33CourseToneColor(0), "rgb(180,235,215)");
+  assert.equal(rs33CourseToneColor(23), "rgb(3,66,50)");
+  assert.ok(slices.every((part) =>
+    part.coordinates.length === part.times.length && part.coordinates.length >= 2 &&
+    part.times.every((time) => Number.isFinite(time)) &&
+    part.segmentIndex >= 0 && part.segmentIndex < track.segments.length
+  ), "each slice stays within one original GPS segment");
+  const created = [];
+  const group = { addTo() { return this; }, remove() {}, removeLayer() {} };
+  const L = {
+    layerGroup() { return group; },
+    polyline(coords, style) {
+      const layer = { color: style.color, coords, addTo() { return this; },
+        setLatLngs(value) { this.coords = value.map((point) => [...point]); } };
+      created.push(layer);
+      return layer;
+    },
+    circleMarker() {
+      return { setLatLng() {}, addTo() { return this; } };
+    },
+  };
+  const playback = createPlaybackLayer(L, {}, track);
+  const palette = created.map((part) => part.color);
+  assert.equal(palette[0], "rgb(180,235,215)");
+  assert.equal(palette.at(-1), "rgb(3,66,50)");
+  playback.setTime(20000);
+  assert.ok(created.some((part) => part.coords.length >= 2 && part.color !== palette.at(-1)),
+    "earlier route is visible with its original color");
+  assert.equal(created.at(-1).coords.length, 0, "unvisited final route is not visible");
+  playback.setTime(track.duration);
+  assert.ok(created.every((part) => part.coords.length >= 2), "whole route appears after playback finishes");
+  playback.setTime(5000);
+  assert.equal(created.at(-1).coords.length, 0, "seeking backward hides future route");
+  assert.deepEqual(created.map((part) => part.color), palette, "colors do not shift during playback or seeking");
+  assert.equal(JSON.stringify([first, second]), original, "GPS and gaps remain untouched");
+  playback.destroy();
+});
+
+test("single stationary fix does not fabricate a colored route", () => {
+  const track = buildPlaybackTrack(run("stationary", 0, 20000, [
+    [35.1, 126.8, 0], [35.1, 126.8, 20000],
+  ]));
+  assert.deepEqual(buildPlaybackColorSlices(track), []);
 });
