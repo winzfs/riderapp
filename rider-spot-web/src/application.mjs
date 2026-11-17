@@ -1715,37 +1715,11 @@ export function mountApplication({
           toggle,
           notify: r,
         }),
-        (0, J.jsxs)(`h2`, {
-          className: `tool-title`,
-          children: [(0, J.jsx)(fe, { size: 21 }), ` 빠른 배달 문구`],
-        }),
-        (0, J.jsx)(`p`, {
-          className: `muted`,
-          children: `문구를 누르면 복사돼요.`,
-        }),
-        (0, J.jsx)(`div`, {
-          className: `phrase-list`,
-          children: [
-            `문 앞에 안전하게 두었습니다. 맛있게 드세요!`,
-            `가게에서 준비 중입니다. 출발하면 안내드릴게요.`,
-            `도착했습니다. 잠시만 나와 주시겠어요?`,
-          ].map((e) =>
-            (0, J.jsxs)(
-              `button`,
-              {
-                onClick: async () => {
-                  try {
-                    (await navigator.clipboard.writeText(e),
-                      r(`문구를 복사했어요.`));
-                  } catch {
-                    r(`이 브라우저에서는 복사를 허용하지 않았어요.`);
-                  }
-                },
-                children: [e, (0, J.jsx)(fe, { size: 17 })],
-              },
-              e,
-            ),
-          ),
+        (0, J.jsx)(`button`, {
+          type: `button`,
+          className: `secondary rs61-shortcuts-link`,
+          onClick: () => window.__rsOpenTool?.("shortcuts"),
+          children: `배달 문구와 현장 도구는 업무에서 사용하기 ›`,
         }),
         (0, J.jsxs)(`h2`, {
           className: `tool-title`,
