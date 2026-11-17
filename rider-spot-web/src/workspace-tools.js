@@ -671,7 +671,7 @@ import { iconMarkup } from "./ui.mjs";
             placeholder: "예: 01012345678",
           }) +
           '<button class="rs-primary">연락처 저장</button></form><button class="rs-secondary" data-rs-sms>현재 위치 문자 준비</button>',
-      ) +
+      )
       : card("내 연락 도구", '<p class="rs-small">계정으로 로그인하면 긴급 연락처를 등록할 수 있어요.</p><button type="button" data-rs-login class="rs-primary">로그인</button>')) +
       card(
         "빠른 배달 문구",
