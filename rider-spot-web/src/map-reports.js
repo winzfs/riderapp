@@ -1,6 +1,6 @@
 import { openMapSheet } from './ui-overlays.mjs';
 import { createPublicPoiOverlay } from './public-pois-overlay.mjs';
-import { isVisibleFacility } from './facility-visibility.mjs';
+import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
 (() => {
   "use strict";
   const RS = {
@@ -315,9 +315,7 @@ import { isVisibleFacility } from './facility-visibility.mjs';
               (row) => Date.parse(row.expires_at) > Date.now(),
             )
           : RS.reports.places.filter((row) =>
-              matchesFacilityLayer(filter, row.category) ||
-              // Explicitly opening a saved/user-submitted facility still works.
-              window.__rs33MapTarget?.id === row.id,
+              matchesFacilityLayer(filter, row.category),
             );
     const stateKey = JSON.stringify([
       filter,
@@ -368,13 +366,7 @@ import { isVisibleFacility } from './facility-visibility.mjs';
             : "위치 공유를 켜면 주변 라이더를 볼 수 있어요."
           : filter === "roads"
             ? "이 화면의 도로 제보 " + records.length + "건"
-            : (filter === "shelters"
-                ? "쉼터·화장실 "
-                : filter === "shops"
-                  ? "정비소 "
-                  : "시설 ") +
-              records.length +
-              "곳";
+            : "화장실 " + records.length + "곳";
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = filter === "roads" ? "제보 올리기" : "시설 등록";
@@ -404,6 +396,7 @@ import { isVisibleFacility } from './facility-visibility.mjs';
         if (bounds.west >= -180 && bounds.east <= 180)
           q = q.gte("lng", bounds.west).lte("lng", bounds.east);
       }
+      if (type === "places") q = q.eq("category", VISIBLE_FACILITY);
       if (type === "roads") q = q.gt("expires_at", new Date().toISOString());
       const { data, error } = await q
         .order("created_at", { ascending: false })
