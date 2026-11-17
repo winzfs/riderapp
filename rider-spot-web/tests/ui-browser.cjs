@@ -52,6 +52,8 @@ async function check(width,native){
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();await p.getByRole('button',{name:'2026-11-16 운행 3회',exact:true}).click();await p.locator('.rs56-day-overview .rs56-day-map').waitFor();await p.waitForFunction(()=>document.querySelector('.rs56-day-map .map')?.dataset.rsBasemap==='positron',null,{timeout:35000});
  if(baseline)await shot('timeline');else {
  await layout('timeline');
+ await p.locator('.rs56-day-map .rs-course-end-pin .rs-end-label').waitFor();
+ assert.equal(await p.locator('.rs56-day-map .rs-course-end-pin .rs-end-label').innerText(),'종료');
  const recap=p.locator('.rs33-timeline .rs-game-recap');
  assert.equal(await recap.count(),1,'completed day should render one passive result card');
  assert.match(await recap.innerText(),/\+40 XP/,'same-day rides award XP once');
@@ -65,6 +67,16 @@ async function check(width,native){
  const eventToggle=p.getByRole('button',{name:'이벤트 켜기'});
  await eventToggle.click();
  await p.getByRole('button',{name:'이벤트 끄기'}).waitFor();
+ await p.locator('.rs56-day-map .rs33-stamp-label.stop').first().waitFor();
+ await p.evaluate(()=>window.__rsMap.setZoom(11));
+ await p.waitForTimeout(350);
+ const cityStops=await p.locator('.rs56-day-map .rs33-stamp-label.stop').count();
+ assert.ok(cityStops>=40,'citywide zoom keeps each recorded stop visible: '+cityStops);
+ await p.evaluate(()=>window.__rsMap.setZoom(9));
+ await p.waitForTimeout(350);
+ const distantStops=await p.locator('.rs56-day-map .rs33-stamp-label.stop').count();
+ assert.ok(distantStops>0 && distantStops<cityStops,'distant zoom clusters events rather than hides them');
+ assert.ok(await p.locator('.rs56-day-map .rs33-stamp-cluster').count()>0,'stop clusters show event counts');
  await p.getByRole('button',{name:'이벤트 끄기'}).click();
  assert.equal(await p.locator('.rs56-stop-events').count(),0,'event list hidden when events are off');
  assert.equal(await p.locator('.rs56-ride-choice').count(),3);
