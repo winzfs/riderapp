@@ -7,6 +7,9 @@ on:
       - 'rider-spot-web/tests/ui-browser.cjs'
       - '.github/workflows/rider-spot-ui.yml'
   workflow_dispatch:
+concurrency:
+  group: rider-spot-ui-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -32,13 +35,21 @@ jobs:
           sed -i "s/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/" tests/ui-browser.cjs
           # documentElement is not available during Playwright addInitScript execution.
           sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+      - name: Start locally rebuilt v61 UI against unchanged Worker APIs
+        run: |
+          node scripts/local-preview.cjs >/tmp/rider-local-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8789/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8789/ | grep -q 'rider-spot-'
       - name: Mobile UI, replay, map, data preservation and simulated WebView
         env:
-          RIDER_UI_URL: https://urban-ui-rider-spot.jazzhjm.workers.dev/
+          RIDER_UI_URL: http://127.0.0.1:8789/
         run: node tests/ui-browser.cjs
       - name: Native bridge capture and offline completion regression
         env:
-          RIDER_TEST_URL: https://urban-ui-rider-spot.jazzhjm.workers.dev/
+          RIDER_TEST_URL: http://127.0.0.1:8789/
           RIDER_TEST_CASE: native
           RIDER_APK_BRIDGE: /tmp/rider-apk/app/src/main/assets/native-bridge.js
         run: |
