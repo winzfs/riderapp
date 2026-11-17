@@ -1,7 +1,8 @@
 import { addKoreanPoiNameLayers } from "./korean-map-labels.mjs";
+import { mountPublicKoreanLabels } from "./korean-public-labels.mjs";
 const STYLES = { simple: "https://tiles.openfreemap.org/styles/positron" };
 const CREDIT =
-  '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
+  '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors · <a href="https://www.vworld.kr/" target="_blank" rel="noopener noreferrer">국가공간정보</a> · <a href="https://www.data.go.kr/data/15012005/openapi.do" target="_blank" rel="noopener noreferrer">소상공인시장진흥공단</a>';
 const scripts = [
   "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js",
   "https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js",
@@ -102,6 +103,7 @@ export function addBasemap(L, map) {
     wrap.classList.remove("rs-polished");
   }
   let readyTimer, fallbackTimer;
+  let removePublicNames = () => {};
   function paint() {
     if (!state.alive) return;
     const isVector = state.mode === "simple";
@@ -115,6 +117,8 @@ export function addBasemap(L, map) {
     }
   }
   function restoreOsm() {
+    removePublicNames();
+    removePublicNames = () => {};
     if (state.creditAdded && map.attributionControl) {
       map.attributionControl.removeAttribution(CREDIT);
       state.creditAdded = false;
@@ -188,6 +192,7 @@ export function addBasemap(L, map) {
       const gl = layer.getMaplibreMap();
       state.glMap = gl;
       if (!gl) throw Error("지도 렌더러 생성 실패");
+      removePublicNames = mountPublicKoreanLabels(gl);
       let done = false;
       const onReady = () => {
         if (done || !state.alive || state.gl !== layer) return;
@@ -443,6 +448,7 @@ export function addBasemap(L, map) {
   paint();
   if (state.mode === "simple") update();
   return () => {
+    removePublicNames();
     if(map.__rsVectorGl){map.__rsVectorGl=null;map.fire?.("riderspot:vector-lost");}
     state.alive = false;
     clearTimeout(readyTimer);
