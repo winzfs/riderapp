@@ -2003,7 +2003,7 @@ export function mountApplication({
     ["shelters", "화장실"],
     ["roads", "도로 제보"],
   ];
-  function rs33LayerFor(kind, category) {
+  function rs33LayerFor(kind) {
     // Every facility opens from the same map layer; only WC pins are visible
     // by default. Explicit facility links may still focus their own record.
     return kind === "roads" ? "roads" : "shelters";
@@ -2055,7 +2055,7 @@ export function mountApplication({
   function rs33OpenMap(record, kind = "places") {
     if (!record || !Number.isFinite(record.lat) || !Number.isFinite(record.lng))
       return;
-    const layer = rs33LayerFor(kind, record.category);
+    const layer = rs33LayerFor(kind);
     window.__rs33MapTarget = {
       id: record.id,
       lat: record.lat,
