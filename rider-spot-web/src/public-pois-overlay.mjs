@@ -106,7 +106,7 @@ export function createPublicPoiOverlay(openMapSheet) {
     if (!map || !L) return;
     attach(map, L);
     const zoom = map.getZoom();
-    if (!client || !["places", "shelters"].includes(filter) || zoom < 14) {
+    if (!client || !["places", "shelters"].includes(filter) || zoom < 13) {
       clear();
       return;
     }
@@ -126,17 +126,24 @@ export function createPublicPoiOverlay(openMapSheet) {
       if (token !== state.seq || map !== state.map) return;
       if (error) throw error;
       // Sparse at city zoom, more information at street level.
-      const cap = zoom < 15 ? 45 : zoom < 16 ? 95 : 190;
+      const cap = zoom < 14 ? 20 : zoom < 15 ? 45 : zoom < 16 ? 95 : 190;
       const filtered = (data || []).filter((p) =>
         p.source === "osm" && valid(p) && allowed(filter, p.category) &&
         !nearRiderReport(p, riderPlaces)
       );
-      const priority = { "화장실": 0, "쉼터": 1, "주유소": 2, "주요시설": 3 };
-      filtered.sort((a, b) =>
-        (priority[a.category] ?? 4) - (priority[b.category] ?? 4) ||
-        String(a.source_id).localeCompare(String(b.source_id)));
+      // Rotate across categories so city zoom does not become a wall of
+      // toilet pins while all fuel stations and landmarks disappear.
+      const queues = ["화장실", "쉼터", "주유소", "주요시설"]
+        .map((category) => filtered.filter((poi) => poi.category === category)
+          .sort((a, b) => String(a.source_id).localeCompare(String(b.source_id))));
+      const visible = [];
+      while (visible.length < cap && queues.some((queue) => queue.length)) {
+        for (const queue of queues) {
+          if (queue.length && visible.length < cap) visible.push(queue.shift());
+        }
+      }
       state.group.clearLayers();
-      for (const poi of filtered.slice(0, cap)) {
+      for (const poi of visible) {
         const kind = icons[poi.category] || icons["주요시설"];
         const icon = L.divIcon({
           className: "rs-public-marker rs-public-marker--" + kind.type,
@@ -153,7 +160,7 @@ export function createPublicPoiOverlay(openMapSheet) {
       if (credit) {
         credit.hidden = !filtered.length;
         credit.querySelector(".rs-public-poi-count").textContent =
-          "공공시설 " + Math.min(filtered.length, cap) + "곳";
+          "공공시설 " + visible.length + "곳";
       }
     } catch (error) {
       if (token !== state.seq) return;
