@@ -41,7 +41,8 @@ jobs:
           const bundle=await readFile('dist/assets/'+dir+'/app.mjs','utf8');
           assert.ok(bundle.includes('apply_rider_trip_odometer'));
           assert.ok(bundle.includes('set_rider_manual_odometer'));
-          assert.ok(bundle.includes('data:image/svg+xml'));
+          assert.ok(bundle.includes('data:image/webp;base64,'),'restored original high-res artwork missing');
+          assert.ok(bundle.includes('neo-flat-original-v197'),'legacy SVG still in use');
           const manifest=JSON.parse(await readFile('dist/release.json','utf8'));
           assert.ok(manifest.hash && manifest.files.includes('/index.html'));
           console.log('PASS v189 candidate',manifest.hash);
@@ -49,7 +50,11 @@ jobs:
       - name: Install Chromium for mobile UI smoke
         run: npx playwright install --with-deps chromium
       - name: Verify bike tile icons, model presets, manual correction and timeline on 412/360 px
-        run: node tests/mobile-records-browser.cjs
+        env:
+          RIDER_TEST_ORIGIN: http://127.0.0.1:8841
+        run: |
+          python3 -m http.server 8841 --directory dist > /tmp/rider-v197-http.log 2>&1 &
+          node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
         if: success()
         with:
