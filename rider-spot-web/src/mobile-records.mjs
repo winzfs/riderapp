@@ -338,7 +338,7 @@ export function createRecords(R, client) {
           h("h2",null,vehicle?.vehicle_name||"내 오토바이"),
           h("div",{className:"bike-odometer-label"},h(Icon,{name:"gauge",size:17}),"현재 계기판"),
           h("strong",{className:"bike-distance"},reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
-            h("span",null,number(reading[0])),h("small",null,"km"))),
+            h("span",null,number(reading[0]))," ",h("small",null,"km"))),
           h("small",null,reading?.[1]||"입력일 미기록",
             !manual&&reading?" · 정비·주유 기록 기준":"")),
         h("img",{src:scooter,alt:"스쿠터 일러스트",width:130,height:82})),
