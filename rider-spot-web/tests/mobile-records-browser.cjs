@@ -104,9 +104,12 @@ async function run(browser,width,height){
         if(index<0)payoutRules.push(incoming);else Object.assign(payoutRules[index],incoming);
         return route.fulfill({json:[]});
       }
-      if(table==="set_rider_daily_income"){
+      if(table==="rs_save_daily_income_guarded"||table==="set_rider_daily_income"){
         if(fail){fail=false;return route.fulfill({status:503,json:{message:"테스트 연결 오류"}});}
-        const data=route.request().postDataJSON();assert.equal(data.p_date,date);Object.assign(totals,data.p_values);return route.fulfill({status:204});
+        const data=route.request().postDataJSON();
+        assert.equal(data.p_date,date);
+        if(table==="rs_save_daily_income_guarded")assert.ok(data.p_expected,"guarded writes require the old amount");
+        Object.assign(totals,data.p_values);return route.fulfill({status:204});
       }
       if(table==="maintenance_logs" && route.request().method()==="DELETE"){
          if(failDelete){failDelete=false;return route.fulfill({status:503,json:{message:"테스트 삭제 실패"}});}
