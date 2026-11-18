@@ -1771,3 +1771,77 @@ svg.rs-icon{flex:none;vertical-align:middle}
     animation:none!important;transition:none!important;
   }
 }
+
+
+/* v189: a compact interval dialog and explicit destructive action.
+   The actual maintenance sheet remains beneath this separate modal. */
+.record-sheet>footer .record-delete-open{
+  width:100%;min-height:44px;padding:8px 12px;background:transparent;
+  color:#a44636;border:0;border-radius:10px;font-size:13px;font-weight:750;
+}
+.record-sheet>footer .record-delete-open:active{background:#fff2ef}
+dialog.record-mini-dialog[open]{
+  position:fixed;inset:0 auto auto 0;box-sizing:border-box;
+  width:100%;max-width:none;max-height:none;margin:0;padding:16px;
+  border:0;background:transparent;color:#273b31;
+  display:flex;align-items:center;justify-content:center;
+  overflow:visible;z-index:5000;
+}
+dialog.record-mini-dialog::backdrop{
+  background:rgba(18,30,27,.48);backdrop-filter:blur(2px);
+}
+.record-mini-card{
+  box-sizing:border-box;width:min(100%,390px);max-height:100%;
+  overflow:auto;overscroll-behavior:contain;
+  background:#fff;border:1px solid #e9eee9;border-radius:20px;
+  box-shadow:0 18px 52px rgba(16,36,29,.24);
+  padding:19px 18px 18px;
+}
+.record-mini-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.record-mini-head h3{font-size:18px;font-weight:800;letter-spacing:-.045em;margin:0}
+.record-mini-head .record-mini-close{
+  display:grid;place-items:center;flex:none;
+  width:38px;min-width:38px;height:38px;min-height:38px;
+  padding:0;background:#f5f7f4;border:0;border-radius:11px;
+  color:#54675a;font-size:24px;line-height:1;
+}
+.record-mini-description{
+  font-size:12px;line-height:1.65;color:#6c7870;margin:0 0 16px;
+}
+.record-mini-form{display:grid;gap:10px}
+.record-mini-form label{
+  display:grid;gap:6px;margin:0;min-width:0;
+  font-size:13px;font-weight:750;color:#3a5245;
+}
+.record-mini-form input{
+  box-sizing:border-box;width:100%;min-width:0;min-height:48px;
+  padding:10px 12px;background:#fbfcfa;border:1px solid #dce4dd;
+  border-radius:12px;font-size:16px;color:#24382c;
+}
+.record-mini-form input:focus{outline:2px solid #b85b32;outline-offset:0}
+.record-mini-form .record-cycle-note{margin:0;font-size:11px;line-height:1.55;color:#748176}
+.record-mini-form .record-cycle-error,.record-mini-dialog .record-cycle-error{
+  margin:2px 0;color:#b04435;font-size:12px;line-height:1.45;
+}
+.record-mini-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;margin-top:12px}
+.record-mini-actions button{min-width:0;min-height:46px;border-radius:12px;font-size:13px;font-weight:800}
+.record-mini-actions .record-mini-cancel{background:#f1f4f1;color:#3d5547;border:0}
+.record-mini-actions .record-cycle-save{
+  width:100%;min-height:46px;margin:0;padding:8px 9px;
+  border:0;background:#ad471b;color:#fff;
+}
+.record-mini-actions .record-mini-delete{
+  background:#ab3e30;color:white;border:0;
+}
+@media(prefers-reduced-motion:no-preference){
+  dialog.record-mini-dialog[open] .record-mini-card{
+    animation:rs189-mini-appear 200ms cubic-bezier(.2,.88,.28,1) both;
+  }
+  @keyframes rs189-mini-appear{
+    from{opacity:.65;transform:translateY(14px) scale(.98)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  dialog.record-mini-dialog[open] .record-mini-card{animation:none!important}
+}
