@@ -251,9 +251,13 @@ export function createFinance(R, client) {
     async function save(form) {
       if(!user||busy||!editor)return;
       const f=new FormData(form),v=k=>String(f.get(k)||"").trim(),moneyValue=k=>v(k).replace(/,/g,"");
-      const amount=Number(moneyValue(editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":editor.kind==="expense"?"amount_won":editor.kind==="settlement"?"paid_won":"monthly_target_won"));
-      if(!safeAmount(amount) || (editor.kind==="fuel"&&amount===0) || (editor.kind==="expense"&&amount===0)){
-        setSheetError("0~1억 원 범위의 올바른 금액을 입력해 주세요.");return;
+      const amountKey=editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":
+        editor.kind==="expense"||editor.kind==="recurrence"?"amount_won":
+        editor.kind==="settlement"?"paid_won":"monthly_target_won";
+      const raw=moneyValue(amountKey),amount=Number(raw);
+      if(editor.kind!=="payout"&&(!raw||!safeAmount(amount) ||
+          (["fuel","expense","recurrence"].includes(editor.kind)&&amount===0))){
+        setSheetError("1억 원 이하의 올바른 금액을 입력해 주세요.");return;
       }
       setBusy(true);setSheetError("");
       try{
@@ -281,13 +285,38 @@ export function createFinance(R, client) {
           table="rider_extra_expenses";
           values={expense_date:v("expense_date"),category:v("category"),amount_won:amount,memo:v("memo")};
           if(!categories.includes(values.category))throw Error("지출 분류를 확인해 주세요.");
+        }else if(kind==="recurrence"){
+          table="rider_recurring_expenses";
+          const day=Number(v("day_of_month"));
+          if(!categories.includes(v("category"))||!Number.isInteger(day)||day<1||day>31)
+            throw Error("비용 분류 또는 매월 날짜를 확인해 주세요.");
+          values={category:v("category"),amount_won:amount,day_of_month:day,
+            memo:v("memo").slice(0,300),active:f.get("active")==="on",
+            updated_at:new Date().toISOString()};
+        }else if(kind==="payout"){
+          table="rider_finance_payout_rules";
+          const cycle=v("cycle"),platform=row?.platform||editor.platform;
+          if(!platforms.includes(platform)||!["none","weekly","monthly"].includes(cycle))
+            throw Error("정산 주기를 확인해 주세요.");
+          const weekday=cycle==="weekly"?Number(v("weekday")):null;
+          const monthDay=cycle==="monthly"?Number(v("month_day")):null;
+          if(cycle==="weekly"&&(!Number.isInteger(weekday)||weekday<0||weekday>6)||
+             cycle==="monthly"&&(!Number.isInteger(monthDay)||monthDay<1||monthDay>31))
+            throw Error("정산 요일 또는 날짜를 확인해 주세요.");
+          values={platform,cycle,weekday,month_day:monthDay,updated_at:new Date().toISOString()};
         }else{
           table="rider_finance_goals";
-          const days=Number(v("planned_work_days"));
-          if(!Number.isInteger(days)||days<1||days>31)throw Error("근무 예정일은 1~31일로 입력해 주세요.");
-          values={monthly_target_won:amount,planned_work_days:days,updated_at:new Date().toISOString()};
+          const days=Number(v("planned_work_days")),goalBasis=v("goal_basis");
+          if(!Number.isInteger(days)||days<1||days>31||!["gross","net"].includes(goalBasis))
+            throw Error("목표 근무일 또는 기준을 확인해 주세요.");
+          values={monthly_target_won:amount,planned_work_days:days,goal_basis:goalBasis,
+            updated_at:new Date().toISOString()};
         }
-        if(kind==="goal"){
+        if(kind==="payout"){
+          const result=await client.from(table).upsert({...values,user_id:user.id},
+            {onConflict:"user_id,platform"});
+          if(result.error)throw result.error;
+        }else if(kind==="goal"){
           const result=await client.from(table).upsert({...values,user_id:user.id},{onConflict:"user_id"});
           if(result.error)throw result.error;
         }else if(kind==="income"&&!row){
@@ -327,8 +356,13 @@ export function createFinance(R, client) {
           const result=await client.from(table).insert({...values,user_id:user.id}).select("id");
           if(result.error)throw result.error;
         }
-        try{localStorage.removeItem("rs:fin-draft:v2:"+user.id+":"+editor.kind);}catch{}
-        setEditor(null);setNotice("기록을 저장했어요.");refresh(n=>n+1);
+        try{
+          localStorage.removeItem("rs:fin-draft:v2:"+user.id+":"+editor.kind);
+          if(kind==="expense"||kind==="recurrence")localStorage.setItem("rs:finance-category:"+user.id,values.category);
+        }catch{}
+        setEditor(null);setNotice(kind==="recurrence"?"반복 지출 일정을 저장했어요.":
+          kind==="payout"?"정산 예정일을 저장했어요.":"기록을 저장했어요.");
+        refresh(n=>n+1);
       }catch(e){setSheetError(e?.message||"기록을 저장하지 못했어요.");}
       finally{setBusy(false);}
     }
@@ -342,6 +376,39 @@ export function createFinance(R, client) {
         if(r.error)throw r.error;if(!r.data?.length)throw Error("삭제할 기록을 찾지 못했어요.");
         setNotice("기록을 삭제했어요.");refresh(n=>n+1);
       }catch(e){setNotice(e?.message||"삭제에 실패했어요.");}
+      finally{setBusy(false);}
+    }
+    const plannedRows=recurringOccurrences(data?.recurring,data?.extras,monthFrom.slice(0,7));
+    async function confirmRecurring(rule) {
+      if(!user||busy||rule.recorded||!rule.day)return;
+      setBusy(true);setNotice("");
+      try{
+        const values={user_id:user.id,recurrence_id:rule.id,recurrence_month:monthFrom,
+          expense_date:rule.day,category:rule.category,amount_won:rule.amount_won,memo:rule.memo||""};
+        const res=await client.from("rider_extra_expenses").insert(values).select("id");
+        if(res.error){
+          if(res.error.code==="23505")setNotice("이달 반복 지출은 이미 등록됐어요.");
+          else throw res.error;
+        }else setNotice("실제 지출 "+money(rule.amount_won)+"을(를) 등록했어요.");
+        refresh(n=>n+1);
+      }catch(e){setNotice(e?.message||"지출을 등록하지 못했어요.");}
+      finally{setBusy(false);}
+    }
+    async function removeRecurring(rule) {
+      if(!user||busy||!rule?.id)return;
+      if((data?.extras||[]).some(x=>x.recurrence_id===rule.id)){
+        setNotice("등록된 실제 지출이 있는 반복 규칙은 '활성화'를 꺼서 중지해 주세요.");
+        return;
+      }
+      if(!window.confirm("반복 지출 일정을 삭제할까요?"))return;
+      setBusy(true);
+      try{
+        const res=await client.from("rider_recurring_expenses").delete()
+          .eq("id",rule.id).eq("user_id",user.id).select("id");
+        if(res.error)throw res.error;
+        if(!res.data?.length)throw Error("삭제할 설정을 찾지 못했어요.");
+        setNotice("반복 일정을 삭제했어요.");refresh(n=>n+1);
+      }catch(e){setNotice(e?.message||"일정을 삭제하지 못했어요.");}
       finally{setBusy(false);}
     }
     async function paid(row) {
