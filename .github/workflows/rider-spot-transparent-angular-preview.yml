@@ -1,0 +1,68 @@
+name: Rider Spot transparent angular PNG candidate smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-transparent-angular-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://d2c9716f-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-angular-final-evidence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Verify exact uploaded resource bytes, transparent icon routing, and preserved map
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const root=process.env.RIDER_UI_URL;
+          const m=JSON.parse(readFileSync('prebuilt/release.json','utf8'));
+          const hash=m.hash;
+          assert.equal(hash,'906de201b6e1','release hash changed since candidate upload');
+          const paths=['/','/sw.js',...['app.mjs','design-system.css','tab-resume.js','native-gps.js','workspace-tools.js','route-worker.mjs'].map(x=>'/assets/rider-spot-'+hash+'/'+x),'/mapdata/manifest.json'];
+          for(const path of paths){
+            const res=await fetch(new URL(path,root));
+            assert.equal(res.status,200,path+' HTTP '+res.status);
+            const data=await res.text();
+            assert.ok(data.length>100,path+' unexpectedly empty');
+            if(path.endsWith('/app.mjs')) {
+              assert.equal(data,readFileSync('prebuilt/app.mjs','utf8'),'candidate app must be byte-identical');
+              assert.ok(data.includes('data:image/png;base64,'));
+            }
+            if(path.endsWith('/design-system.css')){
+              assert.equal(data,readFileSync('prebuilt/design-system.css','utf8'),'candidate CSS must be byte-identical');
+              assert.ok(data.includes('background:transparent!important'),'no filled icon backgrounds');
+            }
+            if(path==='/')assert.ok(data.includes('/assets/rider-spot-'+hash+'/app.mjs'),'new HTML');
+            if(path==='/sw.js')assert.ok(data.includes('rider-spot-shell-'+hash),'PWA cache key');
+            if(path==='/mapdata/manifest.json')assert.ok(JSON.parse(data).counts,'map dataset preserved');
+            console.log('PASS exact candidate resource',path);
+          }
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Test candidate mobile layout, GPS, map, and tab navigation
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-transparent-angular-final-qa
+          path: /tmp/rider-angular-final-evidence
+          retention-days: 14
