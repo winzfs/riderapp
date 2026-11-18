@@ -637,7 +637,16 @@ export function createFinance(R, client) {
         const start=days[i],end=days[Math.min(i+6,days.length-1)];
         weeks.push({label:dateLabel(start)+"~"+dateLabel(end),...financeTotals(data||emptyData,start,end)});
       }
-      const top=Math.max(1,...weeks.map(x=>x.gross));
+      const monthlySeries=financeMonths(data||emptyData,anchor,6)
+        .map(x=>({...x,label:x.month.slice(2).replace("-","/"),key:x.month}));
+      const graphRows=analysisMode==="weekly"?
+        weeks.map((x,i)=>({...x,key:"week-"+i})):monthlySeries;
+      const top=Math.max(1,...graphRows.map(x=>x.gross));
+      const selected=graphRows.find(x=>x.key===selectedAnalysis);
+      const [prevFrom,prevTo]=financeMonthPeriod(monthDelta(anchor,-1));
+      const prev=financeTotals(data||emptyData,prevFrom,prevTo);
+      const delta=prev.gross?Math.round((monthly.gross-prev.gross)/prev.gross*100):null;
+      const activeDays=new Set(monthly.earnings.map(x=>x.work_date)).size;
       return h("div",{className:"fin-stack"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
