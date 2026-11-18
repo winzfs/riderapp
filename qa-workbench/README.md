@@ -11,7 +11,7 @@ Independent operations and QA console for Rider Spot. This is **not** the produc
 
 ## Data isolation
 
-The QA fixtures for riders, posts, trips, earnings, maintenance, bugs and test results are stored **only in the current browser's localStorage** under `rider-spot-qa-v1`. They are not transmitted to Supabase, and they do not appear to real riders. Use the built-in JSON export/import to move the test dataset between devices or to keep a backup. Clearing browser data removes it. The worker's `/api/status` endpoint sends a read-only GET request to the public production URL; HTTP response checks are not functional app tests.
+The QA fixtures for riders, posts, trips, earnings, maintenance, bugs and test results are stored **only in the current browser's localStorage** under `rider-spot-qa-v1`. They are not transmitted to Supabase, and they do not appear to real riders. Use the built-in JSON export/import to move the test dataset between devices or to keep a backup. Clearing browser data removes it. The worker's `/api/status` endpoint sends a read-only GET through the Cloudflare `RIDER_SPOT` service binding to the production Worker; HTTP response checks are not functional app tests.
 
 The site is published without an admin login because it contains no real user data and makes no backend writes. **Never add production keys, service-role credentials, real rider locations or personal earnings to this console.** Before integrating shared/persistent QA data, create a private QA datastore with authentication, audit logging, rate limiting and scoped role permissions. Do not use production tables to store synthetic locations or posts.
 
@@ -47,7 +47,7 @@ This QA console **does not change the production app's navigation**; it models t
 
 ## Deploy and test
 
-Run `node qa-workbench/smoke.mjs` for basic syntax/navigation checks.
+Run `node qa-workbench/smoke.mjs` for basic syntax/navigation checks. On 2026-11-18 the live QA URL was also tested through Cloudflare Browser Rendering: 320/360/412px had no horizontal document overflow; 10 interactions passed (odometer edit, part selection, service history, zoom, time toggle, speed selection, trip finish to earnings, post creation, QA result edit). The QA `/api/status` returned HTTP 200 through the production Worker service binding. **Android WebView remains unverified.**
 
 Set `CLOUDFLARE_API_TOKEN` (a restricted token with Workers Scripts Write) and `CLOUDFLARE_ACCOUNT_ID` in the local/CI environment, then run:
 
