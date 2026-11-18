@@ -633,8 +633,11 @@ export function createRecords(R, client) {
     R.useEffect(()=>{
       if(!user)return;
       const reload=()=>refresh(n=>n+1);
+      const financeReload=e=>{if(e?.detail?.userId===user.id)reload();};
       window.addEventListener("riderspot:odometer-updated",reload);
-      return ()=>window.removeEventListener("riderspot:odometer-updated",reload);
+      window.addEventListener("riderspot:finance-changed",financeReload);
+      return ()=>{window.removeEventListener("riderspot:odometer-updated",reload);
+        window.removeEventListener("riderspot:finance-changed",financeReload);};
     },[user?.id]);
     R.useEffect(()=>{
       let active=true; setError("");
