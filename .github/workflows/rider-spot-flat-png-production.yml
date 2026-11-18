@@ -1,0 +1,44 @@
+name: Rider Spot flat PNG production smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-flat-png-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm exact deployed semi-flat PNG bundle and intact PWA
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFile} from 'node:fs/promises';
+          const root='https://rider-spot.jazzhjm.workers.dev/';
+          const hash='ce520b450457';
+          for(const [path,local] of [
+            ['/', 'prebuilt/index.html'],
+            ['/sw.js', 'prebuilt/sw.js'],
+            ['/assets/rider-spot-'+hash+'/app.mjs','prebuilt/app.mjs'],
+            ['/assets/rider-spot-'+hash+'/design-system.css','prebuilt/design-system.css'],
+          ]) {
+            const r=await fetch(new URL(path,root),{headers:{'cache-control':'no-cache'}});
+            assert.equal(r.status,200,path+' HTTP '+r.status);
+            const actual=await r.text(),expected=await readFile(local,'utf8');
+            assert.equal(actual,expected,path+' does not match verified candidate bytes');
+            console.log('PASS production',path,actual.length);
+          }
+          const manifest=await fetch(new URL('/mapdata/manifest.json',root));
+          assert.equal(manifest.status,200,'public map data intact');
+          assert.ok((await manifest.json()).counts,'map data manifest incomplete');
+          console.log('PASS deployed PNG maintenance v182 and preserved map data');
+          NODE
