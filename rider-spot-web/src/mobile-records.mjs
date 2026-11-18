@@ -457,8 +457,10 @@ export function createRecords(R, client) {
           },{className:"bike-model-reset",disabled:cycleSaving}))));
   }
 
-  function ModelPicker({user,vehicle,cycles,settings,close,changed,onCustom}) {
+  function ModelPicker({user,vehicle,cycles,settings,close,changed}) {
     const [query,setQuery]=R.useState("");
+    const [custom,setCustom]=R.useState(false);
+    const [customName,setCustomName]=R.useState(vehicle?.vehicle_name||"");
     const [brand,setBrand]=R.useState("all");
     const [busy,setBusy]=R.useState(false);
     const [error,setError]=R.useState("");
@@ -468,6 +470,19 @@ export function createRecords(R, client) {
     const term=cleaned(query);
     const available=bikeModels.filter(m=>(brand==="all"||m.brand===brand)&&
       (!term||cleaned(m.brandLabel+" "+m.name+" "+m.aliases.join(" ")).includes(term)));
+    const saveCustom=async()=>{
+      const name=customName.trim();
+      if(!name||name.length>40){setError("차량명을 1~40자로 입력해 주세요.");return;}
+      if(lock.current)return;
+      lock.current=true;setBusy(true);setError("");
+      try{
+        const record={user_id:user.id,vehicle_name:name,model_key:null};
+        await read(client.from("rider_vehicle_profiles").upsert(record,
+          {onConflict:"user_id"}).select("user_id").single());
+        changed();close();
+      }catch(err){setError(err?.message||"차량 이름을 저장하지 못했어요.");}
+      finally{lock.current=false;setBusy(false);}
+    };
     const choose=async model=>{
       if(lock.current)return;
       lock.current=true;setBusy(true);setError("");
@@ -512,8 +527,14 @@ export function createRecords(R, client) {
           !available.length&&h("p",{className:"record-help"},"일치하는 모델이 없어요. 아래에서 직접 입력해 주세요.")),
         error&&h("p",{role:"alert",className:"record-cycle-error"},error),
         busy&&h("p",{className:"record-cycle-note"},"모델 설정을 저장하는 중…"),
-        btn("목록에 없는 차량 직접 입력",()=>{if(!busy)onCustom();},
-          {className:"bike-model-custom",disabled:busy})));
+        !custom?btn("목록에 없는 차량 직접 입력",()=>setCustom(true),
+          {className:"bike-model-custom",disabled:busy}):
+          h("div",{className:"bike-model-custom-editor"},
+            h("label",null,"차량명",
+              h("input",{type:"text",maxLength:40,value:customName,
+                onChange:e=>setCustomName(e.target.value),"aria-label":"차량명"})),
+            btn("차량명 저장",saveCustom,{className:"bike-model-custom-save",disabled:busy})),
+        ));
   }
 
   // Vehicle distance is edited independently of workshop entries and fuel logs.
@@ -674,9 +695,7 @@ export function createRecords(R, client) {
       vehicleEdit && h(VehicleEditor,{kind:vehicleEdit,user,vehicle,
         close:()=>setVehicleEdit(null),changed}),
       modelPicker && h(ModelPicker,{user,vehicle,cycles,settings:modelSettings,
-        close:()=>setModelPicker(false),changed,onCustom:()=>{
-          setModelPicker(false);setVehicleEdit("name");
-        }}),
+        close:()=>setModelPicker(false),changed}),
       detailItem && h(ServiceDetail,{key:detailItem,item:detailItem,rows,cycles,model,
         modelSettings,explicitModel,reading,user,changed,
         close:()=>setDetailItem(null),edit:row=>edit({row}),add:item=>edit({item})}),
