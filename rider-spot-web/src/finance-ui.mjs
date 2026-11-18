@@ -159,7 +159,7 @@ export function createFinance(R, client) {
                   h("option",{key:i,value:i},day)))),
             cycle==="monthly"&&input("매월 일자","month_day","number",row.month_day??25,true,
               {min:1,max:31,step:1}),
-            txt("p","fin-hint","예정일은 직접 정한 참고 일정입니다. 입금 여부와 실제 날짜는 별도로 기록해야 해요.")),
+            txt("p","fin-hint","예정일은 직접 정한 참고 일정입니다. 입금 여부와 실제 날짜는 별도로 기록해야 해요."))),
         h("footer",null,error&&txt("p","fin-error",error),
           h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기"))));
   }
