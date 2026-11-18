@@ -34,7 +34,7 @@ fs.mkdirSync(output, { recursive: true });
       const nav = page.locator(width < 761 ? '.bottom-nav' : '.desktop-nav');
       const open = async () => {
         await nav.getByRole('button', { name: '내 바이크', exact: true }).click();
-        await page.getByRole('button',{name:'프로필·설정 ›'}).click();
+        await page.getByRole('button',{name:'프로필·설정',exact:true}).click();
         await page.locator('.rs-profile-page .rs-journey-panel').waitFor();
       };
       await page.goto(url, { waitUntil: 'domcontentloaded' });

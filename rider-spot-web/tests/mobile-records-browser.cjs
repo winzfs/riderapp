@@ -79,7 +79,7 @@ async function run(browser,width,height){
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
-    assert.ok(await page.locator(".bike-item-icon svg").count()>=4,"maintenance icons render");
+    assert.ok(await page.locator(".bike-item-icon .bike-part-svg").count()>=4,"maintenance icons render");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
