@@ -179,6 +179,7 @@ export function createFinance(R, client) {
     const [filter,setFilter]=R.useState("all");
     const [selectedChart,setSelectedChart]=R.useState(null);
     const [selectedAnalysis,setSelectedAnalysis]=R.useState(null);
+    const [analysisMode,setAnalysisMode]=R.useState("weekly");
     R.useEffect(()=>{
       const changed=e=>{if(!e?.detail?.userId||e.detail.userId===user?.id)refresh(n=>n+1);};
       const visible=()=>{if(document.visibilityState==="visible")refresh(n=>n+1);};
