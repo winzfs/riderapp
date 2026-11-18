@@ -403,7 +403,7 @@ export function createFinance(R, client) {
             .map(([name,value])=>h("div",{className:"fin-cost-row",key:name},
               txt("span",null,name),txt("strong",null,money(value))))),
         monthly.uncertain&&txt("p","fin-warning","예전 기록의 기타 비용 분류가 불분명해 주유·정비비와 중복될 수 있어요."),
-        txt("p","fin-muted","미입력 비용, 세금, 보험 정산 및 실제 계좌 입금액은 자동 추정하지 않습니다.")));
+        txt("p","fin-muted","미입력 비용, 세금, 보험 정산 및 실제 계좌 입금액은 자동 추정하지 않습니다."));
     }
     return h("section",{className:"finance-page page narrow"},
       h("div",{className:"fin-page-head"},h("div",null,txt("small",null,"MY EARNINGS"),
