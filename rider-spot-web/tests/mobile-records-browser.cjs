@@ -111,7 +111,12 @@ async function run(browser,width,height){
   const nav=name=>page.locator(".bottom-nav").getByRole("button",{name,exact:true}).click();
   try {
     await page.goto(origin,{waitUntil:"domcontentloaded"});
-    await page.locator(".ride-launch button").waitFor();
+    try { await page.locator(".ride-launch button").waitFor(); }
+    catch(e){
+      console.error("BOOT DIAGNOSTICS",{errors,body:(await page.locator("body").innerText()).slice(0,700),
+        title:await page.title(),nav:await page.locator(".bottom-nav button").allTextContents()});
+      throw e;
+    }
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
