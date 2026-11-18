@@ -18,7 +18,7 @@ export function createFinance(R, client) {
   const txt=(tag,cls,...children)=>h(tag,{className:cls},...children);
   const icon=(name,size=20)=>h("svg",{viewBox:"0 0 24 24",width:size,height:size,
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",
-    strokeLinejoin:"round","aria-hidden":true},h("path",{d:icons[name]||icons.earnings}));
+    strokeLinejoin:"round","aria-hidden":true},h("path",{d:({left:"M15 18l-6-6 6-6",right:"M9 18l6-6-6-6",close:"M5 5l14 14M19 5L5 19"}[name]||icons[name]||icons.earnings)}));
   const button=(label,action,cls,extra={})=>h("button",{type:"button",onClick:action,
     className:cls,...extra},label);
   const dateInput=(label,name,value)=>h("label",{className:"fin-field"},h("span",null,label),
