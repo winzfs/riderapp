@@ -1,0 +1,70 @@
+name: Rider Spot semi-flat PNG v181 candidate acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-flat-png-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://5a72da79-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-flat-png-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Validate staged preview HTML, PWA and image-generated PNG resource
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const root=process.env.RIDER_UI_URL;
+          const hash='ce520b450457';
+          const paths=['/','/sw.js','/assets/rider-spot-'+hash+'/app.mjs',
+            '/assets/rider-spot-'+hash+'/design-system.css',
+            '/assets/rider-spot-'+hash+'/workspace-tools.js','/mapdata/manifest.json'];
+          const resources={};
+          for(const path of paths){
+            const response=await fetch(new URL(path,root));
+            assert.equal(response.status,200,path+' HTTP '+response.status);
+            resources[path]=await response.text();
+            assert.ok(resources[path].length>100,path+' missing bytes');
+          }
+          const app=resources['/assets/rider-spot-'+hash+'/app.mjs'];
+          assert.ok(app.includes('data:image/png;base64,') && app.includes('500% 200%'),'PNG atlas is not in bundle');
+          assert.ok(resources['/'].includes('/assets/rider-spot-'+hash+'/app.mjs'),'new HTML route');
+          assert.ok(resources['/sw.js'].includes('rider-spot-shell-'+hash),'service worker cache key');
+          assert.ok(resources['/assets/rider-spot-'+hash+'/design-system.css'].includes('bike-part-svg'),'PNG CSS');
+          assert.ok(JSON.parse(resources['/mapdata/manifest.json']).counts,'map data preserved');
+          console.log('PASS preview PNG assets, PWA, and map data');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Synthetic mobile bike, timeline and map UI preview
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - name: Verify maintenance retry, part history, odometer and income on actual preview
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://5a72da79-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-flat-png-v181-qa
+          path: |
+            /tmp/rider-flat-png-qa
+            /tmp/rider-ui-evidence
+          retention-days: 14
