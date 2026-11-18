@@ -165,6 +165,7 @@ export function createRecords(R, client) {
         const payload = {
           id:id.current,user_id:user.id,item:items.join(" · "),service_items:items,
           serviced_on:day,odometer_km:optional("km",999999),cost_won:optional("cost",100000000),
+          next_due_km:row?.next_due_km??null,
           workshop:String(form.get("shop")||"").trim(),note:String(form.get("note")||"").trim()
         };
         await read(client.from("maintenance_logs").upsert(payload).select("id").single());
