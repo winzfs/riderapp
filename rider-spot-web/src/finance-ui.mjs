@@ -241,6 +241,11 @@ export function createFinance(R, client) {
     const perDay=goalUncertain?null:Math.ceil(Math.max(0,goalTarget-goalValue)/remainingWorkDays);
     const graph=financeDays(data||emptyData,today,7);
     const ceiling=Math.max(1,...graph.map(x=>x.gross));
+    const openMaintenance=(row,mode="detail")=>{
+      if(!user||!row?.id)return;
+      window.__rsFinanceMaintenance={id:row.id,userId:user.id,mode};
+      onBike();
+    };
     const openEditor=(kind,row=null)=>{if(!user)return login();
       let savedPlatform="쿠팡이츠";
       try{savedPlatform=localStorage.getItem("rs:finance-platform:"+user.id)||savedPlatform;}catch{}
@@ -432,13 +437,24 @@ export function createFinance(R, client) {
         .map(([id,name])=>button(name,()=>setSection(id),
           "fin-subnav-btn"+(section===id?" selected":""),{key:id,"aria-current":section===id?"page":undefined})));
     function chart() {
-      return h("div",{className:"fin-chart","aria-label":"최근 7일 날짜별 기록 수익 막대 그래프"},
-        graph.map((x,i)=>h("div",{className:"fin-chart-col",key:x.day},
-          txt("small","fin-chart-value",x.gross?new Intl.NumberFormat("ko-KR",{notation:"compact",maximumFractionDigits:1}).format(x.gross):""),
-          h("div",{className:"fin-chart-track"},h("div",{className:"fin-chart-bar",
-            style:{height:x.gross?Math.max(3,x.gross/ceiling*100)+"%":"2px"}})),
-          txt("small","fin-chart-date",dateLabel(x.day)),
-          x.day===today&&h("span",{className:"fin-chart-today","aria-label":"오늘"}))));
+      const selected=graph.find(x=>x.day===selectedChart);
+      return h(R.Fragment,null,
+        h("div",{className:"fin-chart","aria-label":"최근 7일 날짜별 수익"},
+          graph.map(x=>h("button",{type:"button",
+            className:"fin-chart-col fin-chart-point"+(selectedChart===x.day?" selected":""),
+            key:x.day,onClick:()=>setSelectedChart(selectedChart===x.day?null:x.day),
+            "aria-label":x.day+" 수익 "+money(x.gross),"aria-pressed":selectedChart===x.day},
+            txt("small","fin-chart-value",x.gross?new Intl.NumberFormat("ko-KR",{notation:"compact",maximumFractionDigits:1}).format(x.gross):""),
+            h("span",{className:"fin-chart-track"},h("span",{className:"fin-chart-bar",
+              style:{height:x.gross?Math.max(3,x.gross/ceiling*100)+"%":"2px"}})),
+            txt("small","fin-chart-date",dateLabel(x.day)),
+            x.day===today&&h("span",{className:"fin-chart-today","aria-label":"오늘"})))),
+        selected&&h("div",{className:"fin-chart-detail",role:"status"},
+          txt("strong",null,selected.day),
+          txt("span",null,"수익 "+money(selected.gross)),
+          txt("span",null,"업무 비용 "+money(financeTotals(data||emptyData,selected.day,selected.day).cost)),
+          txt("span",null,financeTotals(data||emptyData,selected.day,selected.day).uncertain?
+            "차감액 확인 필요":"차감액 "+money(selected.net))));
     }
     function platformBreakdown() {
       return h("div",{className:"fin-platforms"},
@@ -477,15 +493,15 @@ export function createFinance(R, client) {
         h("section",{className:"fin-card fin-goal"},
           h("header",null,h("h2",null,"월 목표"),
             button(h(R.Fragment,null,icon("settings",16),"설정"),()=>openEditor("goal",goal),"fin-textbtn")),
-          h("div",{className:"fin-goal-amount"},txt("strong",null,money(monthly.gross)),
-            txt("small",null,"/ "+money(goalTarget))),
-          h("div",{className:"fin-goal-track"},h("div",{style:{width:achieved+"%"}})),
+          h("div",{className:"fin-goal-amount"},txt("strong",null,goalUncertain?"확인 필요":money(goalValue)),
+            txt("small",null,"/ "+money(goalTarget)+" · "+(goal.goal_basis==="net"?"비용 차감액":"총수익"))),
+          h("div",{className:"fin-goal-track"},h("div",{style:{width:(achieved??0)+"%"}})),
           h("div",{className:"fin-goal-numbers"},
-            txt("span",null,achieved+"% 달성"),
-            txt("span",null,"남은 목표 "+money(Math.max(0,goalTarget-monthly.gross)))),
+            txt("span",null,achieved==null?"분류 확인 필요":achieved+"% 달성"),
+            txt("span",null,goalUncertain?"확인 필요":"남은 목표 "+money(Math.max(0,goalTarget-goalValue)))),
           h("details",{className:"fin-optional"},h("summary",null,"필요한 하루 수익 보기"),
             h("div",{className:"fin-goal-daily"},txt("small",null,"남은 근무 "+remainingWorkDays+"일 기준"),
-              txt("strong",null,money(perDay))))),
+              txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"플랫폼별 수익")),platformBreakdown()),
         h("section",{className:"fin-card"},
@@ -522,15 +538,39 @@ export function createFinance(R, client) {
             h("div",{className:"fin-record"},
               h("span",{className:"fin-record-icon "+(x.type==="income"?"gain":"spend")},
                 icon(x.type==="income"?"earnings":x.type==="fuel"?"fuel":"settings",19)),
-              h("div",{className:"fin-record-info"},txt("strong",null,x.name),
+              button(h(R.Fragment,null,txt("strong",null,x.name),
                 txt("small",null,x.type==="income"?(x.row.paid_at?"입금 확인 "+x.row.paid_at:"입금 확인 전") :
-                  x.type==="maintenance"?"내 바이크 정비 기록":x.personal?"개인 지출 · 업무비 제외":x.row.memo||x.row.note||"업무 지출")),
+                  x.type==="maintenance"?"정비 원본 기록 보기":x.personal?"개인 지출 · 업무비 제외":x.row.memo||x.row.note||"업무 지출")),
+                ()=>x.type==="maintenance"?openMaintenance(x.row):openEditor(x.type,x.row),
+                "fin-record-info fin-record-open",{"aria-label":x.name+" "+x.day+" 기록 보기"}),
               h("div",{className:"fin-record-end"},
                 txt("strong",x.type==="income"?"gain":"spend",(x.type==="income"?"+":"−")+money(x.amount)),
                 h("div",{className:"fin-record-actions"},
-                  button("수정",()=>x.type==="maintenance"?onBike():openEditor(x.type,x.row),"fin-textbtn"),
+                  button("수정",()=>x.type==="maintenance"?openMaintenance(x.row,"edit"):openEditor(x.type,x.row),"fin-textbtn"),
                   x.type!=="maintenance"&&button("삭제",()=>remove(x.type,x.row),"fin-textbtn fin-danger",{disabled:busy}))))))
           :txt("p","fin-empty","이 기간에 기록이 없어요.")),
+        h("details",{className:"fin-recurring"},
+          h("summary",null,h("strong",null,"반복 지출"),h("span",null,
+            (data?.recurring||[]).filter(x=>x.active!==false).length+"건 설정 · 예정 비용은 미반영")),
+          h("div",{className:"fin-recurring-body"},
+            button("＋ 반복 지출 설정",()=>openEditor("recurrence"),"fin-secondary"),
+            ...(data?.recurring||[]).map(rule=>{
+              const planned=plannedRows.find(x=>x.id===rule.id);
+              const registered=(data?.extras||[]).find(x=>x.recurrence_id===rule.id&&
+                x.recurrence_month===monthFrom);
+              return h("div",{className:"fin-recurring-row",key:rule.id},
+                h("div",{className:"fin-recurring-info"},
+                  txt("strong",null,rule.category+" · "+money(rule.amount_won)),
+                  txt("small",null,rule.active===false?"반복 중지됨":
+                    registered?"실제 지출 등록 완료":planned?.day+" 예정 · 실제 지출 미반영"),
+                  !!rule.memo&&txt("small",null,rule.memo)),
+                h("div",{className:"fin-recurring-actions"},
+                  rule.active!==false&&!registered&&button("지출 등록",()=>confirmRecurring(planned),
+                    "fin-paid-btn",{disabled:busy}),
+                  button("설정",()=>openEditor("recurrence",rule),"fin-textbtn",{disabled:busy}),
+                  button("삭제",()=>removeRecurring(rule),"fin-textbtn fin-danger",{disabled:busy})));
+            }),
+            !(data?.recurring||[]).length&&txt("p","fin-empty","반복 지출 일정이 없어요."))),
         h("div",{className:"fin-shortcuts"},
           button("주유비 기록",()=>openEditor("fuel"),"fin-secondary"),
           button("정비 기록은 내 바이크에서",onBike,"fin-secondary")));
