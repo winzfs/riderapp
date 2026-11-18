@@ -1,4 +1,5 @@
 import { createRecords } from "./mobile-records.mjs";
+import { createNavigationController } from "./navigation.mjs";
 import { createUI } from "./ui.mjs";
 import { createRiderMap } from "./RiderMap.mjs";
 import { createTimeline } from "./Timeline.mjs";
@@ -30,6 +31,7 @@ export function mountApplication({
   Ge,
 }) {
   const { Icon, Metrics, Skeleton, DialogSurface } = createUI(S);
+  const navigation = createNavigationController(window);
   const { RiderProgressCard } = createGamificationUI(S);
   const { JourneyPanel } = createJourneyUI(S);
   function Qo(e, t) {
@@ -2366,7 +2368,7 @@ export function mountApplication({
     distanceKm: es,
   });
   function App() {
-    let [e, t] = (0, S.useState)(`nearby`),
+    let [e, t] = (0, S.useState)(navigation.tab),
       [n, r] = (0, S.useState)(null),
       [i, a] = (0, S.useState)(!1),
       [o, s] = (0, S.useState)(``),
@@ -2376,8 +2378,14 @@ export function mountApplication({
       f = (0, S.useCallback)((e) => s(e), []),
       p = cs(n, f, e);
     window.__rsRideApi = p;
-    window.__rsGoToTab = t;
+    window.__rsGoToTab = (next) => navigation.goTab(next);
     window.__rsActiveTab = e;
+    S.useEffect(() => navigation.subscribe(t), []);
+    S.useEffect(() => {
+      const notifyRoot = event => f(event.detail?.message || "다시 뒤로가면 앱을 종료합니다.");
+      window.addEventListener("riderspot:root-back", notifyRoot);
+      return () => window.removeEventListener("riderspot:root-back", notifyRoot);
+    }, [f]);
     const rs61Scroll = S.useRef(Object.create(null));
     S.useEffect(() => {
       const target = rs61Scroll.current[e] || 0;
@@ -2453,7 +2461,7 @@ export function mountApplication({
               href: `#`,
               className: `brand`,
               onClick: (e) => {
-                (e.preventDefault(), t(`nearby`));
+                (e.preventDefault(), navigateTab(`nearby`));
               },
               children: [
                 `라이더스팟`,
@@ -2534,7 +2542,7 @@ export function mountApplication({
                   e !== `tools` &&
                   (0, J.jsxs)(`button`, {
                     className: `recording-strip`,
-                    onClick: () => t(`trips`),
+                    onClick: () => navigateTab(`trips`),
                     children: [
                       (0, J.jsx)(`span`, {}),
                       ` `,
