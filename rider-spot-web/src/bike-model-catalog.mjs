@@ -154,6 +154,15 @@ export function modelDefaults(model,item){
   model=model||genericScooter;
   if(!modelParts(model).includes(item))return null;
   const basic=approximate[item]||{interval_km:null,interval_days:null,note:"정비소 점검 필요"};
+  // Unverified models still receive a usable, explicitly advisory value;
+  // displacement classes help avoid presenting the same figure for all 72 bikes.
+  const tierEstimate={
+    mid:{"엔진오일":4000,"앞 타이어":20000,"뒤 타이어":16000,
+      "브레이크 패드":15000,"구동벨트":22000,"에어필터":15000,"구동체인":16000},
+    maxi:{"엔진오일":5000,"앞 타이어":23000,"뒤 타이어":19000,
+      "브레이크 패드":18000,"구동벨트":26000,"에어필터":18000,"구동체인":18000}
+  };
+  const estimatedKm=tierEstimate[model.tier]?.[item]??basic.interval_km;
   const official=verified[model.key]?.[item];
   const [baseLow,baseHigh]=range[model.tier]?.[item]||[null,null];
   // Electric traction battery packs can cost far more than a small 12V battery.
@@ -161,7 +170,7 @@ export function modelDefaults(model,item){
   const [costLow,costHigh]=model.kind==="electric"&&item==="배터리"
     ?[null,null]:[baseLow,baseHigh];
   return {
-    item_key:item, interval_km:official?.interval_km??basic.interval_km,
+    item_key:item, interval_km:official?.interval_km??estimatedKm,
     interval_days:official?official.interval_days:basic.interval_days,
     cost_low_won:costLow,cost_high_won:costHigh,
     estimated_cost_won:costLow!=null?Math.round((costLow+costHigh)/2000)*1000:null,
@@ -175,11 +184,25 @@ export function modelDefaults(model,item){
 export function resolveMaintenance(model,item,modelSettings=[],legacyCycles=[],explicitModel=false){
   const base=modelDefaults(model,item);
   const override=modelSettings.find(x=>x.model_key===model?.key && x.item_key===item);
-  if(override)return {...base,...override,source:"personal",is_custom:true,
-    cost_low_won:override.estimated_cost_won??base?.cost_low_won,
-    cost_high_won:override.estimated_cost_won??base?.cost_high_won};
+  if(override){
+    // Early migrations copied rows with two NULL intervals and accidentally
+    // masked the model catalog. Interpret empty legacy rows as missing presets.
+    const missing=override.interval_km==null && override.interval_days==null && !!base?.interval_km;
+    const saved=missing?{...override,interval_km:base.interval_km,interval_days:base.interval_days}:override;
+    const equalsDefault=base && saved.interval_km===base.interval_km &&
+      saved.interval_days===base.interval_days &&
+      saved.estimated_cost_won===base.estimated_cost_won;
+    return {...base,...saved,
+      source:equalsDefault?"default":"personal",is_custom:!equalsDefault,
+      cost_low_won:saved.estimated_cost_won??base?.cost_low_won,
+      cost_high_won:saved.estimated_cost_won??base?.cost_high_won};
+  }
   const legacy=!explicitModel&&legacyCycles.find(x=>x.item_key===item);
-  if(legacy)return {...base,...legacy,source:"legacy",is_custom:true};
+  if(legacy){
+    if(legacy.interval_km==null && legacy.interval_days==null && base)
+      return {...base,source:"default",is_custom:false};
+    return {...base,...legacy,source:"legacy",is_custom:true};
+  }
   return base?{...base,source:"default",is_custom:false}:null;
 }
 export const won=n=>n==null?"가격 정보 없음":Number(n).toLocaleString("ko-KR")+"원";

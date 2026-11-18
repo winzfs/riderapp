@@ -54,3 +54,24 @@ test("chain and EV modes cannot propose nonexistent scooter CVT belt and engine 
   assert.equal(modelDefaults(findBikeModel("honda-supercub110"),"엔진오일").interval_km,3000);
   assert.equal(modelDefaults(findBikeModel("honda-ct125"),"엔진오일").interval_source,"manual");
 });
+
+test("blank legacy model cycles restore catalog defaults without masking user edits",()=>{
+  const pcx=findBikeModel("honda-pcx125"), belt=modelDefaults(pcx,"구동벨트");
+  const stale=[{model_key:pcx.key,item_key:"구동벨트",interval_km:null,interval_days:null,
+    estimated_cost_won:belt.estimated_cost_won}];
+  const restored=resolveMaintenance(pcx,"구동벨트",stale,[],true);
+  assert.equal(restored.interval_km,24000);
+  assert.equal(restored.source,"default");
+  const personal=[{model_key:pcx.key,item_key:"엔진오일",interval_km:2000,
+    interval_days:null,estimated_cost_won:29000}];
+  assert.equal(resolveMaintenance(pcx,"엔진오일",personal,[],true).interval_km,2000);
+  assert.equal(resolveMaintenance(pcx,"엔진오일",personal,[],true).source,"personal");
+  assert.equal(resolveMaintenance(pcx,"에어필터",[],[{item_key:"에어필터",interval_km:null,interval_days:null}],false).interval_km,12000);
+});
+test("model sizes use distinct and clearly estimated reference values",()=>{
+  const small=findBikeModel("honda-pcx125-old"),
+    mid=findBikeModel("yamaha-nmax155"),maxi=findBikeModel("yamaha-xmax300");
+  assert.ok(modelDefaults(small,"뒤 타이어").interval_km<modelDefaults(mid,"뒤 타이어").interval_km);
+  assert.ok(modelDefaults(mid,"뒤 타이어").interval_km<modelDefaults(maxi,"뒤 타이어").interval_km);
+  assert.equal(modelDefaults(maxi,"브레이크 패드").interval_source,"estimate");
+});

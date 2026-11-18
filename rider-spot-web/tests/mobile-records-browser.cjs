@@ -128,6 +128,9 @@ async function run(browser,width,height){
     await page.locator(".ride-launch button").waitFor();
     await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
+    assert.ok(await cards.first().locator(".bike-tile-cycle").isVisible(),"reference interval shown directly on tile");
+    assert.ok(await cards.filter({hasText:"구동벨트"}).getByText(/20,000 km/).count(),
+      "generic 125cc belt reference is visible before selecting a model");
     assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
     const layout=await grid.evaluate(node=>{
       const el=[...node.querySelectorAll(".bike-consumable")].map(x=>x.getBoundingClientRect());
@@ -336,7 +339,7 @@ async function run(browser,width,height){
     assert.equal(records.length,countBefore,"model selection cannot create fake repairs");
     await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
     const modelOil=page.getByRole("dialog",{name:"엔진오일 관리"});
-    await modelOil.getByText("6,000 km",{exact:true}).waitFor();
+    await modelOil.getByText("6,000 km",{exact:true}).first().waitFor();
     await modelOil.getByRole("button",{name:"주기 수정"}).click();
     const modelOilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
     assert.equal(await modelOilCycle.getByLabel("교체 거리 (km)").inputValue(),"6000");

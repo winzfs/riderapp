@@ -405,7 +405,11 @@ export function createRecords(R, client) {
         h("p",{className:"bike-safety-message"},"거리 기준은 예상치입니다. 실제 마모·균열·제동 상태와 설명서를 먼저 확인하세요."),
         h("div",{className:"record-cycle-values"},
           h("span",null,"거리 ",h("b",null,cycle?.interval_km?number(cycle.interval_km)+" km":"미설정")),
-          h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정")))),
+          h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정"))),
+        model && modelDefault?.interval_km && h("p",{className:"bike-reference-cycle"},
+          "모델 기본 추천: "+number(modelDefault.interval_km)+" km"+
+          (modelDefault.interval_source==="manual"?" · 제조사 설명서 참고":" · 일반 점검 참고값"),
+          cycle?.source==="personal"?" · 내 설정을 우선 적용 중":""))),
       model && h("section",{className:"bike-model-cost","aria-label":item+" 예상 교체 비용"},
         h("div",{className:"bike-model-cost-heading"},h("strong",null,"예상 교체 비용"),
           h("small",null,cycle?.source==="personal"?"내 설정":"국내 정비소 참고 시세")),
@@ -491,8 +495,9 @@ export function createRecords(R, client) {
         // Preserve pre-catalog personal intervals under the OLD model. Never
         // overwrite/delete the historic global cycles or service entries.
         const legacyModel=!vehicle?.model_key && inferBikeModel(vehicle?.vehicle_name);
-        const previous=legacyModel&&cycles.filter(c=>!settings.some(x=>
-          x.model_key===legacyModel.key&&x.item_key===c.item_key))
+        const previous=legacyModel&&cycles.filter(c=>
+          (c.interval_km!=null || c.interval_days!=null) &&
+          !settings.some(x=>x.model_key===legacyModel.key&&x.item_key===c.item_key))
           .map(c=>({user_id:user.id,model_key:legacyModel.key,item_key:c.item_key,
             interval_km:c.interval_km,interval_days:c.interval_days,
             estimated_cost_won:modelDefaults(legacyModel,c.item_key)?.estimated_cost_won??null}));
@@ -658,7 +663,7 @@ export function createRecords(R, client) {
       model && h("div",{className:"bike-model-banner"},
         h("div",null,h("strong",null,modelLabel(model)),
           h("small",null,model.kind==="electric"?"전기 스쿠터 · 엔진오일 제외":
-            "기본 정비 정보 제공 · 연식/지역 사양 확인")),
+            "소모품 추천 주기 자동 적용 · 언제든 개별 수정 가능")),
         btn("모델 변경",()=>setModelPicker(true),{className:"bike-model-change"})),
       h("div",{className:"bike-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"＋ 정비 기록"),
@@ -674,17 +679,18 @@ export function createRecords(R, client) {
         choices.map(item=>{
           const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
           const due=serviceDue(row,cycle,reading?.[0]);
-          // Keep detailed mileage/date in the existing detail sheet, not on the compact tile.
+          const cycleLabel=cycle?.interval_km?number(cycle.interval_km)+" km":
+            cycle?.interval_days?number(cycle.interval_days)+"일":"상태 점검";
+          const cycleCaption=cycle?.is_custom?"내 설정":
+            cycle?.interval_source==="manual"?"제조사 참고":"추천 주기";
           const status=due.remaining!=null ?
             (due.state==="overdue"?"기준 "+number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
-            !row?(cycle?.interval_km?number(cycle.interval_km)+" km 참고":
-              cycle?.interval_days?number(cycle.interval_days)+"일 기준":"기록 없음"):
-            due.next!=null?"다음 "+km(due.next):
-            cycle?.interval_km&&row.odometer_km==null?"거리 미입력":
-            cycle?.interval_days?number(cycle.interval_days)+"일 주기":"주기 미설정";
+            row?"교체 거리 미입력":"교체 이력 없음";
           return btn(h(R.Fragment,null,
             h("span",{className:"bike-tile-icon"},h(PartIcon,{name:item,size:46})),
             h("span",{className:"bike-tile-name"},item),
+            h("span",{className:"bike-tile-cycle-caption"},cycleCaption),
+            h("strong",{className:"bike-tile-cycle"},cycleLabel),
             h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
           ()=>user?setDetailItem(item):login(),
           {key:item,className:"bike-consumable bike-tile","aria-label":item+" 관리"}); 
