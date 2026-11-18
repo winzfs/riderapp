@@ -50,7 +50,8 @@ jobs:
           set -euo pipefail
           test -s /tmp/rider-v187-android/app/build/outputs/apk/debug/app-debug.apk
           tar -cJf rider-spot-android/source.tar.xz -C /tmp/rider-v187-android .
-          tar -tJf rider-spot-android/source.tar.xz | grep -q 'MainActivity.java'
+          tar -tJf rider-spot-android/source.tar.xz > /tmp/rider-v187-archive-files.txt
+          grep -q 'MainActivity.java' /tmp/rider-v187-archive-files.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add rider-spot-android/source.tar.xz
