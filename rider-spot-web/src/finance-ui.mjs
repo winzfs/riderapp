@@ -1,11 +1,11 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
 import {icons} from "./ui.mjs";
-import {won,num,koreanWorkDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon} from "./finance-model.mjs";
+import {won,num,koreanWorkDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths} from "./finance-model.mjs";
 
 const money = won;
 const categories = ["보험료","통신비","주차비","장비","기타","식비","개인 비용"];
 const platforms = ["쿠팡이츠","배민","기타"];
-const emptyData = {earnings:[],fuel:[],maintenance:[],extras:[],goal:null};
+const emptyData = {earnings:[],fuel:[],maintenance:[],extras:[],goal:null,recurring:[],payoutRules:[]};
 const dateLabel = day => String(day||"").slice(5).replace("-","/");
 const safeAmount = validWon;
 const monthDelta = (day,offset) => {
@@ -86,7 +86,10 @@ export function createFinance(R, client) {
       return window.__rsNavigation.registerLayer("finance-sheet",()=>closer.current());
     },[]);
     const row=editor.row||{},kind=editor.kind;
-    const name=kind==="income"?"수익":kind==="fuel"?"주유비":kind==="expense"?"기타 지출":kind==="settlement"?"실제 입금":"월 목표";
+    const name=kind==="income"?"수익":kind==="fuel"?"주유비":kind==="expense"?"지출":
+      kind==="settlement"?"실제 입금":kind==="recurrence"?"반복 지출":
+      kind==="payout"?"정산 일정":"월 목표";
+    const [cycle,setCycle]=R.useState(row.cycle||"none");
     return h("dialog",{ref,className:"fin-dialog","aria-label":name+" 입력",
       onCancel:e=>{e.preventDefault();dismiss();},
       onClick:e=>{if(e.target===e.currentTarget)dismiss();}},
@@ -95,7 +98,7 @@ export function createFinance(R, client) {
         h("div",{className:"fin-drag-area",onPointerDown:pointerStart,onPointerMove:pointerMove,
           onPointerUp:pointerEnd,onPointerCancel:pointerEnd},h("span",{className:"fin-drag-handle"})),
         h("header",{className:"fin-sheet-head"},
-          h("div",null,txt("small",null,editor.row?"기록 수정":"빠른 입력"),
+          h("div",null,txt("small",null,editor.row?"기록 수정":kind==="recurrence"||kind==="payout"?"일정 설정":"빠른 입력"),
             h("h2",null,name+(kind==="goal"?" 설정":" 기록"))),
           button(icon("close",22),dismiss,"fin-close",{"aria-label":"닫기",disabled:busy})),
         h("div",{className:"fin-sheet-body"},
@@ -118,7 +121,7 @@ export function createFinance(R, client) {
             txt("p","fin-hint","내 바이크의 주유 기록과 같은 장부를 사용합니다.")),
           kind==="expense"&&h(R.Fragment,null,
             dateInput("지출 날짜","expense_date",row.expense_date||editor.day),
-            select("분류","category",categories,row.category||"보험료"),
+            select("분류","category",categories,row.category||editor.category||"보험료"),
             amountInput("지출 금액","amount_won",row.amount_won??null),
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
             txt("p","fin-hint","주유비·정비비는 각각의 기존 장부에서 기록해 주세요. 비용이 두 번 잡히지 않도록 분리합니다.")),
@@ -130,7 +133,33 @@ export function createFinance(R, client) {
           kind==="goal"&&h(R.Fragment,null,
             amountInput("월 수익 목표","monthly_target_won",row.monthly_target_won??3000000),
             input("한 달 근무 예정일","planned_work_days","number",row.planned_work_days??25,true,{min:1,max:31}),
-            txt("p","fin-hint","목표는 내 계정에 저장되며 실제 수익은 입력된 기록만 반영합니다."))),
+            h("label",{className:"fin-field"},h("span",null,"목표 기준"),
+              h("select",{name:"goal_basis",defaultValue:row.goal_basis||"gross"},
+                h("option",{value:"gross"},"총수익"),
+                h("option",{value:"net"},"업무 비용 차감액")))),
+          kind==="recurrence"&&h(R.Fragment,null,
+            select("비용 분류","category",categories,row.category||editor.category||"보험료"),
+            amountInput("반복 금액","amount_won",row.amount_won??null),
+            input("매월 날짜","day_of_month","number",row.day_of_month??Number(editor.day.slice(8)),true,
+              {min:1,max:31,step:1}),
+            input("메모","memo","text",row.memo||"",false,{maxLength:300}),
+            h("label",{className:"fin-toggle-line"},h("input",{name:"active",type:"checkbox",
+              defaultChecked:row.active!==false}),h("span",null,"반복 일정 활성화")),
+            txt("p","fin-hint","설정만 저장합니다. 실제 지출은 내역에서 확인 후 등록해요.")),
+          kind==="payout"&&h(R.Fragment,null,
+            txt("p","fin-hint",(row.platform||editor.platform)+" · 내 정산 예정 일정"),
+            h("label",{className:"fin-field"},h("span",null,"반복 방식"),
+              h("select",{name:"cycle",value:cycle,onChange:e=>setCycle(e.target.value)},
+                h("option",{value:"none"},"예정일 설정 안 함"),
+                h("option",{value:"weekly"},"매주 특정 요일"),
+                h("option",{value:"monthly"},"매월 특정 날짜"))),
+            cycle==="weekly"&&h("label",{className:"fin-field"},h("span",null,"요일"),
+              h("select",{name:"weekday",defaultValue:String(row.weekday??1)},
+                ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"].map((day,i)=>
+                  h("option",{key:i,value:i},day)))),
+            cycle==="monthly"&&input("매월 일자","month_day","number",row.month_day??25,true,
+              {min:1,max:31,step:1}),
+            txt("p","fin-hint","예정일은 직접 정한 참고 일정입니다. 입금 여부와 실제 날짜는 별도로 기록해야 해요.")),
         h("footer",null,error&&txt("p","fin-error",error),
           h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기"))));
   }
@@ -148,6 +177,8 @@ export function createFinance(R, client) {
     const [sheetError,setSheetError]=R.useState("");
     const [busy,setBusy]=R.useState(false);
     const [filter,setFilter]=R.useState("all");
+    const [selectedChart,setSelectedChart]=R.useState(null);
+    const [selectedAnalysis,setSelectedAnalysis]=R.useState(null);
     R.useEffect(()=>{
       const changed=e=>{if(!e?.detail?.userId||e.detail.userId===user?.id)refresh(n=>n+1);};
       const visible=()=>{if(document.visibilityState==="visible")refresh(n=>n+1);};
@@ -178,11 +209,17 @@ export function createFinance(R, client) {
         fetchRows("rider_fuel_logs","fueled_on"),
         fetchRows("maintenance_logs","serviced_on"),
         fetchRows("rider_extra_expenses","expense_date"),
-        client.from("rider_finance_goals").select("*").eq("user_id",user.id).maybeSingle()
+        client.from("rider_finance_goals").select("*").eq("user_id",user.id).maybeSingle(),
+        client.from("rider_recurring_expenses").select("*").eq("user_id",user.id)
+          .order("created_at",{ascending:false}),
+        client.from("rider_finance_payout_rules").select("*").eq("user_id",user.id)
       ]).then(res=>{
         if(!active)return;
         if(res[4].error)throw res[4].error;
-        setData({earnings:res[0],fuel:res[1],maintenance:res[2],extras:res[3],goal:res[4].data});
+        if(res[5].error)throw res[5].error;
+        if(res[6].error)throw res[6].error;
+        setData({earnings:res[0],fuel:res[1],maintenance:res[2],extras:res[3],
+          goal:res[4].data,recurring:res[5].data||[],payoutRules:res[6].data||[]});
         setLoading(false);
       }).catch(e=>{if(active){setError(e?.message||"수익 데이터를 불러오지 못했어요.");
         setLoading(false);}});
@@ -194,18 +231,23 @@ export function createFinance(R, client) {
     const totals=financeTotals(data||emptyData,from,to);
     const [monthFrom,monthTo]=financeMonthPeriod(anchor);
     const monthly=financeTotals(data||emptyData,monthFrom,monthTo);
-    const goal={monthly_target_won:3000000,planned_work_days:25,...(data?.goal||{})};
+    const goal={monthly_target_won:3000000,planned_work_days:25,goal_basis:"gross",...(data?.goal||{})};
     const goalTarget=num(goal.monthly_target_won);
-    const achieved=goalTarget?Math.min(100,Math.round(monthly.gross/goalTarget*100)):100;
+    const goalValue=goal.goal_basis==="net"?monthly.net:monthly.gross;
+    const goalUncertain=goal.goal_basis==="net"&&monthly.uncertain;
+    const achieved=goalUncertain?null:goalTarget?Math.min(100,Math.round(goalValue/goalTarget*100)):100;
     const workedDays=new Set(monthly.earnings.filter(x=>num(x.gross_won)>0).map(x=>x.work_date)).size;
     const remainingWorkDays=Math.max(1,num(goal.planned_work_days)-workedDays);
-    const perDay=Math.ceil(Math.max(0,goalTarget-monthly.gross)/remainingWorkDays);
+    const perDay=goalUncertain?null:Math.ceil(Math.max(0,goalTarget-goalValue)/remainingWorkDays);
     const graph=financeDays(data||emptyData,today,7);
     const ceiling=Math.max(1,...graph.map(x=>x.gross));
     const openEditor=(kind,row=null)=>{if(!user)return login();
       let savedPlatform="쿠팡이츠";
       try{savedPlatform=localStorage.getItem("rs:finance-platform:"+user.id)||savedPlatform;}catch{}
-      setSheetError("");setEditor({kind,row,day:today,platform:platforms.includes(savedPlatform)?savedPlatform:"쿠팡이츠"});};
+      let category="보험료";
+      try{category=localStorage.getItem("rs:finance-category:"+user.id)||category;}catch{}
+      setSheetError("");setEditor({kind,row,day:today,category:categories.includes(category)?category:"보험료",
+        platform:platforms.includes(savedPlatform)?savedPlatform:"쿠팡이츠"});};
     async function save(form) {
       if(!user||busy||!editor)return;
       const f=new FormData(form),v=k=>String(f.get(k)||"").trim(),moneyValue=k=>v(k).replace(/,/g,"");
