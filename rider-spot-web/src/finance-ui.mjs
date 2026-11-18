@@ -333,7 +333,7 @@ export function createFinance(R, client) {
                 txt("strong",x.type==="income"?"gain":"spend",(x.type==="income"?"+":"−")+money(x.amount)),
                 h("div",{className:"fin-record-actions"},
                   button("수정",()=>x.type==="maintenance"?onBike():openEditor(x.type,x.row),"fin-textbtn"),
-                  x.type!=="maintenance"&&button("삭제",()=>remove(x.type,x.row),"fin-textbtn fin-danger",{disabled:busy})))))))
+                  x.type!=="maintenance"&&button("삭제",()=>remove(x.type,x.row),"fin-textbtn fin-danger",{disabled:busy}))))))
           :txt("p","fin-empty","이 기간에 기록이 없어요.")),
         h("div",{className:"fin-shortcuts"},
           button("주유비 기록",()=>openEditor("fuel"),"fin-secondary"),
