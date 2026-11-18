@@ -80,6 +80,9 @@ async function run(browser,width,height){
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
     assert.ok(await page.locator(".bike-item-icon .bike-part-svg").count()>=4,"maintenance icons render");
+    const pngIcon = page.locator(".bike-item-icon .bike-part-svg").first();
+    assert.match(await pngIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/png;base64,/,
+      "semi-flat PNG atlas is actually rendered rather than legacy SVG");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");

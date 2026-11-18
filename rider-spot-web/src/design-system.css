@@ -1527,3 +1527,12 @@ svg.rs-icon{flex:none;vertical-align:middle}
 @media(prefers-reduced-motion:reduce){
   .record-part,.record-extra summary svg,.record-sheet button{transition:none!important}
 }
+
+/* Semi-flat PNG parts (5x2 single-request atlas): no nested badge behind the image */
+.bike-part-svg{display:inline-block;flex:none;vertical-align:middle;border-radius:23%;background-repeat:no-repeat;background-color:transparent}
+.bike-page .bike-row .bike-item-icon,
+.bike-page .bike-row .bike-item-icon.subtle{background:transparent;border-color:transparent;box-shadow:none;overflow:visible}
+.bike-page .bike-row .bike-item-icon img{display:none}
+.record-sheet .record-parts-grid .record-part .bike-part-svg{margin:0 auto}
+.record-detail-empty .bike-part-svg{opacity:.8}
+@media(max-width:380px){.record-sheet .record-parts-grid .record-part{gap:5px}}

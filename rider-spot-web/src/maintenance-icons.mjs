@@ -1,31 +1,30 @@
-import oil from "./assets/maintenance/engine-oil.svg";
-import front from "./assets/maintenance/front-tire.svg";
-import rear from "./assets/maintenance/rear-tire.svg";
-import brake from "./assets/maintenance/brake-pad.svg";
-import belt from "./assets/maintenance/drive-belt.svg";
-import filter from "./assets/maintenance/air-filter.svg";
-import battery from "./assets/maintenance/battery.svg";
-import spark from "./assets/maintenance/spark-plug.svg";
-import coolant from "./assets/maintenance/coolant.svg";
-import other from "./assets/maintenance/other.svg";
-
-const sources = {
-  "엔진오일":oil, "앞 타이어":front, "뒤 타이어":rear,
-  "브레이크 패드":brake, "구동벨트":belt, "에어필터":filter,
-  "배터리":battery, "점화플러그":spark, "냉각수":coolant,
-};
-export function maintenanceIcon(name) {
-  const part = String(name || "").replace(/\s+/g, "");
-  if (sources[name]) return sources[name];
-  if (/앞.*타이어|프론트.*타이어/.test(part)) return front;
-  if (/뒤.*타이어|뒷.*타이어|리어.*타이어/.test(part)) return rear;
-  if (/오일/.test(part)) return oil;
-  if (/브레이크|패드/.test(part)) return brake;
-  if (/벨트|CVT/.test(part)) return belt;
-  if (/에어.*필터/.test(part)) return filter;
-  if (/배터리/.test(part)) return battery;
-  if (/플러그/.test(part)) return spark;
-  if (/냉각/.test(part)) return coolant;
-  return other;
+// Ten image-generated, compact semi-flat maintenance symbols in one PNG atlas.
+// Positions: oil, front/rear tire, brake, belt, filter, battery, spark, coolant, other.
+import atlas from "./assets/maintenance/flat-parts.png";
+const indexes = Object.freeze({
+  "엔진오일":0,"앞 타이어":1,"뒤 타이어":2,"브레이크 패드":3,
+  "구동벨트":4,"에어필터":5,"배터리":6,"점화플러그":7,"냉각수":8,"기타":9
+});
+function indexOfPart(name) {
+  if(Object.hasOwn(indexes,name)) return indexes[name];
+  const normalized=String(name||"").replace(/\s+/g,"").toLocaleLowerCase("ko-KR");
+  if(/앞.*타이어|프론트.*타이어/.test(normalized)) return 1;
+  if(/뒤.*타이어|뒷.*타이어|리어.*타이어/.test(normalized)) return 2;
+  if(/오일/.test(normalized)) return 0;
+  if(/브레이크|패드/.test(normalized)) return 3;
+  if(/벨트|cvt/.test(normalized)) return 4;
+  if(/에어.*필터/.test(normalized)) return 5;
+  if(/배터리/.test(normalized)) return 6;
+  if(/플러그/.test(normalized)) return 7;
+  if(/냉각/.test(normalized)) return 8;
+  return 9;
 }
-export const maintenanceIconSources = sources;
+export function maintenanceIcon(name) {
+  const index=indexOfPart(name);
+  return {
+    backgroundImage:`url("${atlas}")`,
+    backgroundSize:"500% 200%",
+    backgroundPosition:`${(index%5)*25}% ${Math.floor(index/5)*100}%`
+  };
+}
+export const maintenanceIconSources = indexes;

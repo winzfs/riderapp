@@ -31,7 +31,7 @@ export function createRecords(R, client) {
     className:"rs-icon",width:size,height:size,viewBox:"0 0 24 24",
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,
   },h("path",{d:icons[name]||icons.shops}));
-  const PartIcon = ({name,size=28}) => h("img",{className:"bike-part-svg",src:maintenanceIcon(name),alt:"",width:size,height:size,draggable:false,"aria-hidden":true});
+  const PartIcon = ({name,size=28}) => h("span",{className:"bike-part-svg",style:{width:size,height:size,...maintenanceIcon(name)},"aria-hidden":true});
   function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
@@ -144,7 +144,7 @@ export function createRecords(R, client) {
     const id = R.useRef(row?.id || crypto.randomUUID());
     const selectedKeys = new Set(selected.map(x=>normalizePart(x).toLocaleLowerCase("ko-KR")));
     const partButton = name => btn(h(R.Fragment,null,
-        h(PartIcon,{name,size:32}),
+        h(PartIcon,{name,size:40}),
         h("span",{className:"record-part-name"},name),
         selectedKeys.has(normalizePart(name).toLocaleLowerCase("ko-KR")) &&
           h("span",{className:"record-part-check","aria-hidden":true},h(Icon,{name:"check",size:13}))),
@@ -369,7 +369,7 @@ export function createRecords(R, client) {
             cycle?.interval_days?number(cycle.interval_days)+"일 주기":"주기 미설정";
           return btn(h(R.Fragment,null,
             h("span",{className:"bike-row-main"},
-              h("span",{className:"bike-item-icon"},h(PartIcon,{name:item,size:30})),
+              h("span",{className:"bike-item-icon"},h(PartIcon,{name:item,size:40})),
               h("span",null,h("b",null,item),
                 h("small",null,row?"최근 "+row.serviced_on:"교환 기록 없음"),
                 h("small",null,row?km(row.odometer_km):"거리 미입력"))),
@@ -387,7 +387,7 @@ export function createRecords(R, client) {
           h("h3",null,row.serviced_on.slice(0,7).replace("-","년 ")+"월"),
         btn(h(R.Fragment,null,
           h("span",{className:"bike-row-main"},
-            h("span",{className:"bike-item-icon subtle"},h(PartIcon,{name:itemsOf(row)[0],size:26})),
+            h("span",{className:"bike-item-icon subtle"},h(PartIcon,{name:itemsOf(row)[0],size:36})),
             h("span",null,h("b",null,itemsOf(row).join(" · ")),
               h("small",null,row.serviced_on+" · "+km(row.odometer_km)))),
           h("span",{className:"bike-row-meta"},h("b",null,row.cost_won==null?"비용 미입력":number(row.cost_won)+"원"),

@@ -14,7 +14,7 @@ const legacy = gunzipSync(
 const buildOptions = {
   absWorkingDir: root,
   bundle: true,
-  loader: { ".svg": "dataurl" },
+  loader: { ".svg": "dataurl", ".png": "dataurl" },
   minify: true,
   write: false,
   format: "esm",
