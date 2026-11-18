@@ -34,11 +34,11 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          import {readFile} from 'node:fs/promises';
-          const bundle=await readFile('dist/assets/'+
-            (await import('node:fs/promises')).readdir('dist/assets').then(
-              names=>names.find(name=>name.startsWith('rider-spot-')))+
-            '/app.mjs','utf8');
+          import {readFile,readdir} from 'node:fs/promises';
+          const dirs=await readdir('dist/assets');
+          const dir=dirs.find(name=>name.startsWith('rider-spot-'));
+          assert.ok(dir,'built asset directory missing');
+          const bundle=await readFile('dist/assets/'+dir+'/app.mjs','utf8');
           assert.ok(bundle.includes('apply_rider_trip_odometer'));
           assert.ok(bundle.includes('set_rider_manual_odometer'));
           assert.ok(bundle.includes('data:image/svg+xml'));
