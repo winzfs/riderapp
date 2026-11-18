@@ -141,8 +141,9 @@ async function run(browser,width,height){
     await page.getByRole("button",{name:"모델 선택",exact:true}).click();
     const picker=page.getByRole("dialog",{name:"바이크 모델 선택"});
     await picker.getByRole("button",{name:"목록에 없는 차량 직접 입력"}).click();
-    await dialog.getByLabel("차량명").fill("PCX125 라이더");
-    await dialog.getByRole("button",{name:"차량명 저장"}).click();
+    await picker.getByLabel("차량명").fill("PCX125 라이더");
+    await picker.getByRole("button",{name:"차량명 저장"}).click();
+    await picker.waitFor({state:"hidden"});
     await page.getByRole("heading",{name:"PCX125 라이더"}).waitFor();
     assert.equal(vehicle.odometer_km,25700);
     assert.equal(vehicle.odometer_recorded_on,"2026-11-17","renaming preserves odometer date");
