@@ -1705,3 +1705,36 @@ svg.rs-icon{flex:none;vertical-align:middle}
   background:#a94820;color:#fff;font-size:13px;font-weight:750}
 .record-cycle-save:disabled,.record-cycle-edit:disabled{opacity:.55}
 @media(max-width:380px){.record-sheet .record-cycle-panel{padding:12px}.record-cycle-values>span{padding-inline:7px}}
+
+
+/* v187 motion: tactile workshop sheet, drag handle, compositor-only transforms. */
+@media (prefers-reduced-motion:no-preference) {
+  .record-surface[open] .record-sheet{
+    animation:rs187-sheet-enter 260ms cubic-bezier(.18,.87,.25,1) both;
+    will-change:transform;
+  }
+  .record-surface[open]::backdrop {animation:rs187-dim-in 220ms ease-out both}
+  .record-surface.rs-record-exiting .record-sheet{animation:none;pointer-events:none}
+  @keyframes rs187-sheet-enter{
+    from{transform:translate3d(0,33px,0);opacity:.88}
+    to{transform:translate3d(0,0,0);opacity:1}
+  }
+  @keyframes rs187-dim-in{from{background-color:rgba(21,36,34,0)}to{background-color:rgba(21,36,34,.4)}}
+}
+.record-sheet .record-heading{touch-action:pan-x;cursor:grab;user-select:none;-webkit-user-select:none}
+.record-sheet .record-heading:active{cursor:grabbing}
+.record-sheet .record-grab{width:43px;height:5px;background:#c9d2cd;border-radius:20px}
+.record-sheet .record-primary,.record-sheet .record-cycle-save,
+.bike-page .bike-tile,.app .bottom-nav button,.bike-quiet-action{
+  transition:transform 160ms cubic-bezier(.2,.85,.3,1),background-color 160ms ease,box-shadow 160ms ease;
+}
+@media (hover:none) and (prefers-reduced-motion:no-preference){
+  .record-sheet .record-primary:active,.record-sheet .record-cycle-save:active{transform:scale(.985)}
+  .bike-page .bike-tile:active{transform:scale(.975)}
+  .app .bottom-nav button:active{transform:scale(.94)}
+}
+@media (prefers-reduced-motion:reduce){
+  .record-surface[open] .record-sheet,.record-surface[open]::backdrop{animation:none!important}
+  .record-sheet .record-primary,.record-sheet .record-cycle-save,.bike-page .bike-tile,
+  .app .bottom-nav button{transition:none!important}
+}

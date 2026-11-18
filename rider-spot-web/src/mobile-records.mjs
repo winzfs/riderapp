@@ -35,10 +35,24 @@ export function createRecords(R, client) {
   function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
-    const lock = R.useRef(false), surface = R.useRef(null), startY = R.useRef(null);
+    const lock = R.useRef(false), surface = R.useRef(null);
+    const drag = R.useRef(null), closing = R.useRef(false), closeTimer = R.useRef(null);
     const closeRef = R.useRef(close);
     closeRef.current = close;
-    const dismiss = () => { if (!lock.current) closeRef.current(); };
+    const dismiss = (force = false) => {
+      if (lock.current && !force) return false;
+      if (closing.current) return true;
+      closing.current = true;
+      const node = surface.current, panel = node?.querySelector(".record-sheet");
+      const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      if (!panel || reduced) { closeRef.current(); return true; }
+      node.classList.add("rs-record-exiting");
+      panel.style.transition = "transform 190ms cubic-bezier(.22,.85,.28,1), opacity 170ms ease";
+      panel.style.transform = "translate3d(0,110%,0)";
+      panel.style.opacity = "0.86";
+      closeTimer.current = window.setTimeout(() => closeRef.current(), 190);
+      return true;
+    };
     R.useLayoutEffect(() => {
       const node = surface.current, viewport = window.visualViewport;
       node.showModal();
@@ -57,32 +71,77 @@ export function createRecords(R, client) {
       return () => {
         viewport?.removeEventListener("resize", size);
         viewport?.removeEventListener("scroll", size);
+        if (closeTimer.current != null) window.clearTimeout(closeTimer.current);
         if (node.open) node.close();
         if (--openRecordSheets === 0) document.body.style.overflow = originalBodyOverflow;
       };
     }, []);
     R.useEffect(() => {
+      // Every detail/form is a nested history layer, including Android Back.
+      if (window.__rsNavigation)
+        return window.__rsNavigation.registerLayer("record-sheet", () => dismiss());
+      // Graceful fallback when an older web bundle loads without the controller.
       const marker = crypto.randomUUID();
       history.pushState({...history.state, recordSheet:marker}, "");
       const back = () => {
         const dialogs = [...document.querySelectorAll("dialog.record-surface[open]")];
-        if (history.state?.recordSheet !== marker && dialogs.at(-1) === surface.current && !lock.current)
-          closeRef.current();
+        if (history.state?.recordSheet !== marker && dialogs.at(-1) === surface.current)
+          dismiss();
       };
       window.addEventListener("popstate", back);
       return () => {
         window.removeEventListener("popstate", back);
-        // Do not consume the parent's history entry when closing a nested edit sheet.
         if (history.state?.recordSheet === marker) history.back();
       };
     }, []);
-    const dragStart = event => { startY.current = event.touches?.[0]?.clientY ?? null; };
-    const dragEnd = event => {
-      const end = event.changedTouches?.[0]?.clientY;
-      if (startY.current != null && end - startY.current > 85) dismiss();
-      startY.current = null;
+    const dragStart = event => {
+      if (!event.isPrimary || event.button !== 0 || event.target.closest?.("button,input,textarea")) return;
+      drag.current = {pointer:event.pointerId,startX:event.clientX,startY:event.clientY,
+        lastY:event.clientY,lastAt:performance.now(),distance:0};
+      event.currentTarget.setPointerCapture?.(event.pointerId);
     };
-    const heading = h("div", {className:"record-heading",onTouchStart:dragStart,onTouchEnd:dragEnd},
+    const dragMove = event => {
+      const g = drag.current;
+      if (!g || g.pointer !== event.pointerId || closing.current) return;
+      const distance = Math.max(0,event.clientY-g.startY);
+      if (distance < 4 || distance < Math.abs(event.clientX-g.startX)*1.1) return;
+      const panel = surface.current?.querySelector(".record-sheet");
+      if (!panel) return;
+      g.distance = distance;
+      g.velocity = (event.clientY-g.lastY)/Math.max(8,performance.now()-g.lastAt);
+      g.lastY=event.clientY;
+      g.lastAt=performance.now();
+      panel.style.transition = "none";
+      panel.style.transform = "translate3d(0,"+Math.min(distance,innerHeight*.72)+"px,0)";
+      if (event.cancelable) event.preventDefault();
+    };
+    const dragEnd = event => {
+      const g = drag.current;
+      if (!g || g.pointer !== event.pointerId) return;
+      drag.current = null;
+      const distance = Math.max(0,event.clientY-g.startY);
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      if (distance > 105 || (distance > 48 && (g.velocity||0) > .72)) {
+        dismiss();
+        return;
+      }
+      const panel = surface.current?.querySelector(".record-sheet");
+      if (panel) {
+        panel.style.transition = "transform 310ms cubic-bezier(.18,1.12,.3,1)";
+        panel.style.transform = "";
+      }
+    };
+    const dragCancel = () => {
+      drag.current = null;
+      const panel = surface.current?.querySelector(".record-sheet");
+      if (panel && !closing.current) {
+        panel.style.transition = "transform 260ms cubic-bezier(.18,1,.3,1)";
+        panel.style.transform = "";
+      }
+    };
+    const heading = h("div", {className:"record-heading",
+      onPointerDown:dragStart,onPointerMove:dragMove,onPointerUp:dragEnd,onPointerCancel:dragCancel},
       h("span",{className:"record-grab", "aria-hidden":true}),
       h("div",{className:"record-heading-label"},
         h("span",{className:"record-heading-title"},leading || null,h("strong",null,title)),
@@ -100,7 +159,7 @@ export function createRecords(R, client) {
       lock.current = true; setBusy(true); setError("");
       try {
         await save(new FormData(event.currentTarget));
-        closeRef.current();
+        dismiss(true);
       } catch (err) {
         setError(err?.message || "저장하지 못했어요. 다시 시도해 주세요.");
       } finally {lock.current = false; setBusy(false); }
