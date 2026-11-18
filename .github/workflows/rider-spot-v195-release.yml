@@ -31,7 +31,11 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - name: Verify the actual rendered PNG and displayed model intervals
-        run: node tests/mobile-records-browser.cjs
+        env:
+          RIDER_TEST_ORIGIN: http://127.0.0.1:8840
+        run: |
+          python3 -m http.server 8840 --directory dist > /tmp/rider-spot-v195-http.log 2>&1 &
+          node tests/mobile-records-browser.cjs
       - name: Freeze verified build into production prebuilt assets
         run: |
           node --input-type=module <<'NODE'
