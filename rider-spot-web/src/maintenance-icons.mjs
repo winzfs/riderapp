@@ -34,12 +34,7 @@ const cache=new Map();
 export function maintenanceIcon(name){
   const part=partName(name);
   if(!cache.has(part)){
-    cache.set(part,Object.freeze({
-      backgroundImage:'url("'+assets[part]+'")',
-      backgroundSize:"contain",
-      backgroundPosition:"center",
-      backgroundRepeat:"no-repeat"
-    }));
+    cache.set(part,assets[part]);
   }
   return cache.get(part);
 }
