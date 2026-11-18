@@ -147,7 +147,8 @@ async function run(browser,width,height){
     await page.getByRole("heading",{name:"PCX125 라이더"}).waitFor();
     assert.equal(vehicle.odometer_km,25700);
     assert.equal(vehicle.odometer_recorded_on,"2026-11-17","renaming preserves odometer date");
-    assert.deepEqual(vehicleChanges.at(-1),{vehicle_name:"PCX125 라이더"},"name-only update payload");
+    assert.deepEqual(vehicleChanges.at(-1),{user_id:userId,vehicle_name:"PCX125 라이더",model_key:null},
+      "custom manual bike name does not imply a verified model identity");
     assert.equal(await page.getByRole("button",{name:"교체 주기 설정",exact:true}).count(),0,
       "global replacement cycle editor is removed");
     await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
