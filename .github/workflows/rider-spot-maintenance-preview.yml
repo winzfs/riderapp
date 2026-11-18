@@ -1,4 +1,4 @@
-name: Rider Spot maintenance v180 candidate acceptance
+name: Rider Spot maintenance v180 production smoke
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_UI_URL: https://4cb4d994-rider-spot.jazzhjm.workers.dev/
+      RIDER_UI_URL: https://rider-spot.jazzhjm.workers.dev/
       RIDER_SCREENSHOTS: /tmp/rider-maintenance-evidence
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
           cache-dependency-path: rider-spot-web/package-lock.json
       - run: npm ci
       - run: npm run build && npm test
-      - name: Confirm exact uploaded candidate and preserved map/API assets
+      - name: Confirm exact production routing and preserved map/API assets
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -53,7 +53,7 @@ jobs:
           assert.ok(JSON.parse(texts['/mapdata/manifest.json']).counts);
           NODE
       - run: npx playwright install --with-deps chromium
-      - name: Browser acceptance of actual preview at 320, 360, 390, 412 and 768 widths
+      - name: Browser acceptance of production service at 320, 360, 390, 412 and 768 widths
         run: |
           sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
           sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rider-spot-maintenance-v180-preview-screens
+          name: rider-spot-maintenance-v180-production-screens
           path: |
             /tmp/rider-ui-evidence
             /tmp/rider-journey-evidence
