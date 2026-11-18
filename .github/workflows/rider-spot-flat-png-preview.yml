@@ -43,6 +43,14 @@ jobs:
             assert.ok(resources[path].length>100,path+' missing bytes');
           }
           const app=resources['/assets/rider-spot-'+hash+'/app.mjs'];
+          const local=await (await import('node:fs/promises')).readFile('prebuilt/app.mjs','utf8');
+          if(app!==local){
+            const at=[...app].findIndex((char,index)=>char!==local[index]);
+            console.log('APP DIFF',JSON.stringify({remote:app.length,local:local.length,firstDifference:at,
+              remoteFragment:app.slice(Math.max(0,at-85),at+85),localFragment:local.slice(Math.max(0,at-85),at+85),
+              remoteLine8:app.split('\\n')[7]?.slice(131590,131800),localLine8:local.split('\\n')[7]?.slice(131590,131800)}));
+            throw Error('Candidate app bytes differ from GitHub-tested build');
+          }
           assert.ok(app.includes('data:image/png;base64,') && app.includes('500% 200%'),'PNG atlas is not in bundle');
           assert.ok(resources['/'].includes('/assets/rider-spot-'+hash+'/app.mjs'),'new HTML route');
           assert.ok(resources['/sw.js'].includes('rider-spot-shell-'+hash),'service worker cache key');
