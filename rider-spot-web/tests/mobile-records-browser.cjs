@@ -145,10 +145,10 @@ async function run(browser,width,height){
     assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='vector-v196']").count()>=6,
       "scalable vector icons are installed");
     const newIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
-    assert.match(await newIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/svg\+xml/,
-      "SVG stays sharp when enlarged on a dense Android display");
-    assert.equal(await newIcon.evaluate(el=>getComputedStyle(el).backgroundSize),"contain",
-      "the entire scalable icon fits its card");
+    assert.match(await newIcon.getAttribute("src"), /data:image\/svg\+xml/,
+      "each part uses a full-resolution scalable SVG image");
+    assert.equal(await newIcon.evaluate(el=>el.naturalWidth),96,
+      "decoded SVG artwork has its native viewBox width");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
