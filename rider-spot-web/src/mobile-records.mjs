@@ -2,7 +2,7 @@ import { rs33ISO } from "./timeline-dates.mjs";
 import scooter from "./scooter.svg";
 import { icons } from "./ui.mjs";
 import { maintenanceIcon } from "./maintenance-icons.mjs";
-import { standardParts, itemsOf, composeServiceItems, normalizePart, serviceRows, serviceDue } from "./maintenance-model.mjs";
+import { standardParts, itemsOf, composeServiceItems, normalizePart, serviceRows, serviceBaseline, serviceDue } from "./maintenance-model.mjs";
 
 const platforms = ["쿠팡이츠", "배민"];
 let openRecordSheets = 0;
@@ -32,7 +32,7 @@ export function createRecords(R, client) {
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,
   },h("path",{d:icons[name]||icons.shops}));
   const PartIcon = ({name,size=28}) => h("span",{className:"bike-part-svg",style:{width:size,height:size,...maintenanceIcon(name)},"aria-hidden":true});
-  function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false}) {
+  function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false,footerExtra=null}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
     const lock = R.useRef(false), surface = R.useRef(null);
@@ -154,7 +154,7 @@ export function createRecords(R, client) {
         {className:"record-close","aria-label":"닫기",disabled:busy}));
     const footer = detail ? (action && h("footer",null,btn(action.label,action.onClick,{className:"record-primary"}))) :
       h("footer",null,error && h("p",{role:"alert"},error),
-        h("button",{className:"record-primary",type:"submit",disabled:busy},busy?"저장 중…":submit));
+        h("button",{className:"record-primary",type:"submit",disabled:busy},busy?"저장 중…":submit),footerExtra));
     const props = {className:"record-sheet"};
     if (!detail) props.onSubmit = async event => {
       event.preventDefault();
@@ -172,6 +172,31 @@ export function createRecords(R, client) {
       onClick:event=>{if(event.target===event.currentTarget)dismiss();}},
       h(detail?"div":"form",props,heading,
         h("section",{className:"record-content"},date && h("small",{className:"record-date-label"},date),children),footer));
+  }
+
+  // Compact top-layer editor for actions that must never share the workshop footer.
+  function MiniDialog({title,close,children,busy=false}) {
+    const node=R.useRef(null),closeRef=R.useRef(close),busyRef=R.useRef(busy);
+    closeRef.current=close;busyRef.current=busy;
+    R.useLayoutEffect(()=>{
+      const dialog=node.current;dialog.showModal();
+      return ()=>{if(dialog.open)dialog.close();};
+    },[]);
+    R.useEffect(()=>{
+      if(!window.__rsNavigation)return;
+      return window.__rsNavigation.registerLayer("record-mini",()=>{
+        if(busyRef.current)return false;
+        closeRef.current();return true;
+      });
+    },[]);
+    const dismiss=()=>{if(!busyRef.current)closeRef.current();};
+    return h("dialog",{ref:node,className:"record-mini-dialog","aria-label":title,
+      onCancel:event=>{event.preventDefault();dismiss();},
+      onClick:event=>{if(event.target===event.currentTarget)dismiss();}},
+      h("div",{className:"record-mini-card"},
+        h("header",{className:"record-mini-head"},h("h3",null,title),
+          btn("×",dismiss,{className:"record-mini-close","aria-label":"창 닫기",disabled:busy})),
+        children));
   }
 
   function Income({day,user,login}) {
@@ -204,6 +229,23 @@ export function createRecords(R, client) {
   function ServiceEditor({row,item,choices,user,close,changed}) {
     const [selected,select] = R.useState(() => row ? itemsOf(row) : item ? [item] : []);
     const id = R.useRef(row?.id || crypto.randomUUID());
+    const [deleteConfirm,setDeleteConfirm]=R.useState(false);
+    const [deleting,setDeleting]=R.useState(false);
+    const [deleteError,setDeleteError]=R.useState("");
+    const deleteLock=R.useRef(false);
+    const deleteRecord=async()=>{
+      if(deleteLock.current||!row?.id)return;
+      deleteLock.current=true;setDeleting(true);setDeleteError("");
+      try {
+        const deleted=await read(client.from("maintenance_logs").delete()
+          .eq("id",row.id).eq("user_id",user.id).select("id"));
+        if(!Array.isArray(deleted)||!deleted.some(record=>record.id===row.id))
+          throw Error("삭제할 기록이 없어요. 목록을 다시 확인해 주세요.");
+        changed({deletedId:row.id});
+        setDeleteConfirm(false);close();
+      }catch(err){setDeleteError(err?.message||"기록을 삭제하지 못했어요. 다시 시도해 주세요.");}
+      finally{deleteLock.current=false;setDeleting(false);}
+    };
     const selectedKeys = new Set(selected.map(x=>normalizePart(x).toLocaleLowerCase("ko-KR")));
     const partButton = name => btn(h(R.Fragment,null,
         h(PartIcon,{name,size:40}),
@@ -212,7 +254,9 @@ export function createRecords(R, client) {
           h("span",{className:"record-part-check","aria-hidden":true},h(Icon,{name:"check",size:13}))),
       () => select(current => current.includes(name) ? current.filter(x=>x!==name) : [...current,name]),
       {key:name,className:"record-part", "aria-pressed":selected.includes(name),"aria-label":name});
-    return h(Sheet,{title:row?"정비 기록 수정":"정비 기록",subtitle:"교환한 부품을 선택하세요",close,
+    return h(R.Fragment,null,h(Sheet,{title:row?"정비 기록 수정":"정비 기록",subtitle:"교환한 부품을 선택하세요",close,
+      footerExtra:row&&btn("정비 기록 삭제",()=>setDeleteConfirm(true),
+        {className:"record-delete-open","aria-label":"정비 기록 삭제"}),
       submit:row?"변경사항 저장":"정비 기록 저장",save:async form=>{
         const items = composeServiceItems(selected, form.get("custom"));
         const day = String(form.get("day") || "");
@@ -248,7 +292,16 @@ export function createRecords(R, client) {
       h("details",{className:"record-extra",open:row?.workshop||row?.note?true:undefined},
         h("summary",null,"정비소 · 메모",h(Icon,{name:"chevron",size:17})),
         field("정비소",{name:"shop",maxLength:100,defaultValue:row?.workshop||""}),
-        h("label",null,"메모",h("textarea",{name:"note",maxLength:500,rows:3,defaultValue:row?.note||""}))));
+        h("label",null,"메모",h("textarea",{name:"note",maxLength:500,rows:3,defaultValue:row?.note||""})))),
+      deleteConfirm && h(MiniDialog,{title:"정비 기록을 삭제할까요?",close:()=>setDeleteConfirm(false),busy:deleting},
+        h("p",{className:"record-mini-description"},
+          itemsOf(row).join(" · ")+" · "+row.serviced_on+" 기록을 삭제합니다. 삭제 후 복구할 수 없어요."),
+        deleteError && h("p",{className:"record-cycle-error",role:"alert"},deleteError),
+        h("div",{className:"record-mini-actions"},
+          btn("취소",()=>setDeleteConfirm(false),{className:"record-mini-cancel",disabled:deleting}),
+          btn(deleting?"삭제 중…":"기록 삭제",deleteRecord,
+            {className:"record-mini-delete",disabled:deleting}))));
+
   }
 
   function ServiceDetail({item,rows,cycles,reading,close,edit,add,user,changed}) {
@@ -381,7 +434,10 @@ export function createRecords(R, client) {
     const [editor,setEditor]=R.useState(null),[detailItem,setDetailItem]=R.useState(null);
     const [vehicleEdit,setVehicleEdit]=R.useState(null);
     const changed = payload => {
-      if (payload?.id) setData(current => current ? {
+      if (payload?.deletedId) setData(current => current ? {
+        ...current,rows:current.rows.filter(row=>row.id!==payload.deletedId)
+      } : current);
+      else if (payload?.id) setData(current => current ? {
         ...current,rows:serviceRows([
           {...(current.rows.find(row=>row.id===payload.id)||{created_at:new Date().toISOString()}),...payload},
           ...current.rows.filter(row=>row.id!==payload.id)])
@@ -439,7 +495,7 @@ export function createRecords(R, client) {
         h("h2",null,"소모품 현황")),
       h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
         choices.map(item=>{
-          const row=serviceRows(rows,item)[0], cycle=cycles.find(c=>c.item_key===item);
+          const row=serviceBaseline(rows,item), cycle=cycles.find(c=>c.item_key===item);
           const due=serviceDue(row,cycle,reading?.[0]);
           // Keep detailed mileage/date in the existing detail sheet, not on the compact tile.
           const status=due.remaining!=null ?
