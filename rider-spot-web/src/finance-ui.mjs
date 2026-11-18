@@ -656,6 +656,8 @@ export function createFinance(R, client) {
           moneyStat("기록된 수입",money(monthly.gross)),
           moneyStat("업무 비용",money(monthly.cost)),
           moneyStat("비용 차감액",monthly.uncertain?"확인 필요":money(monthly.net)),
+          moneyStat("근무일 평균",activeDays?money(monthly.gross/activeDays):"기록 없음"),
+          moneyStat("전월 대비",delta==null?"비교 기준 없음":(delta>0?"+":"")+delta+"%"),
           moneyStat("기록된 배달 건수",monthly.deliveries+"건")),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"수익 추이"),
