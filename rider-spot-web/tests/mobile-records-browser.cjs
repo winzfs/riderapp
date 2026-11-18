@@ -19,6 +19,7 @@ async function run(browser,width,height){
   },{session,trips,userId});
   const records=[{id:"11111111-1111-4111-8111-111111111113",serviced_on:date,item:"엔진오일",odometer_km:24500,cost_won:24000,user_id:userId}];
   const totals={};let fail=true,failVehicle=true,failMaintenance=true,failCycle=true,failDelete=true;
+  const recurringRules=[],payoutRules=[],extraExpenses=[];let recurringInserts=0;
   const cycleWrites=[];
   const vehicle={user_id:userId,vehicle_name:"MY125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
   const cycles=[{user_id:userId,item_key:"엔진오일",interval_km:3000,interval_days:null}];
@@ -68,6 +69,41 @@ async function run(browser,width,height){
         }
         return route.fulfill({json:cycles});
       }
+      if(table==="rider_recurring_expenses" && route.request().method()!=="GET"){
+        const method=route.request().method();
+        const incoming=method==="DELETE"?{}:route.request().postDataJSON();
+        if(method==="POST"){
+          recurringInserts++;
+          const added={...incoming,id:"33333333-3333-4333-8333-"+String(recurringInserts).padStart(12,"0")};
+          recurringRules.push(added);return route.fulfill({json:[{id:added.id}]});
+        }
+        const id=url.searchParams.get("id")?.replace("eq.","");
+        const index=recurringRules.findIndex(x=>x.id===id);
+        if(index<0)return route.fulfill({json:[]});
+        if(method==="DELETE")return route.fulfill({json:[recurringRules.splice(index,1)[0]]});
+        Object.assign(recurringRules[index],incoming);return route.fulfill({json:[{id}]});
+      }
+      if(table==="rider_extra_expenses" && route.request().method()!=="GET"){
+        const method=route.request().method(),incoming=method==="DELETE"?{}:route.request().postDataJSON();
+        if(method==="POST"){
+          if(incoming.recurrence_id && extraExpenses.some(x=>
+             x.recurrence_id===incoming.recurrence_id&&x.recurrence_month===incoming.recurrence_month))
+            return route.fulfill({status:409,json:{code:"23505",message:"duplicate occurrence"}});
+          const row={...incoming,id:"22222222-2222-4222-8222-222222222222"};
+          extraExpenses.push(row);return route.fulfill({json:[{id:row.id}]});
+        }
+        const id=url.searchParams.get("id")?.replace("eq.","");
+        const index=extraExpenses.findIndex(x=>x.id===id);
+        if(index<0)return route.fulfill({json:[]});
+        if(method==="DELETE")return route.fulfill({json:[extraExpenses.splice(index,1)[0]]});
+        Object.assign(extraExpenses[index],incoming);return route.fulfill({json:[{id}]});
+      }
+      if(table==="rider_finance_payout_rules" && route.request().method()!=="GET"){
+        const incoming=route.request().postDataJSON();
+        const index=payoutRules.findIndex(x=>x.platform===incoming.platform);
+        if(index<0)payoutRules.push(incoming);else Object.assign(payoutRules[index],incoming);
+        return route.fulfill({json:[]});
+      }
       if(table==="set_rider_daily_income"){
         if(fail){fail=false;return route.fulfill({status:503,json:{message:"테스트 연결 오류"}});}
         const data=route.request().postDataJSON();assert.equal(data.p_date,date);Object.assign(totals,data.p_values);return route.fulfill({status:204});
@@ -90,7 +126,10 @@ async function run(browser,width,height){
       const data={user,trips,maintenance_logs:[...records].sort((a,b)=>b.serviced_on.localeCompare(a.serviced_on)),
         rider_earnings:Object.entries(totals).map(([platform,amount])=>({platform,gross_won:amount||0,gross_entered:amount!=null})),
         rider_vehicle_profiles:vehicle,rider_maintenance_cycles:cycles,
-         rider_model_maintenance_settings:modelSettings}[table]??[];
+         rider_model_maintenance_settings:modelSettings,
+          rider_recurring_expenses:recurringRules,
+          rider_extra_expenses:extraExpenses,
+          rider_finance_payout_rules:payoutRules}[table]??[];
       return route.fulfill({json:data});
     }
     if(["tiles.openfreemap.org","cdn.jsdelivr.net","tile.openstreetmap.org"].includes(url.hostname))return route.continue();
