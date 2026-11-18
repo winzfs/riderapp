@@ -692,7 +692,7 @@ export function createRecords(R, client) {
       h("div",{className:"bike-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"＋ 정비 기록"),
           ()=>edit({}),{className:"record-primary",disabled:!!user&&!data,"aria-label":"＋ 정비 기록"}),
-        btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),()=>tool("fuel"))),
+        btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),()=>{window.__rsFinanceAction="fuel";window.__rsGoToTab?.("earnings");})),
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("div",{className:"bike-section-head"},
         h("h2",null,"소모품 현황")),
@@ -728,8 +728,6 @@ export function createRecords(R, client) {
             h(Icon,{name:"chevron",size:17}))),
         ()=>edit({row}),{className:"bike-row bike-history-row","aria-label":itemsOf(row).join(" · ")+" "+row.serviced_on+" "+(row.cost_won==null?"비용 미입력":number(row.cost_won)+"원")})))
         :h("p",{className:"bike-empty"},user&&!data&&!error?"기록을 읽고 있어요…":"등록된 정비 기록이 없어요."),
-      h("div",{className:"bike-links"},
-        btn(h(R.Fragment,null,h(Icon,{name:"work",size:18}),"전체 업무 도구 ›"),()=>tool("hub"))),
       vehicleEdit && h(VehicleEditor,{kind:vehicleEdit,user,vehicle,
         close:()=>setVehicleEdit(null),changed}),
       modelPicker && h(ModelPicker,{user,vehicle,cycles,settings:modelSettings,
