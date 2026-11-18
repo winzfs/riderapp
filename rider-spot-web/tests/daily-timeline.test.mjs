@@ -11,7 +11,7 @@ function record(id, start, end, km, points = [], events = []) {
   };
 }
 
-test("daily timeline combines all saved runs on their Korean start date", () => {
+test("daily timeline combines all saved runs on their Korean 03:00 work date", () => {
   const source = [
     record("overnight", "2026-11-16T12:55:00Z", "2026-11-16T20:29:00Z", 88.9,
       [
@@ -82,4 +82,20 @@ test("explicit route break and overlapping runs never produce artificial cross-r
   assert.equal(rs33Paths(daily.route.points).length, 3);
   assert.equal(a.points[0].break, undefined);
   assert.equal(b.points[0].break, undefined);
+});
+
+
+test("midnight through 02:59 is assigned to previous workday; 03:00 starts next", () => {
+  const source = [
+    record("before-midnight", "2026-11-18T14:59:00Z", "2026-11-18T15:01:00Z", 1),
+    record("after-midnight", "2026-11-18T15:00:00Z", "2026-11-18T15:05:00Z", 2),
+    record("before-three", "2026-11-18T17:59:59Z", "2026-11-18T18:01:00Z", 3),
+    record("three-exact", "2026-11-18T18:00:00Z", "2026-11-18T18:10:00Z", 4),
+  ];
+  const snapshot = JSON.stringify(source);
+  assert.deepEqual(buildDailyTimeline(source, "2026-11-18").trips.map(t => t.id),
+    ["before-midnight", "after-midnight", "before-three"]);
+  assert.deepEqual(buildDailyTimeline(source, "2026-11-19").trips.map(t => t.id), ["three-exact"]);
+  assert.equal(buildDailyTimeline(source, "2026-11-18").distanceKm, 6);
+  assert.equal(JSON.stringify(source), snapshot, "date grouping must not mutate the original trips");
 });
