@@ -2179,3 +2179,96 @@ dialog.record-mini-dialog::backdrop{
   .fin-chart-analysis .fin-chart-date{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.fin-svg-chart-bar{transition:none}}
+
+
+/* v204 finance visual refinement: isolate legacy global 'header' rules.
+   These rules are scoped to finance only; maps, bike cards and app nav are untouched. */
+.app .finance-page{padding-top:14px;background:transparent}
+.app .finance-page .fin-page-head{
+  margin:0 0 15px;min-height:30px;padding:0 1px;display:flex;align-items:center;
+}
+.app .finance-page .fin-page-head h1{font-size:23px;letter-spacing:-.05em;line-height:1.35;color:#263b32}
+.app .finance-page .fin-card{
+  display:grid;align-content:start;gap:12px;min-height:0;
+  padding:17px 17px 16px;background:#fff;border:1px solid #e8ece8;
+  border-radius:17px;box-shadow:0 2px 7px #1e372707;
+}
+.app .finance-page .fin-card>header{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  height:auto;min-height:25px;width:100%;margin:0;padding:0;
+  border:0;border-radius:0;box-shadow:none;
+  background:transparent;color:#293e33;
+}
+.app .finance-page .fin-card>header h2{
+  color:#293e33;font-size:15px;line-height:1.4;font-weight:800;letter-spacing:-.035em;
+}
+.app .finance-page .fin-card>header small{
+  color:#7d8b80;font-size:11px;line-height:1.35;text-align:right;letter-spacing:-.01em;
+}
+.app .finance-page .fin-card>header .fin-textbtn{margin:-6px -4px -6px 0;font-size:12px;min-height:39px}
+.app .finance-page .fin-stack{gap:11px}
+.app .finance-page .fin-subnav{margin-bottom:13px}
+.app .finance-page .fin-period{gap:7px}
+.app .finance-page .fin-period-btn{min-height:40px;border-radius:11px;font-size:12px}
+.app .finance-page .fin-hero{
+  padding:19px 19px 17px;border-radius:18px;
+  background:linear-gradient(128deg,#273f36 0%,#1f312b 92%);
+  box-shadow:0 4px 13px #1c332719;
+}
+.app .finance-page .fin-hero-top{font-size:12px;color:#dce8dc}
+.app .finance-page .fin-hero-amount{margin-top:7px;font-size:clamp(29px,7.4vw,38px);line-height:1.25}
+.app .finance-page .fin-hero-range{font-size:11px;color:#c3d4c9;margin-top:5px}
+.app .finance-page .fin-hero-divider{margin:14px 0 12px}
+.app .finance-page .fin-hero-bottom{gap:15px}
+.app .finance-page .fin-hero-bottom span{font-size:11px}
+.app .finance-page .fin-hero-bottom strong{font-size:17px}
+.app .finance-page .fin-quick{gap:8px}
+.app .finance-page .fin-quick>button{min-height:49px;border-radius:12px;font-size:13px}
+.app .finance-page .fin-goal{gap:10px;padding-top:15px;padding-bottom:15px}
+.app .finance-page .fin-goal-amount{
+  display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;justify-content:flex-start;
+}
+.app .finance-page .fin-goal-amount strong{font-size:22px;line-height:1.3;color:#284136}
+.app .finance-page .fin-goal-amount small{font-size:11px;color:#748279;line-height:1.45}
+.app .finance-page .fin-goal-track{height:8px;border-radius:20px}
+.app .finance-page .fin-goal-numbers{font-size:11px;line-height:1.35;gap:12px}
+.app .finance-page .fin-goal .fin-optional{margin-top:0;border-top:1px solid #eef0eb}
+.app .finance-page .fin-goal .fin-optional summary{min-height:39px;padding:9px 0 3px;font-size:11px}
+.app .finance-page .fin-chart-card{gap:13px}
+.app .finance-page .fin-chart{padding:3px 0 0;gap:5px}
+.app .finance-page .fin-chart-col{gap:5px}
+.app .finance-page .fin-chart-track{height:95px;width:min(100%,36px);border-radius:7px 7px 3px 3px}
+.app .finance-page .fin-chart-value{font-size:11px;min-height:17px;color:#7b817d;line-height:1.3}
+.app .finance-page .fin-chart-date{font-size:11px;color:#708076;line-height:1.4}
+.app .finance-page .fin-chart-today{height:4px;width:4px}
+.app .finance-page .fin-platform-card{gap:12px}
+.app .finance-page .fin-platforms{gap:11px}
+.app .finance-page .fin-platform{gap:4px}
+.app .finance-page .fin-platform-title{font-size:13px}
+.app .finance-page .fin-platform-title strong{font-size:14px}
+.app .finance-page .fin-no-records{gap:6px;padding-bottom:14px}
+.app .finance-page .fin-no-records .fin-empty{
+  text-align:left;padding:4px 0 2px;font-size:12px;line-height:1.5;color:#7d8a82;
+}
+.app .finance-page .fin-insights>summary{min-height:45px;font-size:13px}
+.app .finance-page .fin-stat{align-content:start}
+.app .finance-page .fin-card .fin-chart-analysis .fin-chart-track{height:100px}
+.app .finance-page .fin-chart-detail{font-size:11px}
+.fin-dialog .fin-sheet>.fin-sheet-head{
+  position:static;height:auto;min-height:0;flex:none;
+  padding:7px 19px 12px;background:#fff;color:#24382e;
+  box-shadow:none;border:0;border-bottom:1px solid #edf0e9;
+}
+.fin-dialog .fin-sheet>.fin-sheet-head h2{color:#263b30;font-size:20px}
+@media(max-width:360px){
+  .app .finance-page{padding-left:12px;padding-right:12px}
+  .app .finance-page .fin-card{padding:14px}
+  .app .finance-page .fin-card>header h2{font-size:14px}
+  .app .finance-page .fin-card>header small{font-size:10px}
+  .app .finance-page .fin-chart-date{font-size:10px}
+  .app .finance-page .fin-goal-amount strong{font-size:20px}
+  .app .finance-page .fin-hero-bottom strong{font-size:15px}
+}
+@media(prefers-reduced-motion:reduce){
+  .app .finance-page .fin-svg-chart-bar{transition:none}
+}
