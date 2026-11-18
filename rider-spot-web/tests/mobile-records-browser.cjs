@@ -51,8 +51,8 @@ async function run(browser,width,height){
       }
       if(table==="maintenance_logs" && route.request().method()==="DELETE"){
          if(failDelete){failDelete=false;return route.fulfill({status:503,json:{message:"테스트 삭제 실패"}});}
-         const id=url.searchParams.get("id")?.replace(/^eq\\./,"");
-         const owner=url.searchParams.get("user_id")?.replace(/^eq\\./,"");
+         const id=url.searchParams.get("id")?.replace("eq.","");
+         const owner=url.searchParams.get("user_id")?.replace("eq.","");
          const index=records.findIndex(x=>x.id===id && x.user_id===owner);
          if(index<0)return route.fulfill({json:[]});
          records.splice(index,1);
@@ -204,10 +204,42 @@ async function run(browser,width,height){
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
+    await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("계기판").fill("40000");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"변경사항 저장"}).click();
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByText("0원").waitFor();
+    const rear=page.getByRole("dialog",{name:"뒤 타이어 관리"});
+    await rear.getByText("0원").waitFor();
+    await rear.getByText("40,000 km",{exact:true}).first().waitFor();
+    await rear.getByRole("button",{name:"주기 설정",exact:true}).click();
+    const rearCycle=page.getByRole("dialog",{name:"뒤 타이어 교체 주기"});
+    await rearCycle.getByLabel("교체 거리 (km)").fill("40000");
+    await rearCycle.getByRole("button",{name:"교체 주기 저장"}).click();
+    await rearCycle.waitFor({state:"hidden"});
+    await rear.getByText("80,000 km",{exact:true}).waitFor();
     await shot("bike-detail-updated");
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByRole("button",{name:"닫기"}).click();
+    await rear.getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
+    await dialog.getByLabel("현재 계기판 (km)").fill("60300");
+    await dialog.getByRole("button",{name:"계기판 저장"}).click();
+    await page.getByText("60,300 km",{exact:true}).first().waitFor();
+    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"})
+      .getByText("19,700 km 남음",{exact:true}).waitFor();
+    await page.getByRole("button",{name:/앞 타이어 · 뒤 타이어.*0원/}).click();
+    const editForDelete=page.getByRole("dialog",{name:"정비 기록 수정"});
+    await editForDelete.getByRole("button",{name:"정비 기록 삭제"}).click();
+    const confirmDelete=page.getByRole("dialog",{name:"정비 기록을 삭제할까요?"});
+    await confirmDelete.getByRole("button",{name:"취소"}).click();
+    await confirmDelete.waitFor({state:"hidden"});
+    assert.equal(records.length,4,"cancel preserves the service record");
+    await editForDelete.getByRole("button",{name:"정비 기록 삭제"}).click();
+    await confirmDelete.getByRole("button",{name:"기록 삭제",exact:true}).click();
+    await confirmDelete.getByRole("alert").waitFor();
+    assert.equal(records.length,4,"failed delete preserves the service record");
+    await confirmDelete.getByRole("button",{name:"기록 삭제",exact:true}).click();
+    await confirmDelete.waitFor({state:"hidden"});
+    await editForDelete.waitFor({state:"hidden"});
+    assert.equal(records.length,3,"delete removes exactly the selected service record");
+    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("기록 없음").waitFor();
+    assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
     await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
     const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리"});
     const handle=swipeDialog.locator(".record-heading");
