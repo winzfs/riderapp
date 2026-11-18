@@ -1721,7 +1721,9 @@ svg.rs-icon{flex:none;vertical-align:middle}
   }
   @keyframes rs187-dim-in{from{background-color:rgba(21,36,34,0)}to{background-color:rgba(21,36,34,.4)}}
 }
-.record-sheet .record-heading{touch-action:pan-x;cursor:grab;user-select:none;-webkit-user-select:none}
+/* Interactive drag must override the completed entrance keyframe, even with fill-mode:both. */
+.record-surface.rs-record-interactive .record-sheet{animation:none!important;will-change:transform}
+.record-sheet .record-heading{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .record-sheet .record-heading:active{cursor:grabbing}
 .record-sheet .record-grab{width:43px;height:5px;background:#c9d2cd;border-radius:20px}
 .record-sheet .record-primary,.record-sheet .record-cycle-save,
