@@ -11,3 +11,9 @@
 .bike-page .bike-safety-message,.record-sheet .bike-safety-message{font-size:11px;line-height:1.55;color:#75817b;margin:5px 2px 12px;letter-spacing:-.02em}
 .record-sheet .bike-safety-message{margin:8px 0 0}
 .bike-page .bike-section-head{margin-bottom:5px}
+
+/* Neo-Flat 189: crisp glossy vectors, no tiny etched mechanical details */
+.bike-page .bike-tile-icon{width:52px;height:49px;margin-bottom:8px}
+.bike-page .bike-tile-icon .bike-part-svg{width:42px!important;height:42px!important;filter:drop-shadow(0 2px 1px rgba(23,53,41,.08))}
+.bike-page .bike-consumables .bike-tile{background:linear-gradient(152deg,#fff 12%,#fbfcfa 100%);box-shadow:0 3px 9px rgba(27,49,39,.035)}
+.record-sheet .record-parts-grid .record-part .bike-part-svg{filter:drop-shadow(0 2px 1px rgba(23,53,41,.08))}
