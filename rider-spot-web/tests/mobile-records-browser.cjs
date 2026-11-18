@@ -143,10 +143,13 @@ async function run(browser,width,height){
     assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
     assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
-    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg").count()>=6,"maintenance vector icons render");
-    const svgIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
-    assert.match(await svgIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/svg\+xml,/,
-      "simplified vector icon set renders without a raster atlas");
+    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='neo-flat-v195']").count()>=6,
+      "new PNG icons are installed, not the cached previous artwork");
+    const newIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
+    assert.match(await newIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/png;base64,/,
+      "actual glossy PNG atlas renders instead of previous inline SVGs");
+    assert.equal(await newIcon.evaluate(el=>getComputedStyle(el).backgroundSize),"500% 200%",
+      "sprite cells are clipped to one part icon");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
