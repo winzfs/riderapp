@@ -296,7 +296,7 @@ export function createFinance(R, client) {
             txt("span",null,achieved+"% 달성"),
             txt("span",null,"남은 목표 "+money(Math.max(0,goalTarget-monthly.gross)))),
           h("div",{className:"fin-goal-daily"},txt("small",null,"남은 예정 근무 "+remainingWorkDays+"일 기준 하루 목표"),
-            txt("strong",null,money(perDay))))));
+            txt("strong",null,money(perDay)))));
     }
     function records() {
       const rows=[];
