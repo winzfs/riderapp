@@ -369,7 +369,7 @@ export function createFinance(R, client) {
             h("div",{className:"fin-settlement-actions"},
               button(x.paid_at?"입금 수정":"입금 입력",()=>openEditor("settlement",x),
                 "fin-paid-btn"+(x.paid_at?" completed":""),{disabled:busy}),
-              x.paid_at&&button("확인 취소",()=>paid(x),"fin-textbtn fin-danger",{disabled:busy})))))));
+              x.paid_at&&button("확인 취소",()=>paid(x),"fin-textbtn fin-danger",{disabled:busy}))))));
     }
     function analysis() {
       const days=[];
