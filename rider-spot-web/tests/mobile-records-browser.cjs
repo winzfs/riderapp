@@ -497,6 +497,16 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(await recurringRow.getByRole("button",{name:"지출 등록"}).count(),0,
       "the same recurring expense cannot be recorded twice through UI");
     await shot("finance-recurring");
+    await page.locator(".fin-record-search summary").click();
+    await page.getByLabel("내역 검색").fill("보험료");
+    await page.locator(".fin-record").filter({hasText:"보험료"}).first().waitFor();
+    await page.getByLabel("내역 검색").fill("");
+    const actualExpense=page.locator(".fin-record").filter({hasText:"보험료"}).first();
+    page.once("dialog",dialog=>dialog.accept());
+    await actualExpense.getByRole("button",{name:"삭제"}).click();
+    await page.getByRole("button",{name:"삭제 실행 취소"}).click();
+    await page.locator(".fin-record").filter({hasText:"보험료"}).first().waitFor();
+    assert.equal(extraExpenses.length,1,"undo restores the original source record");
 
     // These are a rider's custom reference days; they don't mark earnings as paid.
     await page.getByRole("button",{name:"정산",exact:true}).click();
