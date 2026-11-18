@@ -576,32 +576,53 @@ export function createFinance(R, client) {
           button("정비 기록은 내 바이크에서",onBike,"fin-secondary")));
     }
     function settlements() {
-      const rows=monthly.earnings.slice().sort((a,b)=>b.work_date.localeCompare(a.work_date));
+      const rows=monthly.earnings.slice().sort((a,b)=>
+        Number(!!a.paid_at)-Number(!!b.paid_at)||b.work_date.localeCompare(a.work_date));
+      const normalized=p=>p==="배민커넥트"?"배민":p;
       return h("div",{className:"fin-stack"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
           button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
         h("div",{className:"fin-stat-grid"},
-          moneyStat("기록된 실제 입금액",money(monthly.paid),"paid"),
-          moneyStat("미확인 수익",money(monthly.unpaid))),
-        txt("p","fin-muted","플랫폼 계좌 내역과 자동 연동되지 않습니다. 실제 입금일과 금액을 수동 입력하는 장부입니다. 이전 입금 확인 기록에 금액이 없다면 기존 수익액으로 가정해 표시합니다."),
-        monthly.payoutDifference!==0&&txt("p","fin-warning","수익으로 기록한 금액과 확인된 입금액 차이: "+money(monthly.payoutDifference)),
+          moneyStat("미입금 확인 수익",money(monthly.unpaid)),
+          moneyStat("확인된 실제 입금",money(monthly.paid),"paid")),
+        txt("p","fin-muted","수익은 업무일, 입금은 실제 입금일 기준입니다. 계좌 자동 연동은 하지 않아요."),
+        monthly.payoutDifference!==0&&txt("p","fin-warning",
+          "확인된 입금액과 해당 수익 기록 차액: "+money(monthly.payoutDifference)),
         h("section",{className:"fin-card"},
-          h("header",null,h("h2",null,"플랫폼별 정산 현황")),
+          h("header",null,h("h2",null,"플랫폼별 입금 현황")),
           ...Object.entries(monthly.byPlatform).map(([p,g])=>{
-            const settled=rows.filter(x=>(x.platform==="배민커넥트"?"배민":x.platform)===p&&x.paid_at)
+            const paidTotal=rows.filter(x=>normalized(x.platform)===p&&x.paid_at)
               .reduce((n,x)=>n+num(x.paid_won??x.gross_won),0);
             return h("div",{className:"fin-settlement-platform",key:p},
-              txt("strong",null,p),txt("small",null,money(settled)+" 확인 / "+money(g)+" 수익"),
+              txt("strong",null,p),
+              txt("small",null,money(paidTotal)+" 입금 확인 / "+money(g)+" 업무 수익"),
               h("div",{className:"fin-bar-track"},h("div",{className:"fin-bar-value",
-                style:{width:g?settled/g*100+"%":"0%"}})));
+                style:{width:g?Math.min(100,paidTotal/g*100)+"%":"0%"}})));
           }),
-          !rows.length&&txt("p","fin-empty","기록된 수익이 없어요.")),
-        h("section",{className:"fin-card"},h("header",null,h("h2",null,"입금 확인 내역")),
+          !rows.length&&txt("p","fin-empty","이 달의 수익 기록이 없어요.")),
+        h("details",{className:"fin-recurring"},
+          h("summary",null,h("strong",null,"플랫폼별 정산 일정"),h("span",null,"직접 설정 · 예정일 참고")),
+          h("div",{className:"fin-recurring-body"},
+            ...platforms.map(p=>{
+              const rule=(data?.payoutRules||[]).find(x=>x.platform===p);
+              const date=nextPayoutDate(rule,today);
+              const summary=!rule||rule.cycle==="none"?"예정일 미설정":
+                rule.cycle==="weekly"?"매주 "+["일","월","화","수","목","금","토"][rule.weekday]+"요일":
+                  "매월 "+rule.month_day+"일";
+              return h("div",{className:"fin-recurring-row",key:p},
+                h("div",{className:"fin-recurring-info"},
+                  txt("strong",null,p),
+                  txt("small",null,summary+(date?" · 다음 예정 "+date:""))),
+                button("설정",()=>openEditor("payout",{...rule,platform:p}),"fin-textbtn"));
+            }),
+            txt("p","fin-muted","설정한 예정일은 실제 입금을 확정하지 않아요."))),
+        h("section",{className:"fin-card"},h("header",null,h("h2",null,"입금 확인 내역"),
+          txt("small",null,rows.length+"건")),
           ...rows.map(x=>h("div",{className:"fin-settlement-row",key:x.id},
             h("div",null,txt("strong",null,x.platform+" · "+money(x.gross_won)),
-              txt("small",null,x.work_date+(x.paid_at?" · 입금일 "+x.paid_at+" · "+money(x.paid_won??x.gross_won):" · 미확인"))),
+              txt("small",null,x.work_date+(x.paid_at?" · 입금일 "+x.paid_at+" · 실제 "+money(x.paid_won??x.gross_won):" · 미확인"))),
             h("div",{className:"fin-settlement-actions"},
               button(x.paid_at?"입금 수정":"입금 입력",()=>openEditor("settlement",x),
                 "fin-paid-btn"+(x.paid_at?" completed":""),{disabled:busy}),
