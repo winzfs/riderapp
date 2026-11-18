@@ -1676,3 +1676,32 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .bike-page .bike-tile-name{font-size:13px}
   .bike-page .bike-tile-status{font-size:11px}
 }
+
+/* v186 per-part maintenance interval editing — inside the existing part details sheet */
+.record-sheet .record-cycle-panel{
+  margin:17px 0 8px;padding:15px 14px;
+  border:1px solid #e0e6e2;border-radius:14px;background:#f8faf8;
+}
+.record-cycle-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.record-cycle-heading>strong{font-size:14px;font-weight:750;letter-spacing:-.03em;color:#273d33}
+.record-sheet .record-cycle-edit{
+  min-height:34px;padding:7px 10px;border:1px solid #d9e3dc;border-radius:9px;
+  background:#fff;color:#315c47;font-size:12px;font-weight:700;
+}
+.record-cycle-values{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.record-cycle-values>span{
+  min-width:0;flex:1;display:flex;justify-content:space-between;gap:5px;
+  padding:9px 10px;border:1px solid #e5eae5;border-radius:9px;
+  background:#fff;color:#697770;font-size:11px;
+}
+.record-cycle-values b{color:#283f34;font-size:12px;font-weight:700;white-space:nowrap}
+.record-cycle-form{margin-top:12px}
+.record-cycle-form .record-pair{margin:0;gap:8px}
+.record-cycle-form .record-pair label{min-width:0;font-size:12px;font-weight:700;color:#3e5247}
+.record-cycle-form .record-pair input{width:100%;min-width:0;margin-top:7px}
+.record-cycle-note{margin:10px 1px 0;color:#708078;font-size:11px;line-height:1.5}
+.record-cycle-error{margin:8px 0;color:#b04435;font-size:12px;line-height:1.45}
+.record-cycle-save{width:100%;min-height:44px;border:0;border-radius:10px;margin-top:12px;
+  background:#a94820;color:#fff;font-size:13px;font-weight:750}
+.record-cycle-save:disabled,.record-cycle-edit:disabled{opacity:.55}
+@media(max-width:380px){.record-sheet .record-cycle-panel{padding:12px}.record-cycle-values>span{padding-inline:7px}}
