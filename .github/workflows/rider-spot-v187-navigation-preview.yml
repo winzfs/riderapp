@@ -1,0 +1,78 @@
+name: Rider Spot v187 Back and motion candidate acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v187-navigation-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://3e44cff2-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-v187-navigation-screens
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Preview bytes, shared Back handler and GPS/map preservation
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const hash='7daff546a614',root=process.env.RIDER_UI_URL;
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          const paths=[['/','index.html'],['/sw.js','sw.js'],
+            ...['app.mjs','design-system.css','tab-resume.js'].map(name=>['/assets/rider-spot-'+hash+'/'+name,name])];
+          for(const [url,filename] of paths){
+            const r=await fetch(new URL(url,root));
+            assert.equal(r.status,200,'preview HTTP '+url);
+            const response=await r.text();
+            assert.equal(response,fs.readFileSync('prebuilt/'+filename,'utf8'),'source byte integrity '+filename);
+            if(filename==='app.mjs'){
+              assert.ok(response.includes('__rsNavigation'),'navigation stack missing');
+              assert.ok(response.includes('data:image/png;base64,'),'original PNG icons missing');
+            }
+            if(filename==='design-system.css'){
+              assert.ok(response.includes('rs187-sheet-enter'),'spring sheet animation missing');
+              assert.ok(response.includes('prefers-reduced-motion'),'accessibility fallback missing');
+            }
+            if(filename==='tab-resume.js')assert.ok(response.includes('riderspot:tab-restored'),'reload tab synchronization missing');
+            console.log('PASS v187 preview',url);
+          }
+          for(const path of ['/assets/rider-spot-'+hash+'/native-gps.js','/assets/rider-spot-'+hash+'/route-worker.mjs',
+            '/assets/rider-spot-'+hash+'/workspace-tools.js','/mapdata/manifest.json']){
+            const r=await fetch(new URL(path,root));assert.equal(r.status,200,path+' missing');
+            if(path.endsWith('.json'))assert.ok((await r.json()).counts,'map data counts missing');
+          }
+          console.log('PASS map/native tracking resources preserved');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Back across tabs, nested sheet, swipe-down, timeline and earnings (360/412px)
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://3e44cff2-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          sed -i 's@return route.abort();@return route.continue();@g' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - name: Main UI, map, community, replay and WebView visual regressions
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v187-navigation-screens
+          path: |
+            /tmp/rider-v187-navigation-screens
+            /tmp/rider-ui-evidence
+          retention-days: 14
