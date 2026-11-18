@@ -51,6 +51,29 @@ jobs:
           console.log('PASS preview PNG assets, PWA, and map data');
           NODE
       - run: npx playwright install --with-deps chromium
+      - name: Diagnose browser script loads on candidate
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({args:['--no-sandbox']});
+            const page=await browser.newPage();
+            page.on('pageerror',error=>console.log('DIAG PAGE ERROR:',error.stack||String(error)));
+            page.on('console',message=>{if(message.type()==='error')console.log('DIAG CONSOLE ERROR:',message.text())});
+            page.on('requestfailed',request=>console.log('DIAG REQUEST FAILED:',request.url(),request.failure()?.errorText));
+            page.on('response',response=>{
+              const url=response.url();
+              if(url.includes('rider-spot-ce520b450457')||url.includes('rider-maintenance-v40')){
+                console.log('DIAG ASSET RESPONSE:',response.status(),url);
+              }
+            });
+            const response=await page.goto(process.env.RIDER_UI_URL,{waitUntil:'domcontentloaded',timeout:30000});
+            console.log('DIAG HTML STATUS:',response?.status());
+            await page.waitForTimeout(7000);
+            console.log('DIAG ROOT:',await page.evaluate(()=>({title:document.title,html:document.getElementById('root')?.innerHTML.slice(0,200),scripts:[...document.scripts].filter(x=>x.src).map(x=>({src:x.src,type:x.type}))})));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
       - name: Synthetic mobile bike, timeline and map UI preview
         run: |
           sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
