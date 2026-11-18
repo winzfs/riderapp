@@ -145,7 +145,7 @@ async function run(browser,width,height){
     await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();
     assert.doesNotMatch(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/,"grid tile omits historic mileage");
     await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByText("24,500 km").waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
     await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
     await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
     assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
