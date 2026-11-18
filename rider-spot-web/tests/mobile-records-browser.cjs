@@ -142,13 +142,20 @@ async function run(browser,width,height){
     assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
     assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
-    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='vector-v196']").count()>=6,
-      "scalable vector icons are installed");
+    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='neo-flat-original-v197']").count()>=6,
+      "the FIRST original Neo-Flat part graphics are installed");
     const newIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
-    assert.match(await newIcon.getAttribute("src"), /data:image\/svg\+xml/,
-      "each part uses a full-resolution scalable SVG image");
-    assert.equal(await newIcon.evaluate(el=>el.naturalWidth),96,
-      "decoded SVG artwork has its native viewBox width");
+    const rendered=await newIcon.evaluate(el=>({
+      image:getComputedStyle(el).backgroundImage,
+      size:getComputedStyle(el).backgroundSize,
+      position:getComputedStyle(el).backgroundPosition,
+      width:el.getBoundingClientRect().width
+    }));
+    assert.match(rendered.image,/data:image\/webp;base64,/,
+      "high-res first-original image loaded, not redrawn SVG");
+    assert.equal(rendered.size,"500% 200%","correct 5-by-2 crop at all device densities");
+    assert.equal(rendered.position,"0% 0%","first icon occupies first sprite cell");
+    assert.ok(rendered.width>=40,"maintenance symbol is large enough to read");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
