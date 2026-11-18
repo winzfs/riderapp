@@ -45,14 +45,18 @@ test("counts only unique completed ride days; no rewards for live rides or sync 
   assert.equal(JSON.stringify(rides), original, "gamification must never mutate source records");
 });
 
-test("consistent Seoul calendar day boundaries and no bonus for a second trip", () => {
-  assert.equal(riderLocalDay("2026-11-16T15:05:00.000Z"), "2026-11-17");
+test("03:00 Korean workday boundaries and no bonus for a second trip", () => {
+  assert.equal(riderLocalDay("2026-11-16T15:05:00.000Z"), "2026-11-16"); // 00:05 KST
+  assert.equal(riderLocalDay("2026-11-16T17:59:59.000Z"), "2026-11-16"); // 02:59:59 KST
+  assert.equal(riderLocalDay("2026-11-16T18:00:00.000Z"), "2026-11-17"); // 03:00 KST
   assert.equal(riderLocalDay("2026-11-16T14:59:59.000Z"), "2026-11-16");
+  assert.equal(riderLocalDay("2026-12-31T17:59:59.000Z"), "2026-12-31");
+  assert.equal(riderLocalDay("2026-12-31T18:00:00.000Z"), "2027-01-01");
   assert.equal(riderLocalDay("invalid"), null);
   const d = riderDayResult([
     ride("a", "2026-11-16T15:05:00.000Z"),
     ride("b", "2026-11-16T16:05:00.000Z"),
-  ], "2026-11-17");
+  ], "2026-11-16");
   assert.equal(d.completedTrips, 2);
   assert.equal(d.earnedXp, 40);
   assert.equal(d.newBadges.length, 1);
