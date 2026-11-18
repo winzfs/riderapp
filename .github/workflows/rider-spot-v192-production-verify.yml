@@ -43,3 +43,5 @@ jobs:
           tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-native-inspect
           echo 'Native Back handler locations:'
           grep -Rn -E 'onBackPressed|__rsHandleBack|onBackInvoked|riderspot:exit-request|__rsNativeExit' /tmp/rider-native-inspect/app/src/main | head -70 || true
+          echo 'Native onBack implementation:'
+          sed -n '625,682p' /tmp/rider-native-inspect/app/src/main/java/com/riderspot/android/MainActivity.java
