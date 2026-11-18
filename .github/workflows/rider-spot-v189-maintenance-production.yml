@@ -46,7 +46,7 @@ jobs:
           console.log('PASS existing public map resources');
           NODE
       - run: npx playwright install --with-deps chromium
-      - name: Live browser: 60300 current, 40000 tire change, compact cycle, owner delete and timeline 412/360px
+      - name: "Live browser: 60300 current, 40000 tire change, compact cycle, owner delete and timeline 412/360px"
         run: |
           sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
           sed -i 's@const local=path.resolve(__dirname,"../dist");@const local="/tmp/never-serve-local-files";@' tests/mobile-records-browser.cjs
