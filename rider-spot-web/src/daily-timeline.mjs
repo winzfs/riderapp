@@ -1,4 +1,4 @@
-import { rs33ISO } from "./timeline-dates.mjs";
+import { rs33WorkDay } from "./timeline-dates.mjs";
 import { rs33Timestamp } from "./route-analysis.mjs";
 
 /**
@@ -10,7 +10,7 @@ export function buildDailyTimeline(history, day) {
   const trips = (Array.isArray(history) ? history : [])
     .filter((trip) => {
       const started = rs33Timestamp(trip?.started_at);
-      return started != null && rs33ISO(started) === day;
+      return started != null && rs33WorkDay(started) === day;
     })
     .sort((a, b) =>
       rs33Timestamp(a.started_at) - rs33Timestamp(b.started_at) ||
