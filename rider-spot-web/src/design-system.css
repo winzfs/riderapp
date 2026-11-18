@@ -1560,3 +1560,13 @@ svg.rs-icon{flex:none;vertical-align:middle}
 }
 .record-sheet .record-parts-grid .record-part .bike-part-svg{background-color:transparent}
 .bike-page .bike-row .bike-item-icon .bike-part-svg{border-radius:0}
+
+/* Angular maintenance sprites: authentic transparent PNG, no dark or tinted square */
+.bike-page .bike-row .bike-item-icon,
+.bike-page .bike-row .bike-item-icon.subtle {
+  background:transparent !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+.bike-part-svg {background-color:transparent!important;border-radius:0!important;}
+.record-sheet .record-parts-grid .record-part .bike-part-svg{background-color:transparent!important}

@@ -1,0 +1,59 @@
+name: Rider Spot transparent angular PNG QA
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - 'rider-spot-web/src/assets/maintenance/angular-parts-v3.png'
+      - 'rider-spot-web/src/maintenance-icons.mjs'
+      - 'rider-spot-web/src/design-system.css'
+      - '.github/workflows/rider-spot-transparent-angular.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: 'rider-spot-web/package-lock.json'}
+      - run: npm ci
+      - name: Validate exact original transparent PNG artifact
+        run: |
+          python3 - <<'PY'
+          import hashlib,struct,zlib
+          p='src/assets/maintenance/angular-parts-v3.png'
+          data=open(p,'rb').read()
+          assert data[:8]==b'\x89PNG\r\n\x1a\n', 'PNG signature corrupted'
+          assert hashlib.sha256(data).hexdigest()=='604ec70cc28770b0919a581243f21ca555bc22f884c60285048028a64ddbf91e', 'source image byte integrity'
+          width,height=struct.unpack('>II',data[16:24])
+          assert (width,height)==(400,160), 'expected 5x2 raster atlas'
+          offset=8
+          transparency=False
+          while offset<len(data):
+            size=struct.unpack('>I',data[offset:offset+4])[0]
+            typ=data[offset+4:offset+8]
+            body=data[offset+8:offset+8+size]
+            crc=struct.unpack('>I',data[offset+8+size:offset+12+size])[0]
+            assert zlib.crc32(typ+body)==crc, 'PNG chunk CRC'
+            transparency |= typ==b'tRNS'
+            offset+=12+size
+          assert transparency,'transparent PNG palette absent'
+          print('PASS exact generated PNG, alpha palette and chunk checks',len(data))
+          PY
+      - run: npm run build && npm test
+      - name: Confirm icon CSS and embedded PNG in built app
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const manifest=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base='dist/assets/rider-spot-'+manifest.hash+'/';
+          const js=fs.readFileSync(base+'app.mjs','utf8');
+          const css=fs.readFileSync(base+'design-system.css','utf8');
+          if(!js.includes('data:image/png;base64,')||!js.includes('500% 200%'))throw Error('PNG sprite missing');
+          if(!css.includes('authentic transparent PNG'))throw Error('white background override missing');
+          console.log('PASS transparent angular icon bundle',manifest.hash);
+          NODE
