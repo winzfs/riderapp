@@ -2048,3 +2048,6 @@ dialog.record-mini-dialog::backdrop{
 @media(max-width:360px){.app .finance-page{padding-left:11px;padding-right:11px}.fin-card{padding:13px}.fin-hero{padding:18px 17px}.fin-chart{gap:3px}.fin-record-end>strong{font-size:12px}.app .bottom-nav button{font-size:9px}}
 @media(min-width:761px){.app .finance-page{padding:30px 25px 50px}}
 @media(prefers-reduced-motion:reduce){.fin-sheet{animation:none}.fin-bar-value{transition:none}}
+
+.fin-settlement-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.fin-settlement-actions .fin-textbtn{font-size:11px;padding:5px;min-height:36px}
