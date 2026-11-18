@@ -415,6 +415,65 @@ export function createRecords(R, client) {
               cycleSaving?"저장 중…":"교체 주기 저장")))));
   }
 
+  function ModelPicker({user,vehicle,cycles,settings,close,changed,onCustom}) {
+    const [query,setQuery]=R.useState("");
+    const [brand,setBrand]=R.useState("all");
+    const [busy,setBusy]=R.useState(false);
+    const [error,setError]=R.useState("");
+    const lock=R.useRef(false);
+    const currentModel=findBikeModel(vehicle?.model_key)||inferBikeModel(vehicle?.vehicle_name);
+    const cleaned=value=>String(value||"").normalize("NFKC").toLocaleLowerCase("ko-KR").replace(/\s+/g,"");
+    const term=cleaned(query);
+    const available=bikeModels.filter(m=>(brand==="all"||m.brand===brand)&&
+      (!term||cleaned(m.brandLabel+" "+m.name+" "+m.aliases.join(" ")).includes(term)));
+    const choose=async model=>{
+      if(lock.current)return;
+      lock.current=true;setBusy(true);setError("");
+      try {
+        // Preserve pre-catalog personal intervals under the OLD model. Never
+        // overwrite/delete the historic global cycles or service entries.
+        const legacyModel=!vehicle?.model_key && inferBikeModel(vehicle?.vehicle_name);
+        const previous=legacyModel&&cycles.filter(c=>!settings.some(x=>
+          x.model_key===legacyModel.key&&x.item_key===c.item_key))
+          .map(c=>({user_id:user.id,model_key:legacyModel.key,item_key:c.item_key,
+            interval_km:c.interval_km,interval_days:c.interval_days,
+            estimated_cost_won:modelDefaults(legacyModel,c.item_key)?.estimated_cost_won??null}));
+        if(previous?.length)await read(client.from("rider_model_maintenance_settings")
+          .upsert(previous,{onConflict:"user_id,model_key,item_key",ignoreDuplicates:true})
+          .select("item_key"));
+        await read(client.from("rider_vehicle_profiles")
+          .upsert({user_id:user.id,vehicle_name:modelLabel(model),model_key:model.key},
+            {onConflict:"user_id"}).select("user_id").single());
+        changed();close();
+      }catch(e){setError(e?.message||"모델을 저장하지 못했어요. 다시 시도해 주세요.");}
+      finally{lock.current=false;setBusy(false);}
+    };
+    return h(MiniDialog,{title:"바이크 모델 선택",close,busy},
+      h("div",{className:"bike-model-picker"},
+        h("p",{className:"record-mini-description"},
+          "모델을 선택하면 기본 정비 주기와 예상 비용이 표시됩니다. 기존 기록과 계기판은 유지됩니다."),
+        h("div",{className:"bike-model-filters"},
+          h("input",{type:"search",value:query,onChange:e=>setQuery(e.target.value),
+            placeholder:"예: PCX125, NMAX, UHR125",autoComplete:"off","aria-label":"모델 검색"}),
+          h("select",{value:brand,onChange:e=>setBrand(e.target.value),"aria-label":"제조사 필터"},
+            h("option",{value:"all"},"전체 제조사"),
+            bikeBrands.map(b=>h("option",{key:b.key,value:b.key},b.name)))),
+        h("div",{className:"bike-model-count"},available.length+"개 모델"),
+        h("div",{className:"bike-model-list",role:"listbox","aria-label":"선택할 바이크 모델"},
+          available.map(m=>btn(h(R.Fragment,null,
+            h("span",{className:"bike-model-list-name"},h("b",null,m.name),
+              h("small",null,m.brandLabel+" · "+m.cc+"cc"+(m.kind==="electric"?" · 전기":""))),
+            currentModel?.key===m.key&&h("span",{className:"bike-model-selected"},"선택됨")),
+            ()=>choose(m),{key:m.key,className:"bike-model-option",
+              "aria-label":modelLabel(m)+" 선택","aria-selected":currentModel?.key===m.key,
+              disabled:busy})),
+          !available.length&&h("p",{className:"record-help"},"일치하는 모델이 없어요. 아래에서 직접 입력해 주세요.")),
+        error&&h("p",{role:"alert",className:"record-cycle-error"},error),
+        busy&&h("p",{className:"record-cycle-note"},"모델 설정을 저장하는 중…"),
+        btn("목록에 없는 차량 직접 입력",()=>{if(!busy)onCustom();},
+          {className:"bike-model-custom",disabled:busy})));
+  }
+
   // Vehicle distance is edited independently of workshop entries and fuel logs.
   // The database trigger records the Korean calendar date only when the value changes.
   function VehicleEditor({kind,user,vehicle,close,changed}) {
