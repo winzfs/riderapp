@@ -1,9 +1,6 @@
 // Rider Spot passive progress v1. Deliberately read-only: no localStorage,
 // network, GPS, timers, trip mutations or separate state to reconcile.
-const ZONE = "Asia/Seoul";
-const formatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit",
-});
+import { rs33WorkDay } from "./timeline-dates.mjs";
 export const XP_PER_RECORDED_DAY = 25;
 export const XP_PER_ACHIEVEMENT = 15;
 const LEVEL_XP = 100;
@@ -16,10 +13,7 @@ function instant(value) {
 export function riderLocalDay(timestamp) {
   const time = instant(timestamp);
   if (!Number.isFinite(time)) return null;
-  const fields = Object.fromEntries(
-    formatter.formatToParts(new Date(time)).map((part) => [part.type, part.value]),
-  );
-  return [fields.year, fields.month, fields.day].join("-");
+  return rs33WorkDay(time);
 }
 
 function completedRecords(history) {
