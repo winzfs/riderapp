@@ -442,6 +442,54 @@ async function run(browser,width,height){
     page.once("dialog",dialog=>dialog.accept());
     await financeDialog.getByRole("button",{name:"닫기"}).click();
     await financeDialog.waitFor({state:"hidden"});
+
+    // A recurring plan is not a booked expense until the rider confirms it.
+    await page.getByRole("button",{name:"내역",exact:true}).click();
+    await page.locator(".fin-recurring summary").click();
+    await page.getByRole("button",{name:"＋ 반복 지출 설정"}).click();
+    const recurringDialog=page.getByRole("dialog",{name:"반복 지출 입력"});
+    await recurringDialog.getByLabel("반복 금액").fill("65000");
+    await recurringDialog.getByLabel("매월 날짜").fill("31");
+    await recurringDialog.getByRole("button",{name:"저장하기"}).click();
+    await recurringDialog.waitFor({state:"hidden"});
+    assert.equal(recurringRules.length,1);
+    assert.equal(recurringRules[0].amount_won,65000);
+    assert.equal(extraExpenses.length,0,"a scheduled expense must not appear as a real expense");
+    const recurringRow=page.locator(".fin-recurring-row").filter({hasText:"65,000원"}).first();
+    await recurringRow.getByRole("button",{name:"지출 등록"}).click();
+    assert.equal(extraExpenses.length,1,"only a confirmed planned expense is booked");
+    assert.equal(extraExpenses[0].recurrence_id,recurringRules[0].id);
+    await recurringRow.getByText("실제 지출 등록 완료").waitFor();
+    assert.equal(await recurringRow.getByRole("button",{name:"지출 등록"}).count(),0,
+      "the same recurring expense cannot be recorded twice through UI");
+    await shot("finance-recurring");
+
+    // These are a rider's custom reference days; they don't mark earnings as paid.
+    await page.getByRole("button",{name:"정산",exact:true}).click();
+    await page.locator(".fin-recurring summary").click();
+    await page.locator(".fin-recurring-row").filter({hasText:"쿠팡이츠"})
+      .getByRole("button",{name:"설정"}).click();
+    const payoutDialog=page.getByRole("dialog",{name:"정산 일정 입력"});
+    await payoutDialog.getByLabel("반복 방식").selectOption("monthly");
+    await payoutDialog.getByLabel("매월 일자").fill("5");
+    await payoutDialog.getByRole("button",{name:"저장하기"}).click();
+    await payoutDialog.waitFor({state:"hidden"});
+    assert.equal(payoutRules.length,1);
+    assert.equal(payoutRules[0].cycle,"monthly");
+    assert.equal(payoutRules[0].month_day,5);
+    assert.equal(Object.keys(totals).length,2,"a payout schedule cannot generate earnings");
+
+    await page.getByRole("button",{name:"분석",exact:true}).click();
+    await page.getByRole("button",{name:"월별",exact:true}).click();
+    assert.equal(await page.locator(".fin-chart-month .fin-chart-point").count(),6);
+    await page.locator(".fin-chart-month .fin-chart-point").last().click();
+    await page.locator(".fin-chart-detail").waitFor();
+    await shot("finance-analysis");
+    await page.getByRole("button",{name:"내역",exact:true}).click();
+    await page.getByRole("button",{name:/엔진오일.*기록 보기/}).first().click();
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).waitFor();
+    await shot("finance-maintenance-link");
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
