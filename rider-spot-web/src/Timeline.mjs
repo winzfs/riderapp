@@ -2,6 +2,7 @@ import { createUI } from "./ui.mjs";
 import {
   rs33Zone,
   rs33ISO,
+  rs33WorkDay,
   rs33Time,
   rs33Format,
   rs33DateAdd,
@@ -204,8 +205,18 @@ export function createTimeline(S, Zo, Income) {
     );
   }
   function ss({ ride, notify, user, login }) {
-    const today = rs33ISO(Date.now());
+    const [today, setToday] = S.useState(() => rs33WorkDay(Date.now()));
+    S.useEffect(() => {
+      const refresh = () => setToday(rs33WorkDay(Date.now()));
+      const timer = setInterval(refresh, 60_000);
+      document.addEventListener("visibilitychange", refresh);
+      return () => {
+        clearInterval(timer);
+        document.removeEventListener("visibilitychange", refresh);
+      };
+    }, []);
     const [selected, setSelected] = S.useState(null);
+    const liveDay = ride.trip?.started_at ? rs33WorkDay(ride.trip.started_at) : today;
     const [day, setDay] = S.useState(today);
     const [week, setWeek] = S.useState(rs33WeekStart(today));
     const [expanded, setExpanded] = S.useState(false);
@@ -395,7 +406,7 @@ export function createTimeline(S, Zo, Income) {
       setRoadNotice("");
     }
     function back() {
-      if(current?.started_at) choose(rs33ISO(current.started_at));
+      if(current?.started_at) choose(rs33WorkDay(current.started_at));
       setFinished(false);
       setSelected(null);
       setExpanded(false);
@@ -665,8 +676,8 @@ export function createTimeline(S, Zo, Income) {
           finished && ended
             ? rs33J(DayRideCard, {
                 history: ride.history,
-                day: rs33ISO(start),
-                celebrate: true, income:rs33J(Income,{day:rs33ISO(start),user,login}),
+                day: rs33WorkDay(start),
+                celebrate: true, income:rs33J(Income,{day:rs33WorkDay(start),user,login}),
               })
             : null,
           ended
@@ -804,7 +815,7 @@ export function createTimeline(S, Zo, Income) {
     );
     const byDay = new Map();
     for (const trip of history) {
-      const key = rs33ISO(trip.started_at);
+      const key = rs33WorkDay(trip.started_at);
       if (!byDay.has(key)) byDay.set(key, []);
       byDay.get(key).push(trip);
     }
@@ -937,7 +948,7 @@ export function createTimeline(S, Zo, Income) {
                     { className: "trip-map rs33-course-map rs56-day-map" },
                     rs33J(Zo, {
                       key: daily.route.id,
-                      position: day === today && ride.trip && !ride.trip.ended_at
+                      position: day === liveDay && ride.trip && !ride.trip.ended_at
                         ? timelineLivePosition(ride.position, ride.trip)
                         : null,
                       course: {
@@ -945,8 +956,8 @@ export function createTimeline(S, Zo, Income) {
                         startPoint: timelineStartPoint(daily.route),
                         endPoint: daily.trips.every(trip => Boolean(trip.ended_at))
                           ? timelineEndPoint(daily.route) : null,
-                        live: day === today && Boolean(ride.trip && !ride.trip.ended_at),
-                        follow: following && day === today && Boolean(ride.trip && !ride.trip.ended_at),
+                        live: day === liveDay && Boolean(ride.trip && !ride.trip.ended_at),
+                        follow: following && day === liveDay && Boolean(ride.trip && !ride.trip.ended_at),
                         onUnfollow,
                         geometry: dailyCourse?.course?.geometry,
                         stamps: displayedDailyStamps,
@@ -963,7 +974,7 @@ export function createTimeline(S, Zo, Income) {
                       },
                     }),
                   ),
-                  day === today && ride.trip && !ride.trip.ended_at
+                  day === liveDay && ride.trip && !ride.trip.ended_at
                     ? rs33J("button", {
                         type: "button",
                         className: "rs-nav-follow rs56-day-follow" + (following ? " rs-nav-following" : ""),
@@ -1069,7 +1080,7 @@ export function createTimeline(S, Zo, Income) {
               const tripEnd = rs33Timestamp(trip.ended_at);
               const distance = Math.max(0, Number(trip.distance_km) || 0);
               const dateNote =
-                allDays && tripStart ? rs33ISO(tripStart).slice(5) + " · " : "";
+                allDays && tripStart ? rs33WorkDay(tripStart).slice(5) + " · " : "";
               const endLabel =
                 tripEnd && tripStart && rs33ISO(tripEnd) !== rs33ISO(tripStart)
                   ? rs33ISO(tripEnd).slice(5) + " " + rs33Time(tripEnd)
