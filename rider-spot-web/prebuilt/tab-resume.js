@@ -105,5 +105,11 @@
 
   setInterval(repair, 240);
   window.addEventListener("pageshow", repair);
+  // Browser/Android Back restores tabs without a pointer click. Keep the
+  // reload-repair preference in sync so it cannot reopen the tab just left.
+  window.addEventListener("riderspot:tab-restored", event => {
+    const restored = event.detail;
+    if (VALID.has(restored)) remember(restored);
+  });
   window.__rsTabResumeState = () => ({ desired, active: navTab(), repairs: repairCount });
 })();
