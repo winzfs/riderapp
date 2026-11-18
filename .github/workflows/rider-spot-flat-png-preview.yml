@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_UI_URL: https://5a72da79-rider-spot.jazzhjm.workers.dev/
+      RIDER_UI_URL: https://dd0b8501-rider-spot.jazzhjm.workers.dev/
       RIDER_SCREENSHOTS: /tmp/rider-flat-png-qa
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
           node tests/ui-browser.cjs
       - name: Verify maintenance retry, part history, odometer and income on actual preview
         run: |
-          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://5a72da79-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://dd0b8501-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
           node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
