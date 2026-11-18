@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#354740" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+<style>.accent{stroke:#b95426}</style><rect x="10" y="19" width="44" height="33" rx="5"/><path d="M18 19v-6h10v6M38 19v-6h9v6"/><path class="accent" d="M22 31v11M16.5 36.5h11M38 36h10"/><path d="M10 28h44"/></svg>

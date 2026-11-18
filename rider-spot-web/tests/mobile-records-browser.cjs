@@ -18,7 +18,7 @@ async function run(browser,width,height){
     localStorage.setItem("rs:trips:"+userId,JSON.stringify(trips));
   },{session,trips,userId});
   const records=[{id:"11111111-1111-4111-8111-111111111113",serviced_on:date,item:"엔진오일",odometer_km:24500,cost_won:24000,user_id:userId}];
-  const totals={};let fail=true,failVehicle=true;
+  const totals={};let fail=true,failVehicle=true,failMaintenance=true;
   const vehicle={user_id:userId,vehicle_name:"PCX125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
   const cycles=[{user_id:userId,item_key:"엔진오일",interval_km:3000,interval_days:null}];
   const vehicleChanges=[];
@@ -47,6 +47,7 @@ async function run(browser,width,height){
         const data=route.request().postDataJSON();assert.equal(data.p_date,date);Object.assign(totals,data.p_values);return route.fulfill({status:204});
       }
       if(table==="maintenance_logs" && route.request().method()==="POST"){
+        if(failMaintenance){failMaintenance=false;return route.fulfill({status:503,json:{message:"테스트 정비 저장 실패"}});}
         const data=route.request().postDataJSON(),idx=records.findIndex(r=>r.id===data.id);
         if(idx<0) records.push(data); else records[idx]=data;
         return route.fulfill({json:{id:data.id}});
@@ -98,12 +99,19 @@ async function run(browser,width,height){
     await page.getByRole("button",{name:"교체 주기 설정",exact:true}).click();
     await dialog.getByLabel("교체 거리 (km)").first().fill("4000");
     await dialog.getByRole("button",{name:"교체 주기 저장"}).click();
-    await page.getByText("다음 28,500 km",{exact:true}).waitFor();
+    await page.getByText("2,800 km 남음",{exact:true}).waitFor();
+    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByText("28,500 km").waitFor();
+    await shot("bike-detail");
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
     assert.equal(cycles[0].interval_km,4000);
     await shot("bike-updated");
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     await dialog.getByRole("button",{name:"앞 타이어",exact:true}).click();
     await dialog.getByLabel("정비 날짜").fill("2026-11-15");
+    await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
+    await dialog.getByRole("alert").waitFor();
+    assert.equal(await dialog.getByRole("button",{name:"앞 타이어",exact:true}).getAttribute("aria-pressed"),"true");
     await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByText("비용 미입력",{exact:true}).waitFor();
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
@@ -111,15 +119,25 @@ async function run(browser,width,height){
     await dialog.getByLabel("총비용").fill("150000");await dialog.getByLabel("계기판").fill("25000");
     await shot("service");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByRole("button",{name:/앞 타이어 · 뒤 타이어.*150,000원/}).click();
-    await dialog.getByLabel("총비용").fill("140000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
+    await dialog.getByLabel("총비용").fill("140000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
     await page.getByText("140,000원",{exact:true}).waitFor();assert.equal(records.length,3);
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     await dialog.getByRole("button",{name:"엔진오일",exact:true}).click();await dialog.getByLabel("정비 날짜").fill("2026-11-10");
     await dialog.getByLabel("계기판").fill("22000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByRole("button",{name:/엔진오일.*2026-11-10.*비용 미입력/}).click();
-    await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
+    await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
     await page.getByRole("button",{name:/엔진오일.*2026-11-10.*21,000/}).waitFor();
-    assert.match(await page.locator(".bike-row[aria-pressed]").filter({hasText:"엔진오일"}).innerText(),/24,500 km/);
+    assert.match(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/);
+    await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
+    assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByRole("button",{name:"2026-11-15 정비 기록 수정"}).click();
+    assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
+    assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
+    await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
+    await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"변경사항 저장"}).click();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByText("0원").waitFor();
+    await shot("bike-detail-updated");
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByRole("button",{name:"닫기"}).click();
     await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
     await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
     const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");

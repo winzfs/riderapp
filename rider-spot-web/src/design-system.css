@@ -1426,3 +1426,104 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .bike-page .bike-actions button{font-size:13px}
   .bike-row-meta{max-width:45%}
 }
+
+
+/* Maintenance UI — premium compact dashboard / custom SVG parts. */
+.bike-page .bike-vehicle-data .bike-distance{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;white-space:normal;font-size:clamp(22px,5vw,29px);font-variant-numeric:tabular-nums;line-height:1.3}
+.bike-page .bike-distance small{display:inline;color:#62736b;font-size:13px;font-weight:700;letter-spacing:0;margin:0}
+.bike-page .bike-vehicle img{min-width:0}
+.bike-consumables{border-top:1px solid #e3e8e2}
+.bike-page .bike-consumable{padding:12px 3px;min-height:76px;gap:12px}
+.bike-page .bike-consumable .bike-row-main{flex:1;min-width:0}
+.bike-page .bike-consumable .bike-row-meta{max-width:43%;min-width:0;flex:0 1 43%}
+.bike-page .bike-consumable .bike-row-meta b{min-width:0;font-size:11px;font-weight:700}
+.bike-page .bike-row .bike-item-icon{width:46px;height:46px;background:#f4f2ec;color:#454e45;border:1px solid #e9e6dc;border-radius:14px;overflow:hidden}
+.bike-page .bike-row .bike-item-icon.subtle{background:#f2f5f1;border-color:#e7ece6}
+.bike-part-svg{display:block;object-fit:contain;max-width:100%;flex:none}
+.bike-page .bike-row:focus-visible,.record-part:focus-visible,.record-log:focus-visible{outline:3px solid #c06338;outline-offset:-3px}
+.bike-page .bike-row-main small{line-height:1.5}
+.bike-page .bike-row-meta .bike-state-soon,.record-due-status.bike-state-soon{color:#a85a1b}
+.bike-page .bike-row-meta .bike-state-overdue,.record-due-status.bike-state-overdue{color:#b34335}
+.bike-page .bike-row-meta .bike-state-ok{color:#46685a}
+.bike-page .bike-row-meta .bike-state-unknown{color:#78847e}
+.bike-page .bike-history-row{padding-block:11px}
+.bike-page .bike-history-head>small{font-size:12px;font-weight:650;color:#6a7b72}
+.bike-page .bike-history-row .bike-row-main b{font-size:13px}
+.bike-page .bike-history-row .bike-row-meta>b{font-size:12px}
+.record-surface[open]{z-index:2000;overscroll-behavior:contain}
+.record-surface .record-sheet{max-height:calc(100% - 5px);width:min(100%,560px);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px #17251c1f;min-width:0}
+.record-sheet .record-heading{position:relative;display:flex;align-items:center;gap:12px;min-height:84px;padding:24px 16px 10px;background:#fff;border-bottom:1px solid #f0f1ed;touch-action:pan-x;flex:none}
+.record-grab{position:absolute;top:8px;left:50%;width:34px;height:4px;transform:translateX(-50%);border-radius:9px;background:#d2d8d3}
+.record-heading-label{flex:1;min-width:0}
+.record-heading-title{display:flex;align-items:center;gap:9px;min-width:0}
+.record-heading-label strong{font-size:19px;font-weight:800;letter-spacing:-.04em;overflow-wrap:anywhere}
+.record-heading-label small{display:block;color:#6e7b74;font-size:12px;font-weight:550;margin-top:3px}
+.record-heading-title .bike-part-svg{width:30px;height:30px}
+.record-sheet .record-heading .record-close{display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:1px solid #e8ece7;background:#f6f8f5;color:#41524b;border-radius:13px}
+.record-sheet>.record-content{overflow-y:auto;overflow-x:hidden;min-height:0;padding:14px 16px 20px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;flex:1}
+.record-date-label{font-size:12px;color:#77837d}
+.record-sheet label{margin:0 0 13px;display:grid;gap:6px;font-size:13px;font-weight:700;color:#3d4b44;min-width:0}
+.record-sheet input,.record-sheet textarea{border:1px solid #d9e1da;border-radius:12px;font-size:16px;padding:10px 12px;background:#fcfdfb;width:100%;min-width:0}
+.record-sheet input:focus,.record-sheet textarea:focus{outline:2px solid #c56d44;outline-offset:0;border-color:#bc6236}
+.record-sheet fieldset.record-parts{border:0;padding:0;margin:9px 0 16px;min-width:0}
+.record-sheet .record-parts legend{font-size:14px;font-weight:800;color:#34423b;padding:4px 0 11px}
+.record-sheet .record-parts legend small{display:inline;margin-left:8px;color:#87938b;font-weight:500;font-size:11px}
+.record-parts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.record-sheet .record-parts-grid .record-part{display:flex;position:relative;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:11px 6px;min-height:100px;min-width:0;max-width:100%;border:1px solid #e0e6de;border-radius:15px;background:#fcfdfb;color:#2e3e37;font-size:12px;font-weight:700;line-height:1.4;overflow:visible;transition:background-color .15s,border-color .15s}
+.record-part img{width:32px;height:32px;object-fit:contain}
+.record-part-name{text-align:center;overflow-wrap:anywhere;word-break:keep-all}
+.record-sheet .record-parts-grid .record-part[aria-pressed=true]{background:#fff1e7;border:1.5px solid #c86533;color:#9c421b;box-shadow:0 0 0 1px #deaf93 inset}
+.record-part-check{position:absolute;top:5px;right:5px;width:18px;height:18px;display:grid;place-items:center;background:#be592c;border-radius:50%;color:white;line-height:1}
+.record-part-check svg{width:12px;height:12px;stroke-width:3}
+.record-sheet .record-help{margin:-3px 0 16px;font-size:11px;color:#76847b;line-height:1.5}
+.record-sheet .record-measures{gap:10px;margin-top:5px}
+.record-sheet .record-measures label{min-width:0}
+.record-sheet .record-extra{border-top:1px solid #e7ece6;padding-top:3px;margin:7px 0 0}
+.record-sheet .record-extra summary{display:flex;align-items:center;justify-content:space-between;list-style:none;padding:12px 0;font-size:13px;font-weight:750;cursor:pointer;color:#47564f}
+.record-extra summary::-webkit-details-marker{display:none}
+.record-extra summary svg{transition:transform .16s;transform:rotate(90deg)}
+.record-extra[open] summary svg{transform:rotate(-90deg)}
+.record-sheet>footer{min-height:76px;padding:10px 16px max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px;background:#fff;border-top:1px solid #e6eae4;flex:none}
+.record-sheet>footer .record-primary{width:100%;min-height:50px;background:#ad471b;color:white;border-radius:13px;font-weight:800;font-size:15px}
+.record-sheet>footer p[role=alert]{color:#b13f2d;font-size:12px;font-weight:650;line-height:1.35}
+.record-detail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.record-detail-metric{background:#f4f6f3;border:1px solid #ebeee9;border-radius:14px;padding:12px;min-width:0}
+.record-detail-metric small{display:block;font-size:11px;line-height:1.4;color:#6c7970}
+.record-detail-metric strong{display:block;margin-top:7px;font-size:14px;line-height:1.4;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;color:#2b4034}
+.record-due-status{padding:9px 11px;border-radius:10px;background:#f7f5ed;color:#657367;font-size:12px;font-weight:700;margin:0 0 17px}
+.record-detail-section-title{display:flex;align-items:center;justify-content:space-between;margin:11px 0}
+.record-detail-section-title h3{margin:0;font-size:15px;font-weight:800;color:#2a3831}
+.record-detail-section-title small{color:#7c887f;font-size:12px}
+.record-detail-list{border-top:1px solid #e8ece7}
+.record-sheet .record-log{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:84px;padding:14px 4px;text-align:left;border:0;border-bottom:1px solid #edf0ec;border-radius:0;background:#fff;color:#2a3c33}
+.record-log-date,.record-log-cost{display:flex;flex-direction:column;gap:4px;min-width:0}
+.record-log-date strong{font-size:14px;letter-spacing:-.02em;font-weight:800}
+.record-log-date small,.record-log-cost small{font-size:11px;color:#6f7b73}
+.record-log-cost{text-align:right;align-items:flex-end;max-width:51%}
+.record-log-cost b{font-size:13px;font-variant-numeric:tabular-nums}
+.record-log-cost .record-log-edit{color:#a14b26;font-weight:700}
+.record-detail-empty{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;padding:23px 8px 28px}
+.record-detail-empty .bike-part-svg{opacity:.72}
+.record-detail-empty strong{font-size:14px}
+.record-detail-empty p{margin:0;color:#778279;font-size:12px}
+@media(max-width:380px){
+  .bike-page .bike-consumable{gap:7px}
+  .bike-page .bike-consumable .bike-row-meta{flex-basis:40%;max-width:40%}
+  .bike-page .bike-row .bike-item-icon{width:40px;height:40px}
+  .bike-page .bike-row .bike-item-icon img{width:28px;height:28px}
+  .record-parts-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .record-sheet .record-parts-grid .record-part{min-height:81px;padding:8px 5px;gap:6px}
+  .record-part img{width:27px;height:27px}
+  .record-sheet>.record-content{padding:10px 13px 16px}
+  .record-detail-metric{padding:10px}
+  .record-sheet .record-heading{min-height:73px;padding:20px 12px 7px}
+}
+@media(max-height:520px){
+  .record-sheet .record-heading{min-height:62px;padding-top:17px;padding-bottom:5px}
+  .record-heading-label strong{font-size:17px}
+  .record-sheet>footer{min-height:62px;padding-top:6px;padding-bottom:max(7px,env(safe-area-inset-bottom))}
+  .record-sheet>footer .record-primary{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  .record-part,.record-extra summary svg,.record-sheet button{transition:none!important}
+}

@@ -1,11 +1,13 @@
 import { rs33ISO } from "./timeline-dates.mjs";
 import scooter from "./scooter.svg";
 import { icons } from "./ui.mjs";
+import { maintenanceIcon } from "./maintenance-icons.mjs";
+import { standardParts, itemsOf, composeServiceItems, normalizePart, serviceRows, serviceDue } from "./maintenance-model.mjs";
 
 const platforms = ["쿠팡이츠", "배민"];
-const defaults = ["엔진오일", "앞 타이어", "뒤 타이어", "브레이크 패드"];
+let openRecordSheets = 0;
+let originalBodyOverflow = "";
 const number = value => Number(value).toLocaleString("ko-KR");
-const itemsOf = row => row.service_items?.length ? row.service_items : [row.item];
 const km = value => value == null ? "거리 미입력" : number(value) + " km";
 async function read(request) {
   const { data, error } = await request;
@@ -29,45 +31,87 @@ export function createRecords(R, client) {
     className:"rs-icon",width:size,height:size,viewBox:"0 0 24 24",
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,
   },h("path",{d:icons[name]||icons.shops}));
-  const serviceIcon = item => /타이어/.test(item)?"tire":/오일/.test(item)?"oil":/브레이크/.test(item)?"brake":/배터리/.test(item)?"battery":/벨트/.test(item)?"belt":"shops";
-  function Sheet({title, date, close, save, submit, children}) {
+  const PartIcon = ({name,size=28}) => h("img",{className:"bike-part-svg",src:maintenanceIcon(name),alt:"",width:size,height:size,draggable:false,"aria-hidden":true});
+  function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
-    const lock = R.useRef(false);
-    const surface=R.useRef(null);
-    R.useLayoutEffect(()=>{
-      const node=surface.current, viewport=window.visualViewport;
+    const lock = R.useRef(false), surface = R.useRef(null), startY = R.useRef(null);
+    const closeRef = R.useRef(close);
+    closeRef.current = close;
+    const dismiss = () => { if (!lock.current) closeRef.current(); };
+    R.useLayoutEffect(() => {
+      const node = surface.current, viewport = window.visualViewport;
       node.showModal();
-      const size=()=>{node.style.height=(viewport?.height||innerHeight)+"px";node.style.top=(viewport?.offsetTop||0)+"px";};
-      size(); viewport?.addEventListener("resize",size); viewport?.addEventListener("scroll",size);
-      return ()=>{viewport?.removeEventListener("resize",size);viewport?.removeEventListener("scroll",size);node.close();};
-    },[]);
-    const dismiss = () => { if (!lock.current) close(); };
-    const latest = R.useRef(dismiss);
-    latest.current = dismiss;
+      const size = () => {
+        node.style.height = (viewport?.height || innerHeight) + "px";
+        node.style.top = (viewport?.offsetTop || 0) + "px";
+      };
+      size();
+      viewport?.addEventListener("resize", size);
+      viewport?.addEventListener("scroll", size);
+      // Preserve the page's scroll position even when detail/edit sheets are nested.
+      if (openRecordSheets++ === 0) {
+        originalBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+      }
+      return () => {
+        viewport?.removeEventListener("resize", size);
+        viewport?.removeEventListener("scroll", size);
+        if (node.open) node.close();
+        if (--openRecordSheets === 0) document.body.style.overflow = originalBodyOverflow;
+      };
+    }, []);
     R.useEffect(() => {
       const marker = crypto.randomUUID();
       history.pushState({...history.state, recordSheet:marker}, "");
-      const back = () => { if(lock.current) history.pushState({recordSheet:marker},""); else latest.current(); };
-      window.addEventListener("popstate",back);
+      const back = () => {
+        const dialogs = [...document.querySelectorAll("dialog.record-surface[open]")];
+        if (history.state?.recordSheet !== marker && dialogs.at(-1) === surface.current && !lock.current)
+          closeRef.current();
+      };
+      window.addEventListener("popstate", back);
       return () => {
-        window.removeEventListener("popstate",back);
-        if(history.state?.recordSheet === marker) history.back();
+        window.removeEventListener("popstate", back);
+        // Do not consume the parent's history entry when closing a nested edit sheet.
+        if (history.state?.recordSheet === marker) history.back();
       };
     }, []);
-    return h("dialog",{ref:surface,className:"record-surface","aria-label":title,onCancel:e=>{e.preventDefault();dismiss();},onClick:e=>{if(e.target===e.currentTarget)dismiss();}},h("form",{className:"record-sheet",
-      onSubmit:async event=>{
-        event.preventDefault();
-        if(lock.current) return;
-        lock.current=true; setBusy(true); setError("");
-        try { await save(new FormData(event.currentTarget)); close(); }
-        catch(err){ setError(err.message || "저장하지 못했어요. 다시 시도해 주세요."); }
-        finally {lock.current=false; setBusy(false);}
-      }},
-      h("div",{className:"record-heading"},h("strong",null,title),btn("닫기",dismiss,{disabled:busy})),
-      h("section",null,date && h("small",null,date),children),
-      h("footer",null,error && h("p",{role:"alert"},error),h("button",{className:"record-primary",disabled:busy},busy?"저장 중…":submit))));
+    const dragStart = event => { startY.current = event.touches?.[0]?.clientY ?? null; };
+    const dragEnd = event => {
+      const end = event.changedTouches?.[0]?.clientY;
+      if (startY.current != null && end - startY.current > 85) dismiss();
+      startY.current = null;
+    };
+    const heading = h("div", {className:"record-heading",onTouchStart:dragStart,onTouchEnd:dragEnd},
+      h("span",{className:"record-grab", "aria-hidden":true}),
+      h("div",{className:"record-heading-label"},
+        h("span",{className:"record-heading-title"},leading || null,h("strong",null,title)),
+        subtitle && h("small",null,subtitle)),
+      btn(h("svg",{viewBox:"0 0 24 24",width:22,height:22,fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round","aria-hidden":true},
+        h("path",{d:"M5 5 19 19M19 5 5 19"})),dismiss,
+        {className:"record-close","aria-label":"닫기",disabled:busy}));
+    const footer = detail ? (action && h("footer",null,btn(action.label,action.onClick,{className:"record-primary"}))) :
+      h("footer",null,error && h("p",{role:"alert"},error),
+        h("button",{className:"record-primary",type:"submit",disabled:busy},busy?"저장 중…":submit));
+    const props = {className:"record-sheet"};
+    if (!detail) props.onSubmit = async event => {
+      event.preventDefault();
+      if (lock.current) return;
+      lock.current = true; setBusy(true); setError("");
+      try {
+        await save(new FormData(event.currentTarget));
+        closeRef.current();
+      } catch (err) {
+        setError(err?.message || "저장하지 못했어요. 다시 시도해 주세요.");
+      } finally {lock.current = false; setBusy(false); }
+    };
+    return h("dialog",{ref:surface,className:"record-surface","aria-label":title,
+      onCancel:event=>{event.preventDefault();dismiss();},
+      onClick:event=>{if(event.target===event.currentTarget)dismiss();}},
+      h(detail?"div":"form",props,heading,
+        h("section",{className:"record-content"},date && h("small",{className:"record-date-label"},date),children),footer));
   }
+
   function Income({day,user,login}) {
     const [values,setValues]=R.useState(null),[error,setError]=R.useState(""),[revision,refresh]=R.useState(0);
     const [draft,edit]=R.useState(null);
@@ -96,25 +140,87 @@ export function createRecords(R, client) {
   }
 
   function ServiceEditor({row,item,choices,user,close,changed}) {
-    const [selected,select]=R.useState(row?itemsOf(row):item?[item]:[]);
-    const id=R.useRef(row?.id || crypto.randomUUID());
-    return h(Sheet,{title:row?"정비 기록 수정":"정비 기록",close,submit:"정비 기록 저장",save:async form=>{
-      const custom=form.get("custom").trim();
-      const items=[...new Set([...selected,...(custom?[custom]:[])])];
-      if(!items.length) throw Error("정비 항목을 선택해 주세요.");
-      const label=items.join(" · ");
-      if(label.length<2 || label.length>80) throw Error("정비명은 2~80자로 입력해 주세요.");
-      const optional=key=>form.get(key)===""?null:Number(form.get(key));
-      await read(client.from("maintenance_logs").upsert({id:id.current,user_id:user.id,item:label,service_items:items,
-        serviced_on:form.get("day"),odometer_km:optional("km"),cost_won:optional("cost"),
-        workshop:form.get("shop").trim(),note:form.get("note").trim()}).select("id").single());
-      changed();
-    }},field("정비 날짜",{name:"day",type:"date",required:true,defaultValue:row?.serviced_on||rs33ISO(Date.now())}),
-    h("fieldset",null,h("legend",null,"교환 항목 · 복수 선택"),choices.map(name=>btn(name,()=>select(current=>current.includes(name)?current.filter(x=>x!==name):[...current,name]),{key:name,"aria-pressed":selected.includes(name)}))),
-    field("직접 입력",{name:"custom",maxLength:80,placeholder:"다른 정비 항목"}),
-    h("div",{className:"record-pair"},field("계기판 (km)",{type:"number",inputMode:"numeric",min:0,max:999999,name:"km",placeholder:"선택",defaultValue:row?.odometer_km??""}),
-      field("총비용 (원)",{type:"number",inputMode:"numeric",min:0,max:100000000,name:"cost",placeholder:"선택",defaultValue:row?.cost_won??""})),
-    h("details",{open:row?.workshop||row?.note?true:undefined},h("summary",null,"정비소 · 메모"),field("정비소",{name:"shop",maxLength:100,defaultValue:row?.workshop||""}),field("메모",{name:"note",maxLength:500,defaultValue:row?.note||""})));
+    const [selected,select] = R.useState(() => row ? itemsOf(row) : item ? [item] : []);
+    const id = R.useRef(row?.id || crypto.randomUUID());
+    const selectedKeys = new Set(selected.map(x=>normalizePart(x).toLocaleLowerCase("ko-KR")));
+    const partButton = name => btn(h(R.Fragment,null,
+        h(PartIcon,{name,size:32}),
+        h("span",{className:"record-part-name"},name),
+        selectedKeys.has(normalizePart(name).toLocaleLowerCase("ko-KR")) &&
+          h("span",{className:"record-part-check","aria-hidden":true},h(Icon,{name:"check",size:13}))),
+      () => select(current => current.includes(name) ? current.filter(x=>x!==name) : [...current,name]),
+      {key:name,className:"record-part", "aria-pressed":selected.includes(name),"aria-label":name});
+    return h(Sheet,{title:row?"정비 기록 수정":"정비 기록",subtitle:"교환한 부품을 선택하세요",close,
+      submit:row?"변경사항 저장":"정비 기록 저장",save:async form=>{
+        const items = composeServiceItems(selected, form.get("custom"));
+        const day = String(form.get("day") || "");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw Error("정비 날짜를 확인해 주세요.");
+        const optional = (key,max) => {
+          const raw = String(form.get(key) ?? "").replace(/,/g,"").trim();
+          if (!raw) return null;
+          if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw)>max)
+            throw Error((key==="km"?"계기판 거리":"총비용")+"를 확인해 주세요.");
+          return Number(raw);
+        };
+        const payload = {
+          id:id.current,user_id:user.id,item:items.join(" · "),service_items:items,
+          serviced_on:day,odometer_km:optional("km",999999),cost_won:optional("cost",100000000),
+          workshop:String(form.get("shop")||"").trim(),note:String(form.get("note")||"").trim()
+        };
+        await read(client.from("maintenance_logs").upsert(payload).select("id").single());
+        changed(payload);
+      }},
+      field("정비 날짜",{name:"day",type:"date",required:true,defaultValue:row?.serviced_on||rs33ISO(Date.now())}),
+      h("fieldset",{className:"record-parts"},
+        h("legend",null,"교환 부품",h("small",null,"복수 선택 가능")),
+        h("div",{className:"record-parts-grid"},choices.map(partButton))),
+      field("다른 부품 직접 입력",{name:"custom",maxLength:40,
+        placeholder:"목록에 없다면 부품명을 입력하세요",autoComplete:"off"}),
+      h("p",{className:"record-help"},"선택한 부품들은 한 건의 정비 기록으로 저장됩니다."),
+      h("div",{className:"record-pair record-measures"},
+        field("계기판 거리 (km)",{type:"text",inputMode:"numeric",name:"km",placeholder:"미입력",
+          defaultValue:row?.odometer_km??"",autoComplete:"off"}),
+        field("총비용 (원)",{type:"text",inputMode:"numeric",name:"cost",placeholder:"미입력",
+          defaultValue:row?.cost_won??"",autoComplete:"off"})),
+      h("details",{className:"record-extra",open:row?.workshop||row?.note?true:undefined},
+        h("summary",null,"정비소 · 메모",h(Icon,{name:"chevron",size:17})),
+        field("정비소",{name:"shop",maxLength:100,defaultValue:row?.workshop||""}),
+        h("label",null,"메모",h("textarea",{name:"note",maxLength:500,rows:3,defaultValue:row?.note||""}))));
+  }
+
+  function ServiceDetail({item,rows,cycles,reading,close,edit,add}) {
+    const historyRows = serviceRows(rows,item);
+    const recent = historyRows[0], cycle = cycles.find(c=>c.item_key===item);
+    const due = serviceDue(recent,cycle,reading?.[0]);
+    const metric = (label,value) => h("div",{className:"record-detail-metric",key:label},
+      h("small",null,label),h("strong",null,value));
+    const dueText = due.next==null ? (cycle?.interval_days ? number(cycle.interval_days)+"일 기준" : "주기 미설정") : km(due.next);
+    return h(Sheet,{title:item+" 관리",detail:true,leading:h(PartIcon,{name:item,size:30}),
+      subtitle:"교환 시점과 정비 이력을 확인하세요",close,
+      action:{label:historyRows.length?"이 부품 정비 기록 추가":"첫 정비 기록 남기기",onClick:()=>add(item)}},
+      h("div",{className:"record-detail-summary"},
+        metric("최근 교환일",recent?.serviced_on || "이력 없음"),
+        metric("최근 교환 거리",recent ? km(recent.odometer_km) : "거리 미입력"),
+        metric("다음 교환 예정",dueText),
+        metric("설정한 교체 주기",cycle?.interval_km ? number(cycle.interval_km)+" km" :
+          cycle?.interval_days ? number(cycle.interval_days)+"일" : "미설정")),
+      due.remaining!=null && h("p",{className:"record-due-status bike-state-"+due.state},
+        due.state==="overdue" ? "교체 기준 "+number(-due.remaining)+" km 초과" :
+        due.state==="soon" ? "교체 기준까지 "+number(due.remaining)+" km 남음" :
+        "교체 기준까지 "+number(due.remaining)+" km 남음"),
+      h("div",{className:"record-detail-section-title"},h("h3",null,"정비 이력"),
+        h("small",null,historyRows.length+"건")),
+      historyRows.length ? h("div",{className:"record-detail-list"},
+        historyRows.map(row=>btn(h(R.Fragment,null,
+          h("span",{className:"record-log-date"},h("strong",null,row.serviced_on),
+            h("small",null,km(row.odometer_km))),
+          h("span",{className:"record-log-cost"},h("b",null,row.cost_won==null?"비용 미입력":number(row.cost_won)+"원"),
+            row.workshop && h("small",null,row.workshop),
+            h("small",{className:"record-log-edit"},"정비 기록 수정"))),
+          ()=>edit(row),{key:row.id,className:"record-log","aria-label":row.serviced_on+" 정비 기록 수정"})))
+        : h("div",{className:"record-detail-empty"},
+          h(PartIcon,{name:item,size:48}),h("strong",null,"아직 교환 기록이 없어요"),
+          h("p",null,"첫 정비 기록을 남기면 여기서 바로 확인할 수 있어요.")));
   }
 
 
@@ -179,7 +285,7 @@ export function createRecords(R, client) {
     }},
     h("p",{className:"record-help"},"내 바이크에서 확인할 교체 기준을 정하세요. 비워 둔 항목은 주기를 표시하지 않습니다."),
     ...choices.map((item,i)=>h("div",{className:"bike-cycle-editor",key:item},
-      h("strong",null,h(Icon,{name:serviceIcon(item),size:19}),item),
+      h("strong",null,h(PartIcon,{name:item,size:22}),item),
       h("div",{className:"record-pair"},
         field("교체 거리 (km)",{name:"km-"+i,type:"number",inputMode:"numeric",min:1,max:999999,
           step:1,placeholder:"선택",defaultValue:current[item]?.interval_km??""}),
@@ -188,12 +294,17 @@ export function createRecords(R, client) {
   }
 
   function Bike({user,login,profile}) {
-    const [data,setData]=R.useState(null),[error,setError]=R.useState(""),[revision,refresh]=R.useState(0);
-    const [editor,setEditor]=R.useState(null),[filter,setFilter]=R.useState("");
+    const [data,setData] = R.useState(null),[error,setError]=R.useState(""),[revision,refresh]=R.useState(0);
+    const [editor,setEditor]=R.useState(null),[detailItem,setDetailItem]=R.useState(null);
     const [vehicleEdit,setVehicleEdit]=R.useState(null),[cyclesOpen,setCyclesOpen]=R.useState(false);
-    const historyHeading=R.useRef(null);
-    R.useEffect(()=>{if(filter)historyHeading.current?.scrollIntoView({block:"start"});},[filter]);
-    const changed=()=>refresh(n=>n+1);
+    const changed = payload => {
+      if (payload?.id) setData(current => current ? {
+        ...current,rows:serviceRows([
+          {...(current.rows.find(row=>row.id===payload.id)||{created_at:new Date().toISOString()}),...payload},
+          ...current.rows.filter(row=>row.id!==payload.id)])
+      } : current);
+      refresh(n=>n+1);
+    };
     R.useEffect(()=>{
       let active=true; setError("");
       if(user){
@@ -201,18 +312,18 @@ export function createRecords(R, client) {
         Promise.all([pages(()=>table("maintenance_logs").order("serviced_on",{ascending:false}).order("created_at",{ascending:false}).order("id")),
           read(table("rider_vehicle_profiles").maybeSingle()),read(table("rider_maintenance_cycles")),
           read(table("rider_fuel_logs").not("odometer_km","is",null).order("fueled_on",{ascending:false}).order("created_at",{ascending:false}).limit(1))])
-          .then(([rows,vehicle,cycles,fuel])=>{if(active)setData({rows,vehicle,cycles,fuel:fuel[0]});}).catch(()=>{if(active)setError("정비 이력을 불러오지 못했어요.");});
+          .then(([rows,vehicle,cycles,fuel])=>{if(active)setData({rows:serviceRows(rows),vehicle,cycles,fuel:fuel[0]});})
+          .catch(()=>{if(active)setError("정비 이력을 불러오지 못했어요.");});
       }
       return ()=>{active=false;};
     },[user?.id,revision]);
     const rows=data?.rows||[], vehicle=data?.vehicle, cycles=data?.cycles||[];
-    const choices=[...new Set([...rows.flatMap(itemsOf),...defaults,...cycles.map(c=>c.item_key)])];
+    const choices=[...new Set([...standardParts,...rows.flatMap(itemsOf),...cycles.map(c=>c.item_key)])];
     const latest=rows.find(r=>r.odometer_km!=null),fuel=data?.fuel;
     const historyReadings=[[latest?.odometer_km,latest?.serviced_on],[fuel?.odometer_km,fuel?.fueled_on]]
       .filter(([distance,date])=>distance!=null&&date).sort((a,b)=>b[1].localeCompare(a[1])||b[0]-a[0]);
     const manual=vehicle?.odometer_km!=null;
     const reading=manual?[vehicle.odometer_km,vehicle.odometer_recorded_on||"입력일 미기록"]:historyReadings[0];
-    const visible=rows.filter(row=>!filter||itemsOf(row).includes(filter));
     const tool=name=>window.__rsOpenTool?.(name);
     const edit=value=>user?setEditor(value):login();
     const vehicleAction=kind=>user?setVehicleEdit(kind):login();
@@ -226,8 +337,9 @@ export function createRecords(R, client) {
           h("small",null,"등록 차량"),
           h("h2",null,vehicle?.vehicle_name||"내 오토바이"),
           h("div",{className:"bike-odometer-label"},h(Icon,{name:"gauge",size:17}),"현재 계기판"),
-          h("strong",null,reading?km(reading[0]):"거리 미입력"),
-          h("small",null,reading?.[1]||"아직 입력된 거리 없음",
+          h("strong",{className:"bike-distance"},reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
+            h("span",null,number(reading[0])),h("small",null,"km"))),
+          h("small",null,reading?.[1]||"입력일 미기록",
             !manual&&reading?" · 정비·주유 기록 기준":"")),
         h("img",{src:scooter,alt:"스쿠터 일러스트",width:130,height:82})),
       h("div",{className:"bike-vehicle-actions"},
@@ -238,45 +350,48 @@ export function createRecords(R, client) {
       h("div",{className:"bike-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"＋ 정비 기록"),
           ()=>edit({}),{className:"record-primary",disabled:!!user&&!data,"aria-label":"＋ 정비 기록"}),
-        btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),
-          ()=>tool("fuel"))),
+        btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),()=>tool("fuel"))),
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("div",{className:"bike-section-head"},
         h("h2",null,"소모품 현황"),
         btn(h(R.Fragment,null,h(Icon,{name:"settings",size:17}),"교체 주기 설정"),
-          ()=>user?setCyclesOpen(true):login(),{className:"bike-quiet-action","aria-label":"교체 주기 설정",disabled:!!user&&!data})),
-      choices.map(item=>{
-        const row=rows.find(r=>itemsOf(r).includes(item));
-        const cycle=cycles.find(c=>c.item_key===item);
-        const interval=cycle?.interval_km;
-        const due=row?.next_due_km??(interval&&row?.odometer_km!=null?Number(interval)+Number(row.odometer_km):null);
-        return btn(h(R.Fragment,null,
-          h("span",{className:"bike-row-main"},
-            h("span",{className:"bike-item-icon"},h(Icon,{name:serviceIcon(item),size:21})),
-            h("span",null,h("b",null,item),
-              h("small",null,row?km(row.odometer_km):"교환 기록 없음"),
-              row?.serviced_on?h("small",null,"마지막 교환 · "+row.serviced_on):null)),
-          h("span",{className:"bike-row-meta"},
-            due!=null?h("b",null,"다음 "+km(due)):(cycle?.interval_days?h("b",null,cycle.interval_days+"일 주기"):h("small",null,"주기 미설정")),
-            h(Icon,{name:"chevron",size:17}))),
-          ()=>setFilter(filter===item?"":item),
-          {key:item,className:"bike-row","aria-pressed":filter===item});
-      }),
-      h("div",{className:"bike-heading bike-history-head",ref:historyHeading,style:{scrollMarginTop:"64px"}},
-        h("h2",null,h(Icon,{name:"history",size:19}),filter?filter+" 이력":"정비 이력"),
-        filter&&btn("전체 보기",()=>setFilter(""),{className:"bike-quiet-action"})),
-      filter&&btn("＋ "+filter+" 교환 기록",()=>edit({item:filter}),{className:"bike-add"}),
-      visible.length?visible.map((row,i)=>h(R.Fragment,{key:row.id},
-        (!i||visible[i-1].serviced_on.slice(0,7)!==row.serviced_on.slice(0,7))
-          &&h("h3",null,row.serviced_on.slice(0,7).replace("-","년 ")+"월"),
+          ()=>user?setCyclesOpen(true):login(),
+          {className:"bike-quiet-action","aria-label":"교체 주기 설정",disabled:!!user&&!data})),
+      h("div",{className:"bike-consumables"},
+        choices.map(item=>{
+          const row=serviceRows(rows,item)[0], cycle=cycles.find(c=>c.item_key===item);
+          const due=serviceDue(row,cycle,reading?.[0]);
+          const status=due.state==="overdue"?"기준 초과 · "+number(-due.remaining)+" km":
+            due.state==="soon"?"교체 임박 · "+number(due.remaining)+" km":
+            due.remaining!=null?number(due.remaining)+" km 남음":
+            due.next!=null?"다음 "+km(due.next):
+            cycle?.interval_days?number(cycle.interval_days)+"일 주기":"주기 미설정";
+          return btn(h(R.Fragment,null,
+            h("span",{className:"bike-row-main"},
+              h("span",{className:"bike-item-icon"},h(PartIcon,{name:item,size:30})),
+              h("span",null,h("b",null,item),
+                h("small",null,row?"최근 "+row.serviced_on:"교환 기록 없음"),
+                h("small",null,row?km(row.odometer_km):"거리 미입력"))),
+            h("span",{className:"bike-row-meta"},
+              h("b",{className:"bike-status bike-state-"+due.state},status),
+              h(Icon,{name:"chevron",size:17}))),
+          ()=>user?setDetailItem(item):login(),
+          {key:item,className:"bike-row bike-consumable","aria-label":item+" 관리"}); 
+        })),
+      h("div",{className:"bike-heading bike-history-head"},
+        h("h2",null,h(Icon,{name:"history",size:19}),"전체 정비 이력"),
+        h("small",null,rows.length+"건")),
+      rows.length ? rows.map((row,i)=>h(R.Fragment,{key:row.id},
+        (!i||rows[i-1].serviced_on?.slice(0,7)!==row.serviced_on?.slice(0,7)) &&
+          h("h3",null,row.serviced_on.slice(0,7).replace("-","년 ")+"월"),
         btn(h(R.Fragment,null,
           h("span",{className:"bike-row-main"},
-            h("span",{className:"bike-item-icon subtle"},h(Icon,{name:serviceIcon(itemsOf(row)[0]),size:19})),
+            h("span",{className:"bike-item-icon subtle"},h(PartIcon,{name:itemsOf(row)[0],size:26})),
             h("span",null,h("b",null,itemsOf(row).join(" · ")),
               h("small",null,row.serviced_on+" · "+km(row.odometer_km)))),
           h("span",{className:"bike-row-meta"},h("b",null,row.cost_won==null?"비용 미입력":number(row.cost_won)+"원"),
             h(Icon,{name:"chevron",size:17}))),
-          ()=>edit({row}),{className:"bike-row bike-history-row"})))
+        ()=>edit({row}),{className:"bike-row bike-history-row","aria-label":itemsOf(row).join(" · ")+" "+row.serviced_on+" "+(row.cost_won==null?"비용 미입력":number(row.cost_won)+"원")})))
         :h("p",{className:"bike-empty"},user&&!data&&!error?"기록을 읽고 있어요…":"등록된 정비 기록이 없어요."),
       h("div",{className:"bike-links"},
         btn(h(R.Fragment,null,h(Icon,{name:"work",size:18}),"전체 업무 도구 ›"),()=>tool("hub"))),
@@ -284,7 +399,11 @@ export function createRecords(R, client) {
         close:()=>setVehicleEdit(null),changed}),
       cyclesOpen && h(CyclesEditor,{user,choices,cycles,
         close:()=>setCyclesOpen(false),changed}),
-      editor && h(ServiceEditor,{...editor,user,choices,close:()=>setEditor(null),changed}));
+      detailItem && h(ServiceDetail,{item:detailItem,rows,cycles,reading,
+        close:()=>setDetailItem(null),edit:row=>edit({row}),add:item=>edit({item})}),
+      editor && h(ServiceEditor,{...editor,user,choices,
+        close:()=>setEditor(null),changed}));
   }
+
   return {Income,Bike};
 }

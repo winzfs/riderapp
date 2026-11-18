@@ -32,6 +32,7 @@ export const icons = {
   history: "M3 11a9 9 0 1 1 2 6M3 5v6h6m3-5v6l4 2",
   edit: "M4 20l5-.5L20 8l-4-4L5 15l-1 5zm9-13 4 4",
   settings: "M4 7h16M4 17h16M9 4v6m6 4v6",
+  check: "M4 12l5 5L20 6",
   chevron: "M9 5l7 7-7 7",
   calendar: "M4 6h16v15H4V6zm4-3v6m8-6v6M4 11h16",
 
