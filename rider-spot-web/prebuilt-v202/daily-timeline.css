@@ -1,0 +1,79 @@
+/* Daily overview / replay. Shared primitives and tokens live in design-system.css. */
+.rs33-timeline .rs56-day-overview{margin:12px 0 22px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.rs56-day-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 0 12px}
+.rs56-day-header h2{margin:0;font-size:17px;font-weight:650;color:var(--rs-text)}
+.rs56-day-header small,.rs56-day-header p{margin:3px 0 0;font-size:12px;color:var(--rs-muted)}
+.rs56-day-badge{font-size:11px;color:var(--rs-primary);background:var(--rs-soft);border-radius:7px;padding:5px 8px;white-space:nowrap}
+.rs33-timeline .rs56-day-course{margin:0;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--rs-line)}
+.rs56-day-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rs33-timeline .rs56-day-map{height:clamp(320px,91vw,460px);min-height:320px;position:relative;overflow:hidden}
+.rs33-timeline .rs56-day-map .map{height:100%;min-height:100%;width:100%;border-radius:0}
+.rs56-day-map-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;font-size:10px;color:var(--rs-muted);background:#fff;min-height:36px}
+.rs56-day-map-footer small{color:var(--rs-warning);font-size:10px}
+.rs56-gradient-key{width:26px;height:5px;flex:none;border-radius:4px;background:linear-gradient(90deg,#f69745 0%,#eeb96e 27%,#aec792 50%,#4c967c 72%,#034232 100%)}
+.rs56-stamp-detail{flex-basis:100%;font-size:12px;color:var(--rs-primary)}
+.rs56-day-help{margin:10px 0 0;font-size:11px;color:var(--rs-muted);line-height:1.6}
+.rs33-timeline .rs56-rides{display:flex;flex-direction:column;gap:0;margin:0 0 20px;border-top:1px solid var(--rs-line)}
+.rs33-timeline .rs56-ride-choice{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;min-height:80px;padding:16px 0;border:0;border-bottom:1px solid var(--rs-line);border-radius:0;background:transparent;text-align:left;box-shadow:none;color:var(--rs-text)}
+.rs56-ride-choice:active{background:var(--rs-soft)}
+.rs56-ride-number{display:grid;place-items:center;width:32px;height:36px;background:var(--rs-soft);color:var(--rs-primary);border-radius:9px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.rs56-ride-info{display:flex;flex-direction:column;gap:5px;min-width:0}.rs56-ride-info strong{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}.rs56-ride-info small{font-size:12px;color:var(--rs-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs56-ride-link{font-size:12px;font-weight:600;color:var(--rs-primary);white-space:nowrap}
+.rs59-player{border-top:1px solid var(--rs-line);background:#fff;padding:12px;color:var(--rs-text);flex:none}
+.rs59-player-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rs59-player button,.rs59-player select{min-height:44px;border:1px solid var(--rs-line);border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
+.rs59-player .rs59-play{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--rs-primary);color:#fff;border-color:var(--rs-primary);padding:10px 12px;min-width:100px}
+.rs59-player .rs59-play[aria-pressed=true]{background:var(--rs-primary-hover)}
+.rs59-speed{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--rs-muted);white-space:nowrap}
+.rs59-speed select{padding:8px 7px;color:var(--rs-primary);background:#fff;max-width:76px;min-width:64px}
+.rs59-player .rs59-reset{background:var(--rs-bg);color:var(--rs-muted);padding:10px;min-width:44px}
+.rs59-seek{display:block;width:100%;min-height:44px;height:44px;margin:0;padding:0;accent-color:var(--rs-primary);touch-action:pan-y;cursor:pointer}
+.rs59-time-row{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;line-height:1.5;color:var(--rs-muted);font-variant-numeric:tabular-nums}
+.rs59-elapsed{white-space:nowrap;color:var(--rs-text);font-weight:500}
+.rs33-timeline .rs56-day-course.rs33-course-full{border-radius:0;border:0;position:fixed;inset:var(--rs-safe-top) 0 var(--rs-safe-bottom);z-index:2500;display:flex;flex-direction:column;max-height:none;margin:0}
+.rs33-timeline .rs56-day-course.rs33-course-full .rs56-day-map{height:auto;min-height:120px;flex:1}
+.rs33-course-full .rs59-player{padding:8px 12px}.rs33-course-full .rs56-day-map-footer{padding-block:6px}
+
+/* V63: one continuous recap → route → playback/tools panel. */
+.rs33-timeline>.rs-game-recap{margin:13px 0 14px;padding:14px 14px 12px;border-radius:18px;box-shadow:0 3px 14px #174d3410}
+.rs33-timeline>.rs-game-recap .rs-game-recap-heading{margin-bottom:10px}
+.rs33-timeline>.rs-game-recap .rs-game-recap-stats>div{padding:10px 8px}
+.rs33-timeline .rs56-day-overview{margin-top:0}
+.rs59-course-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:9px 12px 11px;border-top:1px solid #edf0ed;background:#fff}
+.rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(4,minmax(0,1fr))}
+.rs59-course-tools button{display:flex;align-items:center;justify-content:center;min-width:0;min-height:42px;padding:8px 4px;border:1px solid #e2e8e3;border-radius:11px;background:#f7f9f6;color:#52645b;font-size:11px;font-weight:700;letter-spacing:-.03em;white-space:nowrap;box-shadow:none}
+.rs59-course-tools button:first-child{color:#14685a;background:#e9f4ef;border-color:#d6e8df}
+.rs59-course-tools button[aria-pressed="true"]{color:#186a56;background:#edf5f0;border-color:#bedfd0}
+.rs59-course-tools button:disabled{opacity:.45}
+.rs59-course-tools button:focus-visible,.rs56-stop-list button:focus-visible{outline:2px solid #0b7663;outline-offset:2px}
+.rs56-stop-events{border-top:1px solid #edf0ed;background:#fcfdfa}
+.rs56-stop-events>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;min-height:42px;padding:8px 13px;font-size:11px;color:#576960;font-weight:650}
+.rs56-stop-events>summary::-webkit-details-marker{display:none}
+.rs56-stop-events>summary strong{color:#146f5c}
+.rs56-stop-events>summary span{margin-left:auto}
+.rs56-stop-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 12px 12px;max-height:184px;overflow-y:auto}
+.rs56-stop-list button{display:flex;align-items:center;gap:5px;min-width:0;min-height:36px;border:1px solid #e5ebe4;border-radius:9px;background:white;padding:7px;font-size:10px;text-align:left;color:#42584e;box-shadow:none}
+.rs56-stop-list time{flex:none;color:#bd723f;font-weight:750;font-variant-numeric:tabular-nums}
+.rs56-stop-list span{min-width:0;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.rs56-stop-list small{flex:none;color:#a47346;font-size:9px}
+@media(max-width:360px){.rs59-course-tools{gap:5px;padding:8px}.rs59-course-tools button{font-size:10px;min-height:40px}.rs56-stop-list{grid-template-columns:1fr}}
+.rs33-course-full .rs59-course-tools{padding:7px 10px}
+
+/* v64: compact journey timeline with distinct clock and event layers */
+.rs33-timeline>.rs-game-recap{margin-bottom:10px}
+.rs33-timeline .rs56-day-overview{margin:0 0 20px}
+.rs33-timeline .rs56-day-course{border-radius:17px}
+.rs59-course-tools,
+.rs59-course-tools:has(.rs38-road-toggle){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:10px 12px;border-top:1px solid #ecf0ed;background:#fff}
+.rs59-course-tools button{min-height:44px;min-width:0;padding:8px 5px;border-radius:11px;border:1px solid #e2eae5;background:#f7f9f7;color:#4c6459;font-size:12px;font-weight:700;white-space:nowrap}
+.rs59-course-tools button:first-child{background:#f7f9f7;color:#4c6459;border-color:#e2eae5}
+.rs59-course-tools button[aria-pressed="true"]{background:#e7f2ed;color:#126a58;border-color:#b9dbcf}
+.rs59-course-tools .rs33-expand{background:#f1f5f3;color:#194f44}
+.rs56-route-focus{padding:10px 14px;border-top:1px solid #edf0ed;background:#f8fbf8;color:#166552;font-size:12px;font-weight:700}
+.rs33-timeline .rs56-day-map{height:clamp(330px,92vw,480px)}
+.rs33-timeline .rs-game-recap::after{pointer-events:none}
+@media(max-width:360px){.rs59-course-tools button{font-size:11px}}
+
+/* Individual trips retain road correction; the daily map stays three-button simple. */
+.rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:360px){.rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(2,minmax(0,1fr))}}
