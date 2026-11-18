@@ -49,7 +49,7 @@ test("save conflicts do not issue successful commit events",async()=>{
   const client={rpc:async()=>({error:{message:"RS_INCOME_CONFLICT"}})};
   await assert.rejects(()=>saveIncomeDay(client,{userId:"r",day:"2026-11-19",
     draft:{쿠팡이츠:100},previous:{쿠팡이츠:null}}),/다른 기기/);
-  assert.match(financeWriteError({message:"RS_DUPLICATE_DAY_PLATFORM"}),/기존/);
+  assert.match(financeWriteError({message:"RS_DUPLICATE_DAY_PLATFORM"}),/기록/);
   assert.match(financeWriteError({message:"RS_SETTLED_INCOME"}),/입금 확인/);
   assert.equal(messages,0);
 });
