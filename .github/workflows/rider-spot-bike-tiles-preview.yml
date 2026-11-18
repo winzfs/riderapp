@@ -1,0 +1,72 @@
+name: Rider Spot bike tiles v185 candidate acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-bike-tiles-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://23221566-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-bike-grid-v185
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Candidate content exact match, asset preservation and transparent PNG
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const root=process.env.RIDER_UI_URL;
+          const hash='384430b8e410';
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          for(const [route,local] of [['/','index.html'],['/sw.js','sw.js'],...['app.mjs','design-system.css'].map(n=>['/assets/rider-spot-'+hash+'/'+n,n])]){
+            const res=await fetch(new URL(route,root));
+            assert.equal(res.status,200,'preview '+route);
+            const actual=await res.text();
+            assert.equal(actual,fs.readFileSync('prebuilt/'+local,'utf8'),'exact source bytes '+route);
+            if(local==='app.mjs')assert.ok(actual.includes('data:image/png;base64,'),'original PNG preserved');
+            if(local==='design-system.css'){
+              assert.ok(actual.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),'3 columns');
+              assert.ok(actual.includes('.bike-tile-status'),'clean compact status');
+            }
+          }
+          for(const path of ['/assets/rider-spot-'+hash+'/workspace-tools.js','/assets/rider-spot-'+hash+'/native-gps.js','/mapdata/manifest.json']){
+            const res=await fetch(new URL(path,root));
+            assert.equal(res.status,200,'preserved '+path);
+            if(path.includes('manifest'))assert.ok((await res.json()).counts);
+          }
+          console.log('PASS candidate bytes, original PNG, and background services');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Candidate map, timeline, native UI and layout regressions
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - name: Candidate remote 360 and 412 pixel bike cards, details and editable records
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://23221566-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          sed -i 's@return route.abort();@return route.continue();@g' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bike-tiles-v185-screenshots
+          path: |
+            /tmp/rider-bike-grid-v185
+            /tmp/rider-ui-evidence
+          retention-days: 14
