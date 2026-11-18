@@ -124,7 +124,7 @@ async function run(browser,width,height){
     await page.goBack();
     await page.locator(".bike-consumables").waitFor();
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","root Back never switches tabs");
-    await nav("운행");
+    await nav("타임라인");
     await page.locator(".ride-launch button").waitFor();
     await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
