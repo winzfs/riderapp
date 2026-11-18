@@ -379,6 +379,30 @@ async function run(browser,width,height){
     const nmaxBelt=page.getByRole("dialog",{name:"구동벨트 관리"});
     await nmaxBelt.getByText("18,000 km",{exact:true}).waitFor();
     await nmaxBelt.getByRole("button",{name:"닫기"}).click();
+
+    // Finance regression: two-field default, thousand separators and per-user draft recovery.
+    await nav("수익");
+    await page.locator(".finance-page .fin-hero-amount").waitFor();
+    await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+    const financeDialog=page.getByRole("dialog",{name:"수익 입력"});
+    await financeDialog.waitFor();
+    assert.equal(await financeDialog.locator('.fin-platform-choice input[type="radio"]').count(),3);
+    assert.equal(await financeDialog.locator('.fin-money-input input[name="gross_won"][inputmode="numeric"]').count(),1);
+    assert.equal(await financeDialog.locator('.fin-optional').first().getAttribute("open"),null);
+    const financeAmount=financeDialog.locator('input[name="gross_won"]');
+    await financeAmount.fill("85000");
+    assert.equal(await financeAmount.inputValue(),"85,000");
+    page.once("dialog",dialog=>dialog.accept());
+    await financeDialog.getByRole("button",{name:"닫기"}).click();
+    await financeDialog.waitFor({state:"hidden"});
+    await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+    await financeDialog.waitFor();
+    assert.equal(await financeDialog.locator('input[name="gross_won"]').inputValue(),"85,000",
+      "finance entry recovers unfinished draft");
+    await shot("finance");
+    page.once("dialog",dialog=>dialog.accept());
+    await financeDialog.getByRole("button",{name:"닫기"}).click();
+    await financeDialog.waitFor({state:"hidden"});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
