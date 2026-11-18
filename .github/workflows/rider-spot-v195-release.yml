@@ -1,0 +1,69 @@
+name: Rider Spot v195 publish tested image assets
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v195-release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-v195-prebuilt
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Verify the actual rendered PNG and displayed model intervals
+        run: node tests/mobile-records-browser.cjs
+      - name: Freeze verified build into production prebuilt assets
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const rel=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          assert.match(rel.hash,/^[a-f0-9]{12}$/);
+          const app=fs.readFileSync('dist/assets/rider-spot-'+rel.hash+'/app.mjs','utf8');
+          assert.ok(app.includes('data:image/png;base64,'));
+          assert.ok(app.includes('neo-flat-v195'));
+          assert.ok(app.includes('modelDefaults'));
+          const dir='dist/assets/rider-spot-'+rel.hash+'/';
+          for(const n of ['app.mjs','route-worker.mjs','native-gps.js','map-reports.js',
+            'design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css']){
+            fs.copyFileSync(dir+n,'prebuilt/'+n);
+          }
+          for(const n of ['index.html','sw.js','release.json'])fs.copyFileSync('dist/'+n,'prebuilt/'+n);
+          console.log('PASS verified new image bundle',rel.hash);
+          NODE
+      - name: Commit tested prebuilt assets for Cloudflare version upload
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rider-spot-web/prebuilt
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: freeze v195 genuine PNG icons and model presets [skip ci]'
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: rider-spot-v195-tested-prebuilt
+          path: rider-spot-web/prebuilt
+          retention-days: 7
