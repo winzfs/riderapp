@@ -1,0 +1,48 @@
+name: Rider Spot v195 production PNG icon smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v195-production-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compare live Worker bytes with verified image build
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const origin='https://rider-spot.jazzhjm.workers.dev';
+          const m=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(m.hash,'1374e3fd452d','wrong tested build');
+          const paths=[['/','index.html'],['/sw.js','sw.js'],
+            ...m.files.filter(x=>x.startsWith('/assets/rider-spot-'+m.hash+'/'))
+             .map(x=>[x,x.split('/').at(-1)])];
+          for(const [path,name] of paths){
+            const res=await fetch(origin+path,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(res.status,200,path+' HTTP '+res.status);
+            const body=await res.text();
+            const source=fs.readFileSync('prebuilt/'+name,'utf8');
+            assert.equal(body,source,path+' does not match tested v195 asset');
+            if(name==='app.mjs'){
+              assert.ok(body.includes('data:image/png;base64,'),'new bitmap missing');
+              assert.ok(body.includes('neo-flat-v195'),'new icon release marker missing');
+              assert.ok(body.includes('500% 200%'),'sprite not correctly sized');
+            }
+            console.log('PASS LIVE v195',path,body.length);
+          }
+          const map=await fetch(origin+'/mapdata/manifest.json');
+          assert.equal(map.status,200,'map data missing');
+          assert.ok((await map.json()).counts,'map data invalid');
+          console.log('PASS map data preserved');
+          NODE
