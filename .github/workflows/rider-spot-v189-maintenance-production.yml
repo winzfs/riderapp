@@ -1,0 +1,60 @@
+name: Rider Spot v189 maintenance live production acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v189-maintenance-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_SCREENSHOTS: /tmp/rider-v189-maintenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Verify actual production HTML, scripts and CSS exact release bytes
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const root='https://rider-spot.jazzhjm.workers.dev',hash='66cd08975984';
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          const paths=[['/','index.html'],['/sw.js','sw.js'],
+            ...['app.mjs','design-system.css','tab-resume.js','native-gps.js','workspace-tools.js'].map(name=>['/assets/rider-spot-'+hash+'/'+name,name])];
+          for(const [url,file] of paths){
+            const r=await fetch(root+url,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(r.status,200,'live HTTP '+url);
+            const actual=await r.text();
+            assert.equal(actual,fs.readFileSync('prebuilt/'+file,'utf8'),url+' differs from audited v189 release');
+            if(file==='app.mjs')assert.ok(actual.includes('record-mini-dialog')&&actual.includes('maintenance_logs')&&actual.includes('deletedId'),'missing new maintenance actions');
+            if(file==='design-system.css')assert.ok(actual.includes('record-mini-dialog')&&actual.includes('record-delete-open'),'missing compact dialog styles');
+            console.log('PASS live v189',url);
+          }
+          const r=await fetch(root+'/mapdata/manifest.json');assert.equal(r.status,200);
+          assert.ok((await r.json()).counts,'map POIs missing');
+          console.log('PASS existing public map resources');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Live browser: 60300 current, 40000 tire change, compact cycle, owner delete and timeline 412/360px
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          sed -i 's@const local=path.resolve(__dirname,"../dist");@const local="/tmp/never-serve-local-files";@' tests/mobile-records-browser.cjs
+          sed -i 's@return route.abort();@return route.continue();@g' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-v189-live-maintenance-screens
+          path: /tmp/rider-v189-maintenance
+          retention-days: 14
