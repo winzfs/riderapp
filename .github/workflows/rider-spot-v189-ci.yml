@@ -46,6 +46,10 @@ jobs:
           assert.ok(manifest.hash && manifest.files.includes('/index.html'));
           console.log('PASS v189 candidate',manifest.hash);
           NODE
+      - name: Install Chromium for mobile UI smoke
+        run: npx playwright install --with-deps chromium
+      - name: Verify bike tile icons, model presets, manual correction and timeline on 412/360 px
+        run: node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
         if: success()
         with:
