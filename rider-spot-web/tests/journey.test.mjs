@@ -6,9 +6,9 @@ const ride = (id, start, end) => ({ id, started_at: start, ended_at: end, distan
 test('Seoul week stamps count completed days once and exclude future and active rides', () => {
   const history = [
     ride('sun', '2026-11-15T14:00:00Z', '2026-11-15T14:30:00Z'),
-    ride('mon', '2026-11-15T15:00:00Z', '2026-11-15T16:00:00Z'),
-    ride('tue', '2026-11-16T15:00:00Z', '2026-11-16T16:00:00Z'),
-    ride('tue', '2026-11-16T15:00:00Z', '2026-11-16T16:00:00Z'),
+    ride('mon', '2026-11-16T00:00:00Z', '2026-11-16T01:00:00Z'),
+    ride('tue', '2026-11-17T00:00:00Z', '2026-11-17T01:00:00Z'),
+    ride('tue', '2026-11-17T00:00:00Z', '2026-11-17T01:00:00Z'),
     ride('active', '2026-11-17T01:00:00Z', null),
     ride('future', '2026-11-19T01:00:00Z', '2026-11-19T02:00:00Z'),
   ];
