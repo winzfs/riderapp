@@ -1,0 +1,50 @@
+name: Rider Spot v193 production end-to-end smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v193-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify v193 production bytes, RPC client, icons and map data
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const root='https://rider-spot.jazzhjm.workers.dev';
+          const manifest=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(manifest.hash,'6d4595ddfd62','unexpected tested bundle');
+          const routes=[
+            ['/','index.html'],['/sw.js','sw.js'],
+            ...manifest.files.filter(p=>p.startsWith('/assets/rider-spot-'+manifest.hash+'/'))
+              .map(p=>[p,p.split('/').at(-1)])
+          ];
+          for(const [path,file] of routes){
+            const response=await fetch(root+path,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(response.status,200,path+' HTTP status');
+            const body=await response.text();
+            const expected=fs.readFileSync('prebuilt/'+file,'utf8');
+            assert.equal(body,expected,path+' production differs from approved bundle');
+            if(file==='app.mjs'){
+              assert.ok(body.includes('apply_rider_trip_odometer'),'missing ride sync');
+              assert.ok(body.includes('set_rider_manual_odometer'),'missing manual override');
+              assert.ok(body.includes('data:image/svg+xml'),'missing Neo-Flat SVG icons');
+            }
+            console.log('PASS production',path,body.length);
+          }
+          const map=await fetch(root+'/mapdata/manifest.json');
+          assert.equal(map.status,200,'preserved public map data HTTP');
+          assert.ok((await map.json()).counts,'public map metadata missing');
+          console.log('PASS preserved map data and v193 assets');
+          NODE
