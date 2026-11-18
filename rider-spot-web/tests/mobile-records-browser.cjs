@@ -130,7 +130,7 @@ async function run(browser,width,height){
     assert.match(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/);
     await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
     assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByRole("button",{name:"2026-11-15 정비 기록 수정"}).click();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
