@@ -20,8 +20,9 @@ async function run(browser,width,height){
   const records=[{id:"11111111-1111-4111-8111-111111111113",serviced_on:date,item:"엔진오일",odometer_km:24500,cost_won:24000,user_id:userId}];
   const totals={};let fail=true,failVehicle=true,failMaintenance=true,failCycle=true,failDelete=true;
   const cycleWrites=[];
-  const vehicle={user_id:userId,vehicle_name:"PCX125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
+  const vehicle={user_id:userId,vehicle_name:"MY125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
   const cycles=[{user_id:userId,item_key:"엔진오일",interval_km:3000,interval_days:null}];
+  const modelSettings=[];
   const vehicleChanges=[];
   await context.routeWebSocket("**/realtime/**",socket=>socket.close());
   await context.route("**/*",async route=>{
@@ -36,7 +37,21 @@ async function run(browser,width,height){
         Object.assign(vehicle,payload);
         return route.fulfill({json:{user_id:userId}});
       }
-      if(table==="rider_maintenance_cycles" && route.request().method()!=="GET"){
+      if(table==="rider_model_maintenance_settings" && route.request().method()!=="GET"){
+         if(route.request().method()==="DELETE"){
+           const key=url.searchParams.get("model_key")?.replace("eq.","");
+           const part=url.searchParams.get("item_key")?.replace("eq.","");
+           const index=modelSettings.findIndex(x=>x.model_key===key&&x.item_key===part);
+           return route.fulfill({json:index<0?[]:modelSettings.splice(index,1)});
+         }
+         const incoming=route.request().postDataJSON();
+         for(const row of (Array.isArray(incoming)?incoming:[incoming])){
+           const index=modelSettings.findIndex(x=>x.model_key===row.model_key&&x.item_key===row.item_key);
+           if(index<0)modelSettings.push(row);else modelSettings[index]={...modelSettings[index],...row};
+         }
+         return route.fulfill({json:modelSettings});
+       }
+       if(table==="rider_maintenance_cycles" && route.request().method()!=="GET"){
         if(failCycle){failCycle=false;return route.fulfill({status:503,json:{message:"테스트 주기 저장 실패"}});}
         for(const payload of route.request().postDataJSON()){
           cycleWrites.push(payload);
@@ -66,7 +81,8 @@ async function run(browser,width,height){
       }
       const data={user,trips,maintenance_logs:[...records].sort((a,b)=>b.serviced_on.localeCompare(a.serviced_on)),
         rider_earnings:Object.entries(totals).map(([platform,amount])=>({platform,gross_won:amount||0,gross_entered:amount!=null})),
-        rider_vehicle_profiles:vehicle,rider_maintenance_cycles:cycles}[table]??[];
+        rider_vehicle_profiles:vehicle,rider_maintenance_cycles:cycles,
+         rider_model_maintenance_settings:modelSettings}[table]??[];
       return route.fulfill({json:data});
     }
     if(["tiles.openfreemap.org","cdn.jsdelivr.net","tile.openstreetmap.org"].includes(url.hostname))return route.continue();
@@ -122,7 +138,9 @@ async function run(browser,width,height){
     await dialog.getByRole("button",{name:"계기판 저장"}).click();
     await page.getByText("25,700 km",{exact:true}).first().waitFor();
     assert.equal(vehicle.odometer_recorded_on,"2026-11-17");
-    await page.getByRole("button",{name:"차량명 수정",exact:true}).click();
+    await page.getByRole("button",{name:"모델 선택",exact:true}).click();
+    const picker=page.getByRole("dialog",{name:"바이크 모델 선택"});
+    await picker.getByRole("button",{name:"목록에 없는 차량 직접 입력"}).click();
     await dialog.getByLabel("차량명").fill("PCX125 라이더");
     await dialog.getByRole("button",{name:"차량명 저장"}).click();
     await page.getByRole("heading",{name:"PCX125 라이더"}).waitFor();
@@ -287,6 +305,43 @@ async function run(browser,width,height){
     await page.evaluate(()=>window.__rsOpenTool("maintenance"));
     await page.locator(".bike-vehicle").waitFor();
     assert.equal(await page.locator("section#rs-tools:not([hidden])").count(),0,"legacy maintenance route is redirected");
+    // A 2025 PCX manufacturer interval and model-specific budget appear without
+    // writing fictitious maintenance or overriding the current odometer.
+    await nav("내 바이크");
+    const countBefore=records.length,odometerBefore=vehicle.odometer_km;
+    await page.getByRole("button",{name:"모델 선택",exact:true}).click();
+    const chooseModel=page.getByRole("dialog",{name:"바이크 모델 선택"});
+    await chooseModel.getByLabel("모델 검색").fill("PCX125");
+    await chooseModel.getByRole("button",{name:"혼다 PCX125 (2021~) 선택"}).click();
+    await chooseModel.waitFor({state:"hidden"});
+    assert.equal(vehicle.model_key,"honda-pcx125");
+    assert.equal(vehicle.odometer_km,odometerBefore,"model selection must preserve odometer");
+    assert.equal(records.length,countBefore,"model selection cannot create fake repairs");
+    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
+    const modelOil=page.getByRole("dialog",{name:"엔진오일 관리"});
+    await modelOil.getByText("6,000 km",{exact:true}).waitFor();
+    await modelOil.getByRole("button",{name:"주기 수정"}).click();
+    const modelOilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
+    assert.equal(await modelOilCycle.getByLabel("교체 거리 (km)").inputValue(),"6000");
+    assert.ok(Number(await modelOilCycle.getByLabel("예상 교체 비용 (원)").inputValue())>0,
+      "estimated price is prefilled in the model editor");
+    await modelOilCycle.getByLabel("교체 거리 (km)").fill("2600");
+    await modelOilCycle.getByLabel("예상 교체 비용 (원)").fill("24000");
+    await modelOilCycle.getByRole("button",{name:"주기·비용 저장"}).click();
+    await modelOilCycle.waitFor({state:"hidden"});
+    assert.equal(modelSettings.find(x=>x.model_key==="honda-pcx125"&&x.item_key==="엔진오일").interval_km,2600);
+    await modelOil.getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("button",{name:"모델 선택",exact:true}).click();
+    await chooseModel.getByLabel("모델 검색").fill("NMAX125");
+    await chooseModel.getByRole("button",{name:"야마하 NMAX125 선택"}).click();
+    await chooseModel.waitFor({state:"hidden"});
+    assert.equal(vehicle.model_key,"yamaha-nmax125");
+    assert.equal(modelSettings.find(x=>x.model_key==="honda-pcx125"&&x.item_key==="엔진오일").interval_km,2600,
+      "previous bike edits remain scoped to previous model");
+    await page.getByRole("button",{name:"구동벨트 관리"}).click();
+    const nmaxBelt=page.getByRole("dialog",{name:"구동벨트 관리"});
+    await nmaxBelt.getByText("18,000 km",{exact:true}).waitFor();
+    await nmaxBelt.getByRole("button",{name:"닫기"}).click();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
