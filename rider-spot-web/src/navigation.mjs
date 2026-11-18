@@ -62,7 +62,10 @@ export function createNavigationController(win = window) {
     if (disposed) return;
     const top = overlays.at(-1);
     if (top && history.state?.[LAYER] !== top.marker) {
-      top.dismiss();
+      const handled = top.dismiss();
+      // Do not lose the sheet's history entry while a database write is busy.
+      if (handled === false)
+        history.pushState(copy({ [LAYER]: top.marker }), "", win.location?.href);
       return;
     }
     const record = history.state?.[KEY];
@@ -94,6 +97,8 @@ export function createNavigationController(win = window) {
   const key = event => {
     if (event.key !== "Escape" || event.defaultPrevented) return;
     if (event.target?.closest?.("input,textarea,[contenteditable=true]")) return;
+    // Native dialogs, map sheets and modals own Escape themselves.
+    if (win.document?.querySelector?.("dialog[open],.modal-backdrop,.rs-sheet-backdrop,[role=dialog]")) return;
     // Native Android Back is managed via history; Escape supports desktop/keyboard.
     event.preventDefault();
     back();
