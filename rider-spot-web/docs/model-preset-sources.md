@@ -21,6 +21,19 @@
    https://www.manualzz.com/doc/91139001/yamaha-nmax-125-scooter-owner-s-manual
    - V-belt indicator interval of 18,000 km; verify the exact year/market model.
 
+### Additional manufacturer references
+
+- Honda ADV160 2026 Japan (first 1,000 km, subsequently 6,000 km / 1 year):
+  https://www.honda.co.jp/customer/motor/adv160/faq/qa009/
+- Honda Super Cub 110 Japan owner manual (first 1,000 km, subsequently 3,000 km / 1 year):
+  https://www.honda.co.jp/ownersmanual/pdf/motor/supercub110/30K887000_web.pdf
+- Honda CT125 Japan owner manual (3,000 km / 1 year):
+  https://webom.hondamotopub.com/webom/HMJ/K2E250/html/JSC002001.html
+- Honda Dio110 Japan owner manual (3,000 km / 1 year):
+  https://webom.hondamotopub.com/webom/HMJ/K2C250/html/JSC002001.html
+
+For electric scooters, do not quote starter-battery prices as traction-battery replacement costs. Traction batteries remain marked *quote required* until verified model/pack-specific prices are available.
+
 ## Korean cost references
 
 - https://ddalbae.kr/guide/repair-cost-guide
