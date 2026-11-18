@@ -125,7 +125,7 @@ async function run(browser,width,height){
     await page.locator(".bike-consumables").waitFor();
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","root Back never switches tabs");
     await nav("타임라인");
-    await page.locator(".ride-launch button").waitFor();
+    await page.locator(".rs33-timeline").waitFor();
     await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
     assert.equal(await cards.first().locator(".bike-tile-cycle").count(),0,"card omits the configured cycle and its origin");
