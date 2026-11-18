@@ -154,7 +154,7 @@ export function createRecords(R, client) {
         {className:"record-close","aria-label":"닫기",disabled:busy}));
     const footer = detail ? (action && h("footer",null,btn(action.label,action.onClick,{className:"record-primary"}))) :
       h("footer",null,error && h("p",{role:"alert"},error),
-        h("button",{className:"record-primary",type:"submit",disabled:busy},busy?"저장 중…":submit),footerExtra));
+        h("button",{className:"record-primary",type:"submit",disabled:busy},busy?"저장 중…":submit),footerExtra);
     const props = {className:"record-sheet"};
     if (!detail) props.onSubmit = async event => {
       event.preventDefault();
