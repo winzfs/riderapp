@@ -281,6 +281,16 @@ export function createTimeline(S, Zo, Income) {
       [dailyStamps, showEvents, showStamps],
     );
     const onStamp = S.useCallback((stamp) => setFocused(stamp), []);
+    // One hardware Back closes the individual trip before leaving Timeline.
+    S.useEffect(() => {
+      if (!selected) return;
+      return window.__rsNavigation?.registerLayer("timeline-trip", () => {
+        setSelected(null);
+        setExpanded(false);
+        setFocused(null);
+        setRoadPreview(null);
+      });
+    }, [selected]);
     S.useEffect(() => {
       if (!expanded) return;
       const previous = document.body.style.overflow;
@@ -289,7 +299,9 @@ export function createTimeline(S, Zo, Income) {
         if (event.key === "Escape") setExpanded(false);
       };
       window.addEventListener("keydown", close);
+      const unregister = window.__rsNavigation?.registerLayer("timeline-full-map", () => setExpanded(false));
       return () => {
+        unregister?.();
         document.body.style.overflow = previous;
         window.removeEventListener("keydown", close);
       };

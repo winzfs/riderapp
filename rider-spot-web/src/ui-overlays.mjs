@@ -21,7 +21,12 @@ export function openMapSheet(content, title, onDispose) {
   document.body.append(backdrop);
   const overflow = document.body.style.overflow;
   document.body.style.overflow = "hidden";
+  let unregister;
+  let closing = false;
   const cleanup = () => {
+    if (closing) return;
+    closing = true;
+    unregister?.();
     backdrop.remove();
     document.body.style.overflow = overflow;
     document.removeEventListener("keydown", key);
@@ -56,6 +61,7 @@ export function openMapSheet(content, title, onDispose) {
   };
   document.addEventListener("keydown", key);
   window.addEventListener("riderspot:screen", cleanup);
+  unregister = window.__rsNavigation?.registerLayer("map-sheet", cleanup);
   activeClose = cleanup;
   close.focus();
   return cleanup;

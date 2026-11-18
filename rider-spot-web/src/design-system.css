@@ -1738,3 +1738,34 @@ svg.rs-icon{flex:none;vertical-align:middle}
   .record-sheet .record-primary,.record-sheet .record-cycle-save,.bike-page .bike-tile,
   .app .bottom-nav button{transition:none!important}
 }
+
+
+/* v187 native-feeling transitions; no transform on Leaflet maps or GPS layers. */
+@media(prefers-reduced-motion:no-preference){
+  .app .bike-page,.app .trip-page,.app .rs-profile-page,.app .rc-community,
+  .app .rs-tools-route,.app .rs33-timeline{
+    animation:rs187-page-arrive 255ms cubic-bezier(.22,.8,.26,1) both;
+  }
+  @keyframes rs187-page-arrive{
+    from{opacity:.72;transform:translate3d(0,9px,0)}
+    to{opacity:1;transform:translate3d(0,0,0)}
+  }
+  .rs-sheet-backdrop,.modal-backdrop{animation:rs187-layer-fade 200ms ease-out both}
+  .rs-map-sheet,.modal{animation:rs187-overlay-up 245ms cubic-bezier(.18,.87,.24,1) both}
+  @keyframes rs187-layer-fade{from{opacity:0}to{opacity:1}}
+  @keyframes rs187-overlay-up{from{transform:translate3d(0,20px,0);opacity:.82}to{transform:translate3d(0,0,0);opacity:1}}
+  .rs-work-hub button,.rs59-course-tools button,.rc-feed-row,
+  .record-sheet .record-log,.record-sheet .record-part{
+    transition:transform 160ms cubic-bezier(.2,.8,.3,1),background-color 170ms ease,border-color 170ms ease;
+  }
+  @media(hover:none) {
+    .rs-work-hub button:active,.rs59-course-tools button:active,
+    .record-sheet .record-log:active,.record-sheet .record-part:active{transform:scale(.985)}
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .app .bike-page,.app .trip-page,.app .rs-profile-page,.app .rc-community,
+  .app .rs-tools-route,.app .rs33-timeline,.rs-map-sheet,.modal,.rs-sheet-backdrop,.modal-backdrop {
+    animation:none!important;transition:none!important;
+  }
+}

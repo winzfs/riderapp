@@ -123,7 +123,9 @@ export function createUI(React) {
         }
       };
       node.addEventListener("keydown", key);
+      const unregister = window.__rsNavigation?.registerLayer("app-modal", () => close.current?.());
       return () => {
+        unregister?.();
         node.removeEventListener("keydown", key);
         document.body.style.overflow = overflow;
         if (previous?.isConnected) previous.focus();
