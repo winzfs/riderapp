@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 const {sampleTrip,userId} = require("./fixtures.cjs");
-const origin="https://rider-spot.jazzhjm.workers.dev";
+const origin=process.env.RIDER_TEST_ORIGIN || "https://rider-spot.jazzhjm.workers.dev";
 const date="2026-11-16";
 const local=path.resolve(__dirname,"../dist");
 const shots=process.env.RIDER_SCREENSHOTS;
@@ -110,7 +110,7 @@ async function run(browser,width,height){
   const shot=async name=>{if(shots){fs.mkdirSync(shots,{recursive:true});await page.screenshot({path:path.join(shots,width+"-"+name+".png")});}};
   const nav=name=>page.locator(".bottom-nav").getByRole("button",{name,exact:true}).click();
   try {
-    await page.goto(origin,{waitUntil:"domcontentloaded"});
+    await page.goto(origin,{waitUntil:"domcontentloaded",timeout:30000});
     try { await page.locator(".ride-launch button").waitFor(); }
     catch(e){
       console.error("BOOT DIAGNOSTICS",{errors,body:(await page.locator("body").innerText()).slice(0,700),
