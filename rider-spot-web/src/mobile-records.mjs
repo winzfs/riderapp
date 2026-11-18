@@ -235,6 +235,7 @@ export function createRecords(R, client) {
         const changes={};
         for(const p of platforms){const v=draft[p]===""?null:Number(draft[p]); if(v!==(values[p]??null))changes[p]=v;}
         await read(client.rpc("set_rider_daily_income",{p_date:day,p_values:changes}));
+        window.dispatchEvent(new CustomEvent("riderspot:finance-changed",{detail:{userId:user.id}}));
         refresh(n=>n+1);
       }},platforms.map((p,i)=>field(p+" (원)",{key:p,name:p,inputMode:"numeric",enterKeyHint:i?"done":"next",placeholder:"미입력",value:draft[p]===""?"":number(draft[p]),
         onKeyDown:event=>{if(!i && event.key==="Enter"){event.preventDefault();event.target.form.elements.namedItem(platforms[1]).focus();}},
@@ -622,6 +623,7 @@ export function createRecords(R, client) {
           {...(current.rows.find(row=>row.id===payload.id)||{created_at:new Date().toISOString()}),...payload},
           ...current.rows.filter(row=>row.id!==payload.id)])
       } : current);
+      window.dispatchEvent(new CustomEvent("riderspot:finance-changed",{detail:{userId:user.id}}));
       refresh(n=>n+1);
     };
     R.useEffect(()=>{
