@@ -12,10 +12,10 @@ const worker=`export default { async fetch(request) {
   if(url.pathname==="/api/status"){
     let status=0,reachable=false;
     try {
-      const result=await fetch("https://rider-spot.jazzhjm.workers.dev/",{method:"HEAD",redirect:"follow",signal:AbortSignal.timeout(6000)});
-      status=result.status;reachable=result.ok;
+      const result=await fetch("https://rider-spot.jazzhjm.workers.dev/",{method:"GET",redirect:"follow",signal:AbortSignal.timeout(6000)});
+      status=result.status;reachable=result.ok;if(result.body)result.body.cancel();
     } catch(_) {}
-    return new Response(JSON.stringify({reachable,status,checked_at:new Date().toISOString(),method:"HEAD"}),{headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
+    return new Response(JSON.stringify({reachable,status,checked_at:new Date().toISOString(),method:"GET"}),{headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
   }
   if(url.pathname!=="/"&&url.pathname!=="/index.html")return new Response("Not Found",{status:404});
   return new Response(${JSON.stringify(html)},{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache","x-robots-tag":"noindex, nofollow","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
