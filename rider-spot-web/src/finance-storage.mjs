@@ -56,18 +56,22 @@ export async function saveIncomeDay(client,{userId,day,draft,previous}){
   return {changed:true,changes};
 }
 export async function saveIncomeRecord(client,{userId,id=null,day,platform,gross,
-  deliveries=0,expenses=0,note="",expectedUpdated=null}){
+  deliveries=0,expenses=0,promo=0,tip=0,note="",expectedUpdated=null}){
   incomeDay(day);
   if(!["쿠팡이츠","배민","기타","배민커넥트"].includes(platform))
     throw Error("플랫폼을 확인해 주세요.");
   const amount=amountWon(gross),expenseAmount=amountWon(expenses);
+  const promoAmount=amountWon(promo),tipAmount=amountWon(tip);
+  if(promoAmount+tipAmount>amount)
+    throw Error("프로모션과 팁 합계가 총수익을 넘었어요. 총수익에 포함된 금액만 입력해 주세요.");
   const count=Number(deliveries);
   if(!Number.isSafeInteger(count)||count<0||count>300||String(note).length>300)
     throw Error("건수와 메모를 확인해 주세요.");
   if(id&&!expectedUpdated)throw Error("기존 기록을 새로 조회한 뒤 수정해 주세요.");
-  const result=await client.rpc("rs_save_income_record",{
+  const result=await client.rpc("rs_save_income_with_components",{
     p_id:id,p_date:day,p_platform:platform,p_gross:amount,p_deliveries:count,
-    p_expenses:expenseAmount,p_note:String(note),p_expected_updated:expectedUpdated
+    p_expenses:expenseAmount,p_note:String(note),p_expected_updated:expectedUpdated,
+    p_promo:promoAmount,p_tip:tipAmount
   });
   if(result.error)throw Error(financeWriteError(result.error));
   emitFinanceChanged(userId);

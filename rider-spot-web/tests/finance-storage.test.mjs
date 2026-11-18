@@ -34,11 +34,13 @@ test("finance detailed edits send expected record revision and never invent user
   const client={rpc:async(name,args)=>{calls.push({name,args});return {data:"saved-uuid",error:null};}};
   const saved=await saveIncomeRecord(client,{userId:"test-rider",id:"record-id",
     day:"2026-11-19",platform:"쿠팡이츠",gross:"85,000",deliveries:12,
-    expenses:"3,000",note:"test",expectedUpdated:"2026-11-18T11:00:00+00:00"});
+    expenses:"3,000",promo:"5,000",tip:"1,000",note:"test",expectedUpdated:"2026-11-18T11:00:00+00:00"});
   assert.equal(saved,"saved-uuid");
-  assert.equal(calls[0].name,"rs_save_income_record");
+  assert.equal(calls[0].name,"rs_save_income_with_components");
   assert.equal(calls[0].args.p_gross,85000);
   assert.equal(calls[0].args.p_expenses,3000);
+  assert.equal(calls[0].args.p_promo,5000);
+  assert.equal(calls[0].args.p_tip,1000);
   assert.equal(calls[0].args.p_expected_updated,"2026-11-18T11:00:00+00:00");
   assert.throws(()=>incomeDayDiff({쿠팡이츠:"bad"},{}));
   await assert.rejects(saveIncomeRecord(client,{id:"record-id",day:"2026-11-19",
@@ -52,4 +54,15 @@ test("save conflicts do not issue successful commit events",async()=>{
   assert.match(financeWriteError({message:"RS_DUPLICATE_DAY_PLATFORM"}),/기록/);
   assert.match(financeWriteError({message:"RS_SETTLED_INCOME"}),/입금 확인/);
   assert.equal(messages,0);
+});
+
+test("promotion and tips are a breakdown inside gross, never an extra earning",async()=>{
+  let calls=0;
+  const client={rpc:async()=>{calls++;return {data:"row",error:null};}};
+  await assert.rejects(()=>saveIncomeRecord(client,{day:"2026-11-19",
+    platform:"배민",gross:10000,promo:7000,tip:4000}),/총수익/);
+  assert.equal(calls,0,"inconsistent breakdown must be rejected before the RPC");
+  assert.equal(await saveIncomeRecord(client,{day:"2026-11-19",
+    platform:"배민",gross:10000,promo:2000,tip:1000}),"row");
+  assert.equal(calls,1);
 });

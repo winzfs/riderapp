@@ -111,7 +111,9 @@ export function createFinance(R, client) {
             h("details",{className:"fin-optional"},h("summary",null,"날짜 · 건수 · 기타"),
               dateInput("업무일","work_date",row.work_date||editor.day),
               input("배달 건수","deliveries","number",row.deliveries??"",false,{min:0,max:300}),
-              amountInput("수익에 포함되지 않은 기타 비용","expenses_won",row.expenses_won??null,false),
+              amountInput("프로모션 · 총수익에 포함","promo_won",row.promo_won??null,false),
+              amountInput("팁 · 총수익에 포함","tip_won",row.tip_won??null,false),
+              amountInput("수익에서 별도 차감할 업무 비용","expenses_won",row.expenses_won??null,false),
               input("메모","note","text",row.note||"",false,{maxLength:300}))),
           kind==="fuel"&&h(R.Fragment,null,
             dateInput("주유 날짜","fueled_on",row.fueled_on||editor.day),
@@ -289,9 +291,13 @@ export function createFinance(R, client) {
           values={work_date:v("work_date"),platform:v("platform"),gross_won:amount,gross_entered:true,
             deliveries:Number(v("deliveries")||0),note:v("note"),
             expenses_won:Number(moneyValue("expenses_won")||0),
+            promo_won:Number(moneyValue("promo_won")||0),
+            tip_won:Number(moneyValue("tip_won")||0),
             expense_scope:row?.expense_scope||"other_only"};
           if(!Number.isSafeInteger(values.deliveries)||values.deliveries<0||values.deliveries>300||
-            !safeAmount(values.expenses_won))throw Error("건수 또는 기타 비용을 확인해 주세요.");
+            !safeAmount(values.expenses_won)||!safeAmount(values.promo_won)||
+            !safeAmount(values.tip_won)||values.promo_won+values.tip_won>amount)
+            throw Error("건수·비용·총수익에 포함된 프로모션과 팁을 확인해 주세요.");
         }else if(kind==="fuel"){
           table="rider_fuel_logs";
           values={fueled_on:v("fueled_on"),cost_won:amount,note:v("note")};
@@ -344,7 +350,8 @@ export function createFinance(R, client) {
           if(row){
             await saveIncomeRecord(client,{userId:user.id,id:row.id,
               day:values.work_date,platform:values.platform,gross:amount,
-              deliveries:values.deliveries,expenses:values.expenses_won,note:values.note,
+              deliveries:values.deliveries,expenses:values.expenses_won,
+              promo:values.promo_won,tip:values.tip_won,note:values.note,
               expectedUpdated:row.updated_at});
           }else{
             const matches=(data?.earnings||[]).filter(x=>x.work_date===values.work_date &&
@@ -352,7 +359,8 @@ export function createFinance(R, client) {
             const previous=matches.filter(x=>x.gross_entered!==false)
               .reduce((n,x)=>n+Number(x.gross_won||0),0);
             const hasExisting=matches.length>0;
-            const detailed=values.deliveries>0||values.expenses_won>0||!!values.note;
+            const detailed=values.deliveries>0||values.expenses_won>0||
+              values.promo_won>0||values.tip_won>0||!!values.note;
             if(hasExisting){
               if(!["쿠팡이츠","배민"].includes(values.platform)||detailed)
                 throw Error("기존 수익의 세부 내용을 변경하려면 내역에서 해당 기록을 선택해 주세요.");
@@ -366,7 +374,7 @@ export function createFinance(R, client) {
             }else{
               await saveIncomeRecord(client,{userId:user.id,day:values.work_date,
                 platform:values.platform,gross:amount,deliveries:values.deliveries,
-                expenses:values.expenses_won,note:values.note});
+                expenses:values.expenses_won,promo:values.promo_won,tip:values.tip_won,note:values.note});
             }
           }
           try{localStorage.setItem("rs:finance-platform:"+user.id,values.platform);}catch{}
