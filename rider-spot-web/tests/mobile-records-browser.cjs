@@ -122,8 +122,10 @@ async function run(browser,width,height){
     await shot("bike");
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","native and browser routing controller initialized");
     await page.goBack();
+    await page.locator(".bike-consumables").waitFor();
+    assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","root Back never switches tabs");
+    await nav("운행");
     await page.locator(".ride-launch button").waitFor();
-    assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"nearby","hardware/browser Back restores the preceding tab");
     await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
     assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
