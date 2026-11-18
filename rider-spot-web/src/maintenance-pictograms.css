@@ -118,3 +118,7 @@
   .bike-page .bike-tile-icon .bike-part-svg{width:48px!important;height:48px!important}
   .record-sheet .record-parts legend{padding-right:98px}
 }
+
+/* Ensure the real SVG image remains visible in history rows and every tile. */
+.bike-page .bike-row .bike-item-icon img.bike-part-svg{display:block!important}
+.bike-part-svg{object-fit:contain!important;max-width:none!important}
