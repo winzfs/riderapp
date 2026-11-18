@@ -165,6 +165,20 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     if(smokeOnly){
       await nav("수익");
       await page.locator(".fin-hero-amount").waitFor();
+      const cardStyle=await page.locator(".fin-card>header").first().evaluate(el=>{
+        const c=getComputedStyle(el),rect=el.getBoundingClientRect();
+        return {height:rect.height,background:c.backgroundColor,color:c.color,padding:c.paddingLeft};
+      });
+      assert.ok(cardStyle.height<=44,"no 78px legacy title bar "+JSON.stringify(cardStyle));
+      assert.ok(cardStyle.background==="rgba(0, 0, 0, 0)"||cardStyle.background==="transparent",
+        "finance cards must not inherit black header background: "+JSON.stringify(cardStyle));
+      const panels=await page.evaluate(()=>({
+        goal:document.querySelector(".fin-goal")?.getBoundingClientRect().height,
+        platform:document.querySelector(".fin-platform-card")?.getBoundingClientRect().height,
+        chart:document.querySelector(".fin-chart-card")?.getBoundingClientRect().height
+      }));
+      assert.ok(panels.goal<240&&panels.platform<220&&panels.chart<275,
+        "dashboard cards must adapt to contents: "+JSON.stringify(panels));
       await shot("finance-responsive");
       const measures=await page.evaluate(()=>({
         vw:innerWidth,scroll:document.documentElement.scrollWidth,
@@ -456,6 +470,10 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     // Finance regression: two-field default, thousand separators and per-user draft recovery.
     await nav("수익");
     await page.locator(".finance-page .fin-hero-amount").waitFor();
+    assert.equal(await page.locator(".fin-platform-card>header small").innerText(),
+      "2026년 11월 기준","platform totals need an explicit monthly range");
+    assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("쿠팡이츠")),
+      "the monthly platform card must still show recorded earnings when today is 0");
     await page.getByRole("button",{name:"수익 입력",exact:true}).click();
     const financeDialog=page.getByRole("dialog",{name:"수익 입력"});
     await financeDialog.waitFor();
