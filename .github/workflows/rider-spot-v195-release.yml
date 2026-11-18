@@ -1,4 +1,4 @@
-name: Rider Spot v195 publish tested image assets
+name: Rider Spot v195 publish tested PNG assets
 on:
   push:
     branches: [feature/rider-spot-native-apk]
