@@ -45,7 +45,7 @@ export function createFinance(R, client) {
       return window.__rsNavigation.registerLayer("finance-sheet",()=>closer.current());
     },[]);
     const row=editor.row||{},kind=editor.kind;
-    const name=kind==="income"?"수익":kind==="fuel"?"주유비":kind==="expense"?"기타 지출":"월 목표";
+    const name=kind==="income"?"수익":kind==="fuel"?"주유비":kind==="expense"?"기타 지출":kind==="settlement"?"실제 입금":"월 목표";
     return h("dialog",{ref,className:"fin-dialog","aria-label":name+" 입력",
       onCancel:e=>{e.preventDefault();if(!busy)close();},
       onClick:e=>{if(e.target===e.currentTarget&&!busy)close();}},
@@ -77,6 +77,11 @@ export function createFinance(R, client) {
             input("지출 금액 (원)","amount_won","number",row.amount_won??"",true,{min:1,max:100000000,placeholder:"예: 6500"}),
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
             txt("p","fin-hint","주유비·정비비는 각각의 기존 장부에서 기록해 주세요. 비용이 두 번 잡히지 않도록 분리합니다.")),
+          kind==="settlement"&&h(R.Fragment,null,
+            txt("p","fin-hint",row.platform+" · "+row.work_date+" 수익 "+money(row.gross_won)+" 기준"),
+            dateInput("실제 입금 날짜","paid_at",row.paid_at||editor.day),
+            input("실제 입금 금액 (원)","paid_won","number",row.paid_won??row.gross_won,true,{min:0,max:100000000}),
+            txt("p","fin-hint","수입 금액과 실제 입금액이 다르면 차액을 정산 화면에 표시합니다.")),
           kind==="goal"&&h(R.Fragment,null,
             input("월 수익 목표 (원)","monthly_target_won","number",row.monthly_target_won??3000000,true,{min:0,max:100000000,step:10000}),
             input("한 달 근무 예정일","planned_work_days","number",row.planned_work_days??25,true,{min:1,max:31}),
@@ -149,7 +154,7 @@ export function createFinance(R, client) {
     async function save(form) {
       if(!user||busy||!editor)return;
       const f=new FormData(form),v=k=>String(f.get(k)||"").trim();
-      const amount=Number(v(editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":editor.kind==="expense"?"amount_won":"monthly_target_won"));
+      const amount=Number(v(editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":editor.kind==="expense"?"amount_won":editor.kind==="settlement"?"paid_won":"monthly_target_won"));
       if(!safeAmount(amount) || (editor.kind==="fuel"&&amount===0) || (editor.kind==="expense"&&amount===0)){
         setSheetError("0~1억 원 범위의 올바른 금액을 입력해 주세요.");return;
       }
@@ -171,6 +176,10 @@ export function createFinance(R, client) {
           if(v("liters")){values.liters=Number(v("liters"));
             if(!(values.liters>0&&values.liters<=150))throw Error("주유량을 확인해 주세요.");}
           else values.liters=null;
+        }else if(kind==="settlement"){
+          table="rider_earnings";
+          if(!row?.id||!v("paid_at"))throw Error("입금 날짜를 확인해 주세요.");
+          values={paid_at:v("paid_at"),paid_won:amount};
         }else if(kind==="expense"){
           table="rider_extra_expenses";
           values={expense_date:v("expense_date"),category:v("category"),amount_won:amount,memo:v("memo")};
@@ -210,13 +219,13 @@ export function createFinance(R, client) {
       finally{setBusy(false);}
     }
     async function paid(row) {
-      if(!user||busy)return;
+      if(!user||busy||!row.paid_at||!window.confirm("입금 확인을 취소할까요?"))return;
       setBusy(true);
       try{const r=await client.from("rider_earnings")
-        .update({paid_at:row.paid_at?null:today}).eq("id",row.id)
+        .update({paid_at:null,paid_won:null}).eq("id",row.id)
         .eq("user_id",user.id).select("id");
         if(r.error)throw r.error;if(!r.data?.length)throw Error("정산 기록이 변경됐어요.");
-        setNotice(row.paid_at?"입금 표시를 취소했어요.":"입금을 확인으로 표시했어요.");
+        setNotice("입금 표시를 취소했어요.");
         refresh(n=>n+1);
       }catch(e){setNotice(e?.message||"정산 상태를 변경하지 못했어요.");}
       finally{setBusy(false);}
@@ -338,14 +347,15 @@ export function createFinance(R, client) {
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
           button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
         h("div",{className:"fin-stat-grid"},
-          moneyStat("입금 확인 표시",money(monthly.paid),"paid"),
+          moneyStat("기록된 실제 입금액",money(monthly.paid),"paid"),
           moneyStat("미확인 수익",money(monthly.unpaid))),
-        txt("p","fin-muted","플랫폼 계좌 내역과 자동 연동되지 않습니다. 수입 기록별로 실제 입금 여부를 직접 표시하는 장부예요."),
+        txt("p","fin-muted","플랫폼 계좌 내역과 자동 연동되지 않습니다. 실제 입금일과 금액을 수동 입력하는 장부입니다. 이전 입금 확인 기록에 금액이 없다면 기존 수익액으로 가정해 표시합니다."),
+        monthly.payoutDifference!==0&&txt("p","fin-warning","수익으로 기록한 금액과 확인된 입금액 차이: "+money(monthly.payoutDifference)),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"플랫폼별 정산 현황")),
           ...Object.entries(monthly.byPlatform).map(([p,g])=>{
             const settled=rows.filter(x=>(x.platform==="배민커넥트"?"배민":x.platform)===p&&x.paid_at)
-              .reduce((n,x)=>n+num(x.gross_won),0);
+              .reduce((n,x)=>n+num(x.paid_won??x.gross_won),0);
             return h("div",{className:"fin-settlement-platform",key:p},
               txt("strong",null,p),txt("small",null,money(settled)+" 확인 / "+money(g)+" 수익"),
               h("div",{className:"fin-bar-track"},h("div",{className:"fin-bar-value",
@@ -355,9 +365,11 @@ export function createFinance(R, client) {
         h("section",{className:"fin-card"},h("header",null,h("h2",null,"입금 확인 내역")),
           ...rows.map(x=>h("div",{className:"fin-settlement-row",key:x.id},
             h("div",null,txt("strong",null,x.platform+" · "+money(x.gross_won)),
-              txt("small",null,x.work_date+(x.paid_at?" · 입금일 "+x.paid_at:" · 미확인"))),
-            button(x.paid_at?"확인 취소":"입금 확인",()=>paid(x),
-              "fin-paid-btn"+(x.paid_at?" completed":""),{disabled:busy}))))));
+              txt("small",null,x.work_date+(x.paid_at?" · 입금일 "+x.paid_at+" · "+money(x.paid_won??x.gross_won):" · 미확인"))),
+            h("div",{className:"fin-settlement-actions"},
+              button(x.paid_at?"입금 수정":"입금 입력",()=>openEditor("settlement",x),
+                "fin-paid-btn"+(x.paid_at?" completed":""),{disabled:busy}),
+              x.paid_at&&button("확인 취소",()=>paid(x),"fin-textbtn fin-danger",{disabled:busy})))))));
     }
     function analysis() {
       const days=[];
