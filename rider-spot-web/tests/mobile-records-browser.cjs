@@ -258,7 +258,7 @@ async function run(browser,width,height){
     await confirmDelete.waitFor({state:"hidden"});
     await editForDelete.waitFor({state:"hidden"});
     assert.equal(records.length,3,"delete removes exactly the selected service record");console.log("PASS single record deletion",width);
-    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("기록 없음").waitFor();
+    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("40,000 km 기준",{exact:true}).waitFor();
     assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
     await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
     const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리"});
