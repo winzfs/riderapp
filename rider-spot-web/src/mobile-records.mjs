@@ -647,6 +647,16 @@ export function createRecords(R, client) {
       }
       return ()=>{active=false;};
     },[user?.id,revision]);
+    R.useEffect(()=>{
+      const pending=window.__rsFinanceMaintenance;
+      if(!user||!data||!pending||pending.userId!==user.id)return;
+      // Resolve by original record UUID after the bike view finishes loading.
+      const record=data.rows.find(row=>row.id===pending.id);
+      window.__rsFinanceMaintenance=null;
+      if(!record)return;
+      if(pending.mode==="edit")setEditor({row:record});
+      else setDetailItem(itemsOf(record)[0]||record.item);
+    },[user?.id,data]);
     const rows=data?.rows||[],vehicle=data?.vehicle,cycles=data?.cycles||[];
     const modelSettings=data?.modelSettings||[];
     const model=findBikeModel(vehicle?.model_key)||inferBikeModel(vehicle?.vehicle_name);
