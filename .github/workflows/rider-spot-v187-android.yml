@@ -1,0 +1,68 @@
+name: Rider Spot v187 native Back and motion APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['rider-spot-android/v187-back-patch.py','.github/workflows/rider-spot-v187-android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-v187-android
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack archived native source and patch navigation only
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-v187-android
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-v187-android
+          python3 rider-spot-android/v187-back-patch.py /tmp/rider-v187-android
+          FILE=/tmp/rider-v187-android/app/src/main/java/com/riderspot/android/MainActivity.java
+          grep -Fq 'window.__rsHandleBack' "$FILE"
+          grep -Fq 'confirmExitFromBack' "$FILE"
+          ! grep -Fq 'if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();' "$FILE"
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Native GPS and bridge regression tests (no data schema change)
+        working-directory: /tmp/rider-v187-android
+        run: node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin,java-version: '17'}
+      - name: Install Android 36 SDK
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Assemble installable Android debug APK
+        working-directory: /tmp/rider-v187-android
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Validate archive and persist upgraded native source
+        run: |
+          set -euo pipefail
+          test -s /tmp/rider-v187-android/app/build/outputs/apk/debug/app-debug.apk
+          tar -cJf rider-spot-android/source.tar.xz -C /tmp/rider-v187-android .
+          tar -tJf rider-spot-android/source.tar.xz | grep -q 'MainActivity.java'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rider-spot-android/source.tar.xz
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(android): delegate hardware Back to Rider Spot navigation stack [skip ci]"
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: RiderSpot-Android-v187-Navigation-debug
+          path: /tmp/rider-v187-android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
