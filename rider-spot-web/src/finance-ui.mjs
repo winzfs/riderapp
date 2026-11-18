@@ -473,6 +473,11 @@ export function createFinance(R, client) {
       [["overview","개요"],["records","내역"],["settlements","정산"],["analysis","분석"]]
         .map(([id,name])=>button(name,()=>setSection(id),
           "fin-subnav-btn"+(section===id?" selected":""),{key:id,"aria-current":section===id?"page":undefined})));
+    const chartBar=(value,max)=>h("svg",{viewBox:"0 0 20 100",
+      preserveAspectRatio:"none",className:"fin-svg-chart","aria-hidden":true},
+      h("rect",{x:2,y:100-Math.min(100,Math.max(0,value/max*100)),
+        width:16,height:Math.min(100,Math.max(0,value/max*100)),rx:3,
+        className:"fin-svg-chart-bar"}));
     function chart() {
       const selected=graph.find(x=>x.day===selectedChart);
       return h(R.Fragment,null,
@@ -482,8 +487,7 @@ export function createFinance(R, client) {
             key:x.day,onClick:()=>setSelectedChart(selectedChart===x.day?null:x.day),
             "aria-label":x.day+" 수익 "+money(x.gross),"aria-pressed":selectedChart===x.day},
             txt("small","fin-chart-value",x.gross?new Intl.NumberFormat("ko-KR",{notation:"compact",maximumFractionDigits:1}).format(x.gross):""),
-            h("span",{className:"fin-chart-track"},h("span",{className:"fin-chart-bar",
-              style:{height:x.gross?Math.max(3,x.gross/ceiling*100)+"%":"2px"}})),
+            h("span",{className:"fin-chart-track"},chartBar(x.gross,ceiling)),
             txt("small","fin-chart-date",dateLabel(x.day)),
             x.day===today&&h("span",{className:"fin-chart-today","aria-label":"오늘"})))),
         selected&&h("div",{className:"fin-chart-detail",role:"status"},
@@ -507,7 +511,13 @@ export function createFinance(R, client) {
         Array.from({length:31},(_,i)=>plusDays(monthFrom,i)).filter(x=>x<=monthTo);
       const rides=snapDays.map(day=>dailyRideSnapshot(window.__rsRideApi?.history,day));
       const duration=rides.reduce((n,x)=>n+num(x.durationMs),0),distance=rides.reduce((n,x)=>n+num(x.distanceKm),0);
+      const recordedDays=new Set(rides.filter(x=>x.trips>0&&x.durationMs>0&&x.distanceKm>0)
+        .map(x=>x.day));
+      const earningDays=new Set(totals.earnings.map(x=>x.work_date));
+      const complete=!!duration&&!!distance&&earningDays.size>0&&
+        [...earningDays].every(day=>recordedDays.has(day));
       const usable=!!duration&&!!distance;
+      const coverageLabel=complete?"운행 기록 기준":usable?"일부 운행만 기록됨":"기록 없음";
       return h("div",{className:"fin-stack"},
         h("div",{className:"fin-period"},
           scopeButton("today","오늘"),scopeButton("week","최근 7일"),scopeButton("month","월간")),
@@ -544,14 +554,15 @@ export function createFinance(R, client) {
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"최근 7일 수익")),chart()),
         h("details",{className:"fin-insights"},
-          h("summary",null,"운행 효율",h("span",null,usable?"운행 기록 기준":"기록 없음")),
+          h("summary",null,"운행 효율",h("span",null,coverageLabel)),
           h("div",{className:"fin-stat-grid"},
             moneyStat("운행 시간",duration?Math.round(duration/360000)/10+"시간":"기록 없음"),
-            moneyStat("시간당 수익",duration?money(totals.gross/(duration/3600000)):"계산 불가"),
+            moneyStat("시간당 수익",complete?money(totals.gross/(duration/3600000)):"계산 불가"),
             moneyStat("운행 거리",distance?distance.toFixed(1)+"km":"기록 없음"),
-            moneyStat("km당 수익",distance?money(totals.gross/distance):"계산 불가"),
-            moneyStat("시간당 비용 차감액",duration&&!totals.uncertain?money(totals.net/(duration/3600000)):"계산 불가"),
-            moneyStat("km당 비용 차감액",distance&&!totals.uncertain?money(totals.net/distance):"계산 불가"))));
+            moneyStat("km당 수익",complete?money(totals.gross/distance):"계산 불가"),
+            moneyStat("시간당 비용 차감액",complete&&!totals.uncertain?money(totals.net/(duration/3600000)):"계산 불가"),
+            moneyStat("km당 비용 차감액",complete&&!totals.uncertain?money(totals.net/distance):"계산 불가")),
+          !complete&&txt("p","fin-efficiency-note","수익이 있는 모든 업무일의 운행 시간과 거리가 기록되어야 효율을 계산해요.")));
     }
     function records() {
       const rows=financeLedger(data||emptyData,monthFrom,monthTo);
@@ -723,8 +734,7 @@ export function createFinance(R, client) {
               "aria-label":x.label+" 수익 "+money(x.gross),"aria-pressed":selectedAnalysis===x.key,
               onClick:()=>setSelectedAnalysis(selectedAnalysis===x.key?null:x.key)},
               txt("small","fin-chart-value",x.gross?new Intl.NumberFormat("ko-KR",{notation:"compact"}).format(x.gross):""),
-              h("span",{className:"fin-chart-track"},h("span",{className:"fin-chart-bar",
-                style:{height:x.gross?Math.max(3,x.gross/top*100)+"%":"2px"}})),
+              h("span",{className:"fin-chart-track"},chartBar(x.gross,top)),
               txt("small","fin-chart-date",x.label)))),
           selected&&h("div",{className:"fin-chart-detail",role:"status"},
             txt("strong",null,selected.label),
