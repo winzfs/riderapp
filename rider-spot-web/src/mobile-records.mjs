@@ -397,11 +397,12 @@ export function createRecords(R, client) {
           cycle?.interval_source==="manual"?"제조사 설명서 기준 · 연식 확인":
           "배달 운행 참고 기준 · 정비 상태를 먼저 확인하세요"),
         h("div",{className:"record-cycle-heading"},
-          h("strong",null,"교체 주기"),
+          h("strong",null,"추천 점검·교체 주기"),
           btn(cycle?.interval_km||cycle?.interval_days?"주기 수정":"주기 설정",()=>{
             if(cycleSaving)return;
             setCycleEditing(true);setCycleError("");
           },{className:"record-cycle-edit","aria-haspopup":"dialog",disabled:cycleSaving})),
+        h("p",{className:"bike-safety-message"},"거리 기준은 예상치입니다. 실제 마모·균열·제동 상태와 설명서를 먼저 확인하세요."),
         h("div",{className:"record-cycle-values"},
           h("span",null,"거리 ",h("b",null,cycle?.interval_km?number(cycle.interval_km)+" km":"미설정")),
           h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정")))),
@@ -548,7 +549,11 @@ export function createRecords(R, client) {
         const distance=Number(value);
         if(!/^\d{1,7}$/.test(value)||!Number.isSafeInteger(distance)||distance>9999999)
           throw Error("계기판 거리를 0~9,999,999km 사이로 입력해 주세요.");
-        payload={odometer_km:distance};
+        // Absolute manual correction supersedes earlier unfinished syncs.
+        await read(client.rpc("set_rider_manual_odometer",{p_km:distance}));
+        window.dispatchEvent(new Event("riderspot:odometer-retry"));
+        changed();
+        return;
       }else{
         if(!value||value.length>40)throw Error("차량명을 1~40자로 입력해 주세요.");
         payload={vehicle_name:value};
@@ -567,7 +572,7 @@ export function createRecords(R, client) {
           h("p",{className:"record-help"},"오토바이 계기판에 표시된 현재 거리를 입력해 주세요. 정비 이력과는 별도로 저장됩니다."),
           field("현재 계기판 (km)",{name:"odometer",type:"number",inputMode:"numeric",enterKeyHint:"done",
             min:0,max:9999999,step:1,required:true,placeholder:"예: 24500",defaultValue:vehicle?.odometer_km??""}),
-          h("p",{className:"record-help"},"변경된 거리를 저장하면 한국시간 기준 입력일이 자동 기록됩니다."))
+          h("p",{className:"record-help"},"직접 입력한 계기판 숫자가 우선합니다. 이전 운행을 나중에 중복 합산하지 않아요."))
       : h(R.Fragment,null,
           field("차량명",{name:"vehicle_name",type:"text",required:true,maxLength:40,
             placeholder:"예: PCX125",defaultValue:vehicle?.vehicle_name||""}),
@@ -590,6 +595,12 @@ export function createRecords(R, client) {
       } : current);
       refresh(n=>n+1);
     };
+    R.useEffect(()=>{
+      if(!user)return;
+      const reload=()=>refresh(n=>n+1);
+      window.addEventListener("riderspot:odometer-updated",reload);
+      return ()=>window.removeEventListener("riderspot:odometer-updated",reload);
+    },[user?.id]);
     R.useEffect(()=>{
       let active=true; setError("");
       if(user){
@@ -656,6 +667,9 @@ export function createRecords(R, client) {
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("div",{className:"bike-section-head"},
         h("h2",null,"소모품 현황")),
+      h("p",{className:"bike-safety-message"},
+        model ? "모델별 주기는 점검 참고값입니다. 연식·운행 조건과 실제 부품 상태를 확인한 뒤 교체하세요." :
+          "모델 미선택 · 일반 125cc 스쿠터 참고값입니다. 모델을 선택하면 해당 기준이 나와요. 실제 상태를 확인한 뒤 교체하세요."),
       h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
         choices.map(item=>{
           const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
@@ -663,7 +677,7 @@ export function createRecords(R, client) {
           // Keep detailed mileage/date in the existing detail sheet, not on the compact tile.
           const status=due.remaining!=null ?
             (due.state==="overdue"?"기준 "+number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
-            !row?(cycle?.interval_km?number(cycle.interval_km)+" km 기준":
+            !row?(cycle?.interval_km?number(cycle.interval_km)+" km 참고":
               cycle?.interval_days?number(cycle.interval_days)+"일 기준":"기록 없음"):
             due.next!=null?"다음 "+km(due.next):
             cycle?.interval_km&&row.odometer_km==null?"거리 미입력":

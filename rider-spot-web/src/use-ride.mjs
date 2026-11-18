@@ -1,4 +1,5 @@
 import { createTripStorage } from "./trip-storage.mjs";
+import { createTripOdometerSync } from "./odometer-sync.mjs";
 import {
   isNative,
   mergeTripPoints,
@@ -30,6 +31,12 @@ export function createUseRide({
       request(client.from("trips").upsert(record, { onConflict: "id" })),
   });
 
+  const odometerSync=createTripOdometerSync({
+    read,write,isOnline:()=>navigator.onLine!==false,
+    apply:row=>request(client.rpc("apply_rider_trip_odometer",{
+      p_trip_id:row.id,p_distance_km:row.distance_km,p_ended_at:row.ended_at
+    }))
+  });
   return function useRide(user, notify, view) {
     const uid = user?.id || "guest";
     const [position, setPosition] = React.useState(null);
@@ -79,6 +86,13 @@ export function createUseRide({
       return message;
     }
 
+    async function flushOdometer(){
+      if(uid==="guest")return;
+      try{
+        const count=await odometerSync.flush(uid,sameAccount);
+        if(count && sameAccount())window.dispatchEvent(new Event("riderspot:odometer-updated"));
+      }catch(error){console.warn("계기판 주행거리 반영 대기",error.message);}
+    }
     async function flush() {
       if (uid === "guest") return;
       for (const id of storage.pending(uid)) {
@@ -91,6 +105,7 @@ export function createUseRide({
           console.warn("운행 기록 서버 저장 대기", error.message);
         }
       }
+      await flushOdometer();
     }
 
     React.useEffect(() => {
@@ -152,12 +167,14 @@ export function createUseRide({
       const initial = setTimeout(resume, 0);
       window.addEventListener("online", resume);
       window.addEventListener("focus", resume);
+      window.addEventListener("riderspot:odometer-retry", resume);
       document.addEventListener("visibilitychange", visible);
       return () => {
         listening = false;
         clearInterval(timer);
         clearTimeout(initial);
         window.removeEventListener("online", resume);
+        window.removeEventListener("riderspot:odometer-retry", resume);
         window.removeEventListener("focus", resume);
         document.removeEventListener("visibilitychange", visible);
         shareGeneration.current++;
@@ -439,6 +456,7 @@ export function createUseRide({
           throw Error("운행을 기록한 계정에서 다시 열어 주세요.");
         const updated = storage.commit(uid, finished);
         storage.enqueue(uid, finished.id);
+        odometerSync.enqueue(uid,finished);
         if (!alreadyComplete || read(activeKey(uid), null)?.id === finished.id)
           saveActive(null);
         if (bridge) {

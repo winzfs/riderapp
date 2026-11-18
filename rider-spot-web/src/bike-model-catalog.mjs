@@ -148,8 +148,11 @@ export const modelParts=model=>{
   if(model?.kind==="chain")return ["엔진오일","앞 타이어","뒤 타이어","브레이크 패드","구동체인","에어필터"];
   return ["엔진오일","앞 타이어","뒤 타이어","브레이크 패드","구동벨트","에어필터"];
 };
+const genericScooter=Object.freeze({key:"generic-125",kind:"scooter",tier:"small"});
 export function modelDefaults(model,item){
-  if(!model||!modelParts(model).includes(item))return null;
+  // If no model was selected, show an explicitly labelled 125cc reference.
+  model=model||genericScooter;
+  if(!modelParts(model).includes(item))return null;
   const basic=approximate[item]||{interval_km:null,interval_days:null,note:"정비소 점검 필요"};
   const official=verified[model.key]?.[item];
   const [baseLow,baseHigh]=range[model.tier]?.[item]||[null,null];

@@ -6,3 +6,8 @@
 .record-sheet .record-parts-grid .record-part[aria-pressed=true]{background:#f8f3ed;border-color:#b97c58;color:#2f4237;box-shadow:0 0 0 1px #e7cbb8 inset}
 .record-part-check{background:#b77350}
 .record-sheet .record-parts-grid .record-part:focus-visible,.bike-page .bike-row:focus-visible{outline-color:#b77350}
+
+/* Neo-Flat maintenance surfaces and inspection notice */
+.bike-page .bike-safety-message,.record-sheet .bike-safety-message{font-size:11px;line-height:1.55;color:#75817b;margin:5px 2px 12px;letter-spacing:-.02em}
+.record-sheet .bike-safety-message{margin:8px 0 0}
+.bike-page .bike-section-head{margin-bottom:5px}
