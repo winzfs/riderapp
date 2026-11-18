@@ -1,0 +1,82 @@
+name: Rider Spot v196 SVG maintenance build and verification
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-v196-maintenance.yml'
+      - 'rider-spot-web/src/mobile-records.mjs'
+      - 'rider-spot-web/src/maintenance-icons.mjs'
+      - 'rider-spot-web/src/maintenance-pictograms.css'
+      - 'rider-spot-web/src/assets/maintenance/*.svg'
+      - 'rider-spot-web/tests/maintenance-icon-assets.test.mjs'
+      - 'rider-spot-web/tests/mobile-records-browser.cjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-v196-tested-build
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Verify actual mobile maintenance flow
+        env:
+          RIDER_TEST_ORIGIN: http://127.0.0.1:8840
+        run: |
+          python3 -m http.server 8840 --directory dist > /tmp/rider-spot-v196-http.log 2>&1 &
+          node tests/mobile-records-browser.cjs
+      - name: Verify scalable SVG and freeze built assets
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const rel=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const dir='dist/assets/rider-spot-'+rel.hash+'/';
+          const app=fs.readFileSync(dir+'app.mjs','utf8');
+          assert.ok(app.includes('data:image/svg+xml'),'scalable icons not bundled');
+          assert.ok(app.includes('vector-v196'),'new icons not used');
+          assert.ok(app.includes('record-custom-trigger'),'extra part button missing');
+          assert.ok(!app.includes('neo-flat-v195.png'),'old raster atlas still bundled');
+          for(const n of ['app.mjs','route-worker.mjs','native-gps.js','map-reports.js',
+            'design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css']){
+            fs.copyFileSync(dir+n,'prebuilt/'+n);
+          }
+          for(const n of ['index.html','sw.js','release.json']) fs.copyFileSync('dist/'+n,'prebuilt/'+n);
+          console.log('VERIFIED SVG MAINTENANCE BUILD',rel.hash);
+          NODE
+      - name: Store verified prebuilt release
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add prebuilt
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: freeze tested v196 vector maintenance assets [skip ci]'
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v196-verification
+          path: |
+            rider-spot-web/prebuilt/release.json
+            rider-spot-web/dist/release.json
+          retention-days: 7
