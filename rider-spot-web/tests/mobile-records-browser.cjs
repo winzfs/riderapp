@@ -28,6 +28,14 @@ async function run(browser,width,height){
   await context.route("**/*",async route=>{
     const url=new URL(route.request().url()),table=url.pathname.split("/").pop();
     if(url.hostname.endsWith(".supabase.co")){
+      if(table==="set_rider_manual_odometer"){
+        const {p_km}=route.request().postDataJSON();
+        if(failVehicle){failVehicle=false;return route.fulfill({status:503,json:{message:"테스트 계기판 저장 실패"}});}
+        vehicle.odometer_km=p_km;
+        vehicle.odometer_recorded_on="2026-11-17";
+        return route.fulfill({json:p_km});
+      }
+      if(table==="apply_rider_trip_odometer")return route.fulfill({json:vehicle.odometer_km});
       if(table==="rider_vehicle_profiles" && route.request().method()!=="GET"){
         const payload=route.request().postDataJSON();
         vehicleChanges.push(payload);
@@ -125,10 +133,10 @@ async function run(browser,width,height){
     assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
     assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
-    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg").count()>=6,"maintenance PNG icons render");
-    const pngIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
-    assert.match(await pngIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/png;base64,/,
-      "semi-flat PNG atlas is actually rendered rather than legacy SVG");
+    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg").count()>=6,"maintenance vector icons render");
+    const svgIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
+    assert.match(await svgIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/svg\+xml,/,
+      "simplified vector icon set renders without a raster atlas");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
@@ -177,7 +185,7 @@ async function run(browser,width,height){
       .getByText("2,800 km 남음",{exact:true}).waitFor();
     await page.getByRole("button",{name:"앞 타이어 관리",exact:true}).click();
     const tireDetail=page.getByRole("dialog",{name:"앞 타이어 관리"});
-    await tireDetail.getByRole("button",{name:"주기 설정",exact:true}).click();
+    await tireDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
     const tireCycle=page.getByRole("dialog",{name:"앞 타이어 교체 주기"});
     await tireCycle.getByLabel("교체 기간 (일)").fill("90");
     await tireCycle.getByRole("button",{name:"교체 주기 저장"}).click();
@@ -229,7 +237,7 @@ async function run(browser,width,height){
     const rear=page.getByRole("dialog",{name:"뒤 타이어 관리"});
     await rear.getByText("0원").waitFor();
     await rear.getByText("40,000 km",{exact:true}).first().waitFor();
-    await rear.getByRole("button",{name:"주기 설정",exact:true}).click();
+    await rear.getByRole("button",{name:"주기 수정",exact:true}).click();
     const rearCycle=page.getByRole("dialog",{name:"뒤 타이어 교체 주기"});
     await rearCycle.getByLabel("교체 거리 (km)").fill("40000");
     await rearCycle.getByRole("button",{name:"교체 주기 저장"}).click();
@@ -258,7 +266,7 @@ async function run(browser,width,height){
     await confirmDelete.waitFor({state:"hidden"});
     await editForDelete.waitFor({state:"hidden"});
     assert.equal(records.length,3,"delete removes exactly the selected service record");console.log("PASS single record deletion",width);
-    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("40,000 km 기준",{exact:true}).waitFor();
+    await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("40,000 km 참고",{exact:true}).waitFor();
     assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
     await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
     const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리"});
