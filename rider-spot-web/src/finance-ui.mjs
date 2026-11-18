@@ -44,8 +44,8 @@ export function createFinance(R, client) {
       close();};
     closer.current=dismiss;
     const draftChange=e=>{
-      if(editor.row?.id||editor.kind==="goal"||editor.kind==="settlement")return;
       dirty.current=true;
+      if(editor.row?.id||editor.kind==="goal"||editor.kind==="settlement"||editor.kind==="payout")return;
       try{const values=Object.fromEntries(new FormData(e.currentTarget));
         localStorage.setItem(key,JSON.stringify({at:Date.now(),values}));}catch{}
     };
@@ -186,6 +186,11 @@ export function createFinance(R, client) {
     const [sheetError,setSheetError]=R.useState("");
     const [busy,setBusy]=R.useState(false);
     const [filter,setFilter]=R.useState("all");
+    const [detailFilter,setDetailFilter]=R.useState("all");
+    const [recordSearch,setRecordSearch]=R.useState("");
+    const [undo,setUndo]=R.useState(null);
+    const undoTimer=R.useRef(null);
+    R.useEffect(()=>()=>{if(undoTimer.current)clearTimeout(undoTimer.current);},[]);
     const [selectedChart,setSelectedChart]=R.useState(null);
     const [selectedAnalysis,setSelectedAnalysis]=R.useState(null);
     const [analysisMode,setAnalysisMode]=R.useState("weekly");
@@ -394,8 +399,25 @@ export function createFinance(R, client) {
         if(kind==="income"&&row.updated_at)query=query.eq("updated_at",row.updated_at);
         const r=await query.select("id");
         if(r.error)throw r.error;if(!r.data?.length)throw Error("다른 기기에서 기록이 변경됐어요. 새로 조회해 주세요.");
+        if(undoTimer.current)clearTimeout(undoTimer.current);
+        setUndo({kind,row,forUser:user.id});
+        undoTimer.current=setTimeout(()=>setUndo(v=>v?.row.id===row.id?null:v),10000);
         setNotice("기록을 삭제했어요.");refresh(n=>n+1);
       }catch(e){setNotice(e?.message||"삭제에 실패했어요.");}
+      finally{setBusy(false);}
+    }
+    async function restoreDeleted(){
+      const current=undo;if(!current||!user||current.forUser!==user.id||busy)return;
+      setBusy(true);
+      try{
+        const table={income:"rider_earnings",fuel:"rider_fuel_logs",
+          expense:"rider_extra_expenses"}[current.kind];
+        const result=await client.from(table).insert({...current.row,user_id:user.id}).select("id");
+        if(result.error)throw result.error;
+        if(!result.data?.length)throw Error("기록 복원을 확인하지 못했어요.");
+        if(undoTimer.current)clearTimeout(undoTimer.current);
+        setUndo(null);setNotice("삭제한 기록을 복원했어요.");refresh(n=>n+1);
+      }catch(e){setNotice(financeWriteError(e));}
       finally{setBusy(false);}
     }
     const plannedRows=recurringOccurrences(data?.recurring,data?.extras,monthFrom.slice(0,7));
@@ -533,8 +555,14 @@ export function createFinance(R, client) {
     }
     function records() {
       const rows=financeLedger(data||emptyData,monthFrom,monthTo);
-      const visible=rows.filter(x=>filter==="all"||filter==="income"&&x.type==="income"||
+      const types=rows.filter(x=>filter==="all"||filter==="income"&&x.type==="income"||
         filter==="expense"&&x.type!=="income");
+      const options=[...new Set(types.map(x=>x.name))].sort((a,b)=>a.localeCompare(b,"ko"));
+      const query=recordSearch.trim().toLocaleLowerCase("ko");
+      const visible=types.filter(x=>
+        (detailFilter==="all"||x.name===detailFilter)&&
+        (!query||[x.name,x.day,x.row.note,x.row.memo,x.row.workshop]
+          .some(v=>String(v||"").toLocaleLowerCase("ko").includes(query))));
       return h("div",{className:"fin-stack"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
@@ -546,6 +574,16 @@ export function createFinance(R, client) {
         h("div",{className:"fin-quick"},
           button("＋ 수익 기록",()=>openEditor("income"),"fin-primary"),
           button("＋ 지출 기록",()=>openEditor("expense"),"fin-secondary")),
+        h("details",{className:"fin-record-search",key:"filters"},
+          h("summary",null,"내역 검색 · 분류"),
+          h("div",{className:"fin-filter-grid"},
+            h("label",null,h("span",null,"검색"),h("input",{type:"search",
+              value:recordSearch,onChange:e=>setRecordSearch(e.target.value),placeholder:"분류·메모·날짜",
+              autoComplete:"off","aria-label":"내역 검색"})),
+            h("label",null,h("span",null,"분류"),h("select",{value:options.includes(detailFilter)?detailFilter:"all",
+              onChange:e=>setDetailFilter(e.target.value),"aria-label":"내역 분류"},
+              h("option",{value:"all"},"모든 분류"),
+              options.map(name=>h("option",{key:name,value:name},name)))))),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"날짜별 내역"),txt("small",null,visible.length+"건")),
           visible.length?visible.map((x,i)=>h(R.Fragment,{key:x.type+x.row.id},
@@ -711,7 +749,10 @@ export function createFinance(R, client) {
       loading&&!data?txt("p","fin-load","수익 기록을 불러오는 중…"):
       error?h("section",{className:"fin-card"},txt("p","fin-error",error),
         button("다시 불러오기",()=>refresh(n=>n+1),"fin-secondary")):
-      h(R.Fragment,null,notice&&txt("p","fin-notice",notice),
+      h(R.Fragment,null,(notice||undo?.forUser===user.id)&&
+        h("div",{className:"fin-notice-row",role:"status"},
+          notice&&txt("span","fin-notice",notice),
+          undo?.forUser===user.id&&button("삭제 실행 취소",restoreDeleted,"fin-undo",{disabled:busy})),
         section==="overview"?overview():section==="records"?records():
         section==="settlements"?settlements():analysis()),
       editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}));
