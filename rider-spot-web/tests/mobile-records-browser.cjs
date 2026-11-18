@@ -82,6 +82,11 @@ async function run(browser,width,height){
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
+    assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","native and browser routing controller initialized");
+    await page.goBack();
+    await page.locator(".ride-launch button").waitFor();
+    assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"nearby","hardware/browser Back restores the preceding tab");
+    await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
     assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
     const layout=await grid.evaluate(node=>{
@@ -128,6 +133,7 @@ async function run(browser,width,height){
     await oilDetail.getByText("28,500 km",{exact:true}).waitFor();
     await oilDetail.getByText("4,000 km",{exact:true}).waitFor();
     await shot("bike-detail");
+    assert.equal(await oilDetail.locator(".record-cycle-form").count(),0,"saving the interval collapses the inline form");
     assert.equal(cycles[0].interval_km,4000);
     assert.deepEqual(cycleWrites.map(c=>c.item_key),["엔진오일"],
       "only the selected part interval was updated");
@@ -172,6 +178,12 @@ async function run(browser,width,height){
     await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
     assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
     await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();
+    await page.goBack();
+    await page.getByRole("dialog",{name:"정비 기록 수정"}).waitFor({state:"hidden"});
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).waitFor();
+    assert.equal(await page.locator(".bottom-nav button.active").innerText(),"내 바이크",
+      "Back from nested edit preserves the underlying part detail");
+    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
@@ -179,6 +191,16 @@ async function run(browser,width,height){
     await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByText("0원").waitFor();
     await shot("bike-detail-updated");
     await page.getByRole("dialog",{name:"뒤 타이어 관리"}).getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
+    const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리"});
+    const handle=swipeDialog.locator(".record-heading");
+    const rect=await handle.boundingBox();
+    assert.ok(rect,"draggable sheet handle has visible geometry");
+    const x=rect.x+rect.width/2,y=rect.y+Math.min(45,rect.height/2);
+    await page.mouse.move(x,y);await page.mouse.down();
+    await page.mouse.move(x,y+170,{steps:8});await page.mouse.up();
+    await swipeDialog.waitFor({state:"hidden"});
+    await shot("bike-after-swipe");
     await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
     await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
     const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");
@@ -198,6 +220,12 @@ async function run(browser,width,height){
     await dialog.getByRole("button",{name:"50,000원 저장"}).click();await page.locator(".record-income").filter({hasText:"50,000원"}).waitFor();
     await page.locator(".record-income").click();await coupang.fill("120000");await baemin.fill("");
     await dialog.getByRole("button",{name:"120,000원 저장"}).click();await page.locator(".record-income").filter({hasText:"120,000원"}).waitFor();
+    await page.locator(".rs56-ride-choice").first().click();
+    await page.locator(".rs33-trip-detail").waitFor();
+    await page.goBack();
+    await page.locator(".rs56-ride-choice").first().waitFor();
+    assert.equal(await page.locator(".rs33-trip-detail").count(),0,
+      "hardware Back from individual ride returns to full-day timeline");
     await page.locator(".rs56-ride-choice").first().click();
     await page.getByLabel("경로 재생 배속").first().selectOption("20");
     await page.getByRole("button",{name:"경로 재생 시작"}).first().click();
