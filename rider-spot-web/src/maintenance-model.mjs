@@ -27,6 +27,16 @@ export function serviceRows(rows, item) {
     String(b.created_at || "").localeCompare(String(a.created_at || "")) ||
     String(b.id || "").localeCompare(String(a.id || "")));
 }
+// A newer service entry with an empty odometer must not hide the last
+// known replacement distance (common when multiple parts were logged together).
+// Keep the date-ordered history unchanged; choose the latest usable baseline
+// only for distance-based due calculations.
+export function serviceBaseline(rows, item) {
+  return serviceRows(rows, item).find(row =>
+    (row.odometer_km != null && Number.isFinite(Number(row.odometer_km)) && Number(row.odometer_km) >= 0) ||
+    (row.next_due_km != null && Number.isFinite(Number(row.next_due_km)) && Number(row.next_due_km) >= 0)
+  ) || null;
+}
 export function serviceDue(row, cycle, currentKm) {
   const interval = Number(cycle?.interval_km);
   const explicit = row?.next_due_km == null ? null : Number(row.next_due_km);
