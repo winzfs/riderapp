@@ -90,6 +90,18 @@ export function createNavigationController(win = window) {
   }
   function back() {
     if (disposed) return false;
+    // The native Activity calls this directly. A second Back at Home requests
+    // Android's explicit exit confirmation instead of unexpectedly finishing.
+    if (!overlays.length && tab === DEFAULT && history.state?.[KEY]?.step === ROOT_GUARD) {
+      const now = Date.now();
+      if (now - lastRootBack < 1900) {
+        emit("riderspot:exit-request");
+        return false;
+      }
+      lastRootBack = now;
+      emit("riderspot:root-back", { message: "뒤로가기를 한 번 더 누르면 종료 확인창이 열립니다." });
+      return true;
+    }
     if (history.state?.[KEY]?.step === 0 && !overlays.length) rootBack();
     else history.back();
     return true;
