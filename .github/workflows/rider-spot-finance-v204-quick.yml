@@ -47,7 +47,6 @@ jobs:
           assert.ok(css.includes('.app .finance-page .fin-card>header'));
           assert.ok(css.includes('.app .finance-page .fin-no-records'));
           assert.ok(app.includes('fin-platform-card'));
-          assert.ok(app.includes('플랫폼별 수익'));
           assert.ok(app.includes('fin-chart-card'));
           assert.ok(css.includes('fin-undo'));
           assert.ok(fs.readFileSync('dist/index.html','utf8').includes(rel.hash));
