@@ -32,9 +32,12 @@ export function financeTotals(data,from,to) {
     const p=x.platform==="배민커넥트"?"배민":x.platform;
     byPlatform[p]=(byPlatform[p]||0)+num(x.gross_won);
   }
-  const paid = earnings.filter(x=>!!x.paid_at).reduce((n,x)=>n+num(x.gross_won),0);
+  const paidRows = earnings.filter(x=>!!x.paid_at);
+  const paid = paidRows.reduce((n,x)=>n+num(x.paid_won??x.gross_won),0);
+  const expectedPaid = paidRows.reduce((n,x)=>n+num(x.gross_won),0);
+  const unpaid = earnings.filter(x=>!x.paid_at).reduce((n,x)=>n+num(x.gross_won),0);
   return {earnings,fuel,maintenance,extras,gross,earningCosts,fuelCost,maintenanceCost,
-    extraCost,cost,net:gross-cost,uncertain,byPlatform,paid,unpaid:gross-paid,
+    extraCost,cost,net:gross-cost,uncertain,byPlatform,paid,expectedPaid,payoutDifference:paid-expectedPaid,unpaid,
     deliveries:earnings.reduce((n,x)=>n+num(x.deliveries),0)};
 }
 export function financeDays(data,last,days=7) {
