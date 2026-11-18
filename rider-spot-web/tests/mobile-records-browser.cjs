@@ -129,14 +129,16 @@ async function run(browser,width,height,{smokeOnly=false}={}){
         return route.fulfill({json:{id:data.id}});
       }
       const data={user,trips,maintenance_logs:[...records].sort((a,b)=>b.serviced_on.localeCompare(a.serviced_on)),
-        rider_earnings:Object.entries(totals).map(([platform,amount])=>({platform,gross_won:amount||0,gross_entered:amount!=null})),
+        rider_earnings:Object.entries(totals).map(([platform,amount],i)=>({
+          id:"55555555-5555-4555-8555-"+String(i+1).padStart(12,"0"),
+          user_id:userId,work_date:date,platform,gross_won:amount||0,
+          gross_entered:amount!=null,expense_scope:"other_only",
+          deliveries:0,expenses_won:0,created_at:date+"T12:00:00Z"})),
         rider_vehicle_profiles:vehicle,rider_maintenance_cycles:cycles,
          rider_model_maintenance_settings:modelSettings,
           rider_recurring_expenses:recurringRules,
           rider_extra_expenses:extraExpenses,
           rider_finance_payout_rules:payoutRules}[table]??[];
-      if(table==="rider_earnings")console.log("FINANCE MOCK RETURNS",JSON.stringify({
-        totals,rows:data,query:url.searchParams.toString()}));
       return route.fulfill({json:data});
     }
     if(["tiles.openfreemap.org","cdn.jsdelivr.net","tile.openstreetmap.org"].includes(url.hostname))return route.continue();
@@ -474,11 +476,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".finance-page .fin-hero-amount").waitFor();
     assert.equal(await page.locator(".fin-platform-card>header small").innerText(),
       "2026년 11월 기준","platform totals need an explicit monthly range");
-    console.log("MONTHLY PLATFORM DIAGNOSTIC",
-      JSON.stringify({income:totals,
-        goal:await page.locator(".fin-goal-amount").innerText(),
-        platform:await page.locator(".fin-platform-card").innerText(),
-        hero:await page.locator(".fin-hero-amount").innerText()}));
+
     await page.locator(".fin-platform-card").getByText("쿠팡이츠",{exact:true})
       .waitFor({timeout:12000});
     assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("120,000원")),
