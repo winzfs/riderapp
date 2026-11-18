@@ -1,117 +1,140 @@
-// Rider Spot navigation: browser history and Android WebView back share one stack.
-// Only UI state is tracked. GPS capture, ride persistence and database data stay untouched.
+// Rider Spot navigation policy: Back dismisses a visible overlay; otherwise
+// the first press prompts and the second press requests app exit.
+// Tab changes never add browser-history entries or replay visited tabs.
 const KEY = "__rsNav";
 const LAYER = "__rsLayer";
-const VERSION = 187;
-const TABS = new Set(["nearby","trips","community","bike","account","tools"]);
+const VERSION = 192;
+const TABS = new Set(["nearby", "trips", "community", "bike", "account", "tools"]);
 const DEFAULT = "nearby";
-const ROOT_GUARD = 1;
+const DOUBLE_BACK_MS = 2000;
+
 export function createNavigationController(win = window) {
   if (win.__rsNavigation) return win.__rsNavigation;
   const history = win.history;
-  const current = history.state?.[KEY];
-  let tab = TABS.has(current?.tab) && current?.version === VERSION ? current.tab : DEFAULT;
-  let serial = current?.version === VERSION ? current.step : ROOT_GUARD;
+  const previous = history.state?.[KEY];
+  let tab = previous?.version === VERSION && TABS.has(previous.tab)
+    ? previous.tab : DEFAULT;
   let onTab = () => {};
-  let lastRootBack = 0;
+  let lastBack = 0;
   let overlays = [];
   let sequence = 0;
   let disposed = false;
+  let suppressNextPop = false;
+
   const emit = (type, detail) => {
     if (typeof win.CustomEvent === "function")
       win.dispatchEvent(new win.CustomEvent(type, { detail }));
   };
-  const copy = (extra = {}) => Object.assign({}, history.state || {}, extra);
-  const state = (targetTab, step) => ({ version: VERSION, tab: targetTab, step });
-  if (current?.version !== VERSION) {
-    history.replaceState(copy({ [KEY]: state(DEFAULT, 0) }), "", win.location?.href);
-    history.pushState(copy({ [KEY]: state(DEFAULT, ROOT_GUARD) }), "", win.location?.href);
+  const copy = extra => Object.assign({}, history.state || {}, extra);
+  const state = next => ({ version: VERSION, tab: next, step: 1 });
+  const url = () => win.location?.href;
+
+  // A guard keeps one Back event inside the PWA/WebView. Migrating from the old
+  // tab-history scheme deliberately starts at the map, not a stale saved tab.
+  if (previous?.version !== VERSION) {
+    history.replaceState(copy({ [KEY]: state(DEFAULT), [LAYER]: undefined, recordSheet: undefined }), "", url());
+    history.pushState(copy({ [KEY]: state(DEFAULT), [LAYER]: undefined, recordSheet: undefined }), "", url());
   }
+
   function publish(next) {
     if (!TABS.has(next)) return;
     tab = next;
     onTab(next);
     emit("riderspot:tab-restored", next);
   }
-  function goTab(next, { replace = false } = {}) {
+  function goTab(next) {
     if (!TABS.has(next) || next === tab) return false;
-    serial += 1;
-    // Drop a stale sheet marker when a screen changes; the sheet itself is unmounted.
-    const nextState = copy({ [KEY]: state(next, serial), [LAYER]: undefined, recordSheet: undefined });
-    if (replace) history.replaceState(nextState, "", win.location?.href);
-    else history.pushState(nextState, "", win.location?.href);
+    lastBack = 0;
+    // Replacing (rather than pushing) history prevents Back from visiting tabs.
+    history.replaceState(copy({
+      [KEY]: state(next),
+      [LAYER]: undefined,
+      recordSheet: undefined,
+    }), "", url());
     publish(next);
     return true;
   }
-  function rootBack() {
-    const now = Date.now();
-    const twice = now - lastRootBack < 1900;
-    lastRootBack = now;
-    if (twice) {
-      emit("riderspot:exit-request");
-      // A native Android activity may expose this optional exit bridge.
-      if (typeof win.__rsNativeExit === "function") win.__rsNativeExit();
-      else history.back();
-      return;
+  function exitRequest(fromPop) {
+    lastBack = 0;
+    emit("riderspot:exit-request");
+    if (typeof win.__rsNativeExit === "function") {
+      win.__rsNativeExit();
+    } else if (fromPop) {
+      // Browser/PWA Back has already popped the guard; allow leaving the page.
+      suppressNextPop = true;
+      history.back();
     }
-    // Keep a guarded root entry so the first Back gesture never closes the app.
-    history.pushState(copy({ [KEY]: state(DEFAULT, ROOT_GUARD), [LAYER]: undefined }), "", win.location?.href);
-    emit("riderspot:root-back", { message: "뒤로가기를 한 번 더 누르면 앱을 종료합니다." });
+    // The Android host can also finish its Activity when __rsHandleBack
+    // returns false. Do not navigate to a previously visited tab.
+    return false;
+  }
+  function rootBack(fromPop = false) {
+    const now = Date.now();
+    if (lastBack && now - lastBack <= DOUBLE_BACK_MS) return exitRequest(fromPop);
+    lastBack = now;
+    if (fromPop) {
+      history.pushState(copy({ [KEY]: state(tab), [LAYER]: undefined }), "", url());
+    }
+    emit("riderspot:root-back", {
+      message: "뒤로가기를 한 번 더 누르면 앱을 종료합니다.",
+    });
+    return true;
   }
   function pop() {
     if (disposed) return;
-    const top = overlays.at(-1);
-    if (top && history.state?.[LAYER] !== top.marker) {
-      const handled = top.dismiss();
-      // Do not lose the sheet's history entry while a database write is busy.
-      if (handled === false)
-        history.pushState(copy({ [LAYER]: top.marker }), "", win.location?.href);
+    if (suppressNextPop) {
+      suppressNextPop = false;
       return;
     }
-    const record = history.state?.[KEY];
-    if (record?.version !== VERSION) return;
-    if (TABS.has(record.tab)) publish(record.tab);
-    serial = Math.max(serial, record.step || 0);
-    if (record.step === 0 && record.tab === DEFAULT) rootBack();
+    const top = overlays.at(-1);
+    if (top) {
+      if (history.state?.[LAYER] !== top.marker) {
+        lastBack = 0;
+        const handled = top.dismiss();
+        // Keep the open sheet reachable while a save operation is in progress.
+        if (handled === false)
+          history.pushState(copy({ [LAYER]: top.marker }), "", url());
+      }
+      return;
+    }
+    // popstate must never restore a tab from an old history entry.
+    rootBack(true);
   }
   function registerLayer(type, dismiss) {
     const marker = "rs-layer-" + (++sequence) + "-" + Date.now();
     overlays.push({ type, marker, dismiss });
-    history.pushState(copy({ [LAYER]: marker }), "", win.location?.href);
+    lastBack = 0;
+    history.pushState(copy({ [LAYER]: marker }), "", url());
     let released = false;
     return () => {
       if (released) return;
       released = true;
-      const i = overlays.findIndex(item => item.marker === marker);
-      if (i >= 0) overlays.splice(i, 1);
-      // Only consume the top layer's entry. Never remove a parent's history entry.
-      if (history.state?.[LAYER] === marker) history.back();
+      const index = overlays.findIndex(item => item.marker === marker);
+      if (index >= 0) overlays.splice(index, 1);
+      lastBack = 0;
+      if (history.state?.[LAYER] === marker) {
+        // A close button closed the sheet (no user Back). Consume its marker
+        // without treating the corresponding popstate as an exit press.
+        suppressNextPop = true;
+        history.back();
+      }
     };
   }
   function back() {
     if (disposed) return false;
-    // The native Activity calls this directly. A second Back at Home requests
-    // Android's explicit exit confirmation instead of unexpectedly finishing.
-    if (!overlays.length && tab === DEFAULT && history.state?.[KEY]?.step === ROOT_GUARD) {
-      const now = Date.now();
-      if (now - lastRootBack < 1900) {
-        emit("riderspot:exit-request");
-        return false;
-      }
-      lastRootBack = now;
-      emit("riderspot:root-back", { message: "뒤로가기를 한 번 더 누르면 종료 확인창이 열립니다." });
+    const top = overlays.at(-1);
+    if (top) {
+      if (history.state?.[LAYER] === top.marker) history.back();
+      else top.dismiss();
       return true;
     }
-    if (history.state?.[KEY]?.step === 0 && !overlays.length) rootBack();
-    else history.back();
-    return true;
+    return rootBack();
   }
   const key = event => {
     if (event.key !== "Escape" || event.defaultPrevented) return;
     if (event.target?.closest?.("input,textarea,[contenteditable=true]")) return;
-    // Native dialogs, map sheets and modals own Escape themselves.
+    // Dialogs and sheet components already handle keyboard Escape.
     if (win.document?.querySelector?.("dialog[open],.modal-backdrop,.rs-sheet-backdrop,[role=dialog]")) return;
-    // Native Android Back is managed via history; Escape supports desktop/keyboard.
     event.preventDefault();
     back();
   };
@@ -124,11 +147,20 @@ export function createNavigationController(win = window) {
     goTab,
     back,
     registerLayer,
-    subscribe(listener) { onTab = listener; listener(tab); return () => { if (onTab === listener) onTab = () => {}; }; },
-    destroy() { disposed = true; win.removeEventListener("popstate", pop); win.removeEventListener("keydown", key); delete win.__rsNavigation; },
+    subscribe(listener) {
+      onTab = listener;
+      listener(tab);
+      return () => { if (onTab === listener) onTab = () => {}; };
+    },
+    destroy() {
+      disposed = true;
+      win.removeEventListener("popstate", pop);
+      win.removeEventListener("keydown", key);
+      delete win.__rsNavigation;
+      delete win.__rsHandleBack;
+    },
   };
   win.__rsNavigation = api;
-  // An Android WebView Activity may call this when hardware Back is pressed.
   win.__rsHandleBack = back;
   return api;
 }
