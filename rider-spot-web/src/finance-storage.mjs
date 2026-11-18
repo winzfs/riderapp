@@ -36,6 +36,9 @@ export function financeWriteError(error){
     return "입금 확인된 수익이에요. 정산 내역을 확인한 뒤 수정해 주세요.";
   if(message.includes("RS_RECORD_NOT_FOUND"))
     return "다른 기기에서 삭제된 기록이에요. 내역을 새로고침해 주세요.";
+  if(message.includes("rider_income_components_valid")||
+     message.includes("RS_INVALID_BREAKDOWN"))
+    return "총수익에 포함된 프로모션·팁 금액을 확인해 주세요.";
   if(message.includes("RS_INVALID"))
     return "날짜·플랫폼·금액을 확인해 주세요.";
   return message||"저장에 실패했어요. 입력값은 유지돼요.";

@@ -469,6 +469,8 @@ async function run(browser,width,height){
 
     // These are a rider's custom reference days; they don't mark earnings as paid.
     await page.getByRole("button",{name:"정산",exact:true}).click();
+    console.log("SETTLEMENT TEST STATE",await page.locator(".fin-recurring-row").count(),
+      (await page.locator(".finance-page").innerText()).slice(0,850));
     await page.locator(".fin-recurring summary").click();
     await page.locator(".fin-recurring-row").filter({hasText:"쿠팡이츠"})
       .getByRole("button",{name:"설정"}).click();
