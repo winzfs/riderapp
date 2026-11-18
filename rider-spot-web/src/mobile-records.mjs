@@ -2,6 +2,8 @@ import { rs33ISO } from "./timeline-dates.mjs";
 import scooter from "./scooter.svg";
 import { icons } from "./ui.mjs";
 import { maintenanceIcon } from "./maintenance-icons.mjs";
+import {bikeModels,bikeBrands,findBikeModel,inferBikeModel,modelLabel,modelParts,
+  modelDefaults,resolveMaintenance,costLabel,won} from "./bike-model-catalog.mjs";
 import { standardParts, itemsOf, composeServiceItems, normalizePart, serviceRows, serviceBaseline, serviceDue } from "./maintenance-model.mjs";
 
 const platforms = ["쿠팡이츠", "배민"];
@@ -239,7 +241,7 @@ export function createRecords(R, client) {
         onChange:event=>{const digits=event.target.value.replace(/,/g,""); if(/^\d{0,9}$/.test(digits)&&Number(digits)<=100000000) edit({...draft,[p]:digits});}}))));
   }
 
-  function ServiceEditor({row,item,choices,user,close,changed}) {
+  function ServiceEditor({row,item,choices,user,close,changed,model}) {
     const [selected,select] = R.useState(() => row ? itemsOf(row) : item ? [item] : []);
     const id = R.useRef(row?.id || crypto.randomUUID());
     const [deleteConfirm,setDeleteConfirm]=R.useState(false);
@@ -260,6 +262,7 @@ export function createRecords(R, client) {
       finally{deleteLock.current=false;setDeleting(false);}
     };
     const selectedKeys = new Set(selected.map(x=>normalizePart(x).toLocaleLowerCase("ko-KR")));
+    const suggestion = !row && selected.length===1 ? modelDefaults(model,selected[0]):null;
     const partButton = name => btn(h(R.Fragment,null,
         h(PartIcon,{name,size:40}),
         h("span",{className:"record-part-name"},name),
@@ -300,8 +303,11 @@ export function createRecords(R, client) {
       h("div",{className:"record-pair record-measures"},
         field("계기판 거리 (km)",{type:"text",inputMode:"numeric",name:"km",placeholder:"미입력",
           defaultValue:row?.odometer_km??"",autoComplete:"off"}),
-        field("총비용 (원)",{type:"text",inputMode:"numeric",name:"cost",placeholder:"미입력",
+        field("총비용 (원)",{type:"text",inputMode:"numeric",name:"cost",
+          placeholder:suggestion?.estimated_cost_won?number(suggestion.estimated_cost_won)+"원 (참고)":"미입력",
           defaultValue:row?.cost_won??"",autoComplete:"off"})),
+      suggestion && h("p",{className:"record-help"},
+        "정비 예상 비용: "+costLabel({...suggestion,source:"default"})+" · 실제 지불한 금액만 저장하세요."),
       h("details",{className:"record-extra",open:row?.workshop||row?.note?true:undefined},
         h("summary",null,"정비소 · 메모",h(Icon,{name:"chevron",size:17})),
         field("정비소",{name:"shop",maxLength:100,defaultValue:row?.workshop||""}),
