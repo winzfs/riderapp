@@ -472,8 +472,10 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".finance-page .fin-hero-amount").waitFor();
     assert.equal(await page.locator(".fin-platform-card>header small").innerText(),
       "2026년 11월 기준","platform totals need an explicit monthly range");
-    assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("쿠팡이츠")),
-      "the monthly platform card must still show recorded earnings when today is 0");
+    await page.locator(".fin-platform-card").getByText("쿠팡이츠",{exact:true})
+      .waitFor({timeout:12000});
+    assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("120,000원")),
+      "month-wide platform totals must use saved income even while today is zero");
     await page.getByRole("button",{name:"수익 입력",exact:true}).click();
     const financeDialog=page.getByRole("dialog",{name:"수익 입력"});
     await financeDialog.waitFor();
