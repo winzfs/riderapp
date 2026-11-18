@@ -2134,3 +2134,48 @@ dialog.record-mini-dialog::backdrop{
 .fin-category-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:-4px}
 .fin-category-chips .fin-chip{border:1px solid #e7e7e0;background:#faf8f5;color:#6c625a;font-size:12px;font-weight:700;min-height:35px;padding:6px 10px;border-radius:100px;touch-action:manipulation}
 .fin-category-chips .fin-chip:focus-visible{outline:2px solid #b76d40;outline-offset:1px}
+
+/* Finance: unified compact surfaces, SVG-accurate analytics and inline recovery */
+.finance-page{
+  --rs-fin-ink:#263b30;
+  --rs-fin-subtle:#738478;
+  --rs-fin-accent:#af5929;
+  --rs-fin-outline:#e4eae3;
+}
+.fin-chart-track .fin-svg-chart{display:block;width:100%;height:100%;overflow:visible;flex:none;color:#c9753d}
+.fin-svg-chart-bar{fill:currentColor;transition:y 180ms cubic-bezier(.24,.82,.32,1),height 180ms cubic-bezier(.24,.82,.32,1)}
+.fin-chart-point.selected .fin-svg-chart{color:#a84d20}
+.fin-record-search{border-radius:12px;border:1px solid var(--rs-fin-outline);background:#fff}
+.fin-record-search>summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:10px 13px;font-size:12px;font-weight:760;color:var(--rs-fin-ink);list-style:none;cursor:pointer}
+.fin-record-search>summary::-webkit-details-marker{display:none}
+.fin-record-search>summary:after{content:"⌄";font-size:16px;color:var(--rs-fin-subtle)}
+.fin-record-search[open]>summary:after{transform:rotate(180deg)}
+.fin-filter-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;padding:0 11px 12px}
+.fin-filter-grid label{min-width:0;display:grid;gap:5px;font-size:11px;color:var(--rs-fin-subtle)}
+.fin-filter-grid input,.fin-filter-grid select{box-sizing:border-box;width:100%;min-width:0;min-height:43px;border-radius:10px;border:1px solid #dce5da;padding:9px 10px;background:#fafbf9;color:var(--rs-fin-ink);font:inherit;font-size:13px}
+.fin-filter-grid input:focus-visible,.fin-filter-grid select:focus-visible{outline:2px solid #b76d40;outline-offset:1px}
+.fin-notice-row{display:flex;align-items:center;gap:9px;justify-content:space-between;padding:9px 11px;border:1px solid #e7ece4;border-radius:11px;background:#f7faf6;min-height:41px}
+.fin-notice-row .fin-notice{font-size:12px;line-height:1.4;color:var(--rs-fin-ink);min-width:0}
+.fin-undo{flex:none;border:0;background:#f5e8dd;border-radius:9px;min-height:39px;padding:8px 10px;color:#944719;font-size:12px;font-weight:800}
+.fin-efficiency-note{font-size:11px;color:#728476;line-height:1.55;padding:0 12px 12px}
+.fin-chart-detail{min-width:0;overflow-wrap:anywhere}
+.fin-record{min-width:0}
+.fin-record-info strong{line-height:1.35}
+.finance-page .fin-primary:disabled,.finance-page .fin-secondary:disabled,.fin-sheet .fin-primary:disabled{opacity:.55;pointer-events:none}
+.fin-sheet .fin-field input[type="search"]{font-size:16px}
+@media(max-width:360px){
+  .fin-filter-grid{grid-template-columns:1fr}
+  .fin-chart-value{font-size:9px}
+  .fin-svg-chart{min-width:0}
+  .fin-record-icon{width:32px;height:32px;border-radius:10px}
+  .fin-record-actions button{padding:4px 3px}
+  .fin-record-end{max-width:50%}
+  .fin-hero-amount{font-size:clamp(27px,8vw,36px)}
+}
+@media(max-width:330px){
+  .fin-hero-bottom{gap:6px}
+  .fin-hero-bottom strong{font-size:13px}
+  .fin-graph-tabs .fin-filter{font-size:10px;padding:6px}
+  .fin-chart-analysis .fin-chart-date{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){.fin-svg-chart-bar{transition:none}}
