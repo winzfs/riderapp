@@ -1,0 +1,44 @@
+name: Rider Spot v191 manufacturer maintenance presets production acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v191-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci && npm run build && npm test
+      - name: "Verify v191 production resources and preserve map"
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';import assert from 'node:assert/strict';
+          const root='https://rider-spot.jazzhjm.workers.dev',hash='a33cce9f0187';
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          const names=[['/','index.html'],['/sw.js','sw.js'],
+            ...['app.mjs','design-system.css','native-gps.js','tab-resume.js','workspace-tools.js'].map(n=>['/assets/rider-spot-'+hash+'/'+n,n])];
+          for(const [url,name] of names){
+            const res=await fetch(root+url,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(res.status,200,'bad v191 HTTP response for '+url);
+            const body=await res.text(),expected=fs.readFileSync('prebuilt/'+name,'utf8');
+            assert.equal(body,expected,'unexpected live resource content: '+url);
+            if(name==='app.mjs'){
+              for(const phrase of ['rider_model_maintenance_settings','honda-adv160','honda-supercub110','bike-model-picker','honda-pcx125','niu-nqi-gts'])
+                assert.ok(body.includes(phrase),'missing catalog feature '+phrase);
+            }
+            console.log('PASS LIVE v191',url);
+          }
+          const m=await fetch(root+'/mapdata/manifest.json');
+          assert.equal(m.status,200,'map data must remain available');
+          assert.ok((await m.json()).counts);
+          console.log('PASS original map and model source notes retained');
+          NODE
