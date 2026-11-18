@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths} from "../src/finance-model.mjs";
+import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "../src/finance-model.mjs";
 
 test("Seoul accounting date rolls over at 03:00, not midnight",()=>{
   assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
@@ -93,4 +93,11 @@ test("monthly comparisons return ordered actual totals and no fictional values",
   const months=financeMonths(data,"2026-11-19",3);
   assert.deepEqual(months.map(x=>x.month),["2026-09","2026-10","2026-11"]);
   assert.deepEqual(months.map(x=>x.gross),[0,50000,70000]);
+});
+
+test("account transitions never reveal the previous rider's financial records",()=>{
+  const privateRecords={earnings:[{gross_won:9999999}]};
+  assert.equal(accountFinanceData("user-b","user-a",privateRecords),null);
+  assert.equal(accountFinanceData(null,"user-a",privateRecords),null);
+  assert.equal(accountFinanceData("user-a","user-a",privateRecords),privateRecords);
 });

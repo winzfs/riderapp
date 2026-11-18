@@ -111,3 +111,8 @@ export function financeMonths(data,last,count=6){
     return {month,...financeTotals(data,month+"-01",monthLastDay(month+"-01"))};
   });
 }
+
+// Keep the previous account's cached money values off-screen during auth transitions.
+export function accountFinanceData(userId,loadedUserId,cached){
+  return userId&&userId===loadedUserId?cached:null;
+}

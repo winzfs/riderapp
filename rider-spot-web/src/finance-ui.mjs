@@ -1,6 +1,6 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
 import {icons} from "./ui.mjs";
-import {won,num,koreanWorkDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths} from "./finance-model.mjs";
+import {won,num,koreanWorkDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "./finance-model.mjs";
 
 const money = won;
 const categories = ["보험료","통신비","주차비","장비","기타","식비","개인 비용"];
@@ -176,7 +176,7 @@ export function createFinance(R, client) {
     const [anchor,setAnchor]=R.useState(koreanWorkDay);
     const [cachedFinance,setData]=R.useState(null);
     const [cachedUserId,setCachedUserId]=R.useState(null);
-    const data=user?.id===cachedUserId?cachedFinance:null;
+    const data=accountFinanceData(user?.id,cachedUserId,cachedFinance);
     const [loading,setLoading]=R.useState(false);
     const [error,setError]=R.useState("");
     const [notice,setNotice]=R.useState("");
