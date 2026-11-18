@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {standardParts, normalizePart, itemsOf, composeServiceItems, serviceRows, serviceDue, totalMaintenanceCost} from "../src/maintenance-model.mjs";
 
-test("show four proven defaults without silently adding every icon", () => {
-  assert.deepEqual(standardParts, ["엔진오일","앞 타이어","뒤 타이어","브레이크 패드"]);
+test("show six rider-priority default parts in the 3-by-2 dashboard without adding every icon", () => {
+  assert.deepEqual(standardParts, ["엔진오일","앞 타이어","뒤 타이어","브레이크 패드","구동벨트","에어필터"]);
 });
 test("split only legacy composite records; keep independent service_items", () => {
   assert.deepEqual(itemsOf({item:"앞 타이어 · 뒤 타이어"}),["앞 타이어","뒤 타이어"]);

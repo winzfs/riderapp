@@ -79,8 +79,21 @@ async function run(browser,width,height){
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
-    assert.ok(await page.locator(".bike-item-icon .bike-part-svg").count()>=4,"maintenance icons render");
-    const pngIcon = page.locator(".bike-item-icon .bike-part-svg").first();
+    const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
+    assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
+    const layout=await grid.evaluate(node=>{
+      const el=[...node.querySelectorAll(".bike-consumable")].map(x=>x.getBoundingClientRect());
+      return {cols:getComputedStyle(node).gridTemplateColumns.split(" ").length,
+        first:el.slice(0,3).map(x=>Math.round(x.y)),second:el.slice(3,6).map(x=>Math.round(x.y)),
+        width:el.map(x=>x.width),outer:node.getBoundingClientRect().width};
+    });
+    assert.equal(layout.cols,3,"exactly three columns on mobile");
+    assert.ok(layout.first.every(y=>y===layout.first[0]),"first three cards share first row");
+    assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
+    assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
+    assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
+    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg").count()>=6,"maintenance PNG icons render");
+    const pngIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
     assert.match(await pngIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/png;base64,/,
       "semi-flat PNG atlas is actually rendered rather than legacy SVG");
     const dialog=page.getByRole("dialog");
@@ -130,7 +143,10 @@ async function run(browser,width,height){
     await page.getByRole("button",{name:/엔진오일.*2026-11-10.*비용 미입력/}).click();
     await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
     await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();
-    assert.match(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/);
+    assert.doesNotMatch(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/,"grid tile omits historic mileage");
+    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByText("24,500 km").waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
     await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
     assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
     await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();

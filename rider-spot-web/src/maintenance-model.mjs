@@ -1,5 +1,5 @@
 // Shared, read-only maintenance presentation helpers. No user data is mutated here.
-export const standardParts = ["엔진오일", "앞 타이어", "뒤 타이어", "브레이크 패드"];
+export const standardParts = ["엔진오일", "앞 타이어", "뒤 타이어", "브레이크 패드", "구동벨트", "에어필터"];
 export const normalizePart = value => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ");
 export function itemsOf(row) {
   const fromArray = Array.isArray(row?.service_items) ? row.service_items.map(normalizePart).filter(Boolean) : [];

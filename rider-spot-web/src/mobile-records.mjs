@@ -358,26 +358,23 @@ export function createRecords(R, client) {
         btn(h(R.Fragment,null,h(Icon,{name:"settings",size:17}),"교체 주기 설정"),
           ()=>user?setCyclesOpen(true):login(),
           {className:"bike-quiet-action","aria-label":"교체 주기 설정",disabled:!!user&&!data})),
-      h("div",{className:"bike-consumables"},
+      h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
         choices.map(item=>{
           const row=serviceRows(rows,item)[0], cycle=cycles.find(c=>c.item_key===item);
           const due=serviceDue(row,cycle,reading?.[0]);
-          const status=due.state==="overdue"?"기준 초과 · "+number(-due.remaining)+" km":
-            due.state==="soon"?"교체 임박 · "+number(due.remaining)+" km":
-            due.remaining!=null?number(due.remaining)+" km 남음":
+          // Keep detailed mileage/date in the existing detail sheet, not on the compact tile.
+          const status=due.remaining!=null ?
+            (due.state==="overdue"?"기준 "+number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
+            !row?"기록 없음":
             due.next!=null?"다음 "+km(due.next):
+            cycle?.interval_km&&row.odometer_km==null?"거리 미입력":
             cycle?.interval_days?number(cycle.interval_days)+"일 주기":"주기 미설정";
           return btn(h(R.Fragment,null,
-            h("span",{className:"bike-row-main"},
-              h("span",{className:"bike-item-icon"},h(PartIcon,{name:item,size:40})),
-              h("span",null,h("b",null,item),
-                h("small",null,row?"최근 "+row.serviced_on:"교환 기록 없음"),
-                h("small",null,row?km(row.odometer_km):"거리 미입력"))),
-            h("span",{className:"bike-row-meta"},
-              h("b",{className:"bike-status bike-state-"+due.state},status),
-              h(Icon,{name:"chevron",size:17}))),
+            h("span",{className:"bike-tile-icon"},h(PartIcon,{name:item,size:46})),
+            h("span",{className:"bike-tile-name"},item),
+            h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
           ()=>user?setDetailItem(item):login(),
-          {key:item,className:"bike-row bike-consumable","aria-label":item+" 관리"}); 
+          {key:item,className:"bike-consumable bike-tile","aria-label":item+" 관리"}); 
         })),
       h("div",{className:"bike-heading bike-history-head"},
         h("h2",null,h(Icon,{name:"history",size:19}),"전체 정비 이력"),
