@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon} from "../src/finance-model.mjs";
+import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths} from "../src/finance-model.mjs";
 
 test("Seoul accounting date rolls over at 03:00, not midnight",()=>{
   assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
@@ -60,4 +60,37 @@ test("personal spending does not reduce business net, source ids remain intact",
 test("won amount validation rejects decimals and oversized values",()=>{
   assert.equal(validWon(12345),true);
   for(const value of [-1,0.2,1e12,Infinity,"NaN"])assert.equal(validWon(value),false);
+});
+
+test("recurring expenses are only projected until user confirms the actual payment",()=>{
+  const rules=[{id:"rule-a",category:"보험료",amount_won:65000,day_of_month:31,active:true},
+    {id:"rule-b",category:"통신비",amount_won:32000,day_of_month:8,active:false}];
+  const pending=recurringOccurrences(rules,[],"2027-02");
+  assert.equal(pending.length,1);
+  assert.equal(pending[0].day,"2027-02-28");
+  assert.equal(pending[0].status,"planned");
+  assert.equal(financeTotals({extras:[]},"2027-02-01","2027-02-28").cost,0);
+  const posted=[{id:"cost-1",recurrence_id:"rule-a",recurrence_month:"2027-02-01",
+    category:"보험료",expense_date:"2027-02-28",amount_won:65000}];
+  assert.equal(recurringOccurrences(rules,posted,"2027-02")[0].status,"recorded");
+  assert.equal(financeTotals({extras:posted},"2027-02-01","2027-02-28").cost,65000);
+  assert.equal(plannedExpenseDate("2028-02",31),"2028-02-29");
+  assert.equal(plannedExpenseDate("2027-04",31),"2027-04-30");
+});
+test("payout schedule dates never change actual payment or revenue",()=>{
+  const week={cycle:"weekly",weekday:1};
+  assert.equal(nextPayoutDate(week,"2026-11-19"),"2026-11-23");
+  assert.equal(nextPayoutDate(week,"2026-11-23"),"2026-11-23");
+  const monthly={cycle:"monthly",month_day:31};
+  assert.equal(nextPayoutDate(monthly,"2027-02-27"),"2027-02-28");
+  assert.equal(nextPayoutDate(monthly,"2027-02-28"),"2027-02-28");
+  assert.equal(nextPayoutDate(monthly,"2027-03-01"),"2027-03-31");
+  assert.equal(nextPayoutDate({cycle:"none"},"2027-02-27"),null);
+});
+test("monthly comparisons return ordered actual totals and no fictional values",()=>{
+  const data={earnings:[{work_date:"2026-10-15",gross_won:50000},
+    {work_date:"2026-11-02",gross_won:70000}]};
+  const months=financeMonths(data,"2026-11-19",3);
+  assert.deepEqual(months.map(x=>x.month),["2026-09","2026-10","2026-11"]);
+  assert.deepEqual(months.map(x=>x.gross),[0,50000,70000]);
 });
