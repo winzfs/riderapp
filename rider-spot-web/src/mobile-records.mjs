@@ -33,7 +33,7 @@ export function createRecords(R, client) {
     className:"rs-icon",width:size,height:size,viewBox:"0 0 24 24",
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,
   },h("path",{d:icons[name]||icons.shops}));
-  const PartIcon = ({name,size=28}) => h("span",{className:"bike-part-svg","data-graphic-version":"vector-v196",style:{width:size,height:size,...maintenanceIcon(name)},"aria-hidden":true});
+  const PartIcon = ({name,size=28}) => h("img",{className:"bike-part-svg","data-graphic-version":"vector-v196",src:maintenanceIcon(name),width:size,height:size,alt:"",decoding:"async",style:{width:size,height:size},"aria-hidden":true});
   function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false,footerExtra=null}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
