@@ -117,7 +117,7 @@ async function run(browser,width,height){
         title:await page.title(),nav:await page.locator(".bottom-nav button").allTextContents()});
       throw e;
     }
-    assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["운행","타임라인","동네","내 바이크"]);
+    assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["지도","타임라인","동네","수익","내 바이크"]);
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","native and browser routing controller initialized");
