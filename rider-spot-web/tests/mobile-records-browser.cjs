@@ -144,7 +144,7 @@ async function run(browser,width,height){
     await oilCycle.getByRole("alert").waitFor();
     assert.equal(await oilCycle.getByLabel("교체 거리 (km)").inputValue(),"4000","failed save keeps entered interval");
     await oilCycle.getByRole("button",{name:"교체 주기 저장"}).click();
-    await oilCycle.waitFor({state:"hidden"});
+    await oilCycle.waitFor({state:"hidden"});console.log("PASS compact cycle editor",width);
     await oilDetail.getByText("28,500 km",{exact:true}).waitFor();
     await oilDetail.getByText("4,000 km",{exact:true}).waitFor();
     await shot("bike-detail");
@@ -214,7 +214,7 @@ async function run(browser,width,height){
     await rearCycle.getByLabel("교체 거리 (km)").fill("40000");
     await rearCycle.getByRole("button",{name:"교체 주기 저장"}).click();
     await rearCycle.waitFor({state:"hidden"});
-    await rear.getByText("80,000 km",{exact:true}).waitFor();
+    await rear.getByText("80,000 km",{exact:true}).waitFor();console.log("PASS 40000km interval + 40000km replacement",width);
     await shot("bike-detail-updated");
     await rear.getByRole("button",{name:"닫기"}).click();
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
@@ -222,7 +222,7 @@ async function run(browser,width,height){
     await dialog.getByRole("button",{name:"계기판 저장"}).click();
     await page.getByText("60,300 km",{exact:true}).first().waitFor();
     await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"})
-      .getByText("19,700 km 남음",{exact:true}).waitFor();
+      .getByText("19,700 km 남음",{exact:true}).waitFor();console.log("PASS 60300km current odometer, 19700km remaining",width);
     await page.getByRole("button",{name:/앞 타이어 · 뒤 타이어.*0원/}).click();
     const editForDelete=page.getByRole("dialog",{name:"정비 기록 수정"});
     await editForDelete.getByRole("button",{name:"정비 기록 삭제"}).click();
@@ -237,7 +237,7 @@ async function run(browser,width,height){
     await confirmDelete.getByRole("button",{name:"기록 삭제",exact:true}).click();
     await confirmDelete.waitFor({state:"hidden"});
     await editForDelete.waitFor({state:"hidden"});
-    assert.equal(records.length,3,"delete removes exactly the selected service record");
+    assert.equal(records.length,3,"delete removes exactly the selected service record");console.log("PASS single record deletion",width);
     await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).getByText("기록 없음").waitFor();
     assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
     await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
@@ -291,5 +291,5 @@ async function run(browser,width,height){
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
 }
-(async()=>{const browser=await chromium.launch({executablePath:process.env.RIDER_CHROMIUM,args:["--no-sandbox"]});
-try{await run(browser,412,892);await run(browser,360,400);}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{const watchdog=setTimeout(()=>{console.error("mobile browser test timed out");process.exit(2);},150000);const browser=await chromium.launch({executablePath:process.env.RIDER_CHROMIUM,args:["--no-sandbox"]});
+try{await run(browser,412,892);await run(browser,360,400);}finally{clearTimeout(watchdog);await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
