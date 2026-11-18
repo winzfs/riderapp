@@ -128,9 +128,8 @@ async function run(browser,width,height){
     await page.locator(".ride-launch button").waitFor();
     await nav("내 바이크");await page.locator(".bike-consumables").waitFor();
     const grid=page.locator(".bike-consumables"),cards=grid.locator(".bike-consumable");
-    assert.ok(await cards.first().locator(".bike-tile-cycle").isVisible(),"reference interval shown directly on tile");
-    assert.ok(await cards.filter({hasText:"구동벨트"}).getByText(/20,000 km/).count(),
-      "generic 125cc belt reference is visible before selecting a model");
+    assert.equal(await cards.first().locator(".bike-tile-cycle").count(),0,"card omits the configured cycle and its origin");
+    assert.equal(await cards.first().locator(".bike-tile-status").count(),1,"each card has exactly one status label");
     assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
     const layout=await grid.evaluate(node=>{
       const el=[...node.querySelectorAll(".bike-consumable")].map(x=>x.getBoundingClientRect());
@@ -143,13 +142,13 @@ async function run(browser,width,height){
     assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
     assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
-    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='neo-flat-v195']").count()>=6,
-      "new PNG icons are installed, not the cached previous artwork");
+    assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='vector-v196']").count()>=6,
+      "scalable vector icons are installed");
     const newIcon=page.locator(".bike-tile-icon .bike-part-svg").first();
-    assert.match(await newIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/png;base64,/,
-      "actual glossy PNG atlas renders instead of previous inline SVGs");
-    assert.equal(await newIcon.evaluate(el=>getComputedStyle(el).backgroundSize),"500% 200%",
-      "sprite cells are clipped to one part icon");
+    assert.match(await newIcon.evaluate(el => getComputedStyle(el).backgroundImage), /data:image\/svg\+xml/,
+      "SVG stays sharp when enlarged on a dense Android display");
+    assert.equal(await newIcon.evaluate(el=>getComputedStyle(el).backgroundSize),"contain",
+      "the entire scalable icon fits its card");
     const dialog=page.getByRole("dialog");
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
@@ -209,6 +208,13 @@ async function run(browser,width,height){
     await tireDetail.getByRole("button",{name:"닫기"}).click();
     await shot("bike-updated");
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
+    assert.equal(await dialog.locator('input[name="custom"]').count(),0,"no always-visible extra-part text field");
+    await dialog.getByRole("button",{name:"기타 부품 추가"}).click();
+    const customModal=page.getByRole("dialog",{name:"기타 부품 추가"});
+    await customModal.getByLabel("부품명").fill("미션오일");
+    await customModal.getByRole("button",{name:"추가",exact:true}).click();
+    await dialog.getByRole("button",{name:"미션오일 제거"}).waitFor();
+    await dialog.getByRole("button",{name:"미션오일 제거"}).click();
     await dialog.getByRole("button",{name:"앞 타이어",exact:true}).click();
     await dialog.getByLabel("정비 날짜").fill("2026-11-15");
     await dialog.getByRole("button",{name:"정비 기록 저장"}).click();

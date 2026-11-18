@@ -33,7 +33,7 @@ export function createRecords(R, client) {
     className:"rs-icon",width:size,height:size,viewBox:"0 0 24 24",
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,
   },h("path",{d:icons[name]||icons.shops}));
-  const PartIcon = ({name,size=28}) => h("span",{className:"bike-part-svg","data-graphic-version":"neo-flat-v195",style:{width:size,height:size,...maintenanceIcon(name)},"aria-hidden":true});
+  const PartIcon = ({name,size=28}) => h("span",{className:"bike-part-svg","data-graphic-version":"vector-v196",style:{width:size,height:size,...maintenanceIcon(name)},"aria-hidden":true});
   function Sheet({title, date, close, save, submit, children, subtitle, leading, action, detail=false,footerExtra=null}) {
     const [error, setError] = R.useState("");
     const [busy, setBusy] = R.useState(false);
@@ -243,6 +243,9 @@ export function createRecords(R, client) {
 
   function ServiceEditor({row,item,choices,user,close,changed,model}) {
     const [selected,select] = R.useState(() => row ? itemsOf(row) : item ? [item] : []);
+    const [customOpen,setCustomOpen] = R.useState(false);
+    const [customName,setCustomName] = R.useState("");
+    const [customError,setCustomError] = R.useState("");
     const id = R.useRef(row?.id || crypto.randomUUID());
     const [deleteConfirm,setDeleteConfirm]=R.useState(false);
     const [deleting,setDeleting]=R.useState(false);
@@ -262,6 +265,14 @@ export function createRecords(R, client) {
       finally{deleteLock.current=false;setDeleting(false);}
     };
     const selectedKeys = new Set(selected.map(x=>normalizePart(x).toLocaleLowerCase("ko-KR")));
+    const customParts = selected.filter(name=>!standardParts.includes(name));
+    const addCustomPart = () => {
+      const name=normalizePart(customName);
+      if(name.length<2||name.length>40){setCustomError("부품명을 2~40자로 입력해 주세요.");return;}
+      const combined=composeServiceItems([...selected,name]);
+      select(combined);
+      setCustomOpen(false);setCustomName("");setCustomError("");
+    };
     const suggestion = !row && selected.length===1 ? modelDefaults(model,selected[0]):null;
     const partButton = name => btn(h(R.Fragment,null,
         h(PartIcon,{name,size:40}),
@@ -274,7 +285,7 @@ export function createRecords(R, client) {
       footerExtra:row&&btn("정비 기록 삭제",()=>setDeleteConfirm(true),
         {className:"record-delete-open","aria-label":"정비 기록 삭제"}),
       submit:row?"변경사항 저장":"정비 기록 저장",save:async form=>{
-        const items = composeServiceItems(selected, form.get("custom"));
+        const items = composeServiceItems(selected);
         const day = String(form.get("day") || "");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw Error("정비 날짜를 확인해 주세요.");
         const optional = (key,max) => {
@@ -296,9 +307,12 @@ export function createRecords(R, client) {
       field("정비 날짜",{name:"day",type:"date",required:true,defaultValue:row?.serviced_on||rs33ISO(Date.now())}),
       h("fieldset",{className:"record-parts"},
         h("legend",null,"교환 부품",h("small",null,"복수 선택 가능")),
-        h("div",{className:"record-parts-grid"},choices.map(partButton))),
-      field("다른 부품 직접 입력",{name:"custom",maxLength:40,
-        placeholder:"목록에 없다면 부품명을 입력하세요",autoComplete:"off"}),
+        btn("＋ 기타 부품",()=>{setCustomError("");setCustomOpen(true);},
+          {className:"record-custom-trigger","aria-label":"기타 부품 추가"}),
+        h("div",{className:"record-parts-grid"},standardParts.filter(name=>choices.includes(name)).map(partButton)),
+        customParts.length>0&&h("div",{className:"record-custom-chips","aria-label":"추가한 기타 부품"},
+          customParts.map(name=>btn(name+" ×",()=>select(current=>current.filter(x=>x!==name)),
+            {key:name,className:"record-custom-chip","aria-label":name+" 제거"}))))),
       h("p",{className:"record-help"},"선택한 부품들은 한 건의 정비 기록으로 저장됩니다."),
       h("div",{className:"record-pair record-measures"},
         field("계기판 거리 (km)",{type:"text",inputMode:"numeric",name:"km",placeholder:"미입력",
@@ -312,6 +326,16 @@ export function createRecords(R, client) {
         h("summary",null,"정비소 · 메모",h(Icon,{name:"chevron",size:17})),
         field("정비소",{name:"shop",maxLength:100,defaultValue:row?.workshop||""}),
         h("label",null,"메모",h("textarea",{name:"note",maxLength:500,rows:3,defaultValue:row?.note||""})))),
+      customOpen && h(MiniDialog,{title:"기타 부품 추가",close:()=>setCustomOpen(false)},
+        h("p",{className:"record-mini-description"},"목록에 없는 부품만 입력하세요. 추가한 부품은 정비 기록에 함께 저장됩니다."),
+        h("label",{className:"record-custom-field"},"부품명",
+          h("input",{type:"text",value:customName,maxLength:40,autoComplete:"off",autoFocus:true,
+            placeholder:"예: 미션오일",onChange:event=>{setCustomName(event.target.value);setCustomError("");},
+            onKeyDown:event=>{if(event.key==="Enter"){event.preventDefault();addCustomPart();}}})),
+        customError && h("p",{role:"alert",className:"record-cycle-error"},customError),
+        h("div",{className:"record-mini-actions"},
+          btn("취소",()=>setCustomOpen(false),{className:"record-mini-cancel"}),
+          btn("추가",addCustomPart,{className:"record-cycle-save"}))),
       deleteConfirm && h(MiniDialog,{title:"정비 기록을 삭제할까요?",close:()=>setDeleteConfirm(false),busy:deleting},
         h("p",{className:"record-mini-description"},
           itemsOf(row).join(" · ")+" · "+row.serviced_on+" 기록을 삭제합니다. 삭제 후 복구할 수 없어요."),
@@ -679,18 +703,12 @@ export function createRecords(R, client) {
         choices.map(item=>{
           const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
           const due=serviceDue(row,cycle,reading?.[0]);
-          const cycleLabel=cycle?.interval_km?number(cycle.interval_km)+" km":
-            cycle?.interval_days?number(cycle.interval_days)+"일":"상태 점검";
-          const cycleCaption=cycle?.is_custom?"내 설정":
-            cycle?.interval_source==="manual"?"제조사 참고":"추천 주기";
           const status=due.remaining!=null ?
-            (due.state==="overdue"?"기준 "+number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
-            row?"교체 거리 미입력":"교체 이력 없음";
+            (due.state==="overdue"?number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
+            row?"거리 미입력":"기록 없음";
           return btn(h(R.Fragment,null,
             h("span",{className:"bike-tile-icon"},h(PartIcon,{name:item,size:46})),
             h("span",{className:"bike-tile-name"},item),
-            h("span",{className:"bike-tile-cycle-caption"},cycleCaption),
-            h("strong",{className:"bike-tile-cycle"},cycleLabel),
             h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
           ()=>user?setDetailItem(item):login(),
           {key:item,className:"bike-consumable bike-tile","aria-label":item+" 관리"}); 

@@ -1,3 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#354740" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-<style>.accent{stroke:#b95426}</style><path d="M20 17h19l8 8v24H16V25z"/><path d="M24 17v-5h12v5M20 29h27M24 38h15M19 48h25"/><path class="accent" d="M35 32c-5 6-6 8-6 10a6 6 0 0 0 12 0c0-2-1-4-6-10z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+<defs>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#62766f"/><stop offset=".48" stop-color="#263b38"/><stop offset="1" stop-color="#172825"/></linearGradient>
+<linearGradient id="dark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3e514d"/><stop offset="1" stop-color="#132321"/></linearGradient>
+<linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffac45"/><stop offset="1" stop-color="#c95a17"/></linearGradient>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#122724" flood-opacity=".16"/></filter>
+</defs><g filter="url(#shadow)"><path d="M23 25h44l10 13v35a6 6 0 0 1-6 6H25a6 6 0 0 1-6-6V31a6 6 0 0 1 4-6Z" fill="url(#metal)"/><path d="M54 27h10l10 12v10H61a7 7 0 0 1-7-7Z" fill="#101f1f"/><path d="M60 33h5l4 5v4h-9Z" fill="#f6f8f4"/><path d="M30 17h18v9H30z" rx="2" fill="url(#orange)"/><path d="M27 30h20" stroke="#8da09a" stroke-width="2" stroke-linecap="round"/><path d="M48 42c-7 9-12 16-12 22a12 12 0 0 0 24 0c0-6-5-13-12-22Z" fill="url(#orange)"/><path d="M44 54c-4 5-4 11-1 14" stroke="#ffe3a5" stroke-width="3" stroke-linecap="round"/><path d="m63 71 10-10v12H63Z" fill="#dd722c"/></g></svg>
