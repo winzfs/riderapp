@@ -347,7 +347,7 @@ if(!state.lastFrame)state.lastFrame=t;
 const dt=Math.min(250,t-state.lastFrame);state.lastFrame=t;
 const trip=selectedTrip()?.payload;if(!trip){state.playing=false;return}
 state.progress=Math.min(1,state.progress+(dt*state.speed)/(duration(trip)*60000));
-drawTripMap();
+if(!state.lastDraw || t-state.lastDraw>=80 || state.progress>=1){drawTripMap();state.lastDraw=t;}
 if(state.progress>=1){state.playing=false;$('playBtn').textContent='▶ 다시 재생';return}
 requestAnimationFrame(playbackFrame);
 }
@@ -355,7 +355,7 @@ function switchPlay(){
 if(!selectedTrip()){toast('먼저 운행 기록을 추가하세요.');return}
 if(state.playing){state.playing=false;$('playBtn').textContent='▶ 재생';return}
 if(state.progress>=1)state.progress=0;
-state.playing=true;state.lastFrame=0;state.speed=Number($('playSpeed').value)||10;
+state.playing=true;state.lastFrame=0;state.lastDraw=0;state.speed=Number($('playSpeed').value)||10;
 $('playBtn').textContent='❚❚ 일시정지';requestAnimationFrame(playbackFrame);
 }
 async function checkMapZoom(){
@@ -413,11 +413,12 @@ function handlers(){
 document.addEventListener('click',async ev=>{
 const target=ev.target.closest('[data-action],[data-view],[data-map-zoom]');if(!target)return;
 if(target.dataset.mapZoom){const map=state.maps[target.dataset.map];if(map)map.setZoom(map.getZoom()+(target.dataset.mapZoom==='in'?.25:-.25));return}
+if(target.dataset.action==='more'){$('moreDialog').showModal();return}
 if(target.dataset.action==='new'){if(target.dataset.part)state.selectedPart=target.dataset.part;formOpen(target.dataset.kind);return}
 if(target.dataset.action==='edit'){const r=state.rows.find(x=>x.id===target.dataset.id);if(r)formOpen(r.kind,r.id);return}
 if(target.dataset.action==='delete'){await remove(target.dataset.id);return}
 if(target.dataset.action==='part'){partOpen(target.dataset.part);return}
-if(target.dataset.view){setView(target.dataset.view);return}
+if(target.dataset.view){if($('moreDialog').open)$('moreDialog').close();setView(target.dataset.view);return}
 });
 $('authBtn').addEventListener('click',()=>{$('authDialog').showModal();updateAuth()});
 $('closeDialog').addEventListener('click',()=>$('editDialog').close());
