@@ -507,14 +507,17 @@ export function createFinance(R, client) {
     }
     function platformBreakdown() {
       return h("div",{className:"fin-platforms"},
-        Object.entries(totals.byPlatform).length?Object.entries(totals.byPlatform)
+        Object.entries(monthly.byPlatform).length?Object.entries(monthly.byPlatform)
           .sort((a,b)=>b[1]-a[1]).map(([p,n])=>h("div",{className:"fin-platform",key:p},
             h("div",{className:"fin-platform-title"},txt("span",null,p),txt("strong",null,money(n))),
             h("div",{className:"fin-bar-track"},h("div",{className:"fin-bar-value",
-              style:{width:totals.gross?(n/totals.gross*100)+"%":"0%"}}))))
-          :txt("p","fin-empty","플랫폼 수익을 입력하면 비율을 보여줘요."));
+              style:{width:monthly.gross?(n/monthly.gross*100)+"%":"0%"}}))))
+          :txt("p","fin-empty","이번 달 플랫폼 수익 기록이 없어요."));
     }
     function overview() {
+      const periodLabel=scope==="today"?"오늘 배달 수익":
+        scope==="week"?"최근 7일 배달 수익":"월간 배달 수익";
+      const monthLabel=monthFrom.slice(0,7).replace("-","년 ")+"월";
       const snapDays=scope==="today"?[today]:scope==="week"?graph.map(x=>x.day):
         Array.from({length:31},(_,i)=>plusDays(monthFrom,i)).filter(x=>x<=monthTo);
       const rides=snapDays.map(day=>dailyRideSnapshot(window.__rsRideApi?.history,day));
@@ -534,7 +537,7 @@ export function createFinance(R, client) {
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
           button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
         h("section",{className:"fin-hero"},
-          h("div",{className:"fin-hero-top"},txt("span",null,"총 배달 수익"),icon("earnings",20)),
+          h("div",{className:"fin-hero-top"},txt("span",null,periodLabel)),
           h("strong",{className:"fin-hero-amount"},money(totals.gross)),
           txt("small","fin-hero-range",from===to?from:from+" ~ "+to),
           h("div",{className:"fin-hero-divider"}),
@@ -546,8 +549,8 @@ export function createFinance(R, client) {
           button(h(R.Fragment,null,icon("earnings",19),"수익 입력"),()=>openEditor("income"),"fin-primary"),
           button(h(R.Fragment,null,icon("fuel",19),"지출 입력"),()=>openEditor("expense"),"fin-secondary")),
         h("section",{className:"fin-card fin-goal"},
-          h("header",null,h("h2",null,"월 목표"),
-            button(h(R.Fragment,null,icon("settings",16),"설정"),()=>openEditor("goal",goal),"fin-textbtn")),
+          h("header",null,h("h2",null,"이번 달 목표"),
+            button(h(R.Fragment,null,icon("settings",15),"목표 수정"),()=>openEditor("goal",goal),"fin-textbtn")),
           h("div",{className:"fin-goal-amount"},txt("strong",null,goalUncertain?"확인 필요":money(goalValue)),
             txt("small",null,"/ "+money(goalTarget)+" · "+(goal.goal_basis==="net"?"비용 차감액":"총수익"))),
           h("div",{className:"fin-goal-track"},h("div",{style:{width:(achieved??0)+"%"}})),
@@ -557,10 +560,14 @@ export function createFinance(R, client) {
           h("details",{className:"fin-optional"},h("summary",null,"필요한 하루 수익 보기"),
             h("div",{className:"fin-goal-daily"},txt("small",null,"남은 근무 "+remainingWorkDays+"일 기준"),
               txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
-        h("section",{className:"fin-card"},
-          h("header",null,h("h2",null,"플랫폼별 수익")),platformBreakdown()),
-        h("section",{className:"fin-card"},
-          h("header",null,h("h2",null,"최근 7일 수익")),chart()),
+        h("section",{className:"fin-card fin-chart-card"},
+          h("header",null,h("h2",null,"최근 7일 수익"),
+            txt("small",null,"막대를 눌러 날짜별 확인")),
+          chart()),
+        h("section",{className:"fin-card fin-platform-card"+(!Object.keys(monthly.byPlatform).length?" fin-no-records":"")},
+          h("header",null,h("h2",null,"플랫폼별 수익"),
+            txt("small",null,monthLabel+" 기준")),
+          platformBreakdown()),
         h("details",{className:"fin-insights"},
           h("summary",null,"운행 효율",h("span",null,coverageLabel)),
           h("div",{className:"fin-stat-grid"},
@@ -758,8 +765,7 @@ export function createFinance(R, client) {
         txt("p","fin-muted","개인 지출은 업무 비용에서 제외합니다. 미기록 비용과 세금은 반영하지 않습니다."));
     }
     return h("section",{className:"finance-page page narrow"},
-      h("div",{className:"fin-page-head"},h("div",null,txt("small",null,"MY EARNINGS"),
-        h("h1",null,"수익 관리")),icon("earnings",25)),
+      h("div",{className:"fin-page-head"},h("h1",null,"수익 관리")),
       sectionNav,
       !user?h("section",{className:"fin-card"},h("h2",null,"내 수익을 안전하게 보관해요."),
         txt("p","fin-muted","로그인하면 수익·지출·정산 기록을 모든 기기에서 확인할 수 있어요."),
