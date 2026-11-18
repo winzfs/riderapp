@@ -126,7 +126,7 @@ async function run(browser,width,height){
     await dialog.getByLabel("계기판").fill("22000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
     await page.getByRole("button",{name:/엔진오일.*2026-11-10.*비용 미입력/}).click();
     await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
-    await page.getByRole("button",{name:/엔진오일.*2026-11-10.*21,000/}).waitFor();
+    await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();
     assert.match(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/);
     await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
     assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
