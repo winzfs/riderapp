@@ -179,8 +179,21 @@ export function createRecords(R, client) {
     const node=R.useRef(null),closeRef=R.useRef(close),busyRef=R.useRef(busy);
     closeRef.current=close;busyRef.current=busy;
     R.useLayoutEffect(()=>{
-      const dialog=node.current;dialog.showModal();
-      return ()=>{if(dialog.open)dialog.close();};
+      const dialog=node.current,viewport=window.visualViewport;
+      dialog.showModal();
+      // Keep the compact editor inside Android's visible area when Gboard opens.
+      const size=()=>{
+        dialog.style.height=(viewport?.height||innerHeight)+"px";
+        dialog.style.top=(viewport?.offsetTop||0)+"px";
+      };
+      size();
+      viewport?.addEventListener("resize",size);
+      viewport?.addEventListener("scroll",size);
+      return ()=>{
+        viewport?.removeEventListener("resize",size);
+        viewport?.removeEventListener("scroll",size);
+        if(dialog.open)dialog.close();
+      };
     },[]);
     R.useEffect(()=>{
       if(!window.__rsNavigation)return;
