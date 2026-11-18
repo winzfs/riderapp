@@ -409,7 +409,7 @@ export function createRecords(R, client) {
         model && modelDefault?.interval_km && h("p",{className:"bike-reference-cycle"},
           "모델 기본 추천: "+number(modelDefault.interval_km)+" km"+
           (modelDefault.interval_source==="manual"?" · 제조사 설명서 참고":" · 일반 점검 참고값"),
-          cycle?.source==="personal"?" · 내 설정을 우선 적용 중":""))),
+          cycle?.source==="personal"?" · 내 설정을 우선 적용 중":"")),
       model && h("section",{className:"bike-model-cost","aria-label":item+" 예상 교체 비용"},
         h("div",{className:"bike-model-cost-heading"},h("strong",null,"예상 교체 비용"),
           h("small",null,cycle?.source==="personal"?"내 설정":"국내 정비소 참고 시세")),
