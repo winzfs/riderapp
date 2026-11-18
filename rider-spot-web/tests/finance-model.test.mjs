@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay} from "../src/finance-model.mjs";
+import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon} from "../src/finance-model.mjs";
 
 test("Seoul accounting date rolls over at 03:00, not midnight",()=>{
   assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
@@ -31,8 +31,8 @@ test("expense categories are disjoint, and paid status is not revenue twice",()=
  };
  const x=financeTotals(data,"2026-11-19","2026-11-19");
  assert.equal(x.gross,160000);
- assert.equal(x.cost,40000);
- assert.equal(x.net,120000);
+ assert.equal(x.cost,33000);
+ assert.equal(x.net,127000);
  assert.equal(x.paid,120000);assert.equal(x.unpaid,40000);
  const adjusted=financeTotals({...data,earnings:data.earnings.map((r,i)=>i===0?{...r,paid_won:115000}:r)},"2026-11-19","2026-11-19");
  assert.equal(adjusted.paid,115000);assert.equal(adjusted.payoutDifference,-5000);assert.equal(adjusted.unpaid,40000);
@@ -44,4 +44,20 @@ test("expense categories are disjoint, and paid status is not revenue twice",()=
 test("legacy unknown cost scope is flagged instead of claiming reliable net",()=>{
  const x=financeTotals({earnings:[{work_date:"2026-11-18",gross_won:10000,expenses_won:2000,expense_scope:"legacy_unknown"}]},"2026-11-18","2026-11-18");
  assert.equal(x.uncertain,true);assert.equal(x.net,8000);
+});
+
+test("personal spending does not reduce business net, source ids remain intact",()=>{
+  const data={earnings:[{id:"a",work_date:"2026-11-19",gross_won:120000}],
+    fuel:[{id:"f",fueled_on:"2026-11-19",cost_won:8000}],
+    maintenance:[{id:"m",serviced_on:"2026-11-19",cost_won:20000}],
+    extras:[{id:"e",expense_date:"2026-11-19",category:"개인 비용",amount_won:4000},
+      {id:"b",expense_date:"2026-11-19",category:"보험료",amount_won:5000}]};
+  const totals=financeTotals(data,"2026-11-19","2026-11-19");
+  assert.equal(totals.net,87000);assert.equal(totals.personalCost,4000);
+  assert.equal(totals.totalSpent,37000);
+  assert.deepEqual(new Set(financeLedger(data,"2026-11-19","2026-11-19").map(x=>x.row.id)),new Set(["a","f","m","e","b"]));
+});
+test("won amount validation rejects decimals and oversized values",()=>{
+  assert.equal(validWon(12345),true);
+  for(const value of [-1,0.2,1e12,Infinity,"NaN"])assert.equal(validWon(value),false);
 });

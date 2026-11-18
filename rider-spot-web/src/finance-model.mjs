@@ -1,6 +1,8 @@
 // Shared rider finance calculations. Keep chart data and entry totals in one place.
 export const won = n => new Intl.NumberFormat("ko-KR").format(Math.round(Number(n) || 0)) + "원";
 export const num = n => Number(n) || 0;
+export const isPersonalExpense = row => ["식비","개인 비용"].includes(row?.category);
+export const validWon = value => Number.isSafeInteger(Number(value)) && Number(value)>=0 && Number(value)<=100000000;
 export const plusDays = (day, offset) => {
   const d = new Date(day + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + offset);
@@ -24,7 +26,8 @@ export function financeTotals(data,from,to) {
   const earningCosts = earnings.reduce((n,x)=>n+num(x.expenses_won),0);
   const fuelCost = fuel.reduce((n,x)=>n+num(x.cost_won),0);
   const maintenanceCost = maintenance.reduce((n,x)=>n+num(x.cost_won),0);
-  const extraCost = extras.reduce((n,x)=>n+num(x.amount_won),0);
+  const personalCost = extras.filter(isPersonalExpense).reduce((n,x)=>n+num(x.amount_won),0);
+  const extraCost = extras.filter(x=>!isPersonalExpense(x)).reduce((n,x)=>n+num(x.amount_won),0);
   const cost = earningCosts + fuelCost + maintenanceCost + extraCost;
   const uncertain = earnings.some(x=>x.expense_scope !== "other_only" && num(x.expenses_won)>0);
   const byPlatform = {};
@@ -37,7 +40,7 @@ export function financeTotals(data,from,to) {
   const expectedPaid = paidRows.reduce((n,x)=>n+num(x.gross_won),0);
   const unpaid = earnings.filter(x=>!x.paid_at).reduce((n,x)=>n+num(x.gross_won),0);
   return {earnings,fuel,maintenance,extras,gross,earningCosts,fuelCost,maintenanceCost,
-    extraCost,cost,net:gross-cost,uncertain,byPlatform,paid,expectedPaid,payoutDifference:paid-expectedPaid,unpaid,
+    extraCost,personalCost,totalSpent:cost+personalCost,cost,net:gross-cost,uncertain,byPlatform,paid,expectedPaid,payoutDifference:paid-expectedPaid,unpaid,
     deliveries:earnings.reduce((n,x)=>n+num(x.deliveries),0)};
 }
 export function financeDays(data,last,days=7) {
@@ -58,3 +61,13 @@ export function monthLastDay(day) {
   return plusDays(d.toISOString().slice(0,10),-1);
 }
 export function financeMonthPeriod(day){ return [day.slice(0,7)+"-01",monthLastDay(day)]; }
+
+export function financeLedger(data,from,to) {
+  const rows=[];
+  for(const row of data?.earnings||[]) if(row.gross_entered!==false)
+    rows.push({type:"income",day:row.work_date,amount:num(row.gross_won),row,name:row.platform});
+  for(const row of data?.fuel||[]) rows.push({type:"fuel",day:row.fueled_on,amount:num(row.cost_won),row,name:"주유비"});
+  for(const row of data?.maintenance||[]) rows.push({type:"maintenance",day:row.serviced_on,amount:num(row.cost_won),row,name:row.item||"정비"});
+  for(const row of data?.extras||[]) rows.push({type:"expense",day:row.expense_date,amount:num(row.amount_won),row,name:row.category,personal:isPersonalExpense(row)});
+  return rows.filter(x=>x.day>=from&&x.day<=to).sort((a,b)=>b.day.localeCompare(a.day) || String(b.row.created_at||"").localeCompare(String(a.row.created_at||"")));
+}
