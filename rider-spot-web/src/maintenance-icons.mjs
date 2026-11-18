@@ -1,6 +1,6 @@
-// Ten image-generated, compact semi-flat maintenance symbols in one PNG atlas.
+// Ten image-generated angular maintenance symbols on transparent PNG for the light UI.
 // Positions: oil, front/rear tire, brake, belt, filter, battery, spark, coolant, other.
-import atlas from "./assets/maintenance/flat-parts.png";
+import atlas from "./assets/maintenance/angular-parts.png";
 const indexes = Object.freeze({
   "엔진오일":0,"앞 타이어":1,"뒤 타이어":2,"브레이크 패드":3,
   "구동벨트":4,"에어필터":5,"배터리":6,"점화플러그":7,"냉각수":8,"기타":9
