@@ -124,3 +124,21 @@
 /* Ensure the real SVG image remains visible in history rows and every tile. */
 .bike-page .bike-row .bike-item-icon img.bike-part-svg{display:block!important}
 .bike-part-svg{object-fit:contain!important;max-width:none!important}
+
+/* v197: restore the FIRST original Neo-Flat 10-part set (256px per icon).
+   Keep existing v196 card proportions, statuses and "other part" popup. */
+.bike-page .bike-part-svg[data-graphic-version="neo-flat-original-v197"],
+.record-sheet .bike-part-svg[data-graphic-version="neo-flat-original-v197"]{
+  display:inline-block!important;
+  flex:none;
+  background-size:500% 200%!important;
+  background-repeat:no-repeat!important;
+  background-color:transparent!important;
+  border-radius:0!important;
+  image-rendering:auto!important;
+  filter:drop-shadow(0 2px 1px rgba(11,35,28,.10));
+}
+.bike-page .bike-tile-icon .bike-part-svg[data-graphic-version="neo-flat-original-v197"],
+.record-sheet .record-parts-grid .record-part .bike-part-svg[data-graphic-version="neo-flat-original-v197"]{
+  background-size:500% 200%!important;
+}
