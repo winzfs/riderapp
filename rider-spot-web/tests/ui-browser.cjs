@@ -195,7 +195,7 @@ await p.locator('[data-rs-tab="fuel"]').click();await p.getByText('주유 빠르
  assert.equal(await game.locator('.rs-game-achievement').count(),5,'all collectible badges visible');
  assert.equal(await game.locator('.rs-game-achievement.rs-game-earned').count(),1);
  await shot('profile-achievements');await p.getByLabel('개인 메모',{exact:true}).fill('테스트 초안');}
- if(!baseline){await nav.getByRole('button',{name:'운행',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);
+ if(!baseline){await nav.getByRole('button',{name:'지도',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.map')?.dataset.rsBasemap==='positron',null,{timeout:35000});await p.reload();await p.getByRole('navigation',{name:'주 메뉴'}).waitFor();assert.equal(await p.evaluate(id=>localStorage.getItem('rs:trips:'+id),userId),original);assert.deepEqual(errors,[]);
  // Verify the new live map after validating previously saved data, so
  // simulated active-trip recovery cannot change the legacy snapshot assertion.
  await nav.getByRole('button',{name:'타임라인',exact:true}).click();
