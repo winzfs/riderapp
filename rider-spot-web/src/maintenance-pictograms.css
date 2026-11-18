@@ -1,0 +1,8 @@
+/* Symbol System 02: quiet industrial pictograms on a neutral canvas. */
+.bike-page .bike-row .bike-item-icon{background:#f2f5f1;border-color:#e5ebe5;border-radius:13px}
+.bike-page .bike-row .bike-item-icon.subtle{background:#f6f7f4;border-color:#edf0ea}
+.bike-page .bike-part-svg,.record-sheet .bike-part-svg{background-color:transparent;filter:none;image-rendering:auto}
+.record-sheet .record-parts-grid .record-part{background:#fbfcfa;border-color:#e3e9e2;border-radius:14px;box-shadow:none}
+.record-sheet .record-parts-grid .record-part[aria-pressed=true]{background:#f8f3ed;border-color:#b97c58;color:#2f4237;box-shadow:0 0 0 1px #e7cbb8 inset}
+.record-part-check{background:#b77350}
+.record-sheet .record-parts-grid .record-part:focus-visible,.bike-page .bike-row:focus-visible{outline-color:#b77350}
