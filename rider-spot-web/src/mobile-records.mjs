@@ -1,4 +1,5 @@
 import { rs33ISO } from "./timeline-dates.mjs";
+import {saveIncomeDay,financeWriteError} from "./finance-storage.mjs";
 import scooter from "./scooter.svg";
 import { icons } from "./ui.mjs";
 import { maintenanceIcon } from "./maintenance-icons.mjs";
@@ -234,9 +235,12 @@ export function createRecords(R, client) {
       save:async()=>{
         const changes={};
         for(const p of platforms){const v=draft[p]===""?null:Number(draft[p]); if(v!==(values[p]??null))changes[p]=v;}
-        await read(client.rpc("set_rider_daily_income",{p_date:day,p_values:changes}));
-        window.dispatchEvent(new CustomEvent("riderspot:finance-changed",{detail:{userId:user.id}}));
-        refresh(n=>n+1);
+        try{
+          await saveIncomeDay(client,{userId:user.id,day,draft,previous:values});
+          refresh(n=>n+1);
+        }catch(error){
+          throw Error(financeWriteError(error));
+        }
       }},platforms.map((p,i)=>field(p+" (원)",{key:p,name:p,inputMode:"numeric",enterKeyHint:i?"done":"next",placeholder:"미입력",value:draft[p]===""?"":number(draft[p]),
         onKeyDown:event=>{if(!i && event.key==="Enter"){event.preventDefault();event.target.form.elements.namedItem(platforms[1]).focus();}},
         onChange:event=>{const digits=event.target.value.replace(/,/g,""); if(/^\d{0,9}$/.test(digits)&&Number(digits)<=100000000) edit({...draft,[p]:digits});}}))));
