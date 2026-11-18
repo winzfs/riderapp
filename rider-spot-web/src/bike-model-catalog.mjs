@@ -117,12 +117,24 @@ const approximate={
   "구동벨트":{interval_km:20000,interval_days:null,note:"벨트 손상·연식 점검 · 설명서 우선"},
   "에어필터":{interval_km:12000,interval_days:null,note:"먼지 많은 배달환경 참고값 · 설명서 우선"},
   "구동체인":{interval_km:15000,interval_days:null,note:"체인 늘어남·윤활·마모 기준 교환"},
-  "배터리":{interval_km:null,interval_days:null,note:"교체주기 없음 · 성능·상태 점검 후 교환"}
+  "배터리":{interval_km:null,interval_days:null,note:"전기 구동 배터리는 성능 점검 후 제조사 실견적 필요 · 일괄 가격/교체주기 제공 안 함"}
 };
 const verified={
   "honda-pcx125":{
     "엔진오일":{interval_km:6000,interval_days:365,note:"2025 유럽판 Honda 설명서 · 첫 교환 1,000 km, 이후 6,000 km",source:costSources.pcxManual},
     "구동벨트":{interval_km:24000,interval_days:null,note:"2025 Honda 설명서 · 12,000 km 점검, 24,000 km 교체",source:costSources.pcxManual}
+  },
+  "honda-adv160":{
+    "엔진오일":{interval_km:6000,interval_days:365,note:"Honda Japan ADV160 2026 설명서 · 첫 1,000 km, 이후 6,000 km / 1년",source:"https://www.honda.co.jp/customer/motor/adv160/faq/qa009/"}
+  },
+  "honda-supercub110":{
+    "엔진오일":{interval_km:3000,interval_days:365,note:"Honda Japan 슈퍼커브110 설명서 · 첫 1,000 km, 이후 3,000 km / 1년",source:"https://www.honda.co.jp/ownersmanual/pdf/motor/supercub110/30K887000_web.pdf"}
+  },
+  "honda-ct125":{
+    "엔진오일":{interval_km:3000,interval_days:365,note:"Honda Japan CT125 설명서 · 첫 1,000 km, 이후 3,000 km / 1년",source:"https://webom.hondamotopub.com/webom/HMJ/K2E250/html/JSC002001.html"}
+  },
+  "honda-dio110":{
+    "엔진오일":{interval_km:3000,interval_days:365,note:"Honda Japan Dio110 설명서 · 첫 1,000 km, 이후 3,000 km / 1년",source:"https://webom.hondamotopub.com/webom/HMJ/K2C250/html/JSC002001.html"}
   },
   "honda-pcx125-old":{
     "구동벨트":{interval_km:24000,interval_days:null,note:"구형 PCX 설명서 기준 · 8,000 km마다 점검, 24,000 km 교체",source:"https://2rom-prd-data.hondamotopub.com/om/HKO/PCX/2010/10PCX125_32KWN600_0.pdf"}
@@ -140,7 +152,11 @@ export function modelDefaults(model,item){
   if(!model||!modelParts(model).includes(item))return null;
   const basic=approximate[item]||{interval_km:null,interval_days:null,note:"정비소 점검 필요"};
   const official=verified[model.key]?.[item];
-  const [costLow,costHigh]=range[model.tier]?.[item]||[null,null];
+  const [baseLow,baseHigh]=range[model.tier]?.[item]||[null,null];
+  // Electric traction battery packs can cost far more than a small 12V battery.
+  // Never show a generic 12V-battery quote as an EV drive-battery replacement.
+  const [costLow,costHigh]=model.kind==="electric"&&item==="배터리"
+    ?[null,null]:[baseLow,baseHigh];
   return {
     item_key:item, interval_km:official?.interval_km??basic.interval_km,
     interval_days:official?official.interval_days:basic.interval_days,
