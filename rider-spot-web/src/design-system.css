@@ -1921,3 +1921,130 @@ dialog.record-mini-dialog::backdrop{
   border-radius:10px;padding:9px 11px;background:#fff;font-size:16px;color:#23382c}
 .bike-model-custom-editor .bike-model-custom-save{width:100%;min-height:44px;border-radius:10px;
   border:0;background:#ad471b;color:#fff;font-size:13px;font-weight:800}
+
+
+/* Rider Spot finance center — five-tab layout and consistent mobile card system. */
+.app .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+.app .bottom-nav button{min-width:0;font-size:clamp(9px,2.7vw,11px);padding-inline:1px}
+.app .bottom-nav button svg{width:22px;height:22px}
+.app .finance-page{max-width:690px;margin:0 auto;padding:18px 16px calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 38px);color:#26332e}
+.finance-page :is(h1,h2,h3,p){margin:0}
+.finance-page h1{font-size:27px;font-weight:800;letter-spacing:-.06em}
+.finance-page h2{font-size:16px;font-weight:780;letter-spacing:-.035em}
+.finance-page button{touch-action:manipulation}
+.fin-page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px}
+.fin-page-head small{display:block;font-size:10px;letter-spacing:.14em;font-weight:800;color:#b15d35;margin-bottom:3px}
+.fin-page-head>svg{width:43px;height:43px;padding:10px;border-radius:14px;color:#a74e20;background:#fbefe5}
+.fin-subnav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;background:#f0f2ef;border:1px solid #e8ece7;border-radius:14px;margin-bottom:18px}
+.fin-subnav .fin-subnav-btn{min-height:41px;padding:8px 3px;font-size:12px;font-weight:700;background:transparent;border:0;border-radius:10px;color:#6e7771}
+.fin-subnav .fin-subnav-btn.selected{color:#954318;background:#fff;box-shadow:0 2px 9px #1e35211a}
+.fin-stack{display:grid;gap:14px;min-width:0}
+.fin-period{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.fin-period-btn{min-height:40px;background:#fff;color:#636b66;border:1px solid #e6e8e5;border-radius:11px;font-weight:700;font-size:12px}
+.fin-period-btn.selected{background:#f9ece1;color:#a44516;border-color:#e9c5ae}
+.fin-hero{position:relative;background:linear-gradient(125deg,#273b35,#1b2c29 85%);border-radius:22px;padding:22px 21px 20px;overflow:hidden;color:#fff;box-shadow:0 8px 24px #1c33271b}
+.fin-hero:before{content:"";position:absolute;right:-55px;top:-55px;width:170px;height:170px;border:1px solid #ffffff1a;border-radius:50%;box-shadow:0 0 0 32px #ffffff04,0 0 0 65px #ffffff04;pointer-events:none}
+.fin-hero-top{display:flex;align-items:center;justify-content:space-between;font-weight:660;font-size:12px;color:#d3dfd9}
+.fin-hero-top svg{color:#f5ad7a}
+.fin-hero-amount{font-size:clamp(30px,7vw,42px);font-weight:800;letter-spacing:-.07em;display:block;line-height:1.25;margin-top:11px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fin-hero-range{font-size:11px;color:#c8d7cf;display:block;margin-top:6px}
+.fin-hero-divider{height:1px;background:#ffffff29;margin:21px 0 15px}
+.fin-hero-bottom{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fin-hero-bottom span{font-size:11px;color:#cbdad2;min-width:0;display:grid;gap:4px}
+.fin-hero-bottom strong{font-size:17px;line-height:1.3;letter-spacing:-.04em;color:#fff;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fin-hero-bottom span:last-child strong{color:#ffb67e}
+.fin-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.fin-stat{background:#fff;border:1px solid #e7eae6;padding:15px 14px;border-radius:16px;min-width:0;display:grid;gap:6px}
+.fin-stat small{font-size:11px;color:#75807a;line-height:1.4}
+.fin-stat strong{font-size:clamp(14px,4vw,20px);font-weight:790;letter-spacing:-.045em;color:#273d33;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.3}
+.fin-stat.paid strong{color:#a74c20}
+.fin-muted{color:#87918a;font-size:11px;line-height:1.55;padding:0 2px}
+.fin-warning{padding:12px 13px;background:#fff3e6;border:1px solid #f0d3b2;color:#92501e;font-size:12px;line-height:1.55;border-radius:12px}
+.fin-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.finance-page .fin-primary,.fin-sheet .fin-primary{background:#ad521f;color:#fff;border:1px solid #ad521f;border-radius:13px;font-size:13px;font-weight:800;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 3px 12px #9e4c2019}
+.finance-page .fin-secondary{background:#fff;color:#6a513f;border:1px solid #e5e3dd;border-radius:13px;font-size:12px;font-weight:750;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.fin-card{background:#fff;border:1px solid #e7eae6;border-radius:18px;padding:16px;display:grid;gap:12px;min-width:0;box-shadow:0 2px 14px #1e372707}
+.fin-card header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:23px}
+.fin-card header small{font-size:11px;color:#929d95}
+.fin-platforms{display:grid;gap:11px}
+.fin-platform-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:12px}
+.fin-platform-title strong{font-variant-numeric:tabular-nums;color:#263b30;font-weight:790;font-size:14px}
+.fin-bar-track{height:7px;border-radius:99px;background:#edf0ec;overflow:hidden;margin-top:7px}
+.fin-bar-value{height:100%;max-width:100%;border-radius:99px;background:linear-gradient(90deg,#d8753c,#edab6c);transition:width .25s ease}
+.fin-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;min-width:0;align-items:end;padding:2px 0 0}
+.fin-chart-week{grid-template-columns:repeat(5,minmax(0,1fr))}
+.fin-chart-col{min-width:0;display:flex;align-items:center;flex-direction:column;gap:4px}
+.fin-chart-value{min-height:16px;font-size:10px;line-height:1.4;color:#8e7767;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fin-chart-track{height:100px;width:min(100%,34px);display:flex;align-items:flex-end;border-radius:6px 6px 2px 2px;background:#f6f6f3;overflow:hidden}
+.fin-chart-bar{background:linear-gradient(180deg,#e9a06c,#ce6832);width:100%;border-radius:6px 6px 2px 2px;min-height:2px}
+.fin-chart-date{text-align:center;font-size:10px;color:#818c86;line-height:1.4;white-space:nowrap}
+.fin-chart-today{width:4px;height:4px;background:#cd7039;border-radius:50%}
+.fin-empty{padding:18px 5px;color:#89938d;font-size:12px;line-height:1.6;text-align:center}
+.fin-goal-amount{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.fin-goal-amount strong{font-size:24px;font-weight:800;letter-spacing:-.055em;color:#283f33}
+.fin-goal-amount small{font-size:11px;color:#87928a}
+.fin-goal-track{height:12px;border-radius:99px;background:#edf0ec;overflow:hidden}
+.fin-goal-track div{height:100%;border-radius:99px;background:linear-gradient(90deg,#d8753c,#f5b378)}
+.fin-goal-numbers{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#8b928d}
+.fin-goal-daily{border-top:1px solid #edf0ec;margin-top:3px;padding-top:14px;display:grid;gap:4px}
+.fin-goal-daily small{font-size:11px;color:#7a8880}
+.fin-goal-daily strong{font-size:20px;color:#a74e20;letter-spacing:-.05em}
+.fin-textbtn{border:0;background:transparent;color:#aa541f;font-size:12px;font-weight:760;display:inline-flex;align-items:center;gap:4px;padding:6px 5px;min-height:38px}
+.fin-textbtn svg{flex:none}
+.fin-danger{color:#a85551}
+.fin-month-head{display:flex;align-items:center;justify-content:center;gap:18px;padding:1px 0}
+.fin-month-head strong{font-size:17px;letter-spacing:-.035em;min-width:110px;text-align:center}
+.fin-iconbtn{background:#fff;border:1px solid #edf0ec;color:#344e3c;width:42px;height:42px;padding:9px;display:grid;place-items:center}
+.fin-inline-tabs{display:flex;gap:8px}
+.fin-filter{font-size:12px;min-height:39px;padding:7px 17px;background:#f3f4f1;color:#68746e;border:0}
+.fin-filter.current{background:#253b32;color:#fff}
+.fin-record-date{font-size:11px;font-weight:790;color:#75847a;letter-spacing:0;margin-top:7px;border-bottom:1px solid #f0f1ee;padding:5px 0}
+.fin-record{display:flex;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid #f2f4f0;min-width:0}
+.fin-record:last-child{border-bottom:0}
+.fin-record-icon{flex:none;background:#f6f0e8;border-radius:12px;color:#ad5c29;width:38px;height:38px;display:grid;place-items:center}
+.fin-record-icon.spend{color:#6f8880;background:#edf2ee}
+.fin-record-info{flex:1;min-width:0;display:grid;gap:3px}
+.fin-record-info strong{font-size:13px;color:#2b4037;overflow-wrap:anywhere}
+.fin-record-info small{font-size:10px;color:#88958c;line-height:1.35;overflow-wrap:anywhere}
+.fin-record-end{display:grid;justify-items:end;gap:2px;flex:none;max-width:46%;min-width:0}
+.fin-record-end>strong{font-size:13px;white-space:nowrap;color:#3d4a45;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.fin-record-end>strong.gain{color:#b25b26}
+.fin-record-actions{display:flex;gap:2px}
+.fin-record-actions button{min-height:30px;font-size:11px;padding:4px 5px}
+.fin-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fin-settlement-platform{display:grid;gap:2px;padding:10px 0;border-bottom:1px solid #f1f3ef}
+.fin-settlement-platform strong{font-size:13px;color:#2b4037}
+.fin-settlement-platform small{font-size:12px;color:#7f8d83}
+.fin-settlement-row{border-top:1px solid #eff1ed;padding:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fin-settlement-row>div{display:grid;gap:4px;min-width:0}
+.fin-settlement-row strong{font-size:12px;color:#263a2e}
+.fin-settlement-row small{font-size:11px;color:#8b978e}
+.fin-paid-btn{min-height:39px;padding:7px 10px;font-size:11px;font-weight:730;color:#a14f27;background:#fff6ed;border:1px solid #edd2ba;flex:none}
+.fin-paid-btn.completed{color:#718079;background:#f1f4f1;border-color:#e8ece8}
+.fin-cost-row{border-bottom:1px solid #edf0ec;padding:10px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.fin-cost-row:last-child{border-bottom:0}
+.fin-cost-row strong{font-size:13px;font-variant-numeric:tabular-nums}
+.fin-load,.fin-error,.fin-notice{font-size:12px;line-height:1.5;margin:8px 0 12px;padding:13px;background:#f5f8f3;border-radius:12px;color:#536f5b}
+.fin-error{color:#a54e41;background:#fff1ea}
+.fin-dialog[open]{position:fixed;inset:0 0 auto;display:flex;align-items:flex-end;justify-content:center;width:100%;height:100dvh;margin:0;padding:0;border:0;max-width:none;max-height:none;z-index:3200;background:transparent;color:#24332b}
+.fin-dialog::backdrop{background:#14251e77;backdrop-filter:blur(2px)}
+.fin-sheet{display:flex;flex-direction:column;width:min(100%,540px);max-height:95%;overflow:hidden;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -10px 40px #1b241a2c;animation:fin-enter .25s cubic-bezier(.21,.87,.25,1) both}
+.fin-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 19px 12px;flex:none;border-bottom:1px solid #edf0e9}
+.fin-sheet-head small{font-size:10px;color:#b16b3c;font-weight:700;letter-spacing:.06em}
+.fin-sheet-head h2{font-size:21px;margin:3px 0 0}
+.fin-close{border:0;background:#f2f3f0;color:#5a6a61;border-radius:50%;width:40px;height:40px;padding:8px;min-height:40px}
+.fin-sheet-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:16px 19px;display:grid;gap:13px}
+.fin-field{display:grid;gap:5px;min-width:0}
+.fin-field>span{font-size:12px;color:#57685b;font-weight:770}
+.fin-sheet .fin-field input,.fin-sheet .fin-field select{width:100%;min-height:48px;border:1px solid #dae2d8;border-radius:11px;font-size:16px;background:#fff;color:#24332b;padding:10px 11px}
+.fin-sheet .fin-field input[type=number]{font-variant-numeric:tabular-nums}
+.fin-optional{border-top:1px solid #edf0e9;padding-top:6px;display:grid;gap:10px}
+.fin-optional summary{font-size:12px;color:#a85d30;font-weight:750;cursor:pointer;padding:10px 0;min-height:42px}
+.fin-optional[open] .fin-field{margin:7px 0 10px}
+.fin-hint{font-size:11px;line-height:1.6;color:#879189}
+.fin-sheet footer{flex:none;padding:12px 19px max(13px,env(safe-area-inset-bottom));border-top:1px solid #edf0ea}
+.fin-sheet footer .fin-primary{width:100%;font-size:15px;min-height:51px}
+@keyframes fin-enter{from{opacity:.7;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:360px){.app .finance-page{padding-left:11px;padding-right:11px}.fin-card{padding:13px}.fin-hero{padding:18px 17px}.fin-chart{gap:3px}.fin-record-end>strong{font-size:12px}.app .bottom-nav button{font-size:9px}}
+@media(min-width:761px){.app .finance-page{padding:30px 25px 50px}}
+@media(prefers-reduced-motion:reduce){.fin-sheet{animation:none}.fin-bar-value{transition:none}}
