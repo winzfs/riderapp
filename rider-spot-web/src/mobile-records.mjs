@@ -323,7 +323,7 @@ export function createRecords(R, client) {
 
   }
 
-  function ServiceDetail({item,rows,cycles,reading,close,edit,add,user,changed}) {
+  function ServiceDetail({item,rows,cycles,model,modelSettings,explicitModel,reading,close,edit,add,user,changed}) {
     const [cycleEditing,setCycleEditing]=R.useState(false);
     const [cycleSaving,setCycleSaving]=R.useState(false);
     const [cycleError,setCycleError]=R.useState("");
@@ -331,11 +331,15 @@ export function createRecords(R, client) {
     const cycleLock=R.useRef(false);
     const historyRows = serviceRows(rows,item);
     const recent = historyRows[0], baseline = serviceBaseline(rows,item);
-    const cycle = localCycle || cycles.find(c=>c.item_key===item);
+    const cycle = localCycle || resolveMaintenance(model,item,modelSettings,cycles,explicitModel)
+      || cycles.find(c=>c.item_key===item);
+    const modelDefault = modelDefaults(model,item);
     const due = serviceDue(baseline,cycle,reading?.[0]);
     const metric = (label,value) => h("div",{className:"record-detail-metric",key:label},
       h("small",null,label),h("strong",null,value));
-    const dueText = due.next==null ? (cycle?.interval_days ? number(cycle.interval_days)+"일 기준" : "주기 미설정") : km(due.next);
+    const dueText = due.next!=null ? km(due.next) :
+      cycle?.interval_km ? "교환 거리 미입력" :
+      cycle?.interval_days ? number(cycle.interval_days)+"일 기준" : "주기 미설정";
     const parseInterval = (form,key,max) => {
       const raw=String(form.get(key)||"").trim();
       if(!raw)return null;
@@ -351,13 +355,23 @@ export function createRecords(R, client) {
         const form=new FormData(event.currentTarget);
         const distance=parseInterval(form,"interval_km",999999);
         const days=parseInterval(form,"interval_days",3650);
-        // Clearing both fields resets an existing cycle; an unset cycle does not need a DB write.
-        if(distance!=null||days!=null||cycle) {
+        const priceRaw=String(form.get("estimated_cost_won")??"").replace(/,/g,"").trim();
+        if(priceRaw && (!/^\\d+$/.test(priceRaw)||!Number.isSafeInteger(Number(priceRaw))||Number(priceRaw)>2000000))
+          throw Error("예상 비용은 0~2,000,000원 사이로 입력해 주세요.");
+        const price=priceRaw===""?null:Number(priceRaw);
+        if(model) {
+          await read(client.from("rider_model_maintenance_settings").upsert([{
+            user_id:user.id,model_key:model.key,item_key:item,interval_km:distance,
+            interval_days:days,estimated_cost_won:price
+          }],{onConflict:"user_id,model_key,item_key"}).select("item_key"));
+        } else if(distance!=null||days!=null||cycle) {
           await read(client.from("rider_maintenance_cycles").upsert([{
             user_id:user.id,item_key:item,interval_km:distance,interval_days:days
           }],{onConflict:"user_id,item_key"}).select("item_key"));
         }
-        setLocalCycle({item_key:item,interval_km:distance,interval_days:days});
+        setLocalCycle({item_key:item,model_key:model?.key,
+          interval_km:distance,interval_days:days,
+          estimated_cost_won:price,source:model?"personal":"legacy"});
         setCycleEditing(false);
         changed();
       } catch(err){
@@ -378,6 +392,10 @@ export function createRecords(R, client) {
         due.state==="soon" ? "교체 기준까지 "+number(due.remaining)+" km 남음" :
         "교체 기준까지 "+number(due.remaining)+" km 남음"),
       h("section",{className:"record-cycle-panel","aria-label":item+" 교체 주기"},
+        model && h("p",{className:"bike-model-default-hint"},
+          cycle?.source==="personal"?"내가 설정한 정비 기준":
+          cycle?.interval_source==="manual"?"제조사 설명서 기준 · 연식 확인":
+          "배달 운행 참고 기준 · 정비 상태를 먼저 확인하세요"),
         h("div",{className:"record-cycle-heading"},
           h("strong",null,"교체 주기"),
           btn(cycle?.interval_km||cycle?.interval_days?"주기 수정":"주기 설정",()=>{
@@ -387,6 +405,11 @@ export function createRecords(R, client) {
         h("div",{className:"record-cycle-values"},
           h("span",null,"거리 ",h("b",null,cycle?.interval_km?number(cycle.interval_km)+" km":"미설정")),
           h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정")))),
+      model && h("section",{className:"bike-model-cost","aria-label":item+" 예상 교체 비용"},
+        h("div",{className:"bike-model-cost-heading"},h("strong",null,"예상 교체 비용"),
+          h("small",null,cycle?.source==="personal"?"내 설정":"국내 정비소 참고 시세")),
+        h("b",null,costLabel(cycle)),
+        h("p",null,"부품·공임 포함 추정치이며 실제 견적과 다를 수 있어요.")),
       h("div",{className:"record-detail-section-title"},h("h3",null,"정비 이력"),
         h("small",null,historyRows.length+"건")),
       historyRows.length ? h("div",{className:"record-detail-list"},
@@ -402,17 +425,36 @@ export function createRecords(R, client) {
           h("p",null,"첫 정비 기록을 남기면 여기서 바로 확인할 수 있어요."))),
       cycleEditing && h(MiniDialog,{title:item+" 교체 주기",close:()=>setCycleEditing(false),busy:cycleSaving},
         h("form",{className:"record-mini-form",onSubmit:saveCycle},
-          h("p",{className:"record-mini-description"},"이 부품의 교체 간격만 설정합니다. 새 정비 기록은 생성되지 않아요."),
+          h("p",{className:"record-mini-description"},"이 부품의 교체 간격과 예상 비용만 설정합니다. 정비 기록에는 영향을 주지 않아요."),
           field("교체 거리 (km)",{name:"interval_km",type:"number",inputMode:"numeric",
             min:1,max:999999,step:1,placeholder:"예: 40000",defaultValue:cycle?.interval_km??"",disabled:cycleSaving}),
           field("교체 기간 (일)",{name:"interval_days",type:"number",inputMode:"numeric",
             min:1,max:3650,step:1,placeholder:"선택 사항",defaultValue:cycle?.interval_days??"",disabled:cycleSaving}),
-          h("p",{className:"record-cycle-note"},"거리 또는 기간 중 하나만 입력해도 돼요. 둘 다 비우면 주기가 해제됩니다."),
+          model && field("예상 교체 비용 (원)",{name:"estimated_cost_won",type:"number",
+            inputMode:"numeric",min:0,max:2000000,step:1000,
+            placeholder:"예상 비용",defaultValue:cycle?.estimated_cost_won??"",disabled:cycleSaving}),
+          h("p",{className:"record-cycle-note"},
+            model ? "교환 기준과 예상 비용은 이 모델에만 적용돼요. 실제 교체 여부는 부품 상태와 설명서를 확인하세요." :
+            "거리 또는 기간 중 하나만 입력해도 돼요. 둘 다 비우면 주기가 해제됩니다."),
           cycleError&&h("p",{className:"record-cycle-error",role:"alert"},cycleError),
           h("div",{className:"record-mini-actions"},
             btn("취소",()=>setCycleEditing(false),{className:"record-mini-cancel",disabled:cycleSaving}),
             h("button",{className:"record-cycle-save",type:"submit",disabled:cycleSaving},
-              cycleSaving?"저장 중…":"교체 주기 저장")))));
+              cycleSaving?"저장 중…":model?"주기·비용 저장":"교체 주기 저장")),
+          model && cycle?.source==="personal" && btn("모델 기본값으로 복원",async()=>{
+            if(cycleLock.current)return;
+            cycleLock.current=true;setCycleSaving(true);setCycleError("");
+            try{
+              const removed=await read(client.from("rider_model_maintenance_settings").delete()
+                .eq("user_id",user.id).eq("model_key",model.key).eq("item_key",item)
+                .select("item_key"));
+              if(!Array.isArray(removed)||!removed.some(x=>x.item_key===item))
+                throw Error("복원할 설정을 찾지 못했어요.");
+              setLocalCycle(modelDefaults(model,item));
+              setCycleEditing(false);changed();
+            }catch(e){setCycleError(e?.message||"기본값을 복원하지 못했어요.");}
+            finally{cycleLock.current=false;setCycleSaving(false);}
+          },{className:"bike-model-reset",disabled:cycleSaving}))));
   }
 
   function ModelPicker({user,vehicle,cycles,settings,close,changed,onCustom}) {
