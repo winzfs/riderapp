@@ -96,6 +96,9 @@ export function createRecords(R, client) {
     }, []);
     const dragStart = event => {
       if (!event.isPrimary || event.button !== 0 || event.target.closest?.("button,input,textarea")) return;
+      // CSS sheet entrance uses animation-fill-mode:both. End its transform ownership
+      // as soon as the user grabs the sheet so the panel follows every pointer move.
+      surface.current?.classList.add("rs-record-interactive");
       drag.current = {pointer:event.pointerId,startX:event.clientX,startY:event.clientY,
         lastY:event.clientY,lastAt:performance.now(),distance:0};
       event.currentTarget.setPointerCapture?.(event.pointerId);
