@@ -58,6 +58,15 @@ jobs:
           (async()=>{
             const browser=await chromium.launch({args:['--no-sandbox']});
             const page=await browser.newPage();
+            const cdp=await page.context().newCDPSession(page);
+            const scripts=new Map();
+            await cdp.send('Debugger.enable');
+            await cdp.send('Runtime.enable');
+            cdp.on('Debugger.scriptParsed',event=>scripts.set(event.scriptId,event.url));
+            cdp.on('Runtime.exceptionThrown',event=>{
+              const e=event.exceptionDetails;
+              console.log('DIAG CDP EXCEPTION:',JSON.stringify({text:e.text,url:e.url,scriptId:e.scriptId,scriptUrl:scripts.get(e.scriptId),line:e.lineNumber,column:e.columnNumber,description:e.exception?.description,stack:e.stackTrace}));
+            });
             page.on('pageerror',error=>console.log('DIAG PAGE ERROR:',error.stack||String(error)));
             page.on('console',message=>{if(message.type()==='error')console.log('DIAG CONSOLE ERROR:',message.text())});
             page.on('requestfailed',request=>console.log('DIAG REQUEST FAILED:',request.url(),request.failure()?.errorText));
