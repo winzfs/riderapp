@@ -1,4 +1,5 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
+import {saveIncomeDay,saveIncomeRecord,financeWriteError} from "./finance-storage.mjs";
 import {icons} from "./ui.mjs";
 import {won,num,koreanWorkDay,koreanCalendarDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "./finance-model.mjs";
 
@@ -334,32 +335,34 @@ export function createFinance(R, client) {
         }else if(kind==="goal"){
           const result=await client.from(table).upsert({...values,user_id:user.id},{onConflict:"user_id"});
           if(result.error)throw result.error;
-        }else if(kind==="income"&&!row){
-          // Same-date/platform finance and timeline totals share one locked RPC.
-          const existing=await client.from("rider_earnings").select("id,gross_won,gross_entered")
-            .eq("user_id",user.id).eq("work_date",values.work_date).eq("platform",values.platform)
-            .order("created_at",{ascending:true});
-          if(existing.error)throw existing.error;
-          const matches=existing.data||[];
-          const previous=matches.filter(x=>x.gross_entered!==false)
-            .reduce((n,x)=>n+Number(x.gross_won||0),0);
-          if(matches.length&&!window.confirm(values.work_date+" "+values.platform+" 기록에 이미 "+money(previous)+"이 있어요. 새 금액 "+money(amount)+"으로 변경할까요?")){
-            setSheetError("기존 기록은 그대로 유지했어요.");return;
-          }
-          const details=values.deliveries>0||values.expenses_won>0||!!values.note;
-          if(values.platform!=="기타"&&!details){
-            const r=await client.rpc("set_rider_daily_income",{p_date:values.work_date,p_values:{[values.platform]:amount}});
-            if(r.error)throw r.error;
-          }else if(matches.length===1){
-            const r=await client.from("rider_earnings").update(values).eq("id",matches[0].id)
-              .eq("user_id",user.id).select("id");
-            if(r.error)throw r.error;
-            if(!r.data?.length)throw Error("기록 변경을 확인하지 못했어요.");
-          }else if(matches.length>1){
-            throw Error("같은 날짜·플랫폼의 기존 기록이 여러 건이에요. 내역에서 개별 수정해 주세요.");
+        }else if(kind==="income"){
+          if(row){
+            await saveIncomeRecord(client,{userId:user.id,id:row.id,
+              day:values.work_date,platform:values.platform,gross:amount,
+              deliveries:values.deliveries,expenses:values.expenses_won,note:values.note,
+              expectedUpdated:row.updated_at});
           }else{
-            const r=await client.from("rider_earnings").insert({...values,user_id:user.id}).select("id");
-            if(r.error)throw r.error;
+            const matches=(data?.earnings||[]).filter(x=>x.work_date===values.work_date &&
+              x.platform===values.platform);
+            const previous=matches.filter(x=>x.gross_entered!==false)
+              .reduce((n,x)=>n+Number(x.gross_won||0),0);
+            const hasExisting=matches.length>0;
+            const detailed=values.deliveries>0||values.expenses_won>0||!!values.note;
+            if(hasExisting){
+              if(!["쿠팡이츠","배민"].includes(values.platform)||detailed)
+                throw Error("기존 수익의 세부 내용을 변경하려면 내역에서 해당 기록을 선택해 주세요.");
+              if(!window.confirm(values.work_date+" "+values.platform+
+                " 기존 수익 "+money(previous)+"을 새 금액 "+money(amount)+"으로 변경할까요?")){
+                setSheetError("기존 기록을 유지했어요.");return;
+              }
+              await saveIncomeDay(client,{userId:user.id,day:values.work_date,
+                draft:{[values.platform]:amount},previous:{[values.platform]:
+                  matches.some(x=>x.gross_entered!==false)?previous:null}});
+            }else{
+              await saveIncomeRecord(client,{userId:user.id,day:values.work_date,
+                platform:values.platform,gross:amount,deliveries:values.deliveries,
+                expenses:values.expenses_won,note:values.note});
+            }
           }
           try{localStorage.setItem("rs:finance-platform:"+user.id,values.platform);}catch{}
         }else if(row){
@@ -378,7 +381,7 @@ export function createFinance(R, client) {
         setEditor(null);setNotice(kind==="recurrence"?"반복 지출 일정을 저장했어요.":
           kind==="payout"?"정산 예정일을 저장했어요.":"기록을 저장했어요.");
         refresh(n=>n+1);
-      }catch(e){setSheetError(e?.message||"기록을 저장하지 못했어요.");}
+      }catch(e){setSheetError(financeWriteError(e));}
       finally{setBusy(false);}
     }
     async function remove(kind,row) {
@@ -386,9 +389,11 @@ export function createFinance(R, client) {
       const table={income:"rider_earnings",fuel:"rider_fuel_logs",expense:"rider_extra_expenses"}[kind];
       if(!table)return;
       setBusy(true);
-      try{const r=await client.from(table).delete().eq("id",row.id)
-        .eq("user_id",user.id).select("id");
-        if(r.error)throw r.error;if(!r.data?.length)throw Error("삭제할 기록을 찾지 못했어요.");
+      try{
+        let query=client.from(table).delete().eq("id",row.id).eq("user_id",user.id);
+        if(kind==="income"&&row.updated_at)query=query.eq("updated_at",row.updated_at);
+        const r=await query.select("id");
+        if(r.error)throw r.error;if(!r.data?.length)throw Error("다른 기기에서 기록이 변경됐어요. 새로 조회해 주세요.");
         setNotice("기록을 삭제했어요.");refresh(n=>n+1);
       }catch(e){setNotice(e?.message||"삭제에 실패했어요.");}
       finally{setBusy(false);}
