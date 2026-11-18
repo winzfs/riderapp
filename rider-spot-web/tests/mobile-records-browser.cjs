@@ -10,8 +10,10 @@ const shots=process.env.RIDER_SCREENSHOTS;
 const trips=[sampleTrip(120,{started:Date.parse(date+"T00:00Z")}),sampleTrip(120,{id:"22222222-2222-4222-8222-222222222222",started:Date.parse(date+"T14:59Z")})];
 const user={id:userId,role:"authenticated",aud:"authenticated",email:"demo@example.test",user_metadata:{nickname:"라이더"},app_metadata:{provider:"email"}};
 const jwt="eyJhbGciOiJIUzI1NiJ9."+Buffer.from(JSON.stringify({sub:userId,exp:Math.floor(Date.now()/1000)+3600})).toString("base64url")+".fixture";
-async function run(browser,width,height){
-  const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,timezoneId:"Asia/Seoul",serviceWorkers:"block",permissions:["geolocation"],geolocation:{latitude:35.17,longitude:126.83}});
+async function run(browser,width,height,{smokeOnly=false}={}){
+  const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,timezoneId:"Asia/Seoul",serviceWorkers:"block",
+    ...(smokeOnly?{userAgent:"Mozilla/5.0 (Linux; Android 17; SM-S926N Build/UP1A) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0.0.0 Mobile Safari/537.36 wv"}:{}),
+    permissions:["geolocation"],geolocation:{latitude:35.17,longitude:126.83}});
   const session={access_token:jwt,token_type:"bearer",refresh_token:"fixture",expires_at:Math.floor(Date.now()/1000)+3600,user};
   await context.addInitScript(({session,trips,userId})=>{
     localStorage.setItem("sb-qkcqzhkvfbymzjdktshp-auth-token",JSON.stringify(session));
@@ -160,6 +162,35 @@ async function run(browser,width,height){
       throw e;
     }
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["지도","타임라인","동네","수익","내 바이크"]);
+    if(smokeOnly){
+      await nav("수익");
+      await page.locator(".fin-hero-amount").waitFor();
+      await shot("finance-responsive");
+      const measures=await page.evaluate(()=>({
+        vw:innerWidth,scroll:document.documentElement.scrollWidth,
+        fin:document.querySelector(".finance-page")?.getBoundingClientRect().width,
+        buttons:[...document.querySelectorAll(".fin-subnav-btn")].map(x=>x.getBoundingClientRect().width)
+      }));
+      assert.ok(measures.scroll<=measures.vw+1,"no page width overflow "+JSON.stringify(measures));
+      assert.ok(measures.buttons.every(w=>w>=35),"finance subnavigation fits "+JSON.stringify(measures));
+      await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+      const dialog=page.getByRole("dialog",{name:"수익 입력"});
+      await dialog.waitFor();
+      const bounds=await dialog.locator(".fin-sheet footer button").boundingBox();
+      assert.ok(bounds&&bounds.width>=200,"safe save button under WebView viewport");
+      await shot("finance-entry-responsive");
+      await dialog.getByRole("button",{name:"닫기"}).click();
+      await dialog.waitFor({state:"hidden"});
+      await page.getByRole("button",{name:"분석",exact:true}).click();
+      await page.getByRole("button",{name:"월별",exact:true}).click();
+      await page.locator(".fin-svg-chart").first().waitFor();
+      await shot("finance-svg-responsive");
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),
+        "analytics also has no width overflow");
+      assert.deepEqual(errors,[]);
+      console.log("PASS responsive finance/Android WebView Chromium emulation",width,height);
+      return;
+    }
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");await page.getByText("24,500 km",{exact:true}).first().waitFor();
     await shot("bike");
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","native and browser routing controller initialized");
@@ -499,5 +530,5 @@ async function run(browser,width,height){
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
 }
-(async()=>{const watchdog=setTimeout(()=>{console.error("mobile browser test timed out");process.exit(2);},150000);const browser=await chromium.launch({executablePath:process.env.RIDER_CHROMIUM,args:["--no-sandbox"]});
-try{await run(browser,412,892);await run(browser,360,400);}finally{clearTimeout(watchdog);await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{const watchdog=setTimeout(()=>{console.error("mobile browser test timed out");process.exit(2);},280000);const browser=await chromium.launch({executablePath:process.env.RIDER_CHROMIUM,args:["--no-sandbox"]});
+try{await run(browser,412,892);await run(browser,360,400);await run(browser,320,700,{smokeOnly:true});await run(browser,430,930,{smokeOnly:true});await run(browser,700,360,{smokeOnly:true});}finally{clearTimeout(watchdog);await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
