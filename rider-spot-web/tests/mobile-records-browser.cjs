@@ -472,6 +472,11 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".finance-page .fin-hero-amount").waitFor();
     assert.equal(await page.locator(".fin-platform-card>header small").innerText(),
       "2026년 11월 기준","platform totals need an explicit monthly range");
+    console.log("MONTHLY PLATFORM DIAGNOSTIC",
+      JSON.stringify({income:totals,
+        goal:await page.locator(".fin-goal-amount").innerText(),
+        platform:await page.locator(".fin-platform-card").innerText(),
+        hero:await page.locator(".fin-hero-amount").innerText()}));
     await page.locator(".fin-platform-card").getByText("쿠팡이츠",{exact:true})
       .waitFor({timeout:12000});
     assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("120,000원")),
