@@ -174,7 +174,9 @@ export function createFinance(R, client) {
     const [section,setSection]=R.useState("overview");
     const [scope,setScope]=R.useState("today");
     const [anchor,setAnchor]=R.useState(koreanWorkDay);
-    const [data,setData]=R.useState(null);
+    const [cachedFinance,setData]=R.useState(null);
+    const [cachedUserId,setCachedUserId]=R.useState(null);
+    const data=user?.id===cachedUserId?cachedFinance:null;
     const [loading,setLoading]=R.useState(false);
     const [error,setError]=R.useState("");
     const [notice,setNotice]=R.useState("");
@@ -200,7 +202,7 @@ export function createFinance(R, client) {
     },[]);
     R.useEffect(()=>{
       let active=true;setError("");setLoading(true);
-      if(!user){setData(null);setLoading(false);return;}
+      if(!user){setData(null);setCachedUserId(null);setLoading(false);return;}
       const fetchRows=async(table,date)=>{
         const list=[];
         for(let offset=0;offset<10000;offset+=500){
@@ -227,6 +229,7 @@ export function createFinance(R, client) {
         if(res[6].error)throw res[6].error;
         setData({earnings:res[0],fuel:res[1],maintenance:res[2],extras:res[3],
           goal:res[4].data,recurring:res[5].data||[],payoutRules:res[6].data||[]});
+        setCachedUserId(user.id);
         setLoading(false);
       }).catch(e=>{if(active){setError(e?.message||"수익 데이터를 불러오지 못했어요.");
         setLoading(false);}});
