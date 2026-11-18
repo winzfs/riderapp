@@ -2350,7 +2350,7 @@ export function mountApplication({
   }
 
   var ls = [
-    [`nearby`, `운행`, be],
+    [`nearby`, `지도`, be],
     [`trips`, `타임라인`, Ae],
     [`community`, `동네`, He],
     [`earnings`, `수익`, Be],
