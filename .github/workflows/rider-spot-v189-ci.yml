@@ -1,0 +1,54 @@
+name: Rider Spot v189 odometer and maintenance CI
+on:
+  push:
+    branches:
+      - feature/rider-spot-native-apk
+    paths:
+      - '.github/workflows/rider-spot-v189-ci.yml'
+      - 'rider-spot-web/src/**'
+      - 'rider-spot-web/tests/**'
+      - 'supabase/migrations/20261118165726_add_trip_odometer_sync.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Test odometer replay, model intervals and maintenance artwork
+        run: npm test
+      - name: Build deployable site with new maintenance vectors
+        run: npm run build
+      - name: Check release contains the updated UI and RPC
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFile} from 'node:fs/promises';
+          const bundle=await readFile('dist/assets/'+
+            (await import('node:fs/promises')).readdir('dist/assets').then(
+              names=>names.find(name=>name.startsWith('rider-spot-')))+
+            '/app.mjs','utf8');
+          assert.ok(bundle.includes('apply_rider_trip_odometer'));
+          assert.ok(bundle.includes('set_rider_manual_odometer'));
+          assert.ok(bundle.includes('data:image/svg+xml'));
+          const manifest=JSON.parse(await readFile('dist/release.json','utf8'));
+          assert.ok(manifest.hash && manifest.files.includes('/index.html'));
+          console.log('PASS v189 candidate',manifest.hash);
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: rider-spot-v189-web-dist
+          path: rider-spot-web/dist
+          retention-days: 7
