@@ -1,0 +1,54 @@
+name: Rider Spot v196 verify live Cloudflare production
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v196-production-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify live Worker against tested maintenance release
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const origin='https://rider-spot.jazzhjm.workers.dev';
+          const m=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(m.hash,'1bca721f751b','production source artifact unexpectedly changed');
+          const files=[
+            ['/','index.html'],
+            ['/sw.js','sw.js'],
+            ...['app.mjs','design-system.css','native-gps.js','route-worker.mjs'].map(name=>['/assets/rider-spot-'+m.hash+'/'+name,name])
+          ];
+          for(const [path,name] of files){
+            const res=await fetch(origin+path,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(res.status,200,path+' HTTP '+res.status);
+            const body=await res.text();
+            assert.equal(body,fs.readFileSync('prebuilt/'+name,'utf8'),path+' mismatches v196');
+            if(name==='app.mjs'){
+              assert.ok(body.includes('vector-v196'),'crisp SVG icon module missing');
+              assert.ok(body.includes('record-custom-trigger'),'separate other-part button missing');
+              assert.ok(body.includes('data:image/svg+xml'),'raster icons still used');
+            }
+            console.log('PASS LIVE v196',path,body.length);
+          }
+          const manifest=await fetch(origin+'/mapdata/manifest.json',{headers:{'Cache-Control':'no-cache'}});
+          assert.equal(manifest.status,200,'map manifest missing');
+          assert.ok((await manifest.json()).counts,'map data missing');
+          console.log('PASS mapdata manifest');
+          for(const previous of ['1374e3fd452d']){
+            const old=await fetch(origin+'/assets/rider-spot-'+previous+'/app.mjs');
+            assert.equal(old.status,200,'previous release compatibility lost');
+            console.log('PASS prior release asset');
+          }
+          NODE
