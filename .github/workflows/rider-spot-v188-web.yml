@@ -1,0 +1,57 @@
+name: Rider Spot v188 finger-following sheet bundle build
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-v188-web.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Build and run unit regressions
+        run: npm run build && npm test
+      - name: Launch local rebuilt Worker-style UI
+        run: |
+          node scripts/local-preview.cjs > /tmp/rs-v188-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8789/ >/dev/null; then break; fi
+            sleep 1
+          done
+      - run: npx playwright install --with-deps chromium
+      - name: Assert real mid-swipe displacement, Back steps and timeline integrity
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="http://127.0.0.1:8789";@' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - name: Persist approved build assets for deployment
+        run: |
+          set -euo pipefail
+          HASH=$(node -p "require('./dist/release.json').hash")
+          echo "Tested v188 release hash: $HASH"
+          for file in app.mjs route-worker.mjs native-gps.js map-reports.js design-system.css workspace-tools.js tab-resume.js daily-timeline.css; do
+            cp "dist/assets/rider-spot-$HASH/$file" "prebuilt/$file"
+          done
+          cp dist/index.html prebuilt/index.html
+          cp dist/sw.js prebuilt/sw.js
+          cp dist/release.json prebuilt/release.json
+          grep -Fq 'rs-record-interactive' prebuilt/design-system.css
+          grep -Fq 'rs-record-interactive' prebuilt/app.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add prebuilt
+          git commit -m "build(web): publish v188 gesture-following release candidate [skip ci]"
+          git pull --rebase origin feature/rider-spot-native-apk
+          git push origin HEAD:feature/rider-spot-native-apk
