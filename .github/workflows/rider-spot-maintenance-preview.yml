@@ -1,4 +1,4 @@
-name: Rider Spot maintenance v179 candidate acceptance
+name: Rider Spot maintenance v180 candidate acceptance
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_UI_URL: https://31944d0b-rider-spot.jazzhjm.workers.dev/
+      RIDER_UI_URL: https://4cb4d994-rider-spot.jazzhjm.workers.dev/
       RIDER_SCREENSHOTS: /tmp/rider-maintenance-evidence
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           const base = process.env.RIDER_UI_URL;
-          const hash = '3b663341cf1c';
+          const hash = 'c783e55eb20d';
           const paths = ['/', '/sw.js',
             '/assets/rider-spot-'+hash+'/app.mjs',
             '/assets/rider-spot-'+hash+'/design-system.css',
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rider-spot-maintenance-v179-preview-screens
+          name: rider-spot-maintenance-v180-preview-screens
           path: |
             /tmp/rider-ui-evidence
             /tmp/rider-journey-evidence
