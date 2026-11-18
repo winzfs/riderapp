@@ -2130,3 +2130,7 @@ dialog.record-mini-dialog::backdrop{
   .fin-graph-tabs .fin-filter{padding:6px 8px}
 }
 @media(prefers-reduced-motion:reduce){.fin-chart-point,.fin-recurring>summary:after{transition:none}}
+
+.fin-category-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:-4px}
+.fin-category-chips .fin-chip{border:1px solid #e7e7e0;background:#faf8f5;color:#6c625a;font-size:12px;font-weight:700;min-height:35px;padding:6px 10px;border-radius:100px;touch-action:manipulation}
+.fin-category-chips .fin-chip:focus-visible{outline:2px solid #b76d40;outline-offset:1px}
