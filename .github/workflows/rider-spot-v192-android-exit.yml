@@ -1,0 +1,107 @@
+name: Rider Spot v192 direct double-Back exit APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v192-android-exit.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-v192-native
+  cancel-in-progress: false
+jobs:
+  build-and-persist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch native second Back to finish Activity, preserving active GPS service
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v192-android
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-v192-android
+          python3 - <<'PY'
+          from pathlib import Path
+          file=Path('/tmp/rs-v192-android/app/src/main/java/com/riderspot/android/MainActivity.java')
+          text=file.read_text()
+          old='if ("\\\"exit\\\"".equals(result)) { confirmExitFromBack(); return; }'
+          new='if ("\\\"exit\\\"".equals(result)) { finish(); return; }'
+          assert text.count(old)==1, 'Native exit branch has changed; inspect before patch'
+          text=text.replace(old,new)
+          text=text.replace(
+              '// The SPA owns the ordered Back stack (sheet -> detail -> tab -> home).',
+              '// The SPA handles sheets; two root Back presses finish the Activity.'
+          )
+          assert text.count(new)==1 and 'getOnBackInvokedDispatcher' in text
+          file.write_text(text)
+          print('PASS direct native second Back calls finish() without confirmation dialog')
+          PY
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify native GPS, intent, and WebView bridges untouched
+        working-directory: /tmp/rs-v192-android
+        run: node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Install Android 36 SDK
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Compile original-package native APK
+        working-directory: /tmp/rs-v192-android
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Copy APK and compile optional side-by-side preview without touching installed data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v192-artifacts
+          cp /tmp/rs-v192-android/app/build/outputs/apk/debug/app-debug.apk /tmp/rs-v192-artifacts/RiderSpot-v192-debug.apk
+          python3 - <<'PY'
+          from pathlib import Path
+          g=Path('/tmp/rs-v192-android/app/build.gradle')
+          text=g.read_text()
+          assert text.count('defaultConfig {')==1
+          g.write_text(text.replace('defaultConfig {','defaultConfig {\n        applicationIdSuffix ".preview192"',1))
+          manifest=Path('/tmp/rs-v192-android/app/src/main/AndroidManifest.xml')
+          text=manifest.read_text()
+          import re
+          text,count=re.subn(r'android:label="[^"]+"','android:label="Rider Spot v192 테스트"',text,count=1)
+          assert count==1
+          manifest.write_text(text)
+          PY
+          cd /tmp/rs-v192-android
+          gradle --no-daemon :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rs-v192-artifacts/RiderSpot-v192-side-by-side-TEST.apk
+      - name: Save patched source for future builds
+        run: |
+          set -euo pipefail
+          # Revert the debug-only preview application ID before archiving.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          g=Path('/tmp/rs-v192-android/app/build.gradle')
+          g.write_text(g.read_text().replace('        applicationIdSuffix ".preview192"\n','',1))
+          manifest=Path('/tmp/rs-v192-android/app/src/main/AndroidManifest.xml')
+          txt=manifest.read_text()
+          txt=txt.replace('android:label="Rider Spot v192 테스트"','android:label="Rider Spot"',1)
+          manifest.write_text(txt)
+          PY
+          tar --exclude='./app/build' --exclude='./.gradle' -cJf rider-spot-android/source.tar.xz -C /tmp/rs-v192-android .
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rider-spot-android/source.tar.xz
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(android): close Activity on second Back without extra confirmation [skip ci]'
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-v192-DirectDoubleBack-APK
+          path: /tmp/rs-v192-artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 30
