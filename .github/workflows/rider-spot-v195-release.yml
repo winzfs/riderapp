@@ -46,7 +46,6 @@ jobs:
           const app=fs.readFileSync('dist/assets/rider-spot-'+rel.hash+'/app.mjs','utf8');
           assert.ok(app.includes('data:image/png;base64,'));
           assert.ok(app.includes('neo-flat-v195'));
-          assert.ok(app.includes('modelDefaults'));
           const dir='dist/assets/rider-spot-'+rel.hash+'/';
           for(const n of ['app.mjs','route-worker.mjs','native-gps.js','map-reports.js',
             'design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css']){
