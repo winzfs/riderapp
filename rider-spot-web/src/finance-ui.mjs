@@ -242,7 +242,7 @@ export function createFinance(R, client) {
     const goalTarget=num(goal.monthly_target_won);
     const goalValue=goal.goal_basis==="net"?monthly.net:monthly.gross;
     const goalUncertain=goal.goal_basis==="net"&&monthly.uncertain;
-    const achieved=goalUncertain?null:goalTarget?Math.min(100,Math.round(goalValue/goalTarget*100)):100;
+    const achieved=goalUncertain?null:goalTarget?Math.max(0,Math.min(100,Math.round(goalValue/goalTarget*100))):100;
     const workedDays=new Set(monthly.earnings.filter(x=>num(x.gross_won)>0).map(x=>x.work_date)).size;
     const remainingWorkDays=Math.max(1,num(goal.planned_work_days)-workedDays);
     const perDay=goalUncertain?null:Math.ceil(Math.max(0,goalTarget-goalValue)/remainingWorkDays);
@@ -700,7 +700,7 @@ export function createFinance(R, client) {
       !user?h("section",{className:"fin-card"},h("h2",null,"내 수익을 안전하게 보관해요."),
         txt("p","fin-muted","로그인하면 수익·지출·정산 기록을 모든 기기에서 확인할 수 있어요."),
         button("로그인",login,"fin-primary")):
-      loading?txt("p","fin-load","수익 기록을 불러오는 중…"):
+      loading&&!data?txt("p","fin-load","수익 기록을 불러오는 중…"):
       error?h("section",{className:"fin-card"},txt("p","fin-error",error),
         button("다시 불러오기",()=>refresh(n=>n+1),"fin-secondary")):
       h(R.Fragment,null,notice&&txt("p","fin-notice",notice),
