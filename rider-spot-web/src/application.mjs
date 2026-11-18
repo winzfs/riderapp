@@ -1,4 +1,5 @@
 import { createRecords } from "./mobile-records.mjs";
+import { createFinance } from "./finance-ui.mjs";
 import { createNavigationController } from "./navigation.mjs";
 import { createUI } from "./ui.mjs";
 import { createRiderMap } from "./RiderMap.mjs";
@@ -2352,10 +2353,12 @@ export function mountApplication({
     [`nearby`, `운행`, be],
     [`trips`, `타임라인`, Ae],
     [`community`, `동네`, He],
+    [`earnings`, `수익`, Be],
     [`bike`, `내 바이크`, Be],
   ];
   const Zo = createRiderMap(S, Jo.default, Xo);
   const { Bike, Income } = createRecords(S, q);
+  const Finance = createFinance(S, q);
   const ss = createTimeline(S, Zo, Income);
   const cs = createUseRide({
     React: S,
@@ -2506,6 +2509,7 @@ export function mountApplication({
                             trips: "route",
                             tools: "work",
                             community: "community",
+                            earnings: "earnings",
                             bike: "riders",
                       account: "user",
                           }[n],
@@ -2632,6 +2636,7 @@ export function mountApplication({
                       ],
                     })
                   : e === "bike" ? (0,J.jsx)(Bike,{user:n,login:()=>a(true),profile:()=>navigateTab("account")},n?.id||"guest")
+                  : e === "earnings" ? (0,J.jsx)(Finance,{user:n,login:()=>a(true),onBike:()=>navigateTab("bike")},n?.id||"guest")
                   : e === `tools`
                     ? (0, J.jsx)(`section`, {
                         key: `route-tools`,
@@ -2682,6 +2687,7 @@ export function mountApplication({
                       trips: "route",
                       tools: "work",
                       community: "community",
+                      earnings: "earnings",
                       bike: "riders",
                       account: "user",
                     }[n],
