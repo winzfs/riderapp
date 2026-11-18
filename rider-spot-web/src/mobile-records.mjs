@@ -557,6 +557,7 @@ export function createRecords(R, client) {
     const [data,setData] = R.useState(null),[error,setError]=R.useState(""),[revision,refresh]=R.useState(0);
     const [editor,setEditor]=R.useState(null),[detailItem,setDetailItem]=R.useState(null);
     const [vehicleEdit,setVehicleEdit]=R.useState(null);
+    const [modelPicker,setModelPicker]=R.useState(false);
     const changed = payload => {
       if (payload?.deletedId) setData(current => current ? {
         ...current,rows:current.rows.filter(row=>row.id!==payload.deletedId)
@@ -574,14 +575,25 @@ export function createRecords(R, client) {
         const table=name=>client.from(name).select("*").eq("user_id",user.id);
         Promise.all([pages(()=>table("maintenance_logs").order("serviced_on",{ascending:false}).order("created_at",{ascending:false}).order("id")),
           read(table("rider_vehicle_profiles").maybeSingle()),read(table("rider_maintenance_cycles")),
-          read(table("rider_fuel_logs").not("odometer_km","is",null).order("fueled_on",{ascending:false}).order("created_at",{ascending:false}).limit(1))])
-          .then(([rows,vehicle,cycles,fuel])=>{if(active)setData({rows:serviceRows(rows),vehicle,cycles,fuel:fuel[0]});})
+          read(table("rider_fuel_logs").not("odometer_km","is",null).order("fueled_on",{ascending:false}).order("created_at",{ascending:false}).limit(1)),
+          read(table("rider_model_maintenance_settings"))])
+          .then(([rows,vehicle,cycles,fuel,modelSettings])=>{
+            if(active)setData({rows:serviceRows(rows),vehicle,cycles,fuel:fuel[0],modelSettings});
+          })
           .catch(()=>{if(active)setError("정비 이력을 불러오지 못했어요.");});
       }
       return ()=>{active=false;};
     },[user?.id,revision]);
-    const rows=data?.rows||[], vehicle=data?.vehicle, cycles=data?.cycles||[];
-    const choices=[...new Set([...standardParts,...rows.flatMap(itemsOf),...cycles.map(c=>c.item_key)])];
+    const rows=data?.rows||[],vehicle=data?.vehicle,cycles=data?.cycles||[];
+    const modelSettings=data?.modelSettings||[];
+    const model=findBikeModel(vehicle?.model_key)||inferBikeModel(vehicle?.vehicle_name);
+    const explicitModel=!!vehicle?.model_key;
+    const defaults=model?modelParts(model):standardParts;
+    const effectiveCycle=item=>resolveMaintenance(model,item,modelSettings,cycles,explicitModel)
+      ||cycles.find(c=>c.item_key===item);
+    const choices=[...new Set([...defaults,...rows.flatMap(itemsOf),
+      ...(!explicitModel?cycles.map(c=>c.item_key):[]),
+      ...modelSettings.filter(x=>x.model_key===model?.key).map(x=>x.item_key)])];
     const latest=rows.find(r=>r.odometer_km!=null),fuel=data?.fuel;
     const historyReadings=[[latest?.odometer_km,latest?.serviced_on],[fuel?.odometer_km,fuel?.fueled_on]]
       .filter(([distance,date])=>distance!=null&&date).sort((a,b)=>b[1].localeCompare(a[1])||b[0]-a[0]);
@@ -608,8 +620,14 @@ export function createRecords(R, client) {
       h("div",{className:"bike-vehicle-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"gauge",size:19}),"계기판 입력"),
           ()=>vehicleAction("odometer"),{className:"bike-outline-action","aria-label":"계기판 입력",disabled:!!user&&!data}),
-        btn(h(R.Fragment,null,h(Icon,{name:"edit",size:18}),"차량명 수정"),
-          ()=>vehicleAction("name"),{className:"bike-outline-action","aria-label":"차량명 수정",disabled:!!user&&!data})),
+        btn(h(R.Fragment,null,h(Icon,{name:"edit",size:18}),"모델 선택"),
+          ()=>user?setModelPicker(true):login(),
+          {className:"bike-outline-action","aria-label":"모델 선택",disabled:!!user&&!data})),
+      model && h("div",{className:"bike-model-banner"},
+        h("div",null,h("strong",null,modelLabel(model)),
+          h("small",null,model.kind==="electric"?"전기 스쿠터 · 엔진오일 제외":
+            "기본 정비 정보 제공 · 연식/지역 사양 확인")),
+        btn("모델 변경",()=>setModelPicker(true),{className:"bike-model-change"})),
       h("div",{className:"bike-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"＋ 정비 기록"),
           ()=>edit({}),{className:"record-primary",disabled:!!user&&!data,"aria-label":"＋ 정비 기록"}),
@@ -619,12 +637,13 @@ export function createRecords(R, client) {
         h("h2",null,"소모품 현황")),
       h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
         choices.map(item=>{
-          const row=serviceBaseline(rows,item), cycle=cycles.find(c=>c.item_key===item);
+          const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
           const due=serviceDue(row,cycle,reading?.[0]);
           // Keep detailed mileage/date in the existing detail sheet, not on the compact tile.
           const status=due.remaining!=null ?
             (due.state==="overdue"?"기준 "+number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
-            !row?"기록 없음":
+            !row?(cycle?.interval_km?number(cycle.interval_km)+" km 기준":
+              cycle?.interval_days?number(cycle.interval_days)+"일 기준":"기록 없음"):
             due.next!=null?"다음 "+km(due.next):
             cycle?.interval_km&&row.odometer_km==null?"거리 미입력":
             cycle?.interval_days?number(cycle.interval_days)+"일 주기":"주기 미설정";
@@ -654,9 +673,14 @@ export function createRecords(R, client) {
         btn(h(R.Fragment,null,h(Icon,{name:"work",size:18}),"전체 업무 도구 ›"),()=>tool("hub"))),
       vehicleEdit && h(VehicleEditor,{kind:vehicleEdit,user,vehicle,
         close:()=>setVehicleEdit(null),changed}),
-      detailItem && h(ServiceDetail,{key:detailItem,item:detailItem,rows,cycles,reading,user,changed,
+      modelPicker && h(ModelPicker,{user,vehicle,cycles,settings:modelSettings,
+        close:()=>setModelPicker(false),changed,onCustom:()=>{
+          setModelPicker(false);setVehicleEdit("name");
+        }}),
+      detailItem && h(ServiceDetail,{key:detailItem,item:detailItem,rows,cycles,model,
+        modelSettings,explicitModel,reading,user,changed,
         close:()=>setDetailItem(null),edit:row=>edit({row}),add:item=>edit({item})}),
-      editor && h(ServiceEditor,{...editor,user,choices,
+      editor && h(ServiceEditor,{...editor,user,model,choices,
         close:()=>setEditor(null),changed}));
   }
 
