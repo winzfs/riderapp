@@ -28,15 +28,56 @@ export function createFinance(R, client) {
       inputMode:type==="number"?"numeric":undefined,...extra}));
   const select=(label,name,choices,value)=>h("label",{className:"fin-field"},h("span",null,label),
     h("select",{name,defaultValue:value},choices.map(c=>h("option",{value:c,key:c},c))));
-  function FinanceSheet({editor,close,save,busy,error}) {
-    const ref=R.useRef(null),closer=R.useRef(close);
-    closer.current=close;
+  const amountInput=(label,name,value,required=true)=>h("label",{className:"fin-field fin-money-input"},
+    h("span",null,label),h("input",{type:"text",name,inputMode:"numeric",enterKeyHint:"done",
+      autoComplete:"off",required,pattern:"[0-9,]*",
+      defaultValue:value==null?"":new Intl.NumberFormat("ko-KR").format(value),placeholder:"0",
+      onInput:e=>{const raw=e.currentTarget.value.replace(/\D/g,"").slice(0,9);
+        const normalized=raw?new Intl.NumberFormat("ko-KR").format(Number(raw)):"";
+        if(e.currentTarget.value!==normalized)e.currentTarget.value=normalized;}}));
+  function FinanceSheet({editor,close,save,busy,error,userId}) {
+    const ref=R.useRef(null),formRef=R.useRef(null),drag=R.useRef(null),dirty=R.useRef(false);
+    const closer=R.useRef(close),key="rs:fin-draft:v2:"+userId+":"+editor.kind;
+    const dismiss=()=>{if(busy)return;
+      if(dirty.current&&!window.confirm("작성 중인 내용을 닫을까요?"))return;
+      close();};
+    closer.current=dismiss;
+    const draftChange=e=>{
+      if(editor.row?.id||editor.kind==="goal"||editor.kind==="settlement")return;
+      dirty.current=true;
+      try{const values=Object.fromEntries(new FormData(e.currentTarget));
+        localStorage.setItem(key,JSON.stringify({at:Date.now(),values}));}catch{}
+    };
+    const pointerStart=e=>{if(!e.isPrimary||e.button!==0)return;
+      drag.current={id:e.pointerId,start:e.clientY};
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      if(formRef.current)formRef.current.style.animation="none";};
+    const pointerMove=e=>{if(drag.current?.id!==e.pointerId)return;
+      if(formRef.current)formRef.current.style.transform="translate3d(0,"+
+        Math.max(0,e.clientY-drag.current.start)+"px,0)";};
+    const pointerEnd=e=>{if(drag.current?.id!==e.pointerId)return;
+      const distance=Math.max(0,e.clientY-drag.current.start);drag.current=null;
+      if(formRef.current){formRef.current.style.transition="transform 200ms cubic-bezier(.2,.8,.3,1)";
+        formRef.current.style.transform="";}
+      if(distance>120)dismiss();};
     R.useLayoutEffect(()=>{
       ref.current?.showModal();
       const vv=window.visualViewport;
       const adjust=()=>{if(ref.current){ref.current.style.top=(vv?.offsetTop||0)+"px";
         ref.current.style.height=(vv?.height||window.innerHeight)+"px";}};
       adjust();vv?.addEventListener("resize",adjust);vv?.addEventListener("scroll",adjust);
+      if(!editor.row?.id&&editor.kind!=="goal"&&editor.kind!=="settlement"){
+        try{const draft=JSON.parse(localStorage.getItem(key)||"null");
+          if(draft?.at>Date.now()-7*86400000&&draft.at<Date.now()+60000){
+            for(const [fieldName,value] of Object.entries(draft.values||{})){
+              const el=formRef.current?.elements.namedItem(fieldName);
+              if(el?.length&&el[0]?.type==="radio"){
+                for(const radio of el)radio.checked=radio.value===value;
+              }else if(el&&typeof el.value==="string")el.value=value;
+            }
+            dirty.current=true;
+          }}catch{}
+      }
       return ()=>{vv?.removeEventListener("resize",adjust);vv?.removeEventListener("scroll",adjust);
         if(ref.current?.open)ref.current.close();};
     },[]);
@@ -47,26 +88,30 @@ export function createFinance(R, client) {
     const row=editor.row||{},kind=editor.kind;
     const name=kind==="income"?"수익":kind==="fuel"?"주유비":kind==="expense"?"기타 지출":kind==="settlement"?"실제 입금":"월 목표";
     return h("dialog",{ref,className:"fin-dialog","aria-label":name+" 입력",
-      onCancel:e=>{e.preventDefault();if(!busy)close();},
-      onClick:e=>{if(e.target===e.currentTarget&&!busy)close();}},
-      h("form",{className:"fin-sheet",onSubmit:e=>{e.preventDefault();save(e.currentTarget);}},
+      onCancel:e=>{e.preventDefault();dismiss();},
+      onClick:e=>{if(e.target===e.currentTarget)dismiss();}},
+      h("form",{ref:formRef,className:"fin-sheet",onChange:draftChange,
+        onInput:draftChange,onSubmit:e=>{e.preventDefault();save(e.currentTarget);}},
+        h("div",{className:"fin-drag-area",onPointerDown:pointerStart,onPointerMove:pointerMove,
+          onPointerUp:pointerEnd,onPointerCancel:pointerEnd},h("span",{className:"fin-drag-handle"})),
         h("header",{className:"fin-sheet-head"},
           h("div",null,txt("small",null,editor.row?"기록 수정":"빠른 입력"),
             h("h2",null,name+(kind==="goal"?" 설정":" 기록"))),
-          button(icon("close",22),close,"fin-close",{"aria-label":"닫기",disabled:busy})),
+          button(icon("close",22),dismiss,"fin-close",{"aria-label":"닫기",disabled:busy})),
         h("div",{className:"fin-sheet-body"},
           kind==="income"&&h(R.Fragment,null,
-            dateInput("배달한 날짜","work_date",row.work_date||editor.day),
-            select("플랫폼","platform",platforms,row.platform||editor.platform||"쿠팡이츠"),
-            input("수입 금액 (원)","gross_won","number",row.gross_won??"",true,{min:0,max:100000000,placeholder:"예: 85000"}),
-            h("details",{className:"fin-optional"},h("summary",null,"건수 · 기타 비용 · 메모 (선택)"),
+            h("div",{className:"fin-platform-choice",role:"radiogroup","aria-label":"배달 플랫폼"},
+              platforms.map(p=>h("label",{key:p},h("input",{type:"radio",name:"platform",value:p,
+                defaultChecked:p===(row.platform||editor.platform||"쿠팡이츠")}),h("span",null,p)))),
+            amountInput("수익 금액","gross_won",row.gross_won??null),
+            h("details",{className:"fin-optional"},h("summary",null,"날짜 · 건수 · 기타"),
+              dateInput("업무일","work_date",row.work_date||editor.day),
               input("배달 건수","deliveries","number",row.deliveries??"",false,{min:0,max:300}),
-              input("수익 기록에 포함할 기타 비용 (원)","expenses_won","number",row.expenses_won??"",false,{min:0,max:100000000}),
-              input("메모","note","text",row.note||"",false,{maxLength:300})),
-            txt("p","fin-hint","수익은 일한 날짜 기준으로 저장해요. 계좌 입금 여부는 정산에서 따로 관리합니다.")),
+              amountInput("수익에 포함되지 않은 기타 비용","expenses_won",row.expenses_won??null,false),
+              input("메모","note","text",row.note||"",false,{maxLength:300}))),
           kind==="fuel"&&h(R.Fragment,null,
             dateInput("주유 날짜","fueled_on",row.fueled_on||editor.day),
-            input("주유 금액 (원)","cost_won","number",row.cost_won??"",true,{min:1,max:100000000,placeholder:"예: 8000"}),
+            amountInput("주유 금액","cost_won",row.cost_won??null),
             h("details",{className:"fin-optional"},h("summary",null,"주유량 · 메모 (선택)"),
               input("주유량 (L)","liters","number",row.liters??"",false,{min:0.001,max:150,step:0.001}),
               input("메모","note","text",row.note||"",false,{maxLength:300})),
@@ -74,16 +119,16 @@ export function createFinance(R, client) {
           kind==="expense"&&h(R.Fragment,null,
             dateInput("지출 날짜","expense_date",row.expense_date||editor.day),
             select("분류","category",categories,row.category||"보험료"),
-            input("지출 금액 (원)","amount_won","number",row.amount_won??"",true,{min:1,max:100000000,placeholder:"예: 6500"}),
+            amountInput("지출 금액","amount_won",row.amount_won??null),
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
             txt("p","fin-hint","주유비·정비비는 각각의 기존 장부에서 기록해 주세요. 비용이 두 번 잡히지 않도록 분리합니다.")),
           kind==="settlement"&&h(R.Fragment,null,
             txt("p","fin-hint",row.platform+" · "+row.work_date+" 수익 "+money(row.gross_won)+" 기준"),
             dateInput("실제 입금 날짜","paid_at",row.paid_at||editor.day),
-            input("실제 입금 금액 (원)","paid_won","number",row.paid_won??row.gross_won,true,{min:0,max:100000000}),
+            amountInput("실제 입금 금액","paid_won",row.paid_won??row.gross_won),
             txt("p","fin-hint","수입 금액과 실제 입금액이 다르면 차액을 정산 화면에 표시합니다.")),
           kind==="goal"&&h(R.Fragment,null,
-            input("월 수익 목표 (원)","monthly_target_won","number",row.monthly_target_won??3000000,true,{min:0,max:100000000,step:10000}),
+            amountInput("월 수익 목표","monthly_target_won",row.monthly_target_won??3000000),
             input("한 달 근무 예정일","planned_work_days","number",row.planned_work_days??25,true,{min:1,max:31}),
             txt("p","fin-hint","목표는 내 계정에 저장되며 실제 수익은 입력된 기록만 반영합니다."))),
         h("footer",null,error&&txt("p","fin-error",error),
@@ -163,8 +208,8 @@ export function createFinance(R, client) {
       setSheetError("");setEditor({kind,row,day:today,platform:platforms.includes(savedPlatform)?savedPlatform:"쿠팡이츠"});};
     async function save(form) {
       if(!user||busy||!editor)return;
-      const f=new FormData(form),v=k=>String(f.get(k)||"").trim();
-      const amount=Number(v(editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":editor.kind==="expense"?"amount_won":editor.kind==="settlement"?"paid_won":"monthly_target_won"));
+      const f=new FormData(form),v=k=>String(f.get(k)||"").trim(),moneyValue=k=>v(k).replace(/,/g,"");
+      const amount=Number(moneyValue(editor.kind==="income"?"gross_won":editor.kind==="fuel"?"cost_won":editor.kind==="expense"?"amount_won":editor.kind==="settlement"?"paid_won":"monthly_target_won"));
       if(!safeAmount(amount) || (editor.kind==="fuel"&&amount===0) || (editor.kind==="expense"&&amount===0)){
         setSheetError("0~1억 원 범위의 올바른 금액을 입력해 주세요.");return;
       }
@@ -176,7 +221,7 @@ export function createFinance(R, client) {
           table="rider_earnings";
           values={work_date:v("work_date"),platform:v("platform"),gross_won:amount,gross_entered:true,
             deliveries:Number(v("deliveries")||0),note:v("note"),
-            expenses_won:Number(v("expenses_won")||0),
+            expenses_won:Number(moneyValue("expenses_won")||0),
             expense_scope:row?.expense_scope||"other_only"};
           if(!Number.isSafeInteger(values.deliveries)||values.deliveries<0||values.deliveries>300||
             !safeAmount(values.expenses_won))throw Error("건수 또는 기타 비용을 확인해 주세요.");
@@ -240,6 +285,7 @@ export function createFinance(R, client) {
           const result=await client.from(table).insert({...values,user_id:user.id}).select("id");
           if(result.error)throw result.error;
         }
+        try{localStorage.removeItem("rs:fin-draft:v2:"+user.id+":"+editor.kind);}catch{}
         setEditor(null);setNotice("기록을 저장했어요.");refresh(n=>n+1);
       }catch(e){setSheetError(e?.message||"기록을 저장하지 못했어요.");}
       finally{setBusy(false);}
@@ -450,7 +496,7 @@ export function createFinance(R, client) {
       h(R.Fragment,null,notice&&txt("p","fin-notice",notice),
         section==="overview"?overview():section==="records"?records():
         section==="settlements"?settlements():analysis()),
-      editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError}));
+      editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}));
   }
   return Finance;
 }
