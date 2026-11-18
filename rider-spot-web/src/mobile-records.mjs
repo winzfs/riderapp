@@ -356,7 +356,7 @@ export function createRecords(R, client) {
         const distance=parseInterval(form,"interval_km",999999);
         const days=parseInterval(form,"interval_days",3650);
         const priceRaw=String(form.get("estimated_cost_won")??"").replace(/,/g,"").trim();
-        if(priceRaw && (!/^\\d+$/.test(priceRaw)||!Number.isSafeInteger(Number(priceRaw))||Number(priceRaw)>2000000))
+        if(priceRaw && (!/^\d+$/.test(priceRaw)||!Number.isSafeInteger(Number(priceRaw))||Number(priceRaw)>2000000))
           throw Error("예상 비용은 0~2,000,000원 사이로 입력해 주세요.");
         const price=priceRaw===""?null:Number(priceRaw);
         if(model) {
