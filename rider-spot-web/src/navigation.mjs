@@ -4,7 +4,7 @@
 const KEY = "__rsNav";
 const LAYER = "__rsLayer";
 const VERSION = 192;
-const TABS = new Set(["nearby", "trips", "community", "bike", "account", "tools"]);
+const TABS = new Set(["nearby", "trips", "community", "earnings", "bike", "account", "tools"]);
 const DEFAULT = "nearby";
 const DOUBLE_BACK_MS = 2000;
 
