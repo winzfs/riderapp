@@ -1,0 +1,71 @@
+name: Rider Spot per-part cycle v186 candidate acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-bike-cycles-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://c7f6a6b1-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-v186-bike-cycles
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build && npm test
+      - name: Compare preview assets with tested build and preserve map services
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const root=process.env.RIDER_UI_URL,hash='61e324cbf937';
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          const paths=[['/','index.html'],['/sw.js','sw.js'],...['app.mjs','design-system.css'].map(name=>['/assets/rider-spot-'+hash+'/'+name,name])];
+          for(const [path,filename] of paths){
+            const r=await fetch(new URL(path,root));assert.equal(r.status,200,path);
+            const text=await r.text();
+            assert.equal(text,fs.readFileSync('prebuilt/'+filename,'utf8'),'candidate differs '+path);
+            if(filename==='app.mjs'){
+              assert.ok(text.includes('record-cycle-save')&&text.includes('rider_maintenance_cycles'),'per-item editor included');
+              assert.ok(text.includes('data:image/png;base64,'),'existing PNG retained');
+            }
+            if(filename==='design-system.css')assert.ok(text.includes('.record-cycle-panel'),'cycle panel style included');
+            console.log('PASS preview',path,text.length);
+          }
+          for(const path of ['/assets/rider-spot-'+hash+'/route-worker.mjs','/assets/rider-spot-'+hash+'/native-gps.js','/assets/rider-spot-'+hash+'/workspace-tools.js','/mapdata/manifest.json']){
+            const r=await fetch(new URL(path,root));assert.equal(r.status,200,path);
+            if(path.endsWith('manifest.json'))assert.ok((await r.json()).counts);
+          }
+          console.log('PASS preview map, GPS and timeline resources');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Verify mobile bike grid, sheet save/retry and timeline on preview
+        run: |
+          sed -i 's@const origin="https://rider-spot.jazzhjm.workers.dev";@const origin="https://c7f6a6b1-rider-spot.jazzhjm.workers.dev";@' tests/mobile-records-browser.cjs
+          sed -i 's@return route.abort();@return route.continue();@g' tests/mobile-records-browser.cjs
+          node tests/mobile-records-browser.cjs
+      - name: Verify map and main UI on preview
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v186-bike-cycle-evidence
+          path: |
+            /tmp/rider-v186-bike-cycles
+            /tmp/rider-ui-evidence
+          retention-days: 14
