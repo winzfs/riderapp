@@ -337,7 +337,7 @@ export function createFinance(R, client) {
           :txt("p","fin-empty","이 기간에 기록이 없어요.")),
         h("div",{className:"fin-shortcuts"},
           button("주유비 기록",()=>openEditor("fuel"),"fin-secondary"),
-          button("정비 기록은 내 바이크에서",onBike,"fin-secondary"))));
+          button("정비 기록은 내 바이크에서",onBike,"fin-secondary")));
     }
     function settlements() {
       const rows=monthly.earnings.slice().sort((a,b)=>b.work_date.localeCompare(a.work_date));
