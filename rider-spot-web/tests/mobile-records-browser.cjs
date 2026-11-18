@@ -18,7 +18,8 @@ async function run(browser,width,height){
     localStorage.setItem("rs:trips:"+userId,JSON.stringify(trips));
   },{session,trips,userId});
   const records=[{id:"11111111-1111-4111-8111-111111111113",serviced_on:date,item:"엔진오일",odometer_km:24500,cost_won:24000,user_id:userId}];
-  const totals={};let fail=true,failVehicle=true,failMaintenance=true;
+  const totals={};let fail=true,failVehicle=true,failMaintenance=true,failCycle=true;
+  const cycleWrites=[];
   const vehicle={user_id:userId,vehicle_name:"PCX125",odometer_km:24500,odometer_recorded_on:"2026-11-15"};
   const cycles=[{user_id:userId,item_key:"엔진오일",interval_km:3000,interval_days:null}];
   const vehicleChanges=[];
@@ -36,7 +37,9 @@ async function run(browser,width,height){
         return route.fulfill({json:{user_id:userId}});
       }
       if(table==="rider_maintenance_cycles" && route.request().method()!=="GET"){
+        if(failCycle){failCycle=false;return route.fulfill({status:503,json:{message:"테스트 주기 저장 실패"}});}
         for(const payload of route.request().postDataJSON()){
+          cycleWrites.push(payload);
           const old=cycles.find(x=>x.item_key===payload.item_key);
           if(old)Object.assign(old,payload);else cycles.push(payload);
         }
@@ -112,15 +115,34 @@ async function run(browser,width,height){
     assert.equal(vehicle.odometer_km,25700);
     assert.equal(vehicle.odometer_recorded_on,"2026-11-17","renaming preserves odometer date");
     assert.deepEqual(vehicleChanges.at(-1),{vehicle_name:"PCX125 라이더"},"name-only update payload");
-    await page.getByRole("button",{name:"교체 주기 설정",exact:true}).click();
-    await dialog.getByLabel("교체 거리 (km)").first().fill("4000");
-    await dialog.getByRole("button",{name:"교체 주기 저장"}).click();
-    await page.getByText("2,800 km 남음",{exact:true}).waitFor();
+    assert.equal(await page.getByRole("button",{name:"교체 주기 설정",exact:true}).count(),0,
+      "global replacement cycle editor is removed");
     await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByText("28,500 km").waitFor();
+    const oilDetail=page.getByRole("dialog",{name:"엔진오일 관리"});
+    await oilDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
+    await oilDetail.getByLabel("교체 거리 (km)").fill("4000");
+    await oilDetail.getByRole("button",{name:"교체 주기 저장"}).click();
+    await oilDetail.getByRole("alert").waitFor();
+    assert.equal(await oilDetail.getByLabel("교체 거리 (km)").inputValue(),"4000","failed save keeps entered interval");
+    await oilDetail.getByRole("button",{name:"교체 주기 저장"}).click();
+    await oilDetail.getByText("28,500 km",{exact:true}).waitFor();
+    await oilDetail.getByText("4,000 km",{exact:true}).waitFor();
     await shot("bike-detail");
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
     assert.equal(cycles[0].interval_km,4000);
+    assert.deepEqual(cycleWrites.map(c=>c.item_key),["엔진오일"],
+      "only the selected part interval was updated");
+    await oilDetail.getByRole("button",{name:"닫기"}).click();
+    await page.locator(".bike-consumable").filter({hasText:"엔진오일"})
+      .getByText("2,800 km 남음",{exact:true}).waitFor();
+    await page.getByRole("button",{name:"앞 타이어 관리",exact:true}).click();
+    const tireDetail=page.getByRole("dialog",{name:"앞 타이어 관리"});
+    await tireDetail.getByRole("button",{name:"주기 설정",exact:true}).click();
+    await tireDetail.getByLabel("교체 기간 (일)").fill("90");
+    await tireDetail.getByRole("button",{name:"교체 주기 저장"}).click();
+    await tireDetail.getByText("90일",{exact:true}).waitFor();
+    assert.equal(cycles.find(c=>c.item_key==="앞 타이어")?.interval_days,90,"save only front tire interval");
+    assert.equal(cycles.find(c=>c.item_key==="엔진오일")?.interval_km,4000,"other parts unaffected");
+    await tireDetail.getByRole("button",{name:"닫기"}).click();
     await shot("bike-updated");
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     await dialog.getByRole("button",{name:"앞 타이어",exact:true}).click();
