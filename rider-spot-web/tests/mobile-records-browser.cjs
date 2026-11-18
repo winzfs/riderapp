@@ -197,7 +197,11 @@ async function run(browser,width,height){
     const rect=await handle.boundingBox();
     assert.ok(rect,"draggable sheet handle has visible geometry");
     const x=rect.x+rect.width/2,y=rect.y+Math.min(45,rect.height/2);
+    const sheetBefore=await swipeDialog.locator(".record-sheet").evaluate(el=>el.getBoundingClientRect().top);
     await page.mouse.move(x,y);await page.mouse.down();
+    await page.mouse.move(x,y+78,{steps:8});
+    const sheetDuring=await swipeDialog.locator(".record-sheet").evaluate(el=>el.getBoundingClientRect().top);
+    assert.ok(sheetDuring-sheetBefore>40,"sheet must visibly track the finger BEFORE release, not jump on dismissal");
     await page.mouse.move(x,y+170,{steps:8});await page.mouse.up();
     await swipeDialog.waitFor({state:"hidden"});
     await shot("bike-after-swipe");
