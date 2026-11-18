@@ -1,0 +1,40 @@
+name: Rider Spot bike tiles v185 production smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-bike-tiles-production.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Compare live site files byte-for-byte with vetted release, preserve map and PNG
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const root='https://rider-spot.jazzhjm.workers.dev', hash='384430b8e410';
+          assert.equal(JSON.parse(fs.readFileSync('prebuilt/release.json','utf8')).hash,hash);
+          for(const [p,f] of [['/','index.html'],['/sw.js','sw.js'],...['app.mjs','design-system.css'].map(n=>['/assets/rider-spot-'+hash+'/'+n,n])]){
+            const res=await fetch(root+p,{headers:{'Cache-Control':'no-cache'}});
+            assert.equal(res.status,200,p+' response');
+            const live=await res.text();
+            assert.equal(live,fs.readFileSync('prebuilt/'+f,'utf8'),p+' differs from repository');
+            if(f==='app.mjs')assert.ok(live.includes('data:image/png;base64,'),'transparent PNG still present');
+            if(f==='design-system.css')assert.ok(live.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),'3-column grid');
+            console.log('PASS production',p,live.length);
+          }
+          const res=await fetch(root+'/mapdata/manifest.json');
+          assert.equal(res.status,200);
+          assert.ok((await res.json()).counts,'map dataset still available');
+          console.log('PASS production map and maintenance assets');
+          NODE
