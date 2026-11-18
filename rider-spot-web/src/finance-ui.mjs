@@ -621,7 +621,7 @@ export function createFinance(R, client) {
                   button("수정",()=>x.type==="maintenance"?openMaintenance(x.row,"edit"):openEditor(x.type,x.row),"fin-textbtn"),
                   x.type!=="maintenance"&&button("삭제",()=>remove(x.type,x.row),"fin-textbtn fin-danger",{disabled:busy}))))))
           :txt("p","fin-empty","이 기간에 기록이 없어요.")),
-        h("details",{className:"fin-recurring"},
+        h("details",{className:"fin-recurring",key:"recurring-expenses"},
           h("summary",null,h("strong",null,"반복 지출"),h("span",null,
             (data?.recurring||[]).filter(x=>x.active!==false).length+"건 설정 · 예정 비용은 미반영")),
           h("div",{className:"fin-recurring-body"},
@@ -674,7 +674,7 @@ export function createFinance(R, client) {
                 style:{width:g?Math.min(100,paidTotal/g*100)+"%":"0%"}})));
           }),
           !rows.length&&txt("p","fin-empty","이 달의 수익 기록이 없어요.")),
-        h("details",{className:"fin-recurring"},
+        h("details",{className:"fin-recurring",key:"payout-schedule"},
           h("summary",null,h("strong",null,"플랫폼별 정산 일정"),h("span",null,"직접 설정 · 예정일 참고")),
           h("div",{className:"fin-recurring-body"},
             ...platforms.map(p=>{
