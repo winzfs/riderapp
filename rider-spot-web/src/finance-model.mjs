@@ -71,3 +71,43 @@ export function financeLedger(data,from,to) {
   for(const row of data?.extras||[]) rows.push({type:"expense",day:row.expense_date,amount:num(row.amount_won),row,name:row.category,personal:isPersonalExpense(row)});
   return rows.filter(x=>x.day>=from&&x.day<=to).sort((a,b)=>b.day.localeCompare(a.day) || String(b.row.created_at||"").localeCompare(String(a.row.created_at||"")));
 }
+
+/** Day-of-month plans are projections until the rider confirms payment.
+ * Projected rows must NEVER be included in financeTotals or financeLedger. */
+export function plannedExpenseDate(month,dayOfMonth){
+  if(!/^\d{4}-\d{2}$/.test(String(month)) || !Number.isInteger(Number(dayOfMonth)) ||
+    Number(dayOfMonth)<1 || Number(dayOfMonth)>31)return null;
+  const last=monthLastDay(month+"-01");
+  return month+"-"+String(Math.min(Number(dayOfMonth),Number(last.slice(8)))).padStart(2,"0");
+}
+export function recurringOccurrences(rules,extras,month){
+  return (rules||[]).filter(x=>x.active!==false).map(rule=>{
+    const day=plannedExpenseDate(month,rule.day_of_month);
+    const recorded=(extras||[]).find(row=>row.recurrence_id===rule.id&&
+      row.recurrence_month===month+"-01");
+    return {...rule,day,recorded:recorded||null,status:recorded?"recorded":"planned"};
+  }).filter(row=>row.day).sort((a,b)=>a.day.localeCompare(b.day)||a.category.localeCompare(b.category));
+}
+export function nextPayoutDate(rule,day){
+  if(!rule||!/^\d{4}-\d{2}-\d{2}$/.test(String(day)))return null;
+  if(rule.cycle==="weekly"&&Number.isInteger(Number(rule.weekday))&&
+      Number(rule.weekday)>=0&&Number(rule.weekday)<=6){
+    const today=new Date(day+"T12:00:00Z").getUTCDay();
+    return plusDays(day,(Number(rule.weekday)-today+7)%7);
+  }
+  if(rule.cycle==="monthly"&&Number.isInteger(Number(rule.month_day))&&
+      Number(rule.month_day)>=1&&Number(rule.month_day)<=31){
+    let proposed=plannedExpenseDate(day.slice(0,7),rule.month_day);
+    if(proposed<day)proposed=plannedExpenseDate(plusDays(monthLastDay(day),1).slice(0,7),rule.month_day);
+    return proposed;
+  }
+  return null;
+}
+export function financeMonths(data,last,count=6){
+  return Array.from({length:count},(_,i)=>{
+    const date=new Date(last.slice(0,7)+"-01T12:00:00Z");
+    date.setUTCMonth(date.getUTCMonth()-count+1+i);
+    const month=date.toISOString().slice(0,7);
+    return {month,...financeTotals(data,month+"-01",monthLastDay(month+"-01"))};
+  });
+}
