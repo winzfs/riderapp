@@ -1845,3 +1845,68 @@ dialog.record-mini-dialog::backdrop{
 @media(prefers-reduced-motion:reduce){
   dialog.record-mini-dialog[open] .record-mini-card{animation:none!important}
 }
+
+
+/* v190 catalog: a quiet, quick model picker and clearly labeled estimates. */
+.bike-model-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border:1px solid #dce8de;border-radius:14px;background:#f6f9f5;
+  padding:10px 12px;margin:8px 0 10px;
+}
+.bike-model-banner>div{flex:1;min-width:0}
+.bike-model-banner strong{display:block;font-size:12px;font-weight:800;color:#2d4938;line-height:1.45}
+.bike-model-banner small{display:block;font-size:10px;line-height:1.45;color:#7c887b;margin-top:2px}
+.bike-model-banner .bike-model-change{
+  flex:none;border:1px solid #cfded0;background:#fff;border-radius:10px;
+  padding:9px 11px;min-height:38px;color:#355844;font-size:11px;font-weight:750;
+}
+.bike-model-picker{min-width:0}
+.bike-model-picker .record-mini-description{margin-bottom:13px}
+.bike-model-filters{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:8px}
+.bike-model-filters input,.bike-model-filters select{
+  box-sizing:border-box;min-width:0;width:100%;height:44px;background:#f9fbf8;
+  border:1px solid #dce6dd;border-radius:11px;padding:9px;font-size:13px;color:#2c4538;
+}
+.bike-model-count{display:flex;justify-content:flex-end;font-size:11px;color:#819084;margin:9px 0 6px}
+.bike-model-list{
+  display:flex;flex-direction:column;gap:5px;max-height:min(45dvh,380px);
+  min-height:70px;overflow-y:auto;padding:3px;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.bike-model-list .bike-model-option{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  width:100%;min-height:60px;text-align:left;box-sizing:border-box;
+  border:1px solid #edf1ec;background:#fff;border-radius:12px;padding:9px 11px;
+  color:#30483a;transition:background .15s,border-color .15s,transform .18s;
+}
+.bike-model-option[aria-selected=true]{background:#f4faf2;border-color:#92bc97}
+.bike-model-option:active{transform:scale(.99);background:#eff6ec}
+.bike-model-list-name{display:grid;min-width:0;gap:3px}
+.bike-model-list-name b{font-size:13px;line-height:1.25;font-weight:800}
+.bike-model-list-name small{font-size:10px;color:#748276}
+.bike-model-selected{font-size:10px;white-space:nowrap;color:#357c48;font-weight:800}
+.bike-model-picker .bike-model-custom{
+  display:block;width:100%;border:0;border-top:1px solid #e9efeb;
+  margin-top:12px;padding:13px 6px 2px;min-height:40px;
+  background:transparent;color:#65816b;font-size:12px;font-weight:700;
+}
+.bike-model-default-hint{margin:0 0 12px;font-size:11px;color:#68816f;line-height:1.5}
+.bike-model-cost{
+  border:1px solid #e2eae2;background:linear-gradient(135deg,#f7f9f4,#fff);
+  border-radius:14px;padding:13px 14px;margin:0 0 17px;
+}
+.bike-model-cost-heading{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.bike-model-cost-heading strong{font-weight:800;color:#2a4032;font-size:13px}
+.bike-model-cost-heading small{font-weight:600;color:#7f8a7c;font-size:10px}
+.bike-model-cost>b{display:block;font-size:16px;letter-spacing:-.02em;margin-top:7px;color:#3b503f}
+.bike-model-cost>p{font-size:11px;line-height:1.5;color:#899184;margin:7px 0 0}
+.bike-model-reset{border:0;background:transparent;color:#678270;padding:12px 7px;
+  font-size:12px;font-weight:700;min-height:40px;text-decoration:underline}
+@media(max-width:380px){
+  .bike-model-filters{grid-template-columns:1fr}
+  .bike-model-list{max-height:min(42dvh,300px)}
+  .bike-model-banner{padding:9px 10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .bike-model-option{transition:none!important}
+}
