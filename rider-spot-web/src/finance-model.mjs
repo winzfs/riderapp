@@ -47,8 +47,7 @@ export function financeDays(data,last,days=7) {
 export function financePeriod(day,scope) {
   if(scope==="today")return [day,day];
   if(scope==="week")return [plusDays(day,-6),day];
-  return [day.slice(0,7)+"-01",plusDays(day.slice(0,7)+"-01",35).slice(0,7)==day.slice(0,7)
-    ? plusDays(day.slice(0,7)+"-01",34) : plusDays(day.slice(0,7)+"-01",-1)];
+  return financeMonthPeriod(day);
 }
 export function monthLastDay(day) {
   const d=new Date(day.slice(0,7)+"-01T12:00:00Z");
