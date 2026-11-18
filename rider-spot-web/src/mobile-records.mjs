@@ -312,7 +312,7 @@ export function createRecords(R, client) {
         h("div",{className:"record-parts-grid"},standardParts.filter(name=>choices.includes(name)).map(partButton)),
         customParts.length>0&&h("div",{className:"record-custom-chips","aria-label":"추가한 기타 부품"},
           customParts.map(name=>btn(name+" ×",()=>select(current=>current.filter(x=>x!==name)),
-            {key:name,className:"record-custom-chip","aria-label":name+" 제거"}))))),
+            {key:name,className:"record-custom-chip","aria-label":name+" 제거"})))),
       h("p",{className:"record-help"},"선택한 부품들은 한 건의 정비 기록으로 저장됩니다."),
       h("div",{className:"record-pair record-measures"},
         field("계기판 거리 (km)",{type:"text",inputMode:"numeric",name:"km",placeholder:"미입력",
