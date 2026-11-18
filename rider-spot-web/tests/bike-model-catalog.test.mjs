@@ -48,4 +48,9 @@ test("chain and EV modes cannot propose nonexistent scooter CVT belt and engine 
   assert.deepEqual(modelParts(ev),["앞 타이어","뒤 타이어","브레이크 패드","배터리"]);
   assert.equal(modelDefaults(ev,"엔진오일"),null);
   assert.equal(modelDefaults(ev,"배터리").interval_km,null);
+  assert.equal(modelDefaults(ev,"배터리").estimated_cost_won,null,
+    "do not mislabel a small 12V battery price as a high-voltage traction battery");
+  assert.equal(modelDefaults(findBikeModel("honda-adv160"),"엔진오일").interval_km,6000);
+  assert.equal(modelDefaults(findBikeModel("honda-supercub110"),"엔진오일").interval_km,3000);
+  assert.equal(modelDefaults(findBikeModel("honda-ct125"),"엔진오일").interval_source,"manual");
 });
