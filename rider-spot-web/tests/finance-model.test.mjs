@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {koreanWorkDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "../src/finance-model.mjs";
+import {koreanWorkDay,koreanCalendarDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "../src/finance-model.mjs";
 
 test("Seoul accounting date rolls over at 03:00, not midnight",()=>{
   assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
@@ -100,4 +100,11 @@ test("account transitions never reveal the previous rider's financial records",(
   assert.equal(accountFinanceData("user-b","user-a",privateRecords),null);
   assert.equal(accountFinanceData(null,"user-a",privateRecords),null);
   assert.equal(accountFinanceData("user-a","user-a",privateRecords),privateRecords);
+});
+
+test("calendar-paid and fuel dates roll over at midnight while rider earnings roll over at 03:00",()=>{
+  const before=new Date("2026-11-18T14:59:59Z"),after=new Date("2026-11-18T15:00:00Z");
+  assert.equal(koreanCalendarDay(before),"2026-11-18");
+  assert.equal(koreanCalendarDay(after),"2026-11-19");
+  assert.equal(koreanWorkDay(after),"2026-11-18");
 });

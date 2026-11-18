@@ -8,6 +8,12 @@ export const plusDays = (day, offset) => {
   d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0,10);
 };
+export function koreanCalendarDay(now = new Date()) {
+  const p=Object.fromEntries(new Intl.DateTimeFormat("en-US",{
+    timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"
+  }).formatToParts(now).map(part=>[part.type,part.value]));
+  return p.year+"-"+p.month+"-"+p.day;
+}
 export function koreanWorkDay(now = new Date()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US",{
     timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",

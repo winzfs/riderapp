@@ -1,6 +1,6 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
 import {icons} from "./ui.mjs";
-import {won,num,koreanWorkDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "./finance-model.mjs";
+import {won,num,koreanWorkDay,koreanCalendarDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "./finance-model.mjs";
 
 const money = won;
 const categories = ["보험료","통신비","주차비","장비","기타","식비","개인 비용"];
@@ -198,7 +198,7 @@ export function createFinance(R, client) {
     },[user?.id]);
     R.useEffect(()=>{
       if(window.__rsFinanceAction==="fuel"){window.__rsFinanceAction=null;
-        setSection("records");setEditor({kind:"fuel",day:koreanWorkDay()});}
+        setSection("records");setEditor({kind:"fuel",day:koreanCalendarDay()});}
     },[]);
     R.useEffect(()=>{
       let active=true;setError("");setLoading(true);
@@ -235,7 +235,7 @@ export function createFinance(R, client) {
         setLoading(false);}});
       return ()=>{active=false;};
     },[user?.id,rev]);
-    const today=koreanWorkDay();
+    const today=koreanWorkDay(),calendarToday=koreanCalendarDay();
     const [from,to]=scope==="month"?financeMonthPeriod(anchor):
       scope==="week"?[plusDays(today,-6),today]:[today,today];
     const totals=financeTotals(data||emptyData,from,to);
@@ -261,7 +261,7 @@ export function createFinance(R, client) {
       try{savedPlatform=localStorage.getItem("rs:finance-platform:"+user.id)||savedPlatform;}catch{}
       let category="보험료";
       try{category=localStorage.getItem("rs:finance-category:"+user.id)||category;}catch{}
-      setSheetError("");setEditor({kind,row,day:today,category:categories.includes(category)?category:"보험료",
+      setSheetError("");setEditor({kind,row,day:kind==="income"?today:calendarToday,category:categories.includes(category)?category:"보험료",
         platform:platforms.includes(savedPlatform)?savedPlatform:"쿠팡이츠"});};
     async function save(form) {
       if(!user||busy||!editor)return;
@@ -617,7 +617,7 @@ export function createFinance(R, client) {
           h("div",{className:"fin-recurring-body"},
             ...platforms.map(p=>{
               const rule=(data?.payoutRules||[]).find(x=>x.platform===p);
-              const date=nextPayoutDate(rule,today);
+              const date=nextPayoutDate(rule,calendarToday);
               const summary=!rule||rule.cycle==="none"?"예정일 미설정":
                 rule.cycle==="weekly"?"매주 "+["일","월","화","수","목","금","토"][rule.weekday]+"요일":
                   "매월 "+rule.month_day+"일";
