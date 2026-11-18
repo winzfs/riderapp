@@ -34,6 +34,8 @@ test("expense categories are disjoint, and paid status is not revenue twice",()=
  assert.equal(x.cost,40000);
  assert.equal(x.net,120000);
  assert.equal(x.paid,120000);assert.equal(x.unpaid,40000);
+ const adjusted=financeTotals({...data,earnings:data.earnings.map((r,i)=>i===0?{...r,paid_won:115000}:r)},"2026-11-19","2026-11-19");
+ assert.equal(adjusted.paid,115000);assert.equal(adjusted.payoutDifference,-5000);assert.equal(adjusted.unpaid,40000);
  assert.deepEqual(x.byPlatform,{"쿠팡이츠":120000,"배민":40000});
  assert.equal(x.deliveries,16);
  assert.equal(x.uncertain,false);
