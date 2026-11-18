@@ -135,6 +135,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
           rider_recurring_expenses:recurringRules,
           rider_extra_expenses:extraExpenses,
           rider_finance_payout_rules:payoutRules}[table]??[];
+      if(table==="rider_earnings")console.log("FINANCE MOCK RETURNS",JSON.stringify({
+        totals,rows:data,query:url.searchParams.toString()}));
       return route.fulfill({json:data});
     }
     if(["tiles.openfreemap.org","cdn.jsdelivr.net","tile.openstreetmap.org"].includes(url.hostname))return route.continue();
