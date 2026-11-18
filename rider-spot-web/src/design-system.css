@@ -1910,3 +1910,14 @@ dialog.record-mini-dialog::backdrop{
 @media(prefers-reduced-motion:reduce){
   .bike-model-option{transition:none!important}
 }
+
+
+.bike-model-custom-editor{
+  display:grid;gap:8px;padding:12px;margin-top:11px;border-radius:12px;
+  border:1px solid #e0e9df;background:#f7faf6;
+}
+.bike-model-custom-editor label{display:grid;gap:6px;font-size:12px;color:#46604d;font-weight:750}
+.bike-model-custom-editor input{width:100%;min-height:44px;box-sizing:border-box;border:1px solid #cadccf;
+  border-radius:10px;padding:9px 11px;background:#fff;font-size:16px;color:#23382c}
+.bike-model-custom-editor .bike-model-custom-save{width:100%;min-height:44px;border-radius:10px;
+  border:0;background:#ad471b;color:#fff;font-size:13px;font-weight:800}
