@@ -380,7 +380,7 @@ export function createRecords(R, client) {
           },{className:"record-cycle-edit","aria-haspopup":"dialog",disabled:cycleSaving})),
         h("div",{className:"record-cycle-values"},
           h("span",null,"거리 ",h("b",null,cycle?.interval_km?number(cycle.interval_km)+" km":"미설정")),
-          h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정"))),
+          h("span",null,"기간 ",h("b",null,cycle?.interval_days?number(cycle.interval_days)+"일":"미설정")))),
       h("div",{className:"record-detail-section-title"},h("h3",null,"정비 이력"),
         h("small",null,historyRows.length+"건")),
       historyRows.length ? h("div",{className:"record-detail-list"},
