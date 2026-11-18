@@ -7,7 +7,8 @@ import { createHash } from "node:crypto";
 export function overlayWorker(source, releaseAssets, expectedSha) {
   const sha = createHash("sha256").update(source).digest("hex");
   if (sha !== expectedSha) throw Error(`Worker snapshot hash mismatch: ${sha}`);
-  const declaration = "const files=";
+  const modern = source.includes("const rsNewAssets=");
+  const declaration = modern ? "const rsNewAssets=" : "const files=";
   const start = source.indexOf(declaration);
   const end = source.indexOf("\n", start);
   if (
@@ -27,7 +28,7 @@ export function overlayWorker(source, releaseAssets, expectedSha) {
       path !== "/index.html" &&
       path !== "/sw.js" &&
       !/^\/assets\/rider-spot-[0-9a-f]{12}\/[a-z.-]+$/.test(path) &&
-      !/^\/mapdata\/(?:admin|manifest|t\d+-\d+)\.json$/.test(path)
+      !/^\/mapdata\/(?:admin|government|manifest|t\d+-\d+)\.json$/.test(path)
     ) {
       throw Error(`Unexpected release asset: ${path}`);
     }
@@ -42,11 +43,30 @@ export function overlayWorker(source, releaseAssets, expectedSha) {
           : "application/javascript; charset=utf-8",
     ];
   }
-  return (
+  const merged =
     source.slice(0, start + declaration.length) +
     JSON.stringify(files) +
     ";" +
-    source.slice(end)
+    source.slice(end);
+  if (!modern) return merged;
+
+  // Older Workers append more asset bundles later. They may overwrite the HTML
+  // and sw.js we just set; restore the candidate entry documents last.
+  const entry = Object.fromEntries(
+    ["/index.html", "/sw.js"]
+      .filter((path) => files[path])
+      .map((path) => [path, files[path]]),
+  );
+  if (!entry["/index.html"] || !entry["/sw.js"])
+    throw Error("Missing HTML or Service Worker in release assets");
+  const handler = "export default {async fetch(request){";
+  const at = merged.lastIndexOf(handler);
+  if (at < 0) throw Error("Missing Worker fetch entrypoint");
+  return (
+    merged.slice(0, at) +
+    "Object.assign(rsNewAssets," + JSON.stringify(entry) + ");" +
+    String.fromCharCode(10) +
+    merged.slice(at)
   );
 }
 
