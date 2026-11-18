@@ -9,7 +9,7 @@ on:
       - '.github/workflows/rider-spot-transparent-angular.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build-and-check:
     runs-on: ubuntu-latest
@@ -21,6 +21,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm, cache-dependency-path: 'rider-spot-web/package-lock.json'}
       - run: npm ci
+      - name: Recover one missing transport character using exact source SHA-256
+        run: python3 scripts/repair_angular_sprite.py
+      - name: Commit byte-exact verified PNG, not approximated or regenerated
+        run: |
+          if ! git diff --quiet -- src/assets/maintenance/angular-parts-v3.png; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/assets/maintenance/angular-parts-v3.png
+            git commit -m "fix(bike): restore verified transparent angular PNG [skip ci]"
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
       - name: Validate exact original transparent PNG artifact
         run: |
           python3 - <<'PY'
