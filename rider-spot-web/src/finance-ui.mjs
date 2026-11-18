@@ -121,6 +121,12 @@ export function createFinance(R, client) {
             txt("p","fin-hint","내 바이크의 주유 기록과 같은 장부를 사용합니다.")),
           kind==="expense"&&h(R.Fragment,null,
             dateInput("지출 날짜","expense_date",row.expense_date||editor.day),
+            h("div",{className:"fin-category-chips","aria-label":"빠른 지출 분류"},
+              [...new Set([row.category||editor.category||"보험료","보험료","장비","식비"])].map(name=>
+                button(name,e=>{
+                  const selectEl=formRef.current?.elements.namedItem("category");
+                  if(selectEl){selectEl.value=name;selectEl.dispatchEvent(new Event("change",{bubbles:true}));}
+                },"fin-chip",{key:name}))),
             select("분류","category",categories,row.category||editor.category||"보험료"),
             amountInput("지출 금액","amount_won",row.amount_won??null),
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
