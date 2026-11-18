@@ -52,3 +52,71 @@
   background-repeat:no-repeat!important;
   filter:drop-shadow(0 2px 2px rgba(14,35,30,.12));
 }
+
+/* v196: sharper scalable symbols, short status-only tiles, separated extra-part dialog. */
+.bike-page .bike-consumables .bike-tile{
+  min-height:137px;padding:12px 7px 11px;gap:6px;
+  justify-content:space-between;border-radius:17px;
+  box-shadow:0 3px 10px rgba(26,42,34,.055);
+}
+.bike-page .bike-tile-icon{
+  display:flex;align-items:center;justify-content:center;
+  width:56px;height:57px;min-height:57px;margin:0 auto 0;
+}
+.bike-page .bike-tile-icon .bike-part-svg{
+  width:54px!important;height:54px!important;
+  background-size:contain!important;image-rendering:auto;
+  filter:drop-shadow(0 2px 2px rgba(20,39,32,.10));
+}
+.bike-page .bike-tile-name{
+  display:block;min-height:16px;font-size:12px;line-height:1.25;
+  font-weight:800;letter-spacing:-.035em;word-break:keep-all;
+}
+.bike-page .bike-tile-cycle-caption,.bike-page .bike-tile-cycle{display:none!important}
+.bike-page .bike-tile-status{
+  display:flex;align-items:center;justify-content:center;width:100%;
+  min-height:26px;margin:1px 0 0;padding:5px 3px;
+  border-radius:9px;background:#eaf4ee;color:#2d664b;
+  font-size:clamp(10px,2.7vw,12px);font-weight:800;
+  letter-spacing:-.035em;line-height:1.2;white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.bike-page .bike-tile-status.bike-state-unknown{background:#f2f4f1;color:#69766e}
+.bike-page .bike-tile-status.bike-state-soon{background:#fff1df;color:#a7601c}
+.bike-page .bike-tile-status.bike-state-overdue{background:#ffebe8;color:#b84432}
+.record-sheet .record-parts{position:relative}
+.record-sheet .record-parts .record-custom-trigger{
+  position:absolute;right:0;top:0;z-index:1;min-height:31px;
+  border:1px solid #e4e9e3;border-radius:9px;
+  padding:5px 9px;background:#f7f9f5;color:#536d5b;
+  font-size:11px;font-weight:800;white-space:nowrap;
+}
+.record-sheet .record-parts .record-custom-trigger:active{background:#edf4ed}
+.record-sheet .record-parts legend{padding-right:104px;max-width:100%;min-height:34px}
+.record-sheet .record-parts-grid .record-part .bike-part-svg{
+  background-size:contain!important;filter:drop-shadow(0 2px 2px rgba(14,35,30,.10));
+}
+.record-sheet .record-parts-grid .record-part{
+  min-height:107px;border-radius:15px;
+}
+.record-sheet .record-custom-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.record-sheet .record-custom-chip{
+  min-height:30px;padding:5px 10px;border-radius:30px;
+  background:#f1f5f0;border:1px solid #d9e5d9;color:#365441;
+  font-size:12px;font-weight:750;
+}
+.record-mini-dialog .record-custom-field{
+  display:grid;gap:7px;font-size:13px;font-weight:750;color:#3a5245;
+}
+.record-mini-dialog .record-custom-field input{
+  box-sizing:border-box;width:100%;min-width:0;min-height:48px;
+  padding:11px 12px;border-radius:12px;
+  border:1px solid #dce4dd;background:#fbfcfa;font-size:16px;color:#24382c;
+}
+.record-mini-dialog .record-custom-field input:focus{outline:2px solid #b85b32;outline-offset:0}
+@media(max-width:380px){
+  .bike-page .bike-consumables .bike-tile{min-height:127px;padding:10px 4px 9px;gap:4px}
+  .bike-page .bike-tile-icon{height:50px;min-height:50px}
+  .bike-page .bike-tile-icon .bike-part-svg{width:48px!important;height:48px!important}
+  .record-sheet .record-parts legend{padding-right:98px}
+}
