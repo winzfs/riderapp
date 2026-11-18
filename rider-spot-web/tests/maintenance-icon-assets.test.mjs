@@ -5,7 +5,7 @@ const root=new URL("../",import.meta.url);
 const read=name=>readFileSync(new URL(name,root),"utf8");
 test("v196 maintenance icons are scalable SVG assets rather than enlarged sprite cells",()=>{
   const mod=read("src/maintenance-icons.mjs");
-  assert.match(mod,/backgroundSize:"contain"/);
+  assert.match(mod,/cache\.set\(part,assets\[part\]\)/);
   assert.doesNotMatch(mod,/neo-flat-v195\.png|500% 200%/);
   for(const [name,file] of [
     ["엔진오일","engine-oil"],["앞 타이어","front-tire"],["뒤 타이어","rear-tire"],
