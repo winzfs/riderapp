@@ -77,6 +77,8 @@ jobs:
                 const html='<!DOCTYPE html><html lang="ko"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body><div class="rs-sheet-backdrop"><section class="rs-map-sheet" role="dialog"><button class="close">×</button><div class="rs-weather-details rs-sheet-content"><header><h2>운행 날씨</h2><small>예보 확인 · 15시 기준</small></header><div class="rs-weather-overview"><span class="rs-weather-large-icon">☁</span><strong>6°</strong><span>구름 조금</span></div><div class="rs-weather-stats">'+Array.from({length:3},()=>'<div class="rs-weather-stat"><svg width="16" height="16"></svg><span>강수량</span><strong>0.0 mm</strong></div>').join('')+'</div><h3>시간별 예보</h3><div class="rs-weather-hours">'+Array.from({length:6},()=>'<div class="rs-weather-hour"><span>15시</span><span>☁</span><strong>6°</strong><small>0.0 mm</small></div>').join('')+'</div><p class="rs-weather-credit">예보 제공: Norwegian Meteorological Institute (MET Norway) · CC BY 4.0. 기상 상황은 실제와 다를 수 있습니다.</p></div></section></div></body></html>';
                 await page.setContent(html);
                 for (const text of css) await page.addStyleTag({content:text});
+                // Wait for the existing 200ms sheet entrance animation before geometry assertions.
+                await page.waitForTimeout(350);
                 const result=await page.evaluate(()=>{
                   const sheet=document.querySelector('.rs-map-sheet'),
                   header=document.querySelector('.rs-weather-details>header'),
@@ -87,7 +89,7 @@ jobs:
                      closeOverlaps:a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top,
                      sheetOverflow:c.left<0||c.right>innerWidth+2,
                      horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2,
-                     bottomNotHidden:c.bottom<=innerHeight+2};
+                     bottomNotHidden:c.bottom<=innerHeight+2,sheetBottom:c.bottom,viewportHeight:innerHeight};
                 });
                 console.log('GEOMETRY',width,JSON.stringify(result));
                 assert.ok(result.headBg==='rgba(0, 0, 0, 0)'||result.headBg==='transparent','dark header remains');
