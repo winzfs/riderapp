@@ -166,6 +166,14 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       throw e;
     }
     assert.deepEqual(await page.locator(".bottom-nav button").allTextContents(),["지도","타임라인","동네","수익","내 바이크"]);
+    const palette=await page.evaluate(()=>{
+      const root=getComputedStyle(document.documentElement);
+      return {teal:root.getPropertyValue("--signal-teal").trim(),
+        orange:root.getPropertyValue("--signal-orange").trim(),
+        ink:root.getPropertyValue("--signal-ink").trim()};
+    });
+    assert.deepEqual(palette,{teal:"#25ccbe",orange:"#ff893b",ink:"#173d43"},
+      "every tab must use one bright Teal & Orange palette");
     if(smokeOnly){
       await nav("수익");
       await page.locator(".fin-hero-amount").waitFor();
@@ -205,6 +213,22 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       await shot("finance-svg-responsive");
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),
         "analytics also has no width overflow");
+      await nav("내 바이크");
+      await page.locator(".bike-consumables").waitFor();
+      const safety=page.locator(".bike-safety-detail");
+      assert.equal(await safety.getAttribute("open"),null,"long maintenance guide stays collapsed");
+      await safety.locator("summary").click();
+      await safety.getByText(/실제 부품 상태|실제 마모 상태/).waitFor();
+      await shot("signal-bike");
+      await nav("타임라인");
+      await page.locator(".rs33-timeline").waitFor();
+      await shot("signal-timeline");
+      await nav("동네");
+      await page.locator(".rc-community").waitFor();
+      await shot("signal-community");
+      await nav("지도");
+      await page.locator(".ride-launch button").waitFor();
+      await shot("signal-map");
       assert.deepEqual(errors,[]);
       console.log("PASS responsive finance/Android WebView Chromium emulation",width,height);
       return;
