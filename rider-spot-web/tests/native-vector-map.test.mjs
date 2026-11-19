@@ -70,6 +70,7 @@ test("the installed Android WebView uses the actual OpenFreeMap Positron vector 
   };
   try {
     const cleanup = addBasemap(leaflet, map);
+    assert.equal(rasterMounted, false, "initial render must not request old OSM tiles");
     assert.equal(wrap.dataset.rsBase, "simple");
     assert.equal(node.dataset.rsBasemap, "loading");
     await new Promise((resolve) => setTimeout(resolve, 30));
@@ -93,6 +94,8 @@ test("WebView does not need a grayscale raster filter to approximate a modern ma
   assert.ok(source.includes("https://tiles.openfreemap.org/styles/positron"));
   assert.doesNotMatch(source, /simple-raster|rs57-native-light-tiles/);
   assert.doesNotMatch(build, /native-light-map\.css/);
+  assert.match(build, /rel="preload" as="script"/);
+  assert.match(build, /tiles\.openfreemap\.org/);
 });
 
 
