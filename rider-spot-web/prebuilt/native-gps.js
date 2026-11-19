@@ -255,6 +255,26 @@
     }
   };
 
+  function mayRetryFreshNativeStart(trip, status) {
+    if (!trip?.id || trip.ended_at || status?.activeId ||
+        status?.lastStoppedId === trip.id) return false;
+    const started = Date.parse(trip.started_at || "");
+    // Recovery of a historical web-only active record is NOT an instruction
+    // to create a new native recording. Only retry a just-started session.
+    if (!Number.isFinite(started) || Math.abs(Date.now() - started) > 60_000)
+      return false;
+    try {
+      const uid = trip.user_id || "guest";
+      const histories = [
+        localRecord("trips:" + uid),
+        JSON.parse(localStorage.getItem("trips:" + uid) || "[]"),
+      ];
+      if (histories.some(rows => Array.isArray(rows) &&
+          rows.some(row => row?.id === trip.id && row.ended_at))) return false;
+    } catch { return false; }
+    return true;
+  }
+
   async function poll() {
     if (busy) return;
     const api = window.__rsRideApi;
@@ -280,8 +300,7 @@
       // If the original APK wrapper failed to start the foreground service,
       // retry once while the app is visible. Never restart a notification-stopped trip.
       if (
-        !status.activeId &&
-        status.lastStoppedId !== id &&
+        mayRetryFreshNativeStart(api.trip, status) &&
         !api.paused &&
         document.visibilityState === "visible" &&
         Date.now() - lastReopen > 20000
