@@ -1,0 +1,272 @@
+/* Rider Spot v211 — visual-only polish on stable Worker v209.
+   NO changes to React, native GPS, service worker, navigation or cache logic. */
+
+:root { --rs-ui211-teal: #07847e; --rs-ui211-ink: #173d3a; --rs-ui211-border: #e5eeeb; }
+.nearby.nearby-full .rs33-map-bar {
+  padding: 8px 12px 9px!important; gap: 6px!important;
+  background: #fff!important; border-bottom: 1px solid #eef2f1;
+  box-shadow: none!important;
+}
+.nearby.nearby-full .rs33-map-bar-top {
+  gap: 8px!important; min-height: 36px; align-items: center; margin: 0!important;
+}
+.nearby.nearby-full .rs33-region-toggle {
+  min-height: 36px!important; padding: 4px 1px!important;
+  background: transparent!important; color: var(--rs-ui211-ink)!important;
+  font-size: 17px!important; font-weight: 760!important; letter-spacing: -.045em;
+}
+.nearby.nearby-full .rs33-map-share {
+  min-height: 34px!important; padding: 5px 10px!important; gap: 6px!important;
+  border-radius: 11px!important; background: #f2f8f7!important;
+  color: #62807b!important; font-size: 11px!important;
+  font-weight: 650!important; box-shadow: none!important;
+}
+.nearby.nearby-full .rs33-map-filters {
+  margin: 0!important; padding: 2px 0 3px!important;
+  gap: 7px!important; scrollbar-width: none;
+}
+.nearby.nearby-full .rs33-map-filters button {
+  min-height: 36px!important; padding: 7px 11px!important;
+  gap: 6px!important; background: #f3f8f7!important;
+  border-radius: 11px!important; box-shadow: none!important;
+  color: #657c79!important; font-size: 12px!important; font-weight: 680!important;
+}
+.nearby.nearby-full .rs33-map-filters button[aria-pressed="true"] {
+  color: #087b76!important; background: #def5f1!important;
+}
+.nearby.nearby-full #rs-weather-hud {
+  box-sizing: border-box; height: 35px!important; min-height: 35px!important;
+  padding: 0 11px!important; gap: 7px!important;
+  border-radius: 10px!important; border: 1px solid var(--rs-ui211-border)!important;
+  background: #fbfcfc!important; box-shadow: none!important;
+}
+.nearby.nearby-full #rs-weather-hud .rs-weather-icon { color: #188c84!important; }
+.nearby.nearby-full #rs-weather-hud .rs-weather-temp {
+  color: #144e49; font-size: 15px!important; font-weight: 790;
+}
+.nearby.nearby-full #rs-weather-hud .rs-weather-condition {
+  font-size: 12px!important; color: #345753;
+}
+.nearby.nearby-full #rs-weather-hud .rs-weather-notice {
+  color: #62827d; font-size: 11px!important; font-weight: 570;
+  max-width: 43%; overflow: hidden; text-overflow: ellipsis;
+}
+.nearby.nearby-full #rs-weather-hud .rs-weather-chevron { color: #92a8a4; }
+.nearby.nearby-full #rs-weather-hud:focus-visible {
+  outline: 2px solid var(--rs-ui211-teal); outline-offset: 2px;
+}
+/* Tight, uniform floating map actions while preserving every control. */
+.nearby.nearby-full .map-wrap .rs-gps-state {
+  top: 11px!important; left: 11px!important; min-height: 35px!important;
+  border: 1px solid #e4eeeb!important; border-radius: 11px!important;
+  background: #fffffff3!important; box-shadow: 0 3px 10px #163e3914!important;
+}
+.nearby.nearby-full .map-wrap #rs-presence-btn {
+  top: 54px!important; left: 11px!important; min-height: 36px!important;
+  border: 1px solid #e4eeeb!important; border-radius: 11px!important;
+  box-shadow: 0 3px 10px #163e3914!important;
+}
+.nearby.nearby-full .map-wrap #rs-demo-toggle {
+  top: 98px!important; left: 11px!important; min-height: 34px!important;
+  border-radius: 11px!important; box-shadow: 0 3px 10px #163e3914!important;
+}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar {
+  border-radius: 12px!important;
+  box-shadow: 0 3px 12px #163e391a!important;
+}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar a {
+  width: 40px!important; height: 40px!important;
+  line-height: 40px!important; min-height: 40px!important;
+}
+.nearby.nearby-full .map-wrap .locate {
+  right: 11px!important; top: 105px!important;
+  min-width: 42px!important; width: 42px!important; min-height: 42px!important;
+  height: 42px!important; border-radius: 12px!important;
+  box-shadow: 0 3px 12px #163e391a!important;
+}
+.nearby.nearby-full .rs-public-marker--toilet .rs-public-marker-face {
+  width: 30px; height: 30px; border-radius: 10px 10px 10px 4px;
+  font-size: 11px; box-shadow: 0 2px 7px #1b445a35;
+}
+.nearby.nearby-full .map-wrap #rs-sos-fab {
+  right: 11px!important; bottom: 90px!important;
+  min-height: 44px!important; padding: 8px 12px!important;
+  border-radius: 12px!important; box-shadow: 0 3px 12px #163e3918!important;
+}
+/* The two counts represent different sources. Keep the credit/attribution visible. */
+.nearby.nearby-full .rs33-map-wrap .rs-public-poi-credit {
+  left: 11px!important; bottom: 66px!important; right: auto;
+  max-width: calc(100% - 125px);
+  border-radius: 9px!important; padding: 5px 7px!important; gap: 5px;
+  font-size: 10px!important; line-height: 1.3;
+  border: 1px solid #e6eeeb!important;
+  background: #fffffff2!important; box-shadow: 0 2px 8px #173c3510!important;
+}
+.nearby.nearby-full .rs33-map-wrap .rs-public-poi-credit .rs-public-poi-count:before {
+  content: "공공 · "; font-weight: 720; color: #267e75;
+}
+.nearby.nearby-full .rs33-map-wrap #rs-report-legend {
+  left: 11px!important; right: 11px!important; bottom: 9px!important;
+  max-width: none!important; min-height: 43px!important;
+  padding: 5px 7px 5px 12px!important;
+  gap: 8px!important; border: 1px solid #e5eeeb!important;
+  border-radius: 12px!important; background: #fffffff8!important;
+  color: #315a54!important; font-size: 12px!important;
+  box-shadow: 0 3px 10px #173c3510!important;
+}
+.nearby.nearby-full .rs33-map-wrap #rs-report-legend .rs33-map-register {
+  min-height: 34px!important; padding: 6px 11px!important;
+  border-radius: 9px!important; border: 0!important;
+  background: #e4f6f2!important; color: #077a72!important;
+  font-size: 12px!important; font-weight: 720!important;
+}
+.nearby.nearby-full .rs33-map-wrap .leaflet-control-attribution {
+  font-size: 9px; line-height: 1.3;
+}
+/* Stable primary action geometry for both idle and active rides. */
+.nearby.nearby-full .ride-launch {
+  padding: 7px 12px 9px!important;
+  border-top: 1px solid #f0f3f2!important;
+  background: #fff!important;
+}
+.nearby.nearby-full .ride-launch button,
+.nearby.nearby-full .ride-launch.active button {
+  width: min(100%, 540px)!important;
+  min-height: 52px!important; border-radius: 13px!important;
+  padding: 10px 14px!important;
+  background: #07847e!important; color: #fff!important;
+  box-shadow: none!important; font-size: 16px!important; font-weight: 750!important;
+}
+.nearby.nearby-full .ride-launch.active button:before {
+  background: #ff9b58!important; vertical-align: middle;
+}
+/* FIX: the legacy global "header" rule was turning the weather heading into
+   a tall dark box. This scoped reset keeps the stable v209 JavaScript untouched. */
+.rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details) {
+  box-sizing: border-box;
+  max-height: min(80dvh, 660px)!important;
+  overflow-x: hidden; overflow-y: auto;
+  padding: 31px 18px max(20px, env(safe-area-inset-bottom))!important;
+  border-radius: 23px 23px 0 0!important;
+  background: #fff!important; box-shadow: 0 -12px 40px #193b361f!important;
+}
+.rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details):before {
+  top: 10px; left: calc(50% - 18px); width: 36px; height: 4px;
+  background: #dfe9e6;
+}
+.rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details) > .close {
+  top: 32px!important; right: 17px!important; z-index: 2;
+  width: 40px!important; height: 40px!important;
+  min-width: 40px!important; min-height: 40px!important;
+  padding: 0!important; border: 0!important;
+  border-radius: 12px!important; color: #657f7b!important;
+  background: #f2f8f6!important; box-shadow: none!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details {
+  box-sizing: border-box; width: 100%; min-width: 0;
+  padding: 0!important; color: var(--rs-ui211-ink)!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details > header {
+  box-sizing: border-box;
+  display: flex!important; flex-direction: column!important;
+  justify-content: center!important; align-items: flex-start!important;
+  gap: 3px!important;
+  height: auto!important; min-height: 48px!important; max-height: none!important;
+  margin: 0 50px 14px 0!important; padding: 0!important;
+  border: 0!important; border-radius: 0!important;
+  background: transparent!important; box-shadow: none!important;
+  color: #183d3a!important; text-align: left!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details > header h2 {
+  margin: 0!important; color: #173e3a!important;
+  font-size: 19px!important; font-weight: 760!important;
+  letter-spacing: -.04em; line-height: 1.3!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details > header small {
+  display: block; color: #819590!important;
+  font-size: 11px!important; line-height: 1.3;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-overview {
+  gap: 9px; margin: 0 0 16px!important; align-items: center;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-large-icon { color: #188a83; }
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-overview strong {
+  font-size: 38px!important; font-weight: 730; line-height: 1;
+  letter-spacing: -.055em; color: #153e3a;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-overview > span:last-child {
+  color: #627c77!important; font-size: 14px!important; font-weight: 600;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-stats {
+  gap: 8px!important; margin: 0 0 20px!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-stat {
+  display: grid!important;
+  grid-template-columns: 16px minmax(0, 1fr)!important;
+  grid-template-rows: auto auto;
+  gap: 6px 5px!important;
+  min-width: 0; border: 1px solid #e9f0ee!important;
+  border-radius: 12px!important; padding: 11px 9px!important;
+  background: #f7faf9!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-stat svg {
+  grid-column: 1; grid-row: 1; color: #579790;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-stat span {
+  grid-column: 2; grid-row: 1; white-space: nowrap;
+  color: #718a85; font-size: 11px;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-stat strong {
+  grid-column: 1 / 3; grid-row: 2;
+  color: #18413c; font-size: 13px; font-weight: 730;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details h3 {
+  font-size: 14px!important; font-weight: 740;
+  margin: 0 0 10px!important; color: #214944;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hours {
+  display: grid!important; grid-template-columns: repeat(6,minmax(0,1fr))!important;
+  gap: 5px!important; min-width: 0; margin: 0!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hour {
+  min-width: 0; gap: 9px!important; padding: 10px 1px!important;
+  border: 1px solid #eff4f1; border-radius: 11px!important;
+  background: #f6f9f8!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hour > span:first-child {
+  color: #718783; font-size: 10px!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hour > span:nth-child(2) {
+  color: #549a94;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hour strong {
+  color: #19433e; font-size: 14px!important;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-hour small {
+  color: #788e89; font-size: 9px!important;
+  white-space: nowrap;
+}
+.rs-sheet-backdrop .rs-map-sheet .rs-weather-details > .rs-weather-credit {
+  margin: 16px 0 0!important; max-width: 100%; overflow-wrap: anywhere;
+  color: #879893!important; font-size: 10px!important;
+  line-height: 1.55!important;
+}
+@media(max-width: 360px) {
+  .nearby.nearby-full .rs33-map-filters button {
+    padding-inline: 9px!important; gap: 4px!important;
+  }
+  .rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details) {
+    padding-inline: 15px!important;
+  }
+  .rs-sheet-backdrop .rs-map-sheet .rs-weather-stat { padding-inline: 7px!important; }
+  .rs-sheet-backdrop .rs-map-sheet .rs-weather-hour { gap: 7px!important; }
+  .rs-sheet-backdrop .rs-map-sheet .rs-weather-hour small { font-size: 8.5px!important; }
+}
+@media(max-height: 590px) {
+  .rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details) {
+    max-height: 90dvh!important;
+  }
+}
+@media(prefers-reduced-motion: reduce) {
+  .rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details) { animation: none!important; }
+}
