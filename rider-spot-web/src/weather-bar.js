@@ -173,8 +173,11 @@ async function refresh(force = false) {
 function initialize() {
   const root = document.getElementById("root");
   if (!root) return;
-  const observer = new MutationObserver(() => {
-    if (document.querySelector(".nearby.nearby-full .rs33-map-bar")) { paint(); void refresh(); }
+  const observer = new MutationObserver(records => {
+    // Ignore our own icon/text mutations. Only mount when React adds a map screen.
+    const mountedMap = records.some(record => [...record.addedNodes].some(node =>
+      node.nodeType === 1 && (node.matches?.(".rs33-map-bar") || node.querySelector?.(".rs33-map-bar"))));
+    if (mountedMap) { paint(); void refresh(); }
   });
   observer.observe(root,{childList:true,subtree:true});
   window.addEventListener("riderspot:map", () => { paint(); void refresh(); });
