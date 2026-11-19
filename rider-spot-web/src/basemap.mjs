@@ -80,11 +80,13 @@ export function guardMaplibreLayerLifecycle(L, layer) {
 
 export function addBasemap(L, map) {
   window.L = L;
+  // Create the raster safety layer without starting its tile requests.
+  // Positron is the initial map; show OSM only if the vector renderer fails.
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
       '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  }).addTo(map);
+  });
   const wrap = map.getContainer().closest(".map-wrap");
   const state = {
     // Restore the same OpenFreeMap Positron vector style on both web and
