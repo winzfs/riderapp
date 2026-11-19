@@ -44,11 +44,14 @@ export default {
     if (!res.ok) return new Response("Static candidate source unavailable",{
       status:503,headers:{"cache-control":"no-store"}
     });
-    const headers=new Headers(res.headers);
-    headers.set("content-type",type);
-    headers.set("cache-control",path.startsWith("/assets/") ? "public, max-age=86400, immutable" : "public, max-age=60");
-    headers.delete("content-encoding");
-    headers.delete("content-length");
+    // Never forward raw.githubusercontent.com's CSP (which includes sandbox)
+    // or upstream origin security headers: those would disable localStorage,
+    // Service Workers and other required WebView capabilities in the app.
+    const headers=new Headers({
+      "content-type":type,
+      "cache-control":path.startsWith("/assets/") ? "public, max-age=86400, immutable" : "public, max-age=60",
+      "x-content-type-options":"nosniff"
+    });
     const output=new Response(res.body,{status:200,headers});
     // Cache only validated immutable file responses. Source pinned to commit.
     if(path.startsWith("/assets/")) {
