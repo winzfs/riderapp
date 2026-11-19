@@ -22,6 +22,13 @@ try {
   check("new premium stylesheet reference",html.includes("/assets/rider-spot-"+rel.hash+"/premium-shell.css"));
   check("existing native recovery guard preserved",html.includes("rs-recovery-guard-v217"));
   check("single app root",html.includes('id="root"'));
+  const kvProof=await fetch(root+"/assets/rider-spot-"+rel.hash+"/premium-shell.css",{
+    signal:AbortSignal.timeout(35000),
+    headers:{"cache-control":"no-cache"}
+  });
+  check("static bundle served from Cloudflare KV rather than GitHub",
+    kvProof.headers.get("x-rs-preview-asset-origin")==="workers-kv",
+    "header "+kvProof.headers.get("x-rs-preview-asset-origin"));
   const css=await get("/assets/rider-spot-"+rel.hash+"/premium-shell.css");
   check("finance selected graph outline removed",css.includes("outline:0!important")&&css.includes("v219 visual refinement"));
   check("CSS equals GitHub verified release",css===readFileSync("prebuilt/premium-shell.css","utf8"));
