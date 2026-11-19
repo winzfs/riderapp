@@ -107,6 +107,12 @@ function substitute(value) {
   return values[value] || value;
 }
 const html = template
+  // Start fetching the vector renderer before React mounts the first map.
+  // Scripts keep their original execution order; preloads only overlap downloads.
+  .replace(
+    "<head>",
+    `<head><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous"><link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin="anonymous"><link rel="preload" as="script" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"><link rel="preload" as="script" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js">`,
+  )
   .replace(
     /<script defer src="\/rider-trip-sync-v18-eee13da20fdf\.js"><\/script>/,
     "",
