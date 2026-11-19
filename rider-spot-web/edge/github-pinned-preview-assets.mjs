@@ -37,7 +37,7 @@ export default {
     const rel=sourcePath(path);
     if (!rel) return new Response("Not found",{status:404});
     const type=Object.entries(TYPES).find(([suffix])=>rel.endsWith(suffix))?.[1] || "application/octet-stream";
-    const cache=new Request("https://rider-spot-static-assets.invalid/" + rel);
+    const cache=new Request("https://rider-spot-static-assets.invalid/v2/" + rel);
     const cached=await caches.default.match(cache);
     if (cached) return request.method === "HEAD" ? new Response(null,cached) : cached;
     const res=await fetch(RAW + rel, { headers: { accept:"*/*" }, redirect:"follow" });
