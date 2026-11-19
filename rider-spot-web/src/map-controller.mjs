@@ -44,6 +44,10 @@ export function createMapController(L, node, cameraId, fallback) {
   let zoom = map.getZoom();
   let cameraChosen = Boolean(saved);
   let readyToSave = cameraChosen;
+  // Only the first GPS fix of a new app page recenters the main map.
+  // The first route bounds of each Timeline map override an old saved view.
+  let firstCourseFit = isCourse;
+  let userInteracted = false;
   let resizing = false;
   let touch = false;
   let moving = false;
@@ -97,7 +101,12 @@ export function createMapController(L, node, cameraId, fallback) {
   function scheduleResize() {
     if (!frame) frame = requestAnimationFrame(resize);
   }
+  function onUserInput() {
+    userInteracted = true;
+    if (!isCourse) window.__rsStartupMainCameraSet = true;
+  }
   function onTouchStart() {
+    onUserInput();
     touch = true;
   }
   function onTouchEnd(event) {
@@ -107,6 +116,8 @@ export function createMapController(L, node, cameraId, fallback) {
   map.on("movestart zoomstart", begin);
   map.on("moveend", finish);
   node.addEventListener("touchstart", onTouchStart, { passive: true });
+  node.addEventListener("pointerdown", onUserInput, { passive: true });
+  node.addEventListener("wheel", onUserInput, { passive: true });
   document.addEventListener("touchend", onTouchEnd, { passive: true });
   document.addEventListener("touchcancel", onTouchEnd, { passive: true });
   const observer = new ResizeObserver(scheduleResize);
@@ -114,6 +125,7 @@ export function createMapController(L, node, cameraId, fallback) {
   window.addEventListener("pageshow", scheduleResize);
 
   function moveTo(position, level) {
+    if (!isCourse) window.__rsStartupMainCameraSet = true;
     cameraChosen = readyToSave = true;
     map.setView([Number(position.lat), Number(position.lng)], level, {
       animate: false,
@@ -121,7 +133,10 @@ export function createMapController(L, node, cameraId, fallback) {
     finish();
   }
   function showBounds(bounds, explicit = false) {
-    if (!bounds || (!explicit && (cameraChosen || touch))) return;
+    if (!bounds) return;
+    const firstFit = firstCourseFit;
+    firstCourseFit = false;
+    if (!explicit && (userInteracted || (!firstFit && (cameraChosen || touch)))) return;
     cameraChosen = readyToSave = true;
     map.fitBounds(bounds, { padding: [45, 66], maxZoom: 16, animate: false });
     finish();
@@ -131,7 +146,11 @@ export function createMapController(L, node, cameraId, fallback) {
     moveTo,
     showBounds,
     initialLocation(position) {
-      if (!cameraChosen && !touch) moveTo(position, 16);
+      if (!isCourse && !window.__rsStartupMainCameraSet && !userInteracted && !touch) {
+        moveTo(position, 16);
+      } else if (!cameraChosen && !touch && !userInteracted) {
+        moveTo(position, 16);
+      }
     },
     destroy() {
       save();
@@ -139,6 +158,8 @@ export function createMapController(L, node, cameraId, fallback) {
       observer.disconnect();
       window.removeEventListener("pageshow", scheduleResize);
       node.removeEventListener("touchstart", onTouchStart);
+      node.removeEventListener("pointerdown", onUserInput);
+      node.removeEventListener("wheel", onUserInput);
       document.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("touchcancel", onTouchEnd);
       map.off("movestart zoomstart", begin);
