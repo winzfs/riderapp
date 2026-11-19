@@ -35,7 +35,7 @@ try {
   const previousCss=await get("/assets/rider-spot-06a4d2f6010a/premium-shell.css");
   check("previous release immutable assets still accessible",previousCss.length>1000);
   const legacy=await get("/rider-spot-shell-v40.js");
-  check("legacy static route kept",legacy.length>1000,"size "+legacy.length);
+  check("legacy static route kept",legacy.includes("rs-native-shell")&&legacy.length>100,"size "+legacy.length);
   const manifest=await get("/mapdata/manifest.json");
   const json=JSON.parse(manifest);
   check("existing public map data loaded",!!json.counts);
