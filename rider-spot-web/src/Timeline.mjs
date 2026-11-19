@@ -472,19 +472,19 @@ export function createTimeline(S, Zo, Income) {
           "aria-pressed": showEvents,
           "aria-label": showEvents ? "이벤트 끄기" : "이벤트 켜기",
           onClick: toggleEvents,
-        }, showEvents ? "● 이벤트 끄기" : "○ 이벤트 켜기"),
+        }, showEvents ? "● 이벤트" : "○ 이벤트"),
         rs33J("button", {
           type: "button", className: "rs33-expand",
           "aria-label": expanded ? "닫기" : "크게 보기",
           "aria-expanded": expanded,
           onClick: () => setExpanded((value) => !value),
-        }, expanded ? "↙ 닫기" : "⛶ 크게"),
+        }, expanded ? "↙ 닫기" : "⛶ 확대"),
         rs33J("button", {
           type: "button", className: "rs45-stamp-toggle",
           "aria-pressed": showStamps,
           "aria-label": showStamps ? "시간 끄기" : "시간 켜기",
           onClick: toggleStamps,
-        }, showStamps ? "◷ 시간 끄기" : "◷ 시간 켜기"),
+        }, showStamps ? "◷ 시간" : "◷ 시간"),
         !isDaily ? rs33J("button", {
           type: "button", className: "rs38-road-toggle",
           "aria-pressed": !!activeRoad,
@@ -1015,7 +1015,7 @@ export function createTimeline(S, Zo, Income) {
                   showEvents && dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
                     ? rs33J("details", { className: "rs56-stop-events" },
                         rs33J("summary", null,
-                          "정차 이벤트 ",
+                          ""정차 ",
                           rs33J("strong", null, dailyCourse.course.stamps.filter((stamp) => stamp.kind === "stop").length + "건"),
                           rs33J("span", { "aria-hidden": true }, "⌄")),
                         rs33J("div", { className: "rs56-stop-list" },
@@ -1038,7 +1038,7 @@ export function createTimeline(S, Zo, Income) {
               : rs33J(
                   "div",
                   { className: "rs56-day-empty" },
-                  "운행 기록은 있지만 저장된 GPS 경로가 없어요.",
+                  "GPS 경로 없음",
                 ),
           )
         : null,
@@ -1046,7 +1046,7 @@ export function createTimeline(S, Zo, Income) {
       rs33J(
         "div",
         { className: "rs33-list-title" },
-        rs33J("h2", null, allDays ? "모든 운행 기록" : "개별 운행 선택"),
+        rs33J("h2", null, allDays ? "운행 기록" : "운행 구간"),
         rs33J(
           "div",
           { className: "rs61-list-actions" },

@@ -1317,7 +1317,7 @@ export function mountApplication({
             type: "search",
             value: search,
             onChange: (e) => setSearch(e.target.value),
-            placeholder: isNews ? "게시글·기사 검색" : "게시글 검색",
+            placeholder: "동네 검색",
             "aria-label": "게시글 검색",
           }),
         ),
@@ -2604,15 +2604,15 @@ export function mountApplication({
                                     p.gpsStatus === `ready`
                                       ? p.position?.t
                                         ? Date.now() - p.position.t > 6e4
-                                          ? `GPS 갱신 지연 · 눌러서 확인`
-                                          : `GPS ${Math.max(0, Math.floor((Date.now() - p.position.t) / 1e3))}초 전 · ${p.sharing ? `공유 중` : `비공개`}`
+                                          ? `GPS 지연 · 확인`
+                                          : `GPS · ${p.sharing ? `공유 중` : `비공개`}`
                                         : p.sharing
-                                          ? `내 위치 확인됨 · 공유 중`
-                                          : `내 위치 확인됨 · 비공개`
+                                          ? `GPS · 공유 중`
+                                          : `GPS · 비공개`
                                       : p.gpsStatus === `error`
                                         ? p.gpsProblem ||
                                           `GPS 오류 · 눌러서 다시 시도`
-                                        : `내 위치 확인 중…`,
+                                        : `GPS 확인 중…`,
                                 }),
                               ],
                             }),

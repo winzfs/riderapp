@@ -121,7 +121,7 @@ export function createFinance(R, client) {
             h("details",{className:"fin-optional"},h("summary",null,"주유량 · 메모 (선택)"),
               input("주유량 (L)","liters","number",row.liters??"",false,{min:0.001,max:150,step:0.001}),
               input("메모","note","text",row.note||"",false,{maxLength:300})),
-            txt("p","fin-hint","내 바이크의 주유 기록과 같은 장부를 사용합니다.")),
+            txt("p","fin-hint","내 바이크와 연동")),
           kind==="expense"&&h(R.Fragment,null,
             dateInput("지출 날짜","expense_date",row.expense_date||editor.day),
             h("div",{className:"fin-category-chips","aria-label":"빠른 지출 분류"},
@@ -133,12 +133,12 @@ export function createFinance(R, client) {
             select("분류","category",categories,row.category||editor.category||"보험료"),
             amountInput("지출 금액","amount_won",row.amount_won??null),
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
-            txt("p","fin-hint","주유비·정비비는 각각의 기존 장부에서 기록해 주세요. 비용이 두 번 잡히지 않도록 분리합니다.")),
+            txt("p","fin-hint","주유·정비비는 각 기록에서 입력")),
           kind==="settlement"&&h(R.Fragment,null,
             txt("p","fin-hint",row.platform+" · "+row.work_date+" 수익 "+money(row.gross_won)+" 기준"),
             dateInput("실제 입금 날짜","paid_at",row.paid_at||editor.day),
             amountInput("실제 입금 금액","paid_won",row.paid_won??row.gross_won),
-            txt("p","fin-hint","수입 금액과 실제 입금액이 다르면 차액을 정산 화면에 표시합니다.")),
+            txt("p","fin-hint","차액은 정산에 표시")),
           kind==="goal"&&h(R.Fragment,null,
             amountInput("월 수익 목표","monthly_target_won",row.monthly_target_won??3000000),
             input("한 달 근무 예정일","planned_work_days","number",row.planned_work_days??25,true,{min:1,max:31}),
@@ -154,7 +154,7 @@ export function createFinance(R, client) {
             input("메모","memo","text",row.memo||"",false,{maxLength:300}),
             h("label",{className:"fin-toggle-line"},h("input",{name:"active",type:"checkbox",
               defaultChecked:row.active!==false}),h("span",null,"반복 일정 활성화")),
-            txt("p","fin-hint","설정만 저장합니다. 실제 지출은 내역에서 확인 후 등록해요.")),
+            txt("p","fin-hint","실제 지출은 확인 후 등록")),
           kind==="payout"&&h(R.Fragment,null,
             txt("p","fin-hint",(row.platform||editor.platform)+" · 내 정산 예정 일정"),
             h("label",{className:"fin-field"},h("span",null,"반복 방식"),
@@ -168,7 +168,7 @@ export function createFinance(R, client) {
                   h("option",{key:i,value:i},day)))),
             cycle==="monthly"&&input("매월 일자","month_day","number",row.month_day??25,true,
               {min:1,max:31,step:1}),
-            txt("p","fin-hint","예정일은 직접 정한 참고 일정입니다. 입금 여부와 실제 날짜는 별도로 기록해야 해요."))),
+            txt("p","fin-hint","예정일만 표시 · 입금은 별도 확인"))),
         h("footer",null,error&&txt("p","fin-error",error),
           h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기"))));
   }
@@ -515,8 +515,8 @@ export function createFinance(R, client) {
           :txt("p","fin-empty","이번 달 플랫폼 수익 기록이 없어요."));
     }
     function overview() {
-      const periodLabel=scope==="today"?"오늘 배달 수익":
-        scope==="week"?"최근 7일 배달 수익":"월간 배달 수익";
+      const periodLabel=scope==="today"?"오늘 수익":
+        scope==="week"?"7일 수익":"월 수익";
       const monthLabel=monthFrom.slice(0,7).replace("-","년 ")+"월";
       const snapDays=scope==="today"?[today]:scope==="week"?graph.map(x=>x.day):
         Array.from({length:31},(_,i)=>plusDays(monthFrom,i)).filter(x=>x<=monthTo);
@@ -549,7 +549,7 @@ export function createFinance(R, client) {
           button(h(R.Fragment,null,icon("earnings",19),"수익 입력"),()=>openEditor("income"),"fin-primary"),
           button(h(R.Fragment,null,icon("fuel",19),"지출 입력"),()=>openEditor("expense"),"fin-secondary")),
         h("section",{className:"fin-card fin-goal"},
-          h("header",null,h("h2",null,"이번 달 목표"),
+          h("header",null,h("h2",null,"월 목표"),
             button(h(R.Fragment,null,icon("settings",15),"목표 수정"),()=>openEditor("goal",goal),"fin-textbtn")),
           h("div",{className:"fin-goal-amount"},txt("strong",null,goalUncertain?"확인 필요":money(goalValue)),
             txt("small",null,"/ "+money(goalTarget)+" · "+(goal.goal_basis==="net"?"비용 차감액":"총수익"))),
@@ -557,15 +557,15 @@ export function createFinance(R, client) {
           h("div",{className:"fin-goal-numbers"},
             txt("span",null,achieved==null?"분류 확인 필요":achieved+"% 달성"),
             txt("span",null,goalUncertain?"확인 필요":"남은 목표 "+money(Math.max(0,goalTarget-goalValue)))),
-          h("details",{className:"fin-optional"},h("summary",null,"필요한 하루 수익 보기"),
-            h("div",{className:"fin-goal-daily"},txt("small",null,"남은 근무 "+remainingWorkDays+"일 기준"),
+          h("details",{className:"fin-optional"},h("summary",null,"하루 목표"),
+            h("div",{className:"fin-goal-daily"},txt("small",null,"잔여 "+remainingWorkDays+"일"),
               txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
         h("section",{className:"fin-card fin-chart-card"},
-          h("header",null,h("h2",null,"최근 7일 수익"),
-            txt("small",null,"막대를 눌러 날짜별 확인")),
+          h("header",null,h("h2",null,"최근 7일"),
+            txt("small",null,"날짜별")),
           chart()),
         h("section",{className:"fin-card fin-platform-card"+(!Object.keys(monthly.byPlatform).length?" fin-no-records":"")},
-          h("header",null,h("h2",null,"플랫폼별 수익"),
+          h("header",null,h("h2",null,"플랫폼별"),
             txt("small",null,monthLabel+" 기준")),
           platformBreakdown()),
         h("details",{className:"fin-insights"},
@@ -666,7 +666,7 @@ export function createFinance(R, client) {
         h("div",{className:"fin-stat-grid"},
           moneyStat("아직 입금 미확인",money(monthly.unpaid)),
           moneyStat("해당 월 수익 중 입금 확인",money(monthly.paid),"paid")),
-        txt("p","fin-muted","수익 내역은 배달 업무일 기준입니다. 실제 입금일은 각 기록에 별도로 표시하며, 계좌 자동 연동은 하지 않아요."),
+        txt("p","fin-muted","업무일 기준 · 입금일은 별도 기록"),
         monthly.payoutDifference!==0&&txt("p","fin-warning",
           "확인된 입금액과 해당 수익 기록 차액: "+money(monthly.payoutDifference)),
         h("section",{className:"fin-card"},
@@ -696,7 +696,7 @@ export function createFinance(R, client) {
                   txt("small",null,summary+(date?" · 다음 예정 "+date:""))),
                 button("설정",()=>openEditor("payout",{...rule,platform:p}),"fin-textbtn"));
             }),
-            txt("p","fin-muted","설정한 예정일은 실제 입금을 확정하지 않아요."))),
+            txt("p","fin-muted","예정일 ≠ 입금 확인"))),
         h("section",{className:"fin-card"},h("header",null,h("h2",null,"입금 확인 내역"),
           txt("small",null,rows.length+"건")),
           ...rows.map(x=>h("div",{className:"fin-settlement-row",key:x.id},
@@ -762,10 +762,10 @@ export function createFinance(R, client) {
             .map(([name,value])=>h("div",{className:"fin-cost-row",key:name},
               txt("span",null,name),txt("strong",null,money(value))))),
         monthly.uncertain&&txt("p","fin-warning","예전 기록의 기타 비용 분류가 불분명해 주유·정비비와 중복될 수 있어요."),
-        txt("p","fin-muted","개인 지출은 업무 비용에서 제외합니다. 미기록 비용과 세금은 반영하지 않습니다."));
+        txt("p","fin-muted","개인 지출·미기록 비용·세금은 별도"));
     }
     return h("section",{className:"finance-page page narrow"},
-      h("div",{className:"fin-page-head"},h("h1",null,"수익 관리")),
+      h("div",{className:"fin-page-head"},h("h1",null,"수익")),
       sectionNav,
       !user?h("section",{className:"fin-card"},h("h2",null,"내 수익을 안전하게 보관해요."),
         txt("p","fin-muted","로그인하면 수익·지출·정산 기록을 모든 기기에서 확인할 수 있어요."),

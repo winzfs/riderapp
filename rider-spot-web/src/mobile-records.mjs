@@ -286,7 +286,7 @@ export function createRecords(R, client) {
           h("span",{className:"record-part-check","aria-hidden":true},h(Icon,{name:"check",size:13}))),
       () => select(current => current.includes(name) ? current.filter(x=>x!==name) : [...current,name]),
       {key:name,className:"record-part", "aria-pressed":selected.includes(name),"aria-label":name});
-    return h(R.Fragment,null,h(Sheet,{title:row?"정비 기록 수정":"정비 기록",subtitle:"교환한 부품을 선택하세요",close,
+    return h(R.Fragment,null,h(Sheet,{title:row?"정비 기록 수정":"정비 기록",close,
       footerExtra:row&&btn("정비 기록 삭제",()=>setDeleteConfirm(true),
         {className:"record-delete-open","aria-label":"정비 기록 삭제"}),
       submit:row?"변경사항 저장":"정비 기록 저장",save:async form=>{
@@ -311,14 +311,13 @@ export function createRecords(R, client) {
       }},
       field("정비 날짜",{name:"day",type:"date",required:true,defaultValue:row?.serviced_on||rs33ISO(Date.now())}),
       h("fieldset",{className:"record-parts"},
-        h("legend",null,"교환 부품",h("small",null,"복수 선택 가능")),
+        h("legend",null,"교환 부품",h("small",null,"복수 선택")),
         btn("＋ 기타 부품",()=>{setCustomError("");setCustomOpen(true);},
           {className:"record-custom-trigger","aria-label":"기타 부품 추가"}),
         h("div",{className:"record-parts-grid"},standardParts.filter(name=>choices.includes(name)).map(partButton)),
         customParts.length>0&&h("div",{className:"record-custom-chips","aria-label":"추가한 기타 부품"},
           customParts.map(name=>btn(name+" ×",()=>select(current=>current.filter(x=>x!==name)),
             {key:name,className:"record-custom-chip","aria-label":name+" 제거"})))),
-      h("p",{className:"record-help"},"선택한 부품들은 한 건의 정비 기록으로 저장됩니다."),
       h("div",{className:"record-pair record-measures"},
         field("계기판 거리 (km)",{type:"text",inputMode:"numeric",name:"km",placeholder:"미입력",
           defaultValue:row?.odometer_km??"",autoComplete:"off"}),
@@ -410,8 +409,8 @@ export function createRecords(R, client) {
       }
     };
     return h(R.Fragment,null,h(Sheet,{title:item+" 관리",detail:true,leading:h(PartIcon,{name:item,size:30}),
-      subtitle:"교환 시점과 정비 이력을 확인하세요",close,
-      action:{label:historyRows.length?"이 부품 정비 기록 추가":"첫 정비 기록 남기기",onClick:()=>add(item)}},
+      close,
+      action:{label:"＋ 정비 기록",onClick:()=>add(item)}},
       h("div",{className:"record-detail-summary"},
         metric("최근 교환일",recent?.serviced_on || "이력 없음"),
         metric("최근 교환 거리",baseline ? km(baseline.odometer_km) : "거리 미입력"),
@@ -689,8 +688,7 @@ export function createRecords(R, client) {
           {className:"bike-quiet-action","aria-label":"프로필·설정"})),
       h("div",{className:"bike-vehicle"},
         h("div",{className:"bike-vehicle-data"},
-          h("small",null,"등록 차량"),
-          h("h2",null,vehicle?.vehicle_name||"내 오토바이"),
+                    h("h2",null,vehicle?.vehicle_name||"내 오토바이"),
           h("div",{className:"bike-odometer-label"},h(Icon,{name:"gauge",size:17}),"현재 계기판"),
           h("strong",{className:"bike-distance"},reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
             h("span",null,number(reading[0]))," ",h("small",null,"km"))),
@@ -706,7 +704,7 @@ export function createRecords(R, client) {
       model && h("div",{className:"bike-model-banner"},
         h("div",null,h("strong",null,modelLabel(model)),
           h("small",null,model.kind==="electric"?"전기 스쿠터 · 엔진오일 제외":
-            "소모품 추천 주기 자동 적용 · 언제든 개별 수정 가능")),
+            "추천 주기 적용")),
         btn("모델 변경",()=>setModelPicker(true),{className:"bike-model-change"})),
       h("div",{className:"bike-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"＋ 정비 기록"),
@@ -714,10 +712,12 @@ export function createRecords(R, client) {
         btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),()=>{window.__rsFinanceAction="fuel";window.__rsGoToTab?.("earnings");})),
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("div",{className:"bike-section-head"},
-        h("h2",null,"소모품 현황")),
-      h("p",{className:"bike-safety-message"},
-        model ? "모델별 주기는 점검 참고값입니다. 연식·운행 조건과 실제 부품 상태를 확인한 뒤 교체하세요." :
-          "모델 미선택 · 일반 125cc 스쿠터 참고값입니다. 모델을 선택하면 해당 기준이 나와요. 실제 상태를 확인한 뒤 교체하세요."),
+        h("h2",null,"소모품")),
+      h("details",{className:"bike-safety-detail"},
+        h("summary",null,"교체 기준 안내"),
+        h("p",{className:"bike-safety-message"},
+          model ? "추천 주기는 참고값입니다. 실제 마모 상태와 제조사 설명서를 확인하세요." :
+            "일반 125cc 참고 주기입니다. 모델 및 실제 부품 상태를 확인하세요.")),
       h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
         choices.map(item=>{
           const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
@@ -733,7 +733,7 @@ export function createRecords(R, client) {
           {key:item,className:"bike-consumable bike-tile","aria-label":item+" 관리"}); 
         })),
       h("div",{className:"bike-heading bike-history-head"},
-        h("h2",null,h(Icon,{name:"history",size:19}),"전체 정비 이력"),
+        h("h2",null,h(Icon,{name:"history",size:19}),"정비 이력"),
         h("small",null,rows.length+"건")),
       rows.length ? rows.map((row,i)=>h(R.Fragment,{key:row.id},
         (!i||rows[i-1].serviced_on?.slice(0,7)!==row.serviced_on?.slice(0,7)) &&
