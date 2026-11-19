@@ -147,7 +147,7 @@ export function createPublicPoiOverlay(openMapSheet) {
       if (credit) {
         credit.hidden = !filtered.length;
         credit.querySelector(".rs-public-poi-count").textContent =
-          "화장실 " + visible.length + "곳";
+          "공공 " + visible.length + "곳";
       }
     } catch (error) {
       if (token !== state.seq) return;
