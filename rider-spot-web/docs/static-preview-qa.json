@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-19T22:14:48.435Z",
+  "at": "2026-11-19T22:18:15.691Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
   "releaseHash": "16c1eecf6bac",
   "checks": [
@@ -123,6 +123,9 @@
       "passed": true,
       "details": ""
     }
+  ],
+  "warnings": [
+    "Production and preview industry-news API both returned HTTP 502; routing parity is observed but API health is not established."
   ],
   "passed": true
 }
