@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-19T22:06:58.026Z",
+  "at": "2026-11-19T22:08:38.255Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
   "releaseHash": "16c1eecf6bac",
   "checks": [
@@ -30,10 +30,75 @@
     },
     {
       "name": "HTTP 200 /assets/rider-spot-16c1eecf6bac/premium-shell.css",
+      "passed": true,
+      "details": "HTTP 200 \n/*\n * Rider Spot — Calm Mobility UI / v218 candidate.\n * Presentation-only: no map DOM manipulation, GPS listeners or routing hooks.\n * Loaded LAST after historical, timeline and "
+    },
+    {
+      "name": "finance selected graph outline removed",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "CSS equals GitHub verified release",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "HTTP 200 /assets/rider-spot-16c1eecf6bac/app.mjs",
+      "passed": true,
+      "details": "HTTP 200 var dd=\"Asia/Seoul\",M1=new Intl.DateTimeFormat(\"en-CA\",{timeZone:dd,year:\"numeric\",month:\"2-digit\",day:\"2-digit\"}),I1=new Intl.DateTimeFormat(\"ko-KR\",{timeZone:dd,hour:\"2-digit\",mi"
+    },
+    {
+      "name": "native UI module loaded",
+      "passed": true,
+      "details": "size 2186079"
+    },
+    {
+      "name": "HTTP 200 /assets/rider-spot-16c1eecf6bac/design-system.css",
+      "passed": true,
+      "details": "HTTP 200 @layer legacy{.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-imag"
+    },
+    {
+      "name": "design system loaded",
+      "passed": true,
+      "details": "size 305161"
+    },
+    {
+      "name": "HTTP 200 /sw.js",
+      "passed": true,
+      "details": "HTTP 200 // Do not force an installed update into an active delivery session.\n// The waiting worker activates naturally after all previous clients close.\nconst CACHE='rider-spot-shell-16c1e"
+    },
+    {
+      "name": "current no-forced-reload service worker",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "no immediate skipWaiting introduced",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "HTTP 200 /assets/rider-spot-06a4d2f6010a/premium-shell.css",
+      "passed": true,
+      "details": "HTTP 200 \n/*\n * Rider Spot — Calm Mobility UI / v218 candidate.\n * Presentation-only: no map DOM manipulation, GPS listeners or routing hooks.\n * Loaded LAST after historical, timeline and "
+    },
+    {
+      "name": "previous release immutable assets still accessible",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "HTTP 200 /rider-spot-shell-v40.js",
+      "passed": true,
+      "details": "HTTP 200 (function(){var ua=navigator.userAgent||\"\";if(ua.indexOf(\"; wv\")>=0||typeof window.RiderSpotHost!==\"undefined\"){document.documentElement.classList.add(\"rs-native-shell\");}})();"
+    },
+    {
+      "name": "legacy static route kept",
       "passed": false,
-      "details": "HTTP 404 Not found"
+      "details": "size 176"
     }
   ],
   "passed": false,
-  "error": "AssertionError [ERR_ASSERTION]: HTTP 200 /assets/rider-spot-16c1eecf6bac/premium-shell.css: HTTP 404 Not found\n    at check (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:11:10)\n    at get (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:16:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:25:13"
+  "error": "AssertionError [ERR_ASSERTION]: legacy static route kept: size 176\n    at check (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:11:10)\n    at file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:38:3\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)"
 }
