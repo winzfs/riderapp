@@ -1,25 +1,23 @@
-// Rider Spot: five model-family illustrations, all facing right.
-// Keep the catalog key as the source of truth; unsupported models use the generic scooter.
-import atlas from "./assets/bikes/bike-models-atlas.webp";
+// Model-family artwork is stored as real-alpha, high-resolution individual files.
+// Keep the bike model catalog as the only selection source of truth.
+import pcx from "./assets/bikes/pcx-profile-hd.webp";
+import nmax from "./assets/bikes/nmax-profile-hd.webp";
+import forza from "./assets/bikes/forza-profile-hd.webp";
+import xmax from "./assets/bikes/xmax-profile-hd.webp";
+import supercub from "./assets/bikes/supercub-profile-hd.webp";
 
-export const BIKE_ART_FAMILIES = Object.freeze(["pcx", "nmax", "forza", "xmax", "supercub"]);
-export function bikeArtFamily(model) {
-  const key = String(model?.key || "").toLowerCase();
-  if (/^honda-pcx/.test(key)) return "pcx";
-  if (/^yamaha-nmax/.test(key)) return "nmax";
-  if (/^honda-forza/.test(key)) return "forza";
-  if (/^yamaha-xmax/.test(key)) return "xmax";
-  if (/^honda-supercub/.test(key)) return "supercub";
+const sources=Object.freeze({pcx,nmax,forza,xmax,supercub});
+export const BIKE_ART_FAMILIES=Object.freeze(Object.keys(sources));
+export function bikeArtFamily(model){
+  const key=String(model?.key||"").toLowerCase();
+  if(/^honda-pcx/.test(key))return "pcx";
+  if(/^yamaha-nmax/.test(key))return "nmax";
+  if(/^honda-forza/.test(key))return "forza";
+  if(/^yamaha-xmax/.test(key))return "xmax";
+  if(/^honda-supercub/.test(key))return "supercub";
   return null;
 }
-export function bikeArtStyle(model) {
-  const family = bikeArtFamily(model);
-  if (!family) return null;
-  const row = BIKE_ART_FAMILIES.indexOf(family);
-  return Object.freeze({
-    backgroundImage: 'url("' + atlas + '")',
-    backgroundSize: "100% 500%",
-    backgroundPosition: "center " + (row * 25) + "%",
-    backgroundRepeat: "no-repeat",
-  });
+export function bikeArtSource(model){
+  const family=bikeArtFamily(model);
+  return family?sources[family]:null;
 }
