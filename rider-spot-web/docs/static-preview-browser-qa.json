@@ -1,11 +1,12 @@
 {
-  "at": "2026-11-19T22:37:21.506Z",
+  "at": "2026-11-19T22:40:52.809Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev/",
   "screens": [
     {
       "width": 320,
       "steps": [
         "five bottom tabs",
+        "styles loaded from Cloudflare KV",
         "premium CSS linked",
         "five tabs functional and no horizontal overflow",
         "finance graph not displayed for anonymous session",
@@ -18,6 +19,7 @@
       "width": 393,
       "steps": [
         "five bottom tabs",
+        "styles loaded from Cloudflare KV",
         "premium CSS linked",
         "five tabs functional and no horizontal overflow",
         "finance graph not displayed for anonymous session",
@@ -30,6 +32,7 @@
       "width": 412,
       "steps": [
         "five bottom tabs",
+        "styles loaded from Cloudflare KV",
         "premium CSS linked",
         "five tabs functional and no horizontal overflow",
         "finance graph not displayed for anonymous session",
