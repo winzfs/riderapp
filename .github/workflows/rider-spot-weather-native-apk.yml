@@ -1,0 +1,80 @@
+name: Rider Spot Android weather-shell safe APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-weather-native-apk.yml'
+      - 'rider-spot-android/weather-native-shell-patch.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+      - name: Restore current native rider source and patch weather-shell update
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-spot-weather-209
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-spot-weather-209
+          python3 rider-spot-android/weather-native-shell-patch.py /tmp/rider-spot-weather-209
+          NATIVE=/tmp/rider-spot-weather-209/app/src/main/java/com/riderspot/android/MainActivity.java
+          grep -Fq 'native_shell=weather209' "$NATIVE"
+          grep -Fq 'inspectWeatherShell(view, url);' "$NATIVE"
+          grep -Fq 'rider-spot-shell-' "$NATIVE"
+          ! grep -Eq 'WebStorage.getInstance\(\)\.deleteAllData|store\.clear|deleteDatabase' "$NATIVE"
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Native GPS, data and navigation regression tests
+        working-directory: /tmp/rider-spot-weather-209
+        run: node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Android SDK 36
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Compile native Android app
+        working-directory: /tmp/rider-spot-weather-209
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Freeze updated original and separate safe-test APKs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-weather-artifacts
+          cp /tmp/rider-spot-weather-209/app/build/outputs/apk/debug/app-debug.apk /tmp/rs-weather-artifacts/RiderSpot-Weather209-debug.apk
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/rider-spot-weather-209')
+          gradle=root/'app/build.gradle'
+          content=gradle.read_text()
+          assert content.count('defaultConfig {')==1
+          gradle.write_text(content.replace('defaultConfig {','defaultConfig {\n        applicationIdSuffix ".weather209test"',1))
+          manifest=root/'app/src/main/AndroidManifest.xml'
+          s=manifest.read_text()
+          s,n=re.subn(r'android:label="[^"]+"','android:label="라이더스팟 날씨 테스트"',s,count=1)
+          assert n==1
+          manifest.write_text(s)
+          PY
+          cd /tmp/rider-spot-weather-209
+          gradle --no-daemon :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rs-weather-artifacts/RiderSpot-Weather209-SafeTest.apk
+          test -s /tmp/rs-weather-artifacts/RiderSpot-Weather209-debug.apk
+          test -s /tmp/rs-weather-artifacts/RiderSpot-Weather209-SafeTest.apk
+          find /tmp/rs-weather-artifacts -type f -printf "%f %k KB\n"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: RiderSpot-Weather209-Native-APK
+          path: /tmp/rs-weather-artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 30
