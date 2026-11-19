@@ -35,4 +35,8 @@ jobs:
           sed -n '80,225p' "$native"
           echo "=== MainActivity lifecycle ==="
           sed -n '595,655p' "$native"
+          echo "=== Native manifest and config lifecycle ==="
+          sed -n '1,160p' /tmp/rider-native/app/src/main/AndroidManifest.xml
+          grep -n 'onConfigurationChanged\|onSaveInstanceState\|setRetainInstance\|onCreate' "$native" || true
+
 
