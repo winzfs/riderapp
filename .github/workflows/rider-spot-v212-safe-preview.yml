@@ -24,11 +24,11 @@ jobs:
           cache: npm
           cache-dependency-path: rider-spot-web/package-lock.json
       - run: npm ci
-      - name: Verify candidate only adds one CSS file to stable v209
+      - name: Verify candidate only adds one CSS file to immutable v209 baseline
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          const prod='https://rider-spot.jazzhjm.workers.dev';
+          const prod='https://f72e41b7-rider-spot.jazzhjm.workers.dev';
           const candidate='https://5ff9b4ad-rider-spot.jazzhjm.workers.dev';
           const paths=['/index.html','/sw.js','/pwa-init.js','/assets/rider-spot-c2447071d7bb/app.mjs',
              '/assets/rider-spot-c2447071d7bb/map-reports.js',
