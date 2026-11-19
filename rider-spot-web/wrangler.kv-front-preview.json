@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rider-spot-static-preview",
+  "main": "edge/static-edge.mjs",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "services": [
+    {
+      "binding": "ASSETS",
+      "service": "rider-spot-static-candidate-assets"
+    },
+    {
+      "binding": "LEGACY",
+      "service": "rider-spot"
+    }
+  ]
+}
