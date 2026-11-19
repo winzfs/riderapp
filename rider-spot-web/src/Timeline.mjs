@@ -470,25 +470,24 @@ export function createTimeline(S, Zo, Income) {
         rs33J("button", {
           type: "button", className: "rs59-event-toggle",
           "aria-pressed": showEvents,
-          "aria-label": showEvents ? "이벤트 표시 끄기" : "이벤트 표시 켜기",
+          "aria-label": showEvents ? "이벤트 끄기" : "이벤트 켜기",
           onClick: toggleEvents,
         }, "이벤트"),
         rs33J("button", {
           type: "button", className: "rs45-stamp-toggle",
           "aria-pressed": showStamps,
-          "aria-label": showStamps ? "시간 표시 끄기" : "시간 표시 켜기",
+          "aria-label": showStamps ? "시간 끄기" : "시간 켜기",
           onClick: toggleStamps,
         }, "시간"),
         rs33J("button", {
           type: "button", className: "rs33-expand",
-          "aria-label": expanded ? "전체 화면 닫기" : "지도를 전체 화면으로 보기",
+          "aria-label": expanded ? "닫기" : "크게 보기",
           "aria-expanded": expanded,
           onClick: () => setExpanded((value) => !value),
         }, expanded ? "닫기" : "전체 화면"),
         !isDaily ? rs33J("button", {
           type: "button", className: "rs38-road-toggle",
           "aria-pressed": !!activeRoad,
-          "aria-label": activeRoad ? "GPS 원본 경로 보기" : "GPS 도로 보정",
           disabled: roadBusy || !raw, onClick: rs38MatchRoads,
         }, roadBusy ? "보정 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
       );
@@ -531,7 +530,6 @@ export function createTimeline(S, Zo, Income) {
                 type: "button",
                 className: "back rs-timeline-back",
                 onClick: back,
-                "aria-label": "하루 전체 경로로 돌아가기",
               }, "‹ 하루 전체")
             : null,
           rs33J(
