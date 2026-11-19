@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/rider-spot-static-browser-qa.yml'
       - 'rider-spot-web/tests/static-preview-browser.cjs'
+      - 'rider-spot-web/edge/**'
   workflow_dispatch:
 permissions:
   contents: write
