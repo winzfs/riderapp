@@ -4,6 +4,7 @@ on:
     branches: [feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-native-recovery-apk.yml'
+      - 'rider-spot-android/source.tar.xz'
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,7 +14,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Restore native source and verify WebView startup
+      - name: Restore v1.0.12 native source and verify WebView startup
         run: |
           set -euo pipefail
           mkdir -p /tmp/rider-spot-android
@@ -43,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/rs-android-artifacts
-          cp /tmp/rider-spot-android/app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-debug.apk
+          cp /tmp/rider-spot-android/app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-v1.0.12-Recovery-debug.apk
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -60,14 +61,14 @@ jobs:
           PY
           cd /tmp/rider-spot-android
           gradle --no-daemon :app:assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-SideBySide.apk
-          test -s /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-debug.apk
-          test -s /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-SideBySide.apk
+          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-v1.0.12-SideBySide-test.apk
+          test -s /tmp/rs-android-artifacts/RiderSpot-v1.0.12-Recovery-debug.apk
+          test -s /tmp/rs-android-artifacts/RiderSpot-v1.0.12-SideBySide-test.apk
           find /tmp/rs-android-artifacts -type f -printf "%f %k KB\n"
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: RiderSpot-Native-Recovery-APK
+          name: RiderSpot-v1.0.12-Recovery-APK
           path: /tmp/rs-android-artifacts/*.apk
           if-no-files-found: error
           retention-days: 30
