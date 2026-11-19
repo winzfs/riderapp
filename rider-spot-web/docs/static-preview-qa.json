@@ -1,0 +1,39 @@
+{
+  "at": "2026-11-19T22:06:58.026Z",
+  "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
+  "releaseHash": "16c1eecf6bac",
+  "checks": [
+    {
+      "name": "HTTP 200 /",
+      "passed": true,
+      "details": "HTTP 200 <!doctype html><html lang=\"ko\"><head><link rel=\"preconnect\" href=\"https://cdn.jsdelivr.net\" crossorigin=\"anonymous\"><link rel=\"preconnect\" href=\"https://tiles.openfreemap.org\" cros"
+    },
+    {
+      "name": "new hashed HTML",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "new premium stylesheet reference",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "existing native recovery guard preserved",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "single app root",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "HTTP 200 /assets/rider-spot-16c1eecf6bac/premium-shell.css",
+      "passed": false,
+      "details": "HTTP 404 Not found"
+    }
+  ],
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: HTTP 200 /assets/rider-spot-16c1eecf6bac/premium-shell.css: HTTP 404 Not found\n    at check (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:11:10)\n    at get (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:16:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:25:13"
+}
