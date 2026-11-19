@@ -26,7 +26,7 @@ function failClosed(message) {
 export async function serveShell(request, env) {
   // Both reads are static: never forward the visitor's credentials to obtain
   // the production-only native recovery guard.
-  const localUrl = new URL("/", request.url);
+  const localUrl = new URL("/index.html", request.url);
   const [asset, legacy] = await Promise.all([
     env.ASSETS.fetch(new Request(localUrl, { method: "GET" })),
     env.LEGACY.fetch(new Request(BACKEND_ORIGIN + "/", {
