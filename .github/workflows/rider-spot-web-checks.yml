@@ -30,6 +30,19 @@ jobs:
         run: npm run build
       - name: Check GPS and tab navigation regression tests
         run: npm test
+      - name: Restore native APK source for release safety gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-spot-staging-native
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rider-spot-staging-native
+          test -s /tmp/rider-spot-staging-native/app/src/main/assets/native-bridge.js
+      - name: Block release staging if old GPS recovery or forced reload returns
+        env:
+          RIDER_ANDROID_SOURCE: /tmp/rider-spot-staging-native
+        run: |
+          node --test /tmp/rider-spot-staging-native/tests/*.test.cjs
+          node scripts/check-update-safety.mjs
       - name: Verify tab recovery is in the production bundle
         run: |
           node --input-type=module <<'NODE'
