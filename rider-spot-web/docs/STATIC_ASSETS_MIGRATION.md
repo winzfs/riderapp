@@ -75,42 +75,110 @@ Before replacing the original production name:
 Until these are verified, the existing production Worker remains at its
 known-good version; no production migration is claimed.
 
-## Live staging status (2026-11-19)
+## Live staging status — Cloudflare KV bridge (2026-11-19)
 
-The isolated preview is deployed at
-https://rider-spot-static-preview.jazzhjm.workers.dev/ .
-It is NOT yet a true Workers Static Assets deployment. The Cloudflare
-connector successfully opened an assets-upload session, but the upload
-endpoint rejected its credentials (401): it requires the session JWT, which
-this connector cannot send as a per-request Authorization override.
+### What has actually been deployed
 
-To validate routing without changing production, two small Workers were
-deployed independently:
-- `rider-spot-static-candidate-assets`: preview-only, immutable GitHub
-  resource gateway for release `16c1eecf6bac`, pinned to commit
-  `6e6bd2d905db57d34408b22aa1b4292e01d92d37`.
-- `rider-spot-static-preview`: separate front Worker with service bindings
-  `ASSETS` to the candidate gateway and `LEGACY` to original `rider-spot`.
+Two small **non-production** Workers are active:
 
-An initial mobile regression exposed a sandbox Content-Security-Policy from
-raw.githubusercontent.com. The gateway now creates its own content headers
-instead of forwarding GitHub's sandbox restrictions, with a versioned cache
-key so restricted cached copies are not reused.
+| Worker | Purpose | Binding |
+| --- | --- | --- |
+| `rider-spot-static-preview` | Front-end entry point, native recovery guard insertion and legacy pass-through | `ASSETS` service to candidate worker; `LEGACY` service to `rider-spot` |
+| `rider-spot-static-candidate-assets` | Serve pinned static UI and public map data from Cloudflare Workers KV | `RS_ASSETS` KV namespace `d268cb25c64445cf9bb67242b79edc28` |
 
-Automated reports:
-- `docs/static-preview-qa.json`: live HTTP, current and previous release
-  assets, native recovery guard, offline Service Worker, map data and
-  read-only legacy API status/content-type parity.
-- `docs/static-preview-browser-qa.json`: anonymous Chromium at 320, 393
-  and 412 px, five tabs, no horizontal overflow, no runtime JS errors or
-  unexpected full-page reloads.
+The test origin is https://rider-spot-static-preview.jazzhjm.workers.dev/ .
+The original https://rider-spot.jazzhjm.workers.dev/ still uses **v220
+version `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`** and has not been
+replaced.
 
-Authenticated income charts and real Android ride recording have not been
-certified on this new hostname. The original `rider-spot` production Worker
-remains unchanged.
+The preview asset Worker previously fetched from raw.githubusercontent.com.
+That temporary behavior has been removed from its active deployed version.
+Cloudflare KV now stores **56 keys**, comprising the **55 actual release
+files** (JavaScript, CSS, HTML, Service Worker and 42 Korean map-data JSON
+files) plus the release manifest `release.json`. Total pinned static content
+is approximately 6.8 MB. The content comes from frozen release
+`16c1eecf6bac` at GitHub commit
+`6e6bd2d905db57d34408b22aa1b4292e01d92d37`, not from the
+latest moving branch tip.
 
-**Production cutover remains blocked** until a legitimate JWT-capable
-Static Assets upload/CI route is available AND the oversized legacy Worker
-can be reproduced as a separately bound, verified backend. Do not point
-`LEGACY` back at `rider-spot` if this front is ever deployed under that
-same name: that would create a circular binding.
+The KV namespace is **preview-only** and stores public app assets, not rider
+profiles, saved routes, financial records or API secrets. Existing app state,
+authenticated API endpoints, legacy routes, prior immutable asset URLs and
+native SQLite records continue to be owned by the original Worker/Android app.
+
+### Reproducible deployment configurations
+
+- `wrangler.kv-assets-preview.json`: current KV asset gateway, bound to
+  `RS_ASSETS`.
+- `wrangler.kv-front-preview.json`: current front end, bound to `ASSETS`
+  and `LEGACY` services.
+- `wrangler.static-preview.json`: desired **future** native Workers Static
+  Assets deploy configuration, not what the current KV bridge uses.
+- `edge/kv-preview-assets.mjs`: strict current-release file allowlist;
+  missing required files return HTTP 503 instead of silently mixing bundles.
+- `edge/static-edge.mjs`: legacy fall-through and fail-closed native recovery
+  guard.
+- `tests/kv-preview-config.test.mjs`: ensures neither staging config can
+  overwrite `rider-spot` or bind the front end to itself.
+
+With appropriately configured Cloudflare credentials, rebuilding the **same
+staging topology** uses:
+
+```sh
+cd rider-spot-web
+npm ci && npm test && npm run build
+npx wrangler@4.53.0 deploy -c wrangler.kv-assets-preview.json
+npx wrangler@4.53.0 deploy -c wrangler.kv-front-preview.json
+```
+
+The KV namespace must already contain every pinned release file before
+the first staging deployment; the setup above is not an asset uploader.
+Do not change either configuration name to `rider-spot`.
+
+### Verified checks and limitations
+
+- `docs/static-preview-qa.json`: live HTTP checks, native guard, current
+  stylesheet and app code, older release fallback, public map data, and
+  read-only API **routing parity**.
+- `docs/static-preview-browser-qa.json`: mobile Chromium widths 320, 393
+  and 412px; 5 bottom tabs, no horizontal overflow, no JavaScript runtime
+  errors, and no full-page auto-reload. Each tested CSS response contains
+  `x-rs-preview-asset-origin: workers-kv`.
+- `docs/static-preview-bundle-qa.json`: **55/55** public release files
+  match the pinned GitHub release byte-for-byte via SHA-256, including
+  the native Service Worker, CSS and public Korean map tiles.
+
+The existing industry-news endpoint returned HTTP **502** on both original
+production and preview during one read-only comparison. This establishes
+routing parity on that request, **not** API health.
+
+The anonymous browser test did not display authenticated income-chart data,
+so chart tapping and persistence still require a signed-in acceptance test.
+Real Android WebView GPS start/stop, background recovery, locked-screen trips
+and SQLite preservation have not been exercised on the preview hostname;
+anonymous Chromium evidence is not a replacement for those release gates.
+
+### The remaining production blocker
+
+Cloudflare's connected management API successfully created an official
+Static Assets upload session, but uploading through that connector failed
+HTTP 401: it could not provide the session JWT as the required bearer token.
+GitHub Actions currently has no configured Cloudflare deploy secret; its
+native Static Assets workflow can run builds but cannot publish assets.
+A user-authorized Wrangler CI token or JWT-capable upload client is needed
+to enable native Workers Static Assets.
+
+**More importantly**, the existing monolithic production backend (APIs,
+OAuth and historical assets) must be exported completely and deployed as
+a separate tested backend Worker before changing the public `rider-spot`
+script. The connector cannot currently retrieve that oversized script
+without exceeding its memory limit. Do not attempt to reconstruct or
+overwrite it from guessed endpoints. The staging front's `LEGACY`
+binding currently targets `rider-spot`; reusing that binding under the
+same Worker name would cause circular routing.
+
+The current KV bridge removes the immediate GitHub runtime dependency and
+proves that a lean front can delegate server work, but it is **not** the
+final no-KV-charge native Static Assets solution and **not** a completed
+production cutover. Both staging Workers can be disabled without changing
+the original production version.
