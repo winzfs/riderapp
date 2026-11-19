@@ -2423,3 +2423,21 @@ dialog.record-mini-dialog::backdrop{
   .app .rs33-trip-summary{padding:11px 12px}
   .app .finance-page .fin-hero{padding:16px 17px}
 }
+
+
+/* Bike portrait atlas: match the maintenance icon neo-flat gloss in a compact UI. */
+.app .bike-page .bike-vehicle .bike-vehicle-art{
+  display:block;flex:0 0 42%;width:42%;height:122px;max-width:170px;min-width:0;
+  background-repeat:no-repeat;align-self:center;pointer-events:none;
+  filter:drop-shadow(0 5px 6px #15494017);
+}
+.bike-model-list .bike-model-option-art{
+  display:block;flex:0 0 74px;width:74px;height:47px;min-width:0;
+  background-repeat:no-repeat;border-radius:7px;pointer-events:none;
+}
+.bike-model-list .bike-model-option:has(.bike-model-option-art){justify-content:flex-start}
+.bike-model-list .bike-model-option .bike-model-selected{margin-left:auto}
+@media(max-width:420px){
+  .app .bike-page .bike-vehicle .bike-vehicle-art{flex-basis:38%;width:38%;height:95px}
+  .bike-model-list .bike-model-option-art{flex-basis:62px;width:62px;height:40px}
+}
