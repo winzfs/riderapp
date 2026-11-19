@@ -1,0 +1,56 @@
+/* Rider Spot weather v1. Restrained HUD, preserving the existing teal design language. */
+.nearby.nearby-full .rs33-map-bar{padding:8px 14px 8px;gap:5px;box-shadow:0 2px 10px rgba(23,70,64,.035)}
+.nearby.nearby-full .rs33-map-bar-top{gap:10px}
+.nearby.nearby-full .rs33-region-toggle{font-size:18px;min-height:38px}
+.nearby.nearby-full .rs33-map-share{min-height:36px;border-radius:11px;padding:6px 11px;background:#f0f7f5}
+.nearby.nearby-full .rs33-map-filters{margin:0;padding:0 0 3px;gap:7px;scrollbar-width:none}
+.nearby.nearby-full .rs33-map-filters button{min-height:37px;border-radius:11px;padding:7px 12px;font-size:12px;font-weight:650;gap:6px;background:#f1f6f5;color:#54706c}
+.nearby.nearby-full .rs33-map-filters button[aria-pressed=true]{background:#d8f5f0;color:#067b76;box-shadow:none}
+.rs-weather-hud{appearance:none;display:flex;align-items:center;width:100%;height:35px;min-height:35px;gap:8px;padding:0 10px;border:1px solid #e4ebea;border-radius:10px;background:#f9fbfa;color:#244b49;text-align:left;letter-spacing:-.02em;box-shadow:none;cursor:pointer}
+.rs-weather-hud:active{background:#edf7f5}
+.rs-weather-icon{display:flex;align-items:center;justify-content:center;flex:none;color:#268f8a}
+.rs-weather-temp{flex:none;font-size:15px;font-weight:750;font-variant-numeric:tabular-nums;color:#0d514d;line-height:1}
+.rs-weather-condition{font-size:12px;font-weight:580;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-weather-notice{margin-left:auto;font-size:11px;font-weight:590;color:#527c79;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44%}
+.rs-weather-chevron{display:flex;align-items:center;color:#91a9a6;flex:none}
+.rs-weather-hud[data-state="stale"] .rs-weather-icon,.rs-weather-hud[data-state="stale"] .rs-weather-temp{color:#7e9895}
+.rs-weather-hud:focus-visible{outline:2px solid #008b84;outline-offset:2px}
+/* Reduce overlay competition without removing rider, SOS, GPS or demo actions. */
+.nearby.nearby-full .map-wrap .rs-gps-state{top:10px;left:11px;min-height:35px;padding:6px 10px;max-width:calc(100% - 86px);border-radius:11px;border:1px solid #e1e9e7;background:#ffffffef;box-shadow:0 3px 11px #163d3812;font-size:11px}
+.nearby.nearby-full .map-wrap #rs-presence-btn{top:54px;left:11px;min-height:37px;padding:7px 10px;border-radius:11px;font-size:11px;max-width:calc(100% - 86px);box-shadow:0 3px 11px #163d3812}
+.nearby.nearby-full .map-wrap #rs-demo-toggle{top:100px;left:11px;min-height:34px;padding:5px 10px;border-radius:11px;font-size:10px;max-width:calc(100% - 86px);background:#fffffff2;box-shadow:0 3px 11px #163d3812}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar{border-radius:12px;box-shadow:0 3px 12px #163d3814}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar a{width:40px;height:40px;line-height:40px;min-height:40px;font-size:21px}
+.nearby.nearby-full .map-wrap .locate{top:105px;right:12px;width:42px;height:42px;min-width:42px;min-height:42px;border-radius:12px;box-shadow:0 3px 12px #163d3814}
+.nearby.nearby-full .map-wrap #rs-sos-fab{border-radius:12px;box-shadow:0 3px 12px #163d3814}
+.nearby.nearby-full .ride-launch{padding:8px 14px 9px}
+.nearby.nearby-full .ride-launch button{border-radius:13px;min-height:53px;font-size:16px;letter-spacing:-.02em}
+/* Forecast bottom sheet: data-rich, but no weather dashboard clutter on the map. */
+.rs-weather-details{font-family:inherit;color:#1b3b39;min-width:0;padding:3px 1px 4px}
+.rs-weather-details header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 0 14px}
+.rs-weather-details h2{font-size:18px;font-weight:750;margin:0;letter-spacing:-.04em}
+.rs-weather-details header small{font-size:11px;color:#7b8c8a}
+.rs-weather-overview{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.rs-weather-large-icon{display:flex;align-items:center;color:#0c8f89}
+.rs-weather-overview strong{font-size:35px;font-weight:720;letter-spacing:-.05em;line-height:1}
+.rs-weather-overview>span:last-child{font-size:14px;color:#637b78}
+.rs-weather-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 22px}
+.rs-weather-stat{background:#f5f8f7;border:1px solid #e8eeec;border-radius:13px;padding:10px 9px;display:grid;gap:4px;min-width:0}
+.rs-weather-stat svg{color:#488b87}
+.rs-weather-stat span{font-size:11px;color:#718784}
+.rs-weather-stat strong{font-size:13px;font-weight:680;white-space:nowrap}
+.rs-weather-details h3{font-size:14px;font-weight:740;letter-spacing:-.02em;margin:0 0 10px}
+.rs-weather-hours{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.rs-weather-hour{display:flex;align-items:center;flex-direction:column;gap:9px;background:#f6f9f8;border-radius:12px;padding:11px 2px 10px;min-width:0}
+.rs-weather-hour>span:first-child{font-size:11px;color:#6b807e}
+.rs-weather-hour>span:nth-child(2){color:#4d9691;display:flex}
+.rs-weather-hour strong{font-size:14px;font-weight:740}
+.rs-weather-hour small{font-size:10px;color:#68817d;white-space:nowrap}
+.rs-weather-credit{margin:18px 0 3px;color:#748783;font-size:11px;line-height:1.6}
+@media(max-width:360px){
+ .rs-weather-hud{padding:0 8px;gap:6px}
+ .rs-weather-condition{font-size:11px}
+ .rs-weather-notice{font-size:10px}
+ .rs-weather-hour{gap:7px}
+ .rs-weather-hour small{font-size:9px}
+}
