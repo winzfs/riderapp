@@ -24,4 +24,29 @@
     active: window.__rsNavigation?.tab || window.__rsActiveTab || "nearby",
     repairs: 0,
   });
+  // Lightweight local-only lifecycle log. No GPS, identity or trip data.
+  const DIAG_KEY = "rs:page-lifecycle:v1";
+  function recordLifecycle(type, detail = "") {
+    try {
+      const rows = JSON.parse(sessionStorage.getItem(DIAG_KEY) || "[]");
+      if (!Array.isArray(rows)) return;
+      rows.push({ at: Date.now(), type, detail: String(detail).slice(0, 60) });
+      sessionStorage.setItem(DIAG_KEY, JSON.stringify(rows.slice(-32)));
+    } catch { /* Private browsing and disabled storage are supported. */ }
+  }
+  window.__rsReloadDiagnostics = () => {
+    try { return JSON.parse(sessionStorage.getItem(DIAG_KEY) || "[]"); }
+    catch { return []; }
+  };
+  const navigationType = window.performance?.getEntriesByType?.("navigation")?.[0]?.type;
+  recordLifecycle("boot", navigationType || "unknown");
+  window.addEventListener("pagehide", event => recordLifecycle("pagehide", event.persisted ? "bfcache" : "unload"));
+  window.addEventListener("beforeunload", () => recordLifecycle("beforeunload"));
+  window.addEventListener("pageshow", event => recordLifecycle("pageshow", event.persisted ? "bfcache" : "normal"));
+  window.addEventListener("error", () => recordLifecycle("window-error"));
+  window.addEventListener("unhandledrejection", () => recordLifecycle("unhandled-rejection"));
+  try {
+    window.navigator?.serviceWorker?.addEventListener("controllerchange", () => recordLifecycle("sw-controllerchange"));
+  } catch { /* Unavailable in some Android shells. */ }
+
 })();
