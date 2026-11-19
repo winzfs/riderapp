@@ -1,0 +1,110 @@
+name: Rider Spot v212 safe CSS-only production preview
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-v212-safe-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Verify candidate only adds one CSS file to stable v209
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const prod='https://rider-spot.jazzhjm.workers.dev';
+          const candidate='https://5ff9b4ad-rider-spot.jazzhjm.workers.dev';
+          const paths=['/index.html','/sw.js','/pwa-init.js','/assets/rider-spot-c2447071d7bb/app.mjs',
+             '/assets/rider-spot-c2447071d7bb/map-reports.js',
+             '/assets/rider-weather-20261119/weather-bar.js','/assets/rider-weather-20261119/weather-bar.css'];
+          for(const path of paths) {
+            const [live,prev]=await Promise.all([prod,candidate].map(async url=>{
+              const res=await fetch(url+path,{headers:{'Cache-Control':'no-store'}});
+              assert.equal(res.status,200, url+path+' status');
+              return res.text();
+            }));
+            if(path==='/index.html'){
+              const extra='<link rel="stylesheet" href="/assets/rider-weather-ui-v211/polish.css">';
+              assert.equal(prev.split(extra).length,2,'new stylesheet should appear once');
+              assert.equal(prev.replace(extra,''),live,'ONLY the one stylesheet may change');
+            } else assert.equal(prev,live,'Must not modify '+path);
+            console.log('PASS UNCHANGED',path,live.length);
+          }
+          const style=await fetch(candidate+'/assets/rider-weather-ui-v211/polish.css').then(r=>r.text());
+          assert.ok(style.includes('visual-only polish'));
+          assert.ok(style.includes('.rs-weather-details > header'));
+          assert.ok(style.includes('.ride-launch.active button'));
+          console.log('PASS ONLY CSS CHANGE',style.length);
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Check weather sheet on small phones using actual production CSS
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const root='https://5ff9b4ad-rider-spot.jazzhjm.workers.dev';
+            const paths=[
+              '/assets/rider-spot-c2447071d7bb/design-system.css',
+              '/assets/rider-weather-20261119/weather-bar.css',
+              '/assets/rider-weather-ui-v211/polish.css'
+            ];
+            const css=await Promise.all(paths.map(async path=>{
+              const res=await fetch(root+path);
+              assert.equal(res.status,200,path);
+              return res.text();
+            }));
+            const browser=await chromium.launch({args:['--no-sandbox'],headless:true});
+            try{
+              for(const width of [320,360,390,412]){
+                const page=await browser.newPage({viewport:{width,height:740}});
+                const html='<!DOCTYPE html><html lang="ko"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body><div class="rs-sheet-backdrop"><section class="rs-map-sheet" role="dialog"><button class="close">×</button><div class="rs-weather-details rs-sheet-content"><header><h2>운행 날씨</h2><small>예보 확인 · 15시 기준</small></header><div class="rs-weather-overview"><span class="rs-weather-large-icon">☁</span><strong>6°</strong><span>구름 조금</span></div><div class="rs-weather-stats">'+Array.from({length:3},()=>'<div class="rs-weather-stat"><svg width="16" height="16"></svg><span>강수량</span><strong>0.0 mm</strong></div>').join('')+'</div><h3>시간별 예보</h3><div class="rs-weather-hours">'+Array.from({length:6},()=>'<div class="rs-weather-hour"><span>15시</span><span>☁</span><strong>6°</strong><small>0.0 mm</small></div>').join('')+'</div><p class="rs-weather-credit">예보 제공: Norwegian Meteorological Institute (MET Norway) · CC BY 4.0. 기상 상황은 실제와 다를 수 있습니다.</p></div></section></div></body></html>';
+                await page.setContent(html);
+                for (const text of css) await page.addStyleTag({content:text});
+                const result=await page.evaluate(()=>{
+                  const sheet=document.querySelector('.rs-map-sheet'),
+                  header=document.querySelector('.rs-weather-details>header'),
+                  close=document.querySelector('.rs-map-sheet>.close');
+                  const rect=e=>e.getBoundingClientRect();
+                  const a=rect(header),b=rect(close),c=rect(sheet);
+                  return {headBg:getComputedStyle(header).backgroundColor,headHeight:a.height,
+                     closeOverlaps:a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top,
+                     sheetOverflow:c.left<0||c.right>innerWidth+2,
+                     horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2,
+                     bottomNotHidden:c.bottom<=innerHeight+2};
+                });
+                console.log('GEOMETRY',width,JSON.stringify(result));
+                assert.ok(result.headBg==='rgba(0, 0, 0, 0)'||result.headBg==='transparent','dark header remains');
+                assert.ok(result.headHeight<66,'oversized header');
+                assert.equal(result.closeOverlaps,false,'close button overlaps heading');
+                assert.equal(result.sheetOverflow,false,'sheet horizontal overflow');
+                assert.equal(result.horizontalOverflow,false,'page overflow');
+                assert.equal(result.bottomNotHidden,true,'bottom sheet cropped');
+                await page.screenshot({path:'/tmp/rider-weather-v212-'+width+'.png'});
+                await page.close();
+              }
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-v212-css-only-layout-tests
+          path: /tmp/rider-weather-v212-*.png
+          retention-days: 7
