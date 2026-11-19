@@ -43,9 +43,9 @@ jobs:
             }));
             assert.equal(ph.includes('rs-recovery-guard-v217'),true);
             assert.equal(live.includes('rs-recovery-guard-v217'),false);
-            for(const part of ['weather-bar.js','app.mjs','daily-timeline.css','rider-maintenance-v40','rider-finance-v23']){
-              assert.equal(ph.includes(part),true,'missing '+part);
-            }
+            const cleaned=ph.replace(/<script id="rs-recovery-guard-v217">[\\s\\S]*?<\\/script>/,'');
+            assert.equal(cleaned,live,'preview must differ from production ONLY by one guard script');
+            assert.equal(ph.split('rs-recovery-guard-v217').length,2,'guard inserted exactly once');
             const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
             try{
               const context=await browser.newContext({viewport:{width:393,height:830},deviceScaleFactor:3,isMobile:true,hasTouch:true,locale:'ko-KR',serviceWorkers:'block'});
