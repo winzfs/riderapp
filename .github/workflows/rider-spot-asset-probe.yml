@@ -1,0 +1,38 @@
+name: Rider Spot production 503 intermittent asset probe
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-asset-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  asset-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production and version preview HTTP errors
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const domains=['https://rider-spot.jazzhjm.workers.dev','https://e2160ce3-rider-spot.jazzhjm.workers.dev'];
+          const paths=['/','/sw.js','/assets/rider-spot-c2447071d7bb/native-gps.js','/rider-demo-v26-d1f66164c3aa.js','/rider-presence-v24-3d3c7f94ff4a.js','/assets/rider-weather-20261119/weather-bar.js'];
+          const failures=[];
+          for(const origin of domains) {
+            for(let pass=0;pass<3;pass++){
+              const round=await Promise.all(paths.map(async(path)=>{
+                try{
+                  const start=Date.now();
+                  const res=await fetch(origin+path+'?check='+pass,{headers:{'Cache-Control':'no-store'},signal:AbortSignal.timeout(12000)});
+                  const sample=res.ok?'':(await res.text()).slice(0,350).replace(/\s+/g,' ');
+                  const v={path,status:res.status,ms:Date.now()-start,server:res.headers.get('server'),cfRay:res.headers.get('cf-ray'),cfCache:res.headers.get('cf-cache-status'),body:sample};
+                  if(res.status>=500)failures.push({origin,...v});
+                  if(res.body && !res.bodyUsed)await res.body.cancel().catch(()=>{});
+                  return v;
+                }catch(e){return {path,error:String(e)}}
+              }));
+              console.log('ROUND',JSON.stringify({origin,pass,round}));
+            }
+          }
+          console.log('HTTP_5XX',JSON.stringify(failures));
+          NODE
