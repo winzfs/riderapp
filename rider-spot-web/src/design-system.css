@@ -2443,3 +2443,35 @@ dialog.record-mini-dialog::backdrop{
   .app .bike-page .bike-vehicle .bike-vehicle-art{flex-basis:40%;width:40%;height:auto;max-width:150px}
   .bike-model-list .bike-model-option-art{flex-basis:68px;width:68px;height:auto;max-height:45px}
 }
+
+/* Facility registration uses the map sheet above its originating screen. */
+.rs-map-sheet:has(> .rs-facility-sheet) {
+  border-radius: 24px 24px 0 0;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+.rs-facility-sheet h2 {
+  margin: 0 48px 8px 0;
+  color: var(--rs-text);
+  font-size: 20px;
+  line-height: 1.4;
+}
+.rs-facility-sheet > .rs-small {
+  color: var(--rs-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.rs-facility-sheet .rs-form { display: grid; gap: 12px; }
+.rs-facility-sheet .rs-field { font-weight: 650; }
+.rs-facility-sheet .rs-field :is(input, select, textarea) {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.rs-facility-sheet textarea { min-height: 76px; }
+.rs-facility-sheet .rs-form > .rs-primary,
+.rs-facility-sheet [data-rs-pick-map] { width: 100%; }
+.rs-facility-sheet .rs-facility-status { color: var(--rs-muted); margin: 10px 0 0; }
+@media (min-width: 761px) {
+  .rs-map-sheet:has(> .rs-facility-sheet) { border-radius: 22px; }
+}

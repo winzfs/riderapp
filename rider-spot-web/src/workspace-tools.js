@@ -1,3 +1,4 @@
+import { openMapSheet } from "./ui-overlays.mjs";
 import { completedRideRows, dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
 import { createWorkDrafts } from "./work-drafts.mjs";
@@ -145,6 +146,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
   const REPLY_EMPTY =
     "아직 답글이 없어요. 도움이 가능하다면 한마디 남겨주세요.";
   let root;
+  let facilitySheet;
   function msg(text, isError = false) {
     S.lastError = text;
     const el = $("#rs-message");
@@ -159,9 +161,9 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
     if (result.error) throw result.error;
     return result.data;
   }
-  function requireUser() {
+  function requireUser(notify = msg) {
     if (S.user) return true;
-    msg(
+    notify(
       "로그인 후 이용할 수 있어요. 내 정보에서 Google 또는 이메일로 로그인해 주세요.",
       true,
     );
@@ -313,31 +315,65 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       )
       .join("");
     return (
-      card(
-        "라이더 편의시설",
-        '<p class="rs-small">라이더가 이용할 수 있는 화장실을 알려주세요. 지도에는 화장실만 표시돼요.</p><form data-rs-form="places" class="rs-form">' +
-          '<label class="rs-field"><span>시설 종류</span><select name="category"><option>화장실</option></select></label>' +
-          formField("장소 이름", "title", "text", {
-            required: true,
-            maxLength: 80,
-            placeholder: "예: 주차장 옆 공용 화장실",
-          }) +
-          textarea(
-            "이용 팁",
-            "details",
-            "이용 가능 시간이나 위치 단서",
-            400,
-            false,
-          ) +
-          usePointForm() +
-          '<button class="rs-primary" type="submit">시설 등록</button></form>',
-      ) +
+      '<button type="button" class="rs-primary" data-rs-register-facility>시설 등록</button>' +
       card(
         "등록된 시설 · " + S.data.places.length + "곳",
         rows || empty("아직 제보가 없어요. 첫 번째 시설을 등록해 주세요."),
       )
     );
   }
+  function openFacilityRegistration() {
+    if (facilitySheet) return;
+    const content = document.createElement("div");
+    content.className = "rs-facility-sheet";
+    content.innerHTML =
+      '<h2>편의시설 등록</h2>' +
+      '<p class="rs-small">라이더가 이용할 수 있는 화장실을 알려주세요. 지도에는 화장실만 표시돼요.</p><form data-rs-form="places" class="rs-form">' +
+      '<label class="rs-field"><span>시설 종류</span><select name="category"><option>화장실</option></select></label>' +
+      formField("장소 이름", "title", "text", {
+        required: true,
+        maxLength: 80,
+        placeholder: "예: 주차장 옆 공용 화장실",
+      }) +
+      textarea(
+        "이용 팁",
+        "details",
+        "이용 가능 시간이나 위치 단서",
+        400,
+        false,
+      ) +
+      usePointForm() +
+      '<button class="rs-primary" type="submit">시설 등록</button></form>' +
+      '<p class="rs-facility-status" role="status" hidden></p>';
+    const form = content.querySelector("form");
+    const status = content.querySelector(".rs-facility-status");
+    const notify = (text) => {
+      status.textContent = text;
+      status.hidden = false;
+      status.scrollIntoView({ block: "nearest" });
+    };
+    const gpsButton = form.querySelector("[data-rs-gps]");
+    gpsButton.addEventListener("click", async () => {
+      await useCurrentLocation(gpsButton);
+      if (form.isConnected) form.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitForm(form, notify, () => {
+        dismiss();
+        const toast = document.createElement("p");
+        toast.className = "rs-toast";
+        toast.setAttribute("role", "status");
+        toast.textContent = "편의시설을 등록했어요.";
+        document.body.append(toast);
+        setTimeout(() => toast.remove(), 2500);
+      });
+    });
+    const dismiss = openMapSheet(content, "편의시설 등록", () => { facilitySheet = null; });
+    facilitySheet = dismiss;
+  }
+  window.__rsOpenFacilityRegistration = openFacilityRegistration;
+  window.__rsDismissFacilityRegistration = () => facilitySheet?.();
   function renderEarnings() {
     const hasSavedRides = completedRideRows(window.__rsRideApi?.history).length > 0;
     const all = S.data.earnings,
@@ -1311,8 +1347,24 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       );
     });
   }
-  async function submitForm(form) {
-    if (S.busy || !requireUser()) return;
+  async function useCurrentLocation(button) {
+    const form = button.closest("form");
+    const status = $(".rs-gps-status", form);
+    button.disabled = true;
+    try {
+      const point = await gps();
+      form.elements.lat.value = point.lat;
+      form.elements.lng.value = point.lng;
+      status.textContent =
+        "위치 선택 완료 · " + point.lat.toFixed(4) + ", " + point.lng.toFixed(4);
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  async function submitForm(form, notify = msg, onSaved) {
+    if (S.busy || !requireUser(notify)) return;
     const type = form.dataset.rsForm,
       fd = new FormData(form),
       v = (k) => String(fd.get(k) || "").trim();
@@ -1332,7 +1384,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
           !Number.isFinite(lat) ||
           !Number.isFinite(lng)
         )
-          throw Error("현재 위치 가져오기를 먼저 눌러 주세요.");
+          throw Error(type === "places" ? "지도에서 위치를 선택하거나 현재 위치를 사용해 주세요." : "현재 위치 가져오기를 먼저 눌러 주세요.");
         const fields = {
           user_id: user.id,
           nickname: nick(),
@@ -1485,7 +1537,8 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       await loadAll();
       if (type === "reply") await refreshReplies(v("sos_id"));
       if (S.active && type !== "reply") render();
-      msg(editing ? "기록을 수정했어요." : "기록을 저장했어요.");
+      if (onSaved) onSaved();
+      else msg(editing ? "기록을 수정했어요." : "기록을 저장했어요.");
     } catch (e) {
       const raw = String(e?.message || "잠시 후 다시 시도해 주세요.");
       const friendly = raw.includes("sos_requests_message_check")
@@ -1493,7 +1546,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
         : raw.includes("sos_one_active_per_user_idx")
           ? "이미 진행 중인 SOS가 있어요. 기존 요청을 종료해 주세요."
           : raw;
-      msg("저장 실패: " + friendly, true);
+      notify("저장 실패: " + friendly, true);
     } finally {
       S.busy = false;
       if (submit) submit.disabled = false;
@@ -1580,6 +1633,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       if (!x) return;
       if (x.hasAttribute("data-rs-close")) return close();
       if (x.hasAttribute("data-rs-hub")) return open("hub");
+      if (x.hasAttribute("data-rs-register-facility")) return openFacilityRegistration();
       if (x.hasAttribute("data-rs-go-trips")) {
         S.active = false;
         root.hidden = true;
@@ -1711,23 +1765,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       if (x.hasAttribute("data-rs-back-sos")) return open("sos");
       if (x.dataset.rsCopy) return copy(x.dataset.rsCopy);
       if (x.hasAttribute("data-rsSms")) return prepareSMS();
-      if (x.hasAttribute("data-rsGps")) {
-        const form = x.closest("form"),
-          status = $(".rs-gps-status", form);
-        x.disabled = true;
-        try {
-          const p = await gps();
-          form.elements.lat.value = p.lat;
-          form.elements.lng.value = p.lng;
-          status.textContent =
-            "위치 선택 완료 · " + p.lat.toFixed(4) + ", " + p.lng.toFixed(4);
-        } catch (err) {
-          status.textContent = err.message;
-        } finally {
-          x.disabled = false;
-        }
-        return;
-      }
+      if (x.hasAttribute("data-rs-gps")) return useCurrentLocation(x);
       if (x.dataset.rsPan) {
         const coords = x.dataset.rsPan.split(",").map(Number);
         if (coords.length === 2 && coords.every(Number.isFinite)) {
@@ -1788,6 +1826,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
           const previous = S.user?.id;
           S.user = session?.user || null;
           if (previous !== S.user?.id) {
+            facilitySheet?.();
             S.editing = null;
             S.dataLoaded = false;
             S.platform = "";

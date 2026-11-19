@@ -371,8 +371,10 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
       button.type = "button";
       button.textContent = filter === "roads" ? "제보 올리기" : "시설 등록";
       button.className = "rs33-map-register";
-      button.onclick = () =>
-        window.__rsOpenTool?.(filter === "roads" ? "roads" : "places");
+      button.onclick = () => {
+        if (filter === "roads") window.__rsOpenTool?.("roads");
+        else window.__rsOpenFacilityRegistration?.();
+      };
       if (filter !== "riders") legend.append(button);
     }
   }
@@ -525,7 +527,8 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     }
     RS.picker = null;
     releasePicker();
-    window.__rsGoToTab?.("tools");
+    if (pick.type === "places") window.__rsOpenFacilityRegistration?.();
+    else window.__rsGoToTab?.("tools");
   }
   function buildPicker(map) {
     const wrap = document.querySelector(".map-wrap");
@@ -571,6 +574,7 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     const pt =
       d.lat && d.lng ? { lat: Number(d.lat), lng: Number(d.lng) } : null;
     RS.picker = { type, coords: valid(pt) ? pt : null };
+    if (type === "places") window.__rsDismissFacilityRegistration?.();
     window.__rsGoToTab?.("nearby");
     setTimeout(install, 100);
   }
@@ -677,6 +681,11 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     true,
   );
   window.addEventListener("riderspot:report-saved", afterSaved);
+  window.addEventListener("riderspot:tab-restored", (event) => {
+    if (RS.picker?.type !== "places" || event.detail === "nearby") return;
+    RS.picker = null;
+    releasePicker();
+  });
   window.addEventListener("riderspot:map", () => {
     install();
     scheduleFetch(450);

@@ -335,6 +335,55 @@ async function gesture(cdp, page, label, dir) {
   });
   await page.waitForTimeout(275);
 }
+async function facilitySheetTest() {
+  const { context, page, errors, navs } = await open({ account: true });
+  try {
+    let saved;
+    await context.route("**/rest/v1/rider_places*", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      saved = route.request().postDataJSON();
+      await route.fulfill({ status: 201 });
+    });
+    const register = page.locator("#rs-report-legend .rs33-map-register");
+    const sheet = page.getByRole("dialog", { name: "편의시설 등록" });
+    await register.click();
+    await sheet.waitFor();
+    assert.equal(await page.evaluate(() => window.__rsNavigation.tab), "nearby");
+    await sheet.getByLabel("장소 이름").fill("테스트 화장실");
+    await sheet.getByLabel("이용 팁").fill("주차장 입구");
+    await sheet.getByRole("button", { name: /지도에서 위치 선택하기/ }).click();
+    await sheet.waitFor({ state: "hidden" });
+    const picker = page.locator("#rs-map-picker");
+    await picker.waitFor();
+    await picker.getByRole("button", { name: "취소" }).click();
+    await sheet.waitFor();
+    assert.equal(await sheet.getByLabel("장소 이름").inputValue(), "테스트 화장실");
+    await sheet.getByRole("button", { name: /지도에서 위치 선택하기/ }).click();
+    await picker.waitFor();
+    await page.evaluate(() => window.__rsMap.fire("click", { latlng: { lat: 35.16, lng: 126.83 } }));
+    await picker.getByRole("button", { name: "이 위치로 등록" }).click();
+    await sheet.waitFor();
+    assert.equal(await sheet.getByLabel("이용 팁").inputValue(), "주차장 입구");
+    await sheet.getByText(/지도 선택 완료/).waitFor();
+    await sheet.getByRole("button", { name: "시설 등록", exact: true }).click();
+    await sheet.waitFor({ state: "hidden" });
+    assert.equal(saved?.title, "테스트 화장실");
+    assert.equal(saved?.category, "화장실");
+    assert.equal(saved?.lat, 35.16);
+    assert.equal(saved?.lng, 126.83);
+    await register.click();
+    await sheet.waitFor();
+    assert.equal(await sheet.getByLabel("장소 이름").inputValue(), "");
+    await page.evaluate(() => window.__rsHandleBack());
+    await sheet.waitFor({ state: "hidden" });
+    assert.equal(await page.evaluate(() => window.__rsNavigation.tab), "nearby");
+    assert.equal(navs(), 1);
+    assert.deepEqual(errors, []);
+    console.log("PASS facility sheet: map, position selection, draft, save and Android Back");
+  } finally {
+    await context.close();
+  }
+}
 async function mapTest() {
   const { context, page, errors, navs } = await open({ trip: sampleTrip(100) });
   try {
@@ -580,6 +629,7 @@ async function nativeTest() {
   });
   try {
     const subset = process.env.RIDER_TEST_CASE;
+    if (subset === "facility") await facilitySheetTest();
     if (!benchmark && !baseline && (!subset || subset === "map"))
       await mapTest();
     if (!subset || subset === "timeline")
