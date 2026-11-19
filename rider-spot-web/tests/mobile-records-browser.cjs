@@ -558,7 +558,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await actualExpense.getByRole("button",{name:"삭제"}).click();
     const deleteConfirm=page.getByRole("dialog",{name:"확인"});
     await deleteConfirm.waitFor();
-    await deleteConfirm.getByRole("button",{name:"확인",exact:true}).click();
+    await deleteConfirm.getByRole("button",{name:"삭제",exact:true}).click();
     await page.getByRole("button",{name:"삭제 실행 취소"}).click();
     await page.locator(".fin-record").filter({hasText:"보험료"}).first().waitFor();
     assert.equal(extraExpenses.length,1,"undo restores the original source record");

@@ -36,7 +36,7 @@ export function createFinance(R, client) {
       onInput:e=>{const raw=e.currentTarget.value.replace(/\D/g,"").slice(0,9);
         const normalized=raw?new Intl.NumberFormat("ko-KR").format(Number(raw)):"";
         if(e.currentTarget.value!==normalized)e.currentTarget.value=normalized;}}));
-  function ConfirmModal({message,cancel,accept,danger=false}) {
+  function ConfirmModal({message,cancel,accept,danger=false,acceptLabel="확인"}) {
     const node=R.useRef(null);
     const cancelRef=R.useRef(cancel);
     cancelRef.current=cancel;
@@ -57,7 +57,7 @@ export function createFinance(R, client) {
         h("p",{className:"rs-app-confirm-text"},message),
         h("div",{className:"rs-app-confirm-actions"},
           button("취소",cancel,"rs-app-confirm-cancel"),
-          button(danger?"버리고 닫기":"확인",accept,
+          button(acceptLabel,accept,
             "rs-app-confirm-accept"+(danger?" is-danger":"")))));
   }
   function FinanceSheet({editor,close,save,busy,error,userId}) {
@@ -198,7 +198,7 @@ export function createFinance(R, client) {
         h("footer",null,error&&txt("p","fin-error",error),
           h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기")),
         discardOpen&&h(ConfirmModal,{message:"작성 중인 내용을 버리고 닫을까요?",
-          cancel:()=>setDiscardOpen(false),accept:close,danger:true})));
+          cancel:()=>setDiscardOpen(false),accept:close,danger:true,acceptLabel:"버리고 닫기"})));
   }
 
   function Finance({user,login,onBike}) {
@@ -822,7 +822,8 @@ export function createFinance(R, client) {
       editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}),
       confirmation&&h(ConfirmModal,{message:confirmation,
         cancel:()=>settleConfirm(false),accept:()=>settleConfirm(true),
-        danger:/삭제|취소/.test(confirmation)}));
+        danger:/삭제|취소/.test(confirmation),
+        acceptLabel:/삭제/.test(confirmation)?"삭제":"확인"}));
   }
   return Finance;
 }
