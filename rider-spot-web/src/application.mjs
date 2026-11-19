@@ -2059,6 +2059,9 @@ export function mountApplication({
           ),
         ),
       ),
+      // React owns the placeholder; the weather extension owns ONLY its children.
+      // Never append unmanaged nodes directly to React's map bar.
+      rs33J("div", { className: "rs-weather-slot" }),
     );
   }
   function rs33OpenMap(record, kind = "places") {

@@ -59,7 +59,9 @@ function gridPosition() {
   return {lat:(Math.round(lat * 20) / 20).toFixed(2), lon:(Math.round(lon * 20) / 20).toFixed(2)};
 }
 function barElement() {
-  const host = document.querySelector(".nearby.nearby-full .rs33-map-bar");
+  // Mount only into React's intentionally empty extension slot. This prevents
+  // reconciliation from attempting to own the weather button or its SVG nodes.
+  const host = document.querySelector(".nearby.nearby-full .rs-weather-slot");
   if (!host) return null;
   let button = host.querySelector("#" + ID);
   if (!button) {
@@ -77,22 +79,32 @@ function barElement() {
   }
   return button;
 }
+function setText(node, value) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+function setIcon(node, kind) {
+  if (node && node.dataset.icon !== kind) {
+    node.innerHTML = svg(kind);
+    node.dataset.icon = kind;
+  }
+}
 function paint() {
   const button = barElement(); if (!button) return;
   const stale = !current || Date.now() - Date.parse(current.receivedAt || "") > 3 * 3600000;
-  button.dataset.state = stale ? "stale" : "ready";
+  const status = stale ? "stale" : "ready";
+  if (button.dataset.state !== status) button.dataset.state = status;
   if (!current || stale) {
-    button.querySelector(".rs-weather-icon").innerHTML = svg("cloud");
-    button.querySelector(".rs-weather-temp").textContent = "—°";
-    button.querySelector(".rs-weather-condition").textContent = pending ? "날씨 불러오는 중" : "날씨 확인";
-    button.querySelector(".rs-weather-notice").textContent = "예보 보기";
+    setIcon(button.querySelector(".rs-weather-icon"), "cloud");
+    setText(button.querySelector(".rs-weather-temp"), "—°");
+    setText(button.querySelector(".rs-weather-condition"), pending ? "날씨 불러오는 중" : "날씨 확인");
+    setText(button.querySelector(".rs-weather-notice"), "예보 보기");
     return;
   }
   const condition = describe(current.current?.symbol);
-  button.querySelector(".rs-weather-icon").innerHTML = svg(condition.kind);
-  button.querySelector(".rs-weather-temp").textContent = numberText(current.current?.temp, "°");
-  button.querySelector(".rs-weather-condition").textContent = condition.text;
-  button.querySelector(".rs-weather-notice").textContent = rainText(current);
+  setIcon(button.querySelector(".rs-weather-icon"), condition.kind);
+  setText(button.querySelector(".rs-weather-temp"), numberText(current.current?.temp, "°"));
+  setText(button.querySelector(".rs-weather-condition"), condition.text);
+  setText(button.querySelector(".rs-weather-notice"), rainText(current));
 }
 function hourKst(iso) {
   const t = Date.parse(iso);
@@ -146,7 +158,7 @@ async function refresh(force = false) {
   const bar = barElement(); if (!bar || document.hidden) return;
   const point = gridPosition(); if (!point) { paint(); return; }
   const key = point.lat + "," + point.lon;
-  if (!force && pending) return;
+  if (pending) return; // At most one request; tab and GPS events cannot overlap it.
   if (!force && currentKey === key && current && Date.now() - loadedAt < REFRESH_MS) { paint(); return; }
   if (!force && currentKey !== key) {
     current = null;
@@ -156,7 +168,11 @@ async function refresh(force = false) {
     } catch {}
   }
   currentKey = key;
-  pending = fetch("/api/weather?lat=" + point.lat + "&lon=" + point.lon, {headers:{"Accept":"application/json"}})
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), 10000);
+  pending = fetch("/api/weather?lat=" + point.lat + "&lon=" + point.lon, {
+    headers: {"Accept":"application/json"}, signal: abort.signal,
+  })
     .then(async res => {
       if (!res.ok) throw Error("Weather unavailable");
       const data = await res.json();
@@ -167,7 +183,7 @@ async function refresh(force = false) {
       }
     }).catch(() => {
       if (currentKey === key && !current) loadedAt = Date.now() - REFRESH_MS + 5 * 60000;
-    }).finally(() => { pending = null; paint(); });
+    }).finally(() => { clearTimeout(timeout); pending = null; paint(); });
   paint();
   await pending;
 }
@@ -177,11 +193,13 @@ function initialize() {
   const observer = new MutationObserver(records => {
     // Ignore our own icon/text mutations. Only mount when React adds a map screen.
     const mountedMap = records.some(record => [...record.addedNodes].some(node =>
-      node.nodeType === 1 && (node.matches?.(".rs33-map-bar") || node.querySelector?.(".rs33-map-bar"))));
+      node.nodeType === 1 && (node.matches?.(".rs-weather-slot") || node.querySelector?.(".rs-weather-slot"))));
     if (mountedMap) { paint(); void refresh(); }
   });
   observer.observe(root,{childList:true,subtree:true});
-  window.addEventListener("riderspot:map", () => { paint(); void refresh(); });
+  // Rider-marker updates may arrive every few seconds. They cannot change the
+  // weather grid often enough to justify repaints or HTTP requests.
+  window.addEventListener("riderspot:map", () => { if (!document.hidden) paint(); });
   window.addEventListener("riderspot:screen", () => { paint(); void refresh(); });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) void refresh(); });
   setInterval(() => void refresh(),60_000);

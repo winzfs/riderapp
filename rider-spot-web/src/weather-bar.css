@@ -264,3 +264,6 @@
 @media(prefers-reduced-motion:reduce){
   .rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet{animation:none}
 }
+
+/* Stable React-owned mount target for the weather HUD; identical visible geometry. */
+.rs-weather-slot{display:block;width:100%;min-width:0}
