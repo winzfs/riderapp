@@ -68,8 +68,16 @@ export default {
         status: response.status, headers,
       });
     }
-    // Cloudflare normally serves matching ASSETS without invoking this code.
-    // Any other path, including old JS/CSS, API and OAuth, is delegated intact.
+    // Real Static Assets serves matches directly. The manually staged preview
+    // uses an asset service binding instead, so it must explicitly dispatch
+    // newly hashed paths here. Older hashed URLs fall back to the legacy Worker.
+    if ((request.method === "GET" || request.method === "HEAD")
+        && (/^\\/assets\\/rider-spot-[0-9a-f]{12}\\//.test(path)
+          || /^\\/mapdata\\//.test(path))) {
+      const candidate = await env.ASSETS.fetch(request);
+      if (candidate.status !== 404) return candidate;
+    }
+    // Other paths, including historic JS/CSS, API and OAuth, stay untouched.
     return env.LEGACY.fetch(backendRequest(request));
   },
 };
