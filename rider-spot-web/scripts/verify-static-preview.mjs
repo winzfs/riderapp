@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 const root = process.env.RIDER_PREVIEW_URL || "https://rider-spot-static-preview.jazzhjm.workers.dev";
 const rel=JSON.parse(readFileSync("prebuilt/release.json","utf8"));
-const report={at:new Date().toISOString(),origin:root,releaseHash:rel.hash,checks:[],passed:false};
+const report={at:new Date().toISOString(),origin:root,releaseHash:rel.hash,checks:[],warnings:[],passed:false};
 const expectedAssets=new Set(rel.files);
 function check(name,condition,details="") {
   report.checks.push({name,passed:!!condition,details:String(details).slice(0,250)});
@@ -43,6 +43,7 @@ try {
   ]);
   check("read-only API response status parity",oldAPI.status===newAPI.status,
     "original "+oldAPI.status+" candidate "+newAPI.status);
+  if(oldAPI.status >= 500)report.warnings.push("Production and preview industry-news API both returned HTTP "+oldAPI.status+"; routing parity is observed but API health is not established.");
   check("read-only API content type parity",
     (oldAPI.headers.get("content-type")||"").split(";")[0]===(newAPI.headers.get("content-type")||"").split(";")[0]);
   const manifest=await get("/mapdata/manifest.json");
