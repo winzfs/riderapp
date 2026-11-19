@@ -29,15 +29,19 @@
   // Persist across Activity/WebView recreation: sessionStorage alone is lost
   // when Android replaces the renderer, hiding the cause of repeated boots.
   const PERSISTENT_DIAG_KEY = "rs:page-lifecycle:persistent:v2";
+  const ephemeralStore = typeof sessionStorage === "undefined" ? null : sessionStorage;
+  const durableStore = typeof localStorage === "undefined" ? null : localStorage;
   function readLog(storage, key) {
     try {
+      if (!storage) return [];
       const value = JSON.parse(storage.getItem(key) || "[]");
       return Array.isArray(value) ? value : [];
     } catch { return []; }
   }
   function recordLifecycle(type, detail = "") {
     const entry = { at: Date.now(), type, detail: String(detail).slice(0, 60) };
-    for (const [storage, key] of [[sessionStorage, DIAG_KEY], [localStorage, PERSISTENT_DIAG_KEY]]) {
+    for (const [storage, key] of [[ephemeralStore, DIAG_KEY], [durableStore, PERSISTENT_DIAG_KEY]]) {
+      if (!storage) continue;
       try {
         const rows = readLog(storage, key);
         rows.push(entry);
@@ -46,8 +50,8 @@
     }
   }
   window.__rsReloadDiagnostics = () => ({
-    currentSession: readLog(sessionStorage, DIAG_KEY),
-    persistent: readLog(localStorage, PERSISTENT_DIAG_KEY),
+    currentSession: readLog(ephemeralStore, DIAG_KEY),
+    persistent: readLog(durableStore, PERSISTENT_DIAG_KEY),
   });
   const navigationType = window.performance?.getEntriesByType?.("navigation")?.[0]?.type;
   recordLifecycle("boot", navigationType || "unknown");
