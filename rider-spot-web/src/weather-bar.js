@@ -90,7 +90,7 @@ function paint() {
   }
   const condition = describe(current.current?.symbol);
   button.querySelector(".rs-weather-icon").innerHTML = svg(condition.kind);
-  button.querySelector(".rs-weather-temp").textContent = numberText(Number(current.current?.temp), "°");
+  button.querySelector(".rs-weather-temp").textContent = numberText(current.current?.temp, "°");
   button.querySelector(".rs-weather-condition").textContent = condition.text;
   button.querySelector(".rs-weather-notice").textContent = rainText(current);
 }
@@ -102,20 +102,20 @@ function openDetails() {
   if (!current) { void refresh(true); return; }
   const data = current;
   const root = document.createElement("div"); root.className = "rs-weather-details";
-  const head = document.createElement("header");
+  const head = document.createElement("div"); head.className = "rs-weather-head";
   const title = document.createElement("h2"); title.textContent = "운행 날씨";
   const time = document.createElement("small");
-  time.textContent = "예보 확인 · " + hourKst(data.current?.time) + " 기준";
+  time.textContent = hourKst(data.current?.time) + " 기준 · 시간별 예보";
   head.append(title, time); root.append(head);
   const overview = document.createElement("div"); overview.className = "rs-weather-overview";
   const kind = describe(data.current?.symbol);
-  overview.innerHTML = '<span class="rs-weather-large-icon">' + svg(kind.kind, 32) + '</span><strong>' + numberText(Number(data.current?.temp), "°") + '</strong><span>' + kind.text + '</span>';
+  overview.innerHTML = '<span class="rs-weather-large-icon">' + svg(kind.kind, 32) + '</span><strong>' + numberText(data.current?.temp, "°") + '</strong><span>' + kind.text + '</span>';
   root.append(overview);
   const stats = document.createElement("div"); stats.className = "rs-weather-stats";
   for (const [icon, label, value] of [
     ["drop","강수량", Number.isFinite(data.current?.precipMm) ? data.current.precipMm.toFixed(1) + " mm" : "—"],
     ["wind","풍속", Number.isFinite(data.current?.wind) ? data.current.wind.toFixed(1) + " m/s" : "—"],
-    ["drop","습도",numberText(Number(data.current?.humidity), "%")]
+    ["drop","습도",numberText(data.current?.humidity, "%")]
   ]) {
     const cell = document.createElement("div"); cell.className = "rs-weather-stat";
     cell.innerHTML = svg(icon,16);
@@ -131,15 +131,16 @@ function openDetails() {
     const label = document.createElement("span"); label.textContent = hourKst(row.time);
     const cond = describe(row.symbol);
     const pict = document.createElement("span"); pict.innerHTML = svg(cond.kind,19);
-    const temp = document.createElement("strong"); temp.textContent = numberText(Number(row.temp),"°");
+    const temp = document.createElement("strong"); temp.textContent = numberText(row.temp,"°");
     const rain = document.createElement("small"); rain.textContent = Number.isFinite(row.precipMm) ? row.precipMm.toFixed(1) + " mm" : "—";
     cell.append(label,pict,temp,rain); hours.append(cell);
   }
   root.append(hours);
   const foot = document.createElement("p"); foot.className = "rs-weather-credit";
-  foot.textContent = "예보 제공: Norwegian Meteorological Institute (MET Norway) · CC BY 4.0. 기상 상황은 실제와 다를 수 있습니다.";
+  foot.textContent = "제공: Norwegian Meteorological Institute (MET Norway) · CC BY 4.0 · 실제 기상과 다를 수 있음";
   root.append(foot);
   openMapSheet(root, "운행 날씨");
+  document.querySelector(".rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details)")?.classList.add("rs-weather-sheet");
 }
 async function refresh(force = false) {
   const bar = barElement(); if (!bar || document.hidden) return;
