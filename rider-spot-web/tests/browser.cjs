@@ -336,8 +336,9 @@ async function gesture(cdp, page, label, dir) {
   await page.waitForTimeout(275);
 }
 async function facilitySheetTest() {
-  const { context, page, errors, navs } = await open({ account: true });
+  const { context, page, errors } = await open({ account: true });
   try {
+    const documentStartedAt = await page.evaluate(() => performance.timeOrigin);
     let saved;
     await context.route("**/rest/v1/rider_places*", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
@@ -377,7 +378,7 @@ async function facilitySheetTest() {
     await page.evaluate(() => window.__rsHandleBack());
     await sheet.waitFor({ state: "hidden" });
     assert.equal(await page.evaluate(() => window.__rsNavigation.tab), "nearby");
-    assert.equal(navs(), 1);
+    assert.equal(await page.evaluate(() => performance.timeOrigin), documentStartedAt);
     assert.deepEqual(errors, []);
     console.log("PASS facility sheet: map, position selection, draft, save and Android Back");
   } finally {
