@@ -1,0 +1,37 @@
+name: Rider Spot native WebView weather cache diagnosis
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-weather-native-diagnose.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+      - name: Inspect real shipped Android WebView and app start URL
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-weather-native
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-weather-native
+          echo "=== MainActivity relevant lines ==="
+          grep -RnE 'loadUrl|ROOT_URL|BASE_URL|workers.dev|setCacheMode|LOAD_CACHE|setDomStorageEnabled|ServiceWorker|shouldInterceptRequest|clearCache|onPageFinished|onResume' /tmp/rs-weather-native/app/src/main/java /tmp/rs-weather-native/app/src/main/assets 2>/dev/null | head -90 || true
+          echo "=== Android Asset file list ==="
+          find /tmp/rs-weather-native/app/src/main/assets -maxdepth 2 -type f 2>/dev/null | head -50 || true
+          echo "=== WebView setup excerpt ==="
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('/tmp/rs-weather-native/app/src/main/java')
+          for f in root.rglob('*MainActivity*'):
+              if f.suffix not in ('.java','.kt'):continue
+              s=f.read_text(errors='replace').splitlines()
+              for i,l in enumerate(s):
+                  if any(x in l for x in ('loadUrl','setCacheMode','setWebViewClient','setJavaScriptEnabled','onResume','WebView = new WebView','webView = new WebView')):
+                      a=max(0,i-5);b=min(len(s),i+9)
+                      print(str(f),i+1,':','\n'.join(f'{j+1}: {s[j]}' for j in range(a,b)))
+          PY
