@@ -36,6 +36,15 @@ try {
   check("previous release immutable assets still accessible",previousCss.length>1000);
   const legacy=await get("/rider-spot-shell-v40.js");
   check("legacy static route kept",legacy.includes("rs-native-shell")&&legacy.length>100,"size "+legacy.length);
+  // Read-only parity test for one existing API. No trips, riders or records are mutated.
+  const [oldAPI,newAPI]=await Promise.all([
+    fetch("https://rider-spot.jazzhjm.workers.dev/api/industry-news",{signal:AbortSignal.timeout(35000)}),
+    fetch(root+"/api/industry-news",{signal:AbortSignal.timeout(35000)})
+  ]);
+  check("read-only API response status parity",oldAPI.status===newAPI.status,
+    "original "+oldAPI.status+" candidate "+newAPI.status);
+  check("read-only API content type parity",
+    (oldAPI.headers.get("content-type")||"").split(";")[0]===(newAPI.headers.get("content-type")||"").split(";")[0]);
   const manifest=await get("/mapdata/manifest.json");
   const json=JSON.parse(manifest);
   check("existing public map data loaded",!!json.counts);
