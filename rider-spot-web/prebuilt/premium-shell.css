@@ -463,3 +463,161 @@ dialog.rs-app-confirm::backdrop{
 @media(prefers-reduced-motion:reduce){
   .rs-app-confirm-inner,.app .page button{transition:none}
 }
+
+
+/* Rider Spot / v219 visual refinement.
+ * Scoped presentation only. No lifecycle, navigation, chart-data or map mutations.
+ * Keep this block last so old finance selected outlines cannot leak through. */
+.app .finance-page .fin-chart-point,
+.app .finance-page .fin-chart-point:focus,
+.app .finance-page .fin-chart-point.selected{
+  outline:none;
+  box-shadow:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.app .finance-page .fin-chart-point .fin-chart-track,
+.app .finance-page .fin-chart-point.selected .fin-chart-track,
+.app .finance-page .fin-chart-point:focus .fin-chart-track{
+  outline:0!important;
+  outline-offset:0;
+  box-shadow:none;
+  border:0;
+  background:#F3F6F4;
+  transition:background-color 180ms ease;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-track{
+  background:#EAF5F1;
+}
+.app .finance-page .fin-chart-point:focus-visible{
+  outline:2px solid #087F7D;
+  outline-offset:2px;
+  border-radius:9px;
+}
+.app .finance-page .fin-chart-point.selected .fin-svg-chart{
+  color:#FF8B43;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-date{
+  color:#087F7D;
+  font-weight:760;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-value{
+  color:#305854;
+  font-weight:730;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-today{
+  background:#FF8B43;
+}
+.app .finance-page .fin-chart-detail{
+  background:#F5F9F7;
+  border:1px solid #E3ECE8;
+  border-radius:12px;
+  padding:12px 13px;
+  gap:6px 12px;
+  font-variant-numeric:tabular-nums;
+}
+.app .finance-page .fin-chart-detail strong{
+  color:#173D3C;
+  font-weight:760;
+}
+.app .finance-page .fin-chart-card{overflow:hidden}
+.app .finance-page .fin-chart{min-width:0}
+.app .finance-page .fin-chart-col{min-width:0;padding:3px 0}
+.app .finance-page .fin-chart-date{font-variant-numeric:tabular-nums}
+
+/* Rhythm, geometry and hierarchy shared across existing screens. */
+.app .finance-page .fin-card,
+.app .bike-page .bike-vehicle,
+.app .rs33-course-shell,
+.app .rs-game-recap,
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  border-radius:18px;
+  border-color:#E1EBE8;
+  box-shadow:0 2px 8px rgba(19,62,58,.025);
+}
+.app .finance-page .fin-card>header,
+.app .bike-page .bike-section-head,
+.app .rs33-list-title{
+  align-items:center;
+}
+.app .finance-page .fin-quick>button,
+.app .bike-page .bike-actions button,
+.app .bike-page .bike-vehicle-actions button,
+.app .rc-community .rc-head .rc-write{
+  border-radius:12px;
+  min-height:48px;
+}
+.app .finance-page .fin-period-btn{
+  border-radius:11px;
+  min-height:42px;
+  font-weight:690;
+}
+.app .finance-page .fin-period-btn.selected{
+  background:#E3F5F0;
+  border-color:#BBDCD5;
+  box-shadow:none;
+}
+.app .finance-page .fin-subnav{
+  background:#EAF2F0;
+  border-color:#E0EAE7;
+  border-radius:13px;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected{
+  box-shadow:0 1px 3px rgba(20,63,55,.05);
+}
+.app .finance-page .fin-goal-track,
+.app .finance-page .fin-bar-track{overflow:hidden;border-radius:999px}
+.app .finance-page .fin-insights{
+  border-radius:15px;
+  border-color:#E2ECE9;
+}
+.app .bike-page .bike-consumables .bike-tile{
+  border-radius:15px;
+  min-height:139px;
+  padding:13px 5px 12px;
+  box-shadow:0 2px 8px rgba(19,62,58,.025);
+}
+.app .bike-page .bike-tile-icon{
+  width:56px;
+  height:52px;
+  margin-bottom:6px;
+}
+.app .bike-page .bike-tile-status{
+  line-height:1.35;
+  padding:5px 7px;
+  font-variant-numeric:tabular-nums;
+}
+.app .bike-page .bike-history-row{
+  min-height:66px;
+  border-bottom-color:#E4EDEA;
+}
+.app .rc-community .rc-search{background:#FFF}
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  padding:17px 16px 15px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid h2{
+  font-size:16px;
+  line-height:1.4;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid p{
+  line-height:1.55;
+}
+.app .rs33-week-head,
+.app .rs33-week{border-color:#E1EBE8}
+.app .rs33-week button[aria-pressed=true]{
+  border-radius:12px;
+  box-shadow:none;
+}
+.app .rs59-course-tools button,
+.app .rs33-course-controls button{
+  border-radius:11px;
+}
+.app .bottom-nav button{
+  -webkit-tap-highlight-color:transparent;
+}
+@media(max-width:380px){
+  .app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{padding:14px 13px 12px}
+  .app .bike-page .bike-consumables .bike-tile{padding:11px 3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .app .finance-page .fin-chart-point .fin-chart-track{transition:none}
+}
