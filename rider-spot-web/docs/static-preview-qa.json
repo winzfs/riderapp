@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-19T22:08:38.255Z",
+  "at": "2026-11-19T22:09:21.148Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
   "releaseHash": "16c1eecf6bac",
   "checks": [
@@ -95,10 +95,24 @@
     },
     {
       "name": "legacy static route kept",
-      "passed": false,
+      "passed": true,
       "details": "size 176"
+    },
+    {
+      "name": "HTTP 200 /mapdata/manifest.json",
+      "passed": true,
+      "details": "HTTP 200 {\"schema\":1,\"coverage\":\"광주광역시\",\"bbox\":[126.68,34.98,127.13,35.36],\"size\":0.04,\"tiles\":[\"t3167-877\",\"t3167-878\",\"t3167-879\",\"t3167-880\",\"t3168-877\",\"t3168-878\",\"t3168-879\",\"t3168-88"
+    },
+    {
+      "name": "existing public map data loaded",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "built manifest keeps CSS",
+      "passed": true,
+      "details": ""
     }
   ],
-  "passed": false,
-  "error": "AssertionError [ERR_ASSERTION]: legacy static route kept: size 176\n    at check (file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:11:10)\n    at file:///home/runner/work/riderapp/riderapp/rider-spot-web/scripts/verify-static-preview.mjs:38:3\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)"
+  "passed": true
 }
