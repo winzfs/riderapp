@@ -525,7 +525,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       "finance entry recovers unfinished draft");
     await shot("finance");
     await financeDialog.getByRole("button",{name:"닫기"}).click();
-    const discard=page.getByRole("dialog",{name:"확인"});
+    // Reuse the same confirmation locator for the second draft dismissal.
     await discard.waitFor();
     await discard.getByRole("button",{name:"버리고 닫기"}).click();
     await financeDialog.waitFor({state:"hidden"});
