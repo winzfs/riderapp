@@ -4,7 +4,11 @@ const MAX_ZOOM = 19;
 function readCamera(key) {
   // A denied or corrupted sessionStorage value must not mask a valid
   // persistent camera after a WebView renderer restart.
-  for (const storage of [window.sessionStorage, window.localStorage]) {
+  for (const storage of [
+    typeof sessionStorage === "undefined" ? null : sessionStorage,
+    typeof localStorage === "undefined" ? null : localStorage,
+  ]) {
+    if (!storage) continue;
     try {
       const saved = JSON.parse(storage.getItem(key) || "null");
       if (
@@ -60,7 +64,11 @@ export function createMapController(L, node, cameraId, fallback) {
     if (!readyToSave) return;
     const value = JSON.stringify({ lat: center.lat, lng: center.lng, zoom });
     // One unavailable storage backend must never disable the other.
-    for (const storage of [window.sessionStorage, window.localStorage]) {
+    for (const storage of [
+    typeof sessionStorage === "undefined" ? null : sessionStorage,
+    typeof localStorage === "undefined" ? null : localStorage,
+  ]) {
+    if (!storage) continue;
       try { storage.setItem(key, value); }
       catch { /* Camera persistence is optional. */ }
     }
@@ -149,7 +157,7 @@ export function createMapController(L, node, cameraId, fallback) {
     initialLocation(position) {
       // A saved camera is an intentional view: GPS updates must never override it.
       // Only the initial unsaved map may center on the first valid GPS fix.
-      if (!isCourse && !cameraChosen && !window.__rsStartupMainCameraSet && !userInteracted && !touch) {
+      if (!isCourse && !window.__rsStartupMainCameraSet && !userInteracted && !touch) {
         moveTo(position, 16);
       }
     },
