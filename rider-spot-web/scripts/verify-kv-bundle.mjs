@@ -20,7 +20,7 @@ async function verify(path) {
     if(path==="/index.html") {
       const html=actual.toString("utf8");
       assert.ok(html.includes("rs-recovery-guard-v217"),"missing native recovery guard");
-      actual=Buffer.from(html.replace(/<script id="rs-recovery-guard-v217">[\\s\\S]*?<\\/script>/,""),"utf8");
+      actual=Buffer.from(html.replace(/<script id="rs-recovery-guard-v217">[\s\S]*?<\/script>/,""),"utf8");
     }
     const expected=readFileSync(expectedFile);
     assert.equal(digest(actual),digest(expected),
