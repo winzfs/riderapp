@@ -1,0 +1,571 @@
+/* Rider Spot trusted-origin native integration. Injected at document start.
+ * Only the app's own first-party page gets the WebMessage bridge.
+ * Location recording is opt-in; native samples never leave the device directly.
+ */
+(() => {
+  'use strict';
+  if (window.__rsNativeInstalled || !window.RiderSpotHost) return;
+  window.__rsNativeInstalled = true;
+  const host = window.RiderSpotHost;
+  let nextRequestId = 1;
+  const pending = new Map();
+  const watchers = new Map();
+  let watchId = 100000;
+  let currentApi = null;
+  let draining = false;
+  let lastLiveDrainAt = 0;
+  let lastServiceRecoveryAt = 0;
+  let lastGpsWarningAt = 0;
+  let reconciling = false;
+  const finalizingTripIds = new Set();
+  let stopScanAt = 0;
+  const stopPointCache = { id:null, seq:0, points:[] };
+
+  host.onmessage = event => {
+    try {
+      const answer = JSON.parse(event.data);
+      const item = pending.get(answer.id);
+      if (!item) return;
+      pending.delete(answer.id);
+      if (answer.ok) item.resolve(answer.data);
+      else item.reject(new Error(answer.error || 'GPS 요청 실패'));
+    } catch (err) { console.warn('[RiderSpotNative] reply error', err); }
+  };
+
+  function send(action, extra = {}) {
+    return new Promise((resolve, reject) => {
+      const id = nextRequestId++;
+      pending.set(id, { resolve, reject });
+      try { host.postMessage(JSON.stringify({ id, action, ...extra })); }
+      catch (error) { pending.delete(id); reject(error); }
+    });
+  }
+
+  // Supabase's web app normally redirects to Google, then returns to Chrome.
+  // Android WebView has a separate cookie/storage profile, so the account never
+  // reaches the APK. Use the external browser and a one-time native app callback.
+  function patchOAuth(client) {
+    if (!client?.auth || typeof client.auth.signInWithOAuth !== 'function' || client.auth.__rsNativeOAuthPatched) return;
+    const auth = client.auth;
+    const original = auth.signInWithOAuth.bind(auth);
+    auth.signInWithOAuth = async (options) => {
+      if (options?.provider !== 'google') return original(options);
+      const request = {...options, options:{
+        ...(options.options || {}),
+        redirectTo: location.origin + '/', // already an allowed Supabase redirect
+        skipBrowserRedirect:true
+      }};
+      const result = await original(request);
+      if (result?.error) return result;
+      if (!result?.data?.url) return {data:null,error:new Error('구글 인증 주소를 받지 못했어요')};
+      try { await send('oauth-open', {url:result.data.url}); }
+      catch (error) { return {data:null,error}; }
+      return result;
+    };
+    Object.defineProperty(auth, '__rsNativeOAuthPatched', {value:true});
+  }
+
+  try {
+    let supabaseClient = window.__rsClient || null;
+    Object.defineProperty(window, '__rsClient', {
+      configurable:true,
+      get:() => supabaseClient,
+      set:client => { supabaseClient = client; patchOAuth(client); }
+    });
+    if (supabaseClient) patchOAuth(supabaseClient);
+  } catch (err) { console.warn('[RiderSpotNative] OAuth bridge unavailable', err); }
+
+  function notify(text) {
+    if (!document.body) { console.warn('[RiderSpotNative]', text); return; }
+    let bar = document.getElementById('rs-native-alert');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'rs-native-alert';
+      Object.assign(bar.style, {
+        position:'fixed', top:'max(12px, env(safe-area-inset-top))', left:'12px', right:'12px',
+        zIndex:'2147483600', padding:'12px 14px', background:'#153c33', color:'#fff',
+        borderRadius:'12px', fontSize:'13px', lineHeight:'1.5', boxShadow:'0 6px 24px #0003'
+      });
+      document.body.appendChild(bar);
+    }
+    bar.textContent = text;
+    clearTimeout(bar.__rsTimer);
+    bar.__rsTimer = setTimeout(() => bar.remove(), 6500);
+  }
+
+  // Use Android LocationManager for foreground location updates. Unlike the
+  // browser API, the native bridge uses THIS application's location permission.
+  window.__rsNativePosition = point => {
+    if (!point || !Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return;
+    // During a trip, ONLY SQLite-accepted samples can drive the route UI.
+    // The foreground Activity has a separate (often noisier) location stream;
+    // writing that stream directly into React created map/SQLite mismatches.
+    const active = window.__rsRideApi;
+    if (active?.trip?.id && !active.paused) {
+      if (Date.now()-lastLiveDrainAt > 2000) {
+        lastLiveDrainAt=Date.now();
+        void drain(active.trip.id);
+      }
+      return;
+    }
+    for (const listener of watchers.values()) {
+      try { listener.success(geoPosition(point)); }
+      catch (err) { console.warn('[RiderSpotNative] watch listener', err); }
+    }
+  };
+  window.__rsNativePermissionGranted = () => {
+    if (watchers.size) send('geo-watch').catch(err => notify(err.message));
+  };
+
+  const actualGeo = navigator.geolocation;
+  if (actualGeo) {
+    const originalWatch = actualGeo.watchPosition.bind(actualGeo);
+    const originalClear = actualGeo.clearWatch.bind(actualGeo);
+    const originalCurrent = actualGeo.getCurrentPosition.bind(actualGeo);
+    const proxy = {
+      watchPosition(success, failure, options = {}) {
+        if (typeof success !== 'function') throw new TypeError('GPS success callback required');
+        const id = watchId++;
+        watchers.set(id, {success, failure});
+        if (watchers.size === 1) send('geo-watch').catch(err => {
+          if (typeof failure === 'function') failure({code:2, message:err.message});
+          notify('라이더스팟 위치 설정: ' + err.message);
+        });
+        return id;
+      },
+      clearWatch(id) {
+        if (!watchers.has(id)) { originalClear(id); return; }
+        watchers.delete(id);
+        if (!watchers.size) send('geo-unwatch').catch(err => console.warn(err));
+      },
+      getCurrentPosition(success, failure, options = {}) {
+        if (typeof success !== 'function') throw new TypeError('GPS success callback required');
+        const maxAge = Math.max(0, Number(options.maximumAge) || 0);
+        send('geo-current', { maxAge }).then(p => success(geoPosition(p))).catch(err => {
+          if (typeof failure === 'function') failure({code:2, message:err.message});
+          notify('라이더스팟 GPS: ' + err.message);
+        });
+      }
+    };
+    try { Object.defineProperty(navigator, 'geolocation', { configurable: true, get: () => proxy }); }
+    catch (err) {
+      console.warn('[RiderSpotNative] geolocation proxy unavailable', err);
+      // Older WebViews continue using the correctly granted WebChromeClient route.
+    }
+  }
+
+  async function activeState() {
+    try { return await send('state'); } catch (err) { return null; }
+  }
+
+  function geoPosition(p) {
+    return { coords: {
+      latitude:p.lat, longitude:p.lng, accuracy:p.accuracy,
+      heading:p.heading, speed:p.speed, altitude:null, altitudeAccuracy:null
+    }, timestamp:p.t };
+  }
+
+  // An automatic stop must be observed, not inferred from an absent GPS fix.
+  // Works from SQLite samples, including those collected while the screen was off.
+  const STOP_SOURCE = 'riderspot-native-stop-v1';
+  const STOP_MIN_MS = 60_000;
+  const STOP_RADIUS_METERS = 30;
+  const STOP_MAX_GAP_MS = 35_000;
+  const STOP_MAX_ACCURACY_METERS = 40;
+  const STOP_MAX_MOVING_SPEED_MS = 2.5;
+  function distanceMeters(a, b) {
+    const rad = Math.PI / 180;
+    const dLat = (b.lat-a.lat)*rad, dLng=(b.lng-a.lng)*rad;
+    const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+    return 6371000 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  function durationText(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    return minutes >= 60
+      ? `${Math.floor(minutes/60)}시간 ${minutes%60 ? (minutes%60)+'분' : ''}`.trim()
+      : `${minutes}분${seconds%60 ? ' '+(seconds%60)+'초' : ''}`;
+  }
+  function detectStops(source) {
+    const events = [];
+    let candidate = null;
+    const flush = () => {
+      if (!candidate || candidate.count < 4 || candidate.last.t - candidate.first.t < STOP_MIN_MS) return;
+      const start = candidate.first.t, end = candidate.last.t;
+      const seconds = Math.floor((end-start)/1000);
+      events.push({
+        source:STOP_SOURCE, id:'auto-stop:'+start,
+        type:'정차 · '+durationText(seconds),
+        at:new Date(start).toISOString(), end_at:new Date(end).toISOString(),
+        duration_seconds:seconds,
+        lat:candidate.sumLat/candidate.count, lng:candidate.sumLng/candidate.count
+      });
+    };
+    for (const raw of (Array.isArray(source) ? source : [])) {
+      const p={
+        t:Number(raw?.t), lat:Number(raw?.lat), lng:Number(raw?.lng),
+        accuracy:Number(raw?.accuracy), speed:Number(raw?.speed ?? 0)
+      };
+      if (!Number.isFinite(p.t) || p.t <= 0 || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)
+          || Math.abs(p.lat) > 90 || Math.abs(p.lng) > 180) continue;
+      if (!Number.isFinite(p.accuracy) || p.accuracy <= 0 || p.accuracy > STOP_MAX_ACCURACY_METERS) continue;
+      if (p.speed >= STOP_MAX_MOVING_SPEED_MS) { flush(); candidate=null; continue; }
+      if (!candidate) {
+        candidate = { first:p, last:p, anchor:p, count:1, sumLat:p.lat, sumLng:p.lng };
+        continue;
+      }
+      const gap = p.t-candidate.last.t;
+      if (gap <= 0) continue; // Same GPS fix delivered twice from GPS and Fused providers.
+      if (gap > STOP_MAX_GAP_MS || distanceMeters(candidate.anchor,p) > STOP_RADIUS_METERS) {
+        flush();
+        candidate = { first:p, last:p, anchor:p, count:1, sumLat:p.lat, sumLng:p.lng };
+        continue;
+      }
+      candidate.last = p;
+      candidate.count++;
+      candidate.sumLat += p.lat;
+      candidate.sumLng += p.lng;
+    }
+    flush();
+    return events;
+  }
+  function mergeStopEvents(existing, stops) {
+    const keep = (Array.isArray(existing)?existing:[]).filter(e => e?.source !== STOP_SOURCE);
+    // Keep the manually entered events and stable chronological ordering.
+    return [...keep, ...stops].sort((a,b) => (Date.parse(a?.at)||0)-(Date.parse(b?.at)||0));
+  }
+  // Used by integration tests; the detector only processes device-local samples.
+  window.__rsNativeDetectStops = detectStops;
+  window.__rsNativeStopMerge = mergeStopEvents;
+
+  async function syncActiveStops(id) {
+    const api = window.__rsRideApi;
+    if (!api?.trip || api.trip.id !== id || Date.now()-stopScanAt < 15_000) return;
+    stopScanAt = Date.now();
+    if (stopPointCache.id !== id) {
+      stopPointCache.id = id;
+      stopPointCache.seq = 0;
+      stopPointCache.points = [];
+    }
+    for (let page=0; page<90; page++) {
+      const batch=(await send('points',{tripId:id,afterSeq:stopPointCache.seq,limit:180})).points || [];
+      if (!batch.length) break;
+      for (const p of batch) {
+        if (Number(p.seq) <= stopPointCache.seq) continue;
+        stopPointCache.points.push(p);
+        stopPointCache.seq = Number(p.seq);
+      }
+      if (batch.length < 180) break;
+    }
+    const latest=window.__rsRideApi;
+    if (!latest?.trip || latest.trip.id !== id) return; // Finish may have happened during SQLite reads.
+    const mergedEvents=mergeStopEvents(latest.trip.events,detectStops(stopPointCache.points));
+    if (JSON.stringify(mergedEvents) === JSON.stringify(latest.trip.events || [])) return;
+    // This is the same React trip object used by the ride hook's ref.
+    // Persist locally before requesting a UI refresh; do not upload in-flight data.
+    latest.trip.events = mergedEvents;
+    const userId=await currentUserId();
+    if (window.__rsRideApi?.trip?.id !== id) return;
+    localStorage.setItem('rs:active:'+userId,JSON.stringify(window.__rsRideApi.trip));
+    window.dispatchEvent(new Event('riderspot:native-events'));
+  }
+
+  function getSeq(id) {
+    return Number(sessionStorage.getItem('rs-native-seq:' + id)) || 0;
+  }
+  function setSeq(id, seq) {
+    sessionStorage.setItem('rs-native-seq:' + id, String(seq));
+  }
+
+  async function drain(id) {
+    if (!id || draining || watchers.size === 0) return;
+    draining = true;
+    try {
+      let seq = getSeq(id);
+      for (let page = 0; page < 90; page++) {
+        const response = await send('points', { tripId:id, afterSeq:seq, limit:180 });
+        const points = Array.isArray(response.points) ? response.points : [];
+        if (!points.length) break;
+        for (const point of points) {
+          // Never advance the replay cursor if no active React recording is
+          // available. On the next resume these samples must still be replayed.
+          if (window.__rsRideApi?.trip?.id !== id || window.__rsRideApi?.paused) break;
+          for (const listener of watchers.values()) {
+            try { listener.success(geoPosition(point)); } catch (err) { console.error(err); }
+          }
+          seq = Math.max(seq, point.seq);
+        }
+        setSeq(id, seq);
+        if (points.length && seq < points[points.length-1].seq) break;
+        if (points.length < 180) break;
+        // Yield to React before replaying the next batch.
+        await new Promise(resolve => setTimeout(resolve, 16));
+      }
+    } catch (err) { console.warn('[RiderSpotNative] deferred replay', err); }
+    finally { draining = false; }
+  }
+
+  function wrap(api) {
+    if (!api || api.__rsWrapped) return api;
+    Object.defineProperty(api, '__rsWrapped', {value:true});
+    const start = api.startTrip;
+    const finish = api.finish;
+    const togglePause = api.togglePause;
+
+    api.startTrip = async (...args) => {
+      const answer = await start(...args);
+      // React rerenders with trip.id after a successful fix. Never record on failure.
+      for (let n = 0; n < 12; n++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const trip = window.__rsRideApi?.trip;
+        if (trip && !trip.ended_at) {
+          try { await send('start', { tripId:trip.id }); }
+          catch (err) { notify('백그라운드 GPS 시작 실패 · ' + err.message); }
+          break;
+        }
+      }
+      return answer;
+    };
+
+    api.togglePause = async (...args) => {
+      const trip = api.trip;
+      const willPause = !api.paused;
+      // Flush the last fixes BEFORE the React app enters paused mode.
+      if (trip && willPause) await drain(trip.id);
+      const result = togglePause(...args);
+      if (trip) await send('pause', { tripId:trip.id, paused:willPause })
+        .catch(err => notify('GPS 일시정지 설정 오류 · ' + err.message));
+      return result;
+    };
+
+    api.finish = async (...args) => {
+      const trip = api.trip;
+      if (trip?.id && finalizingTripIds.has(trip.id)) return;
+      if (trip?.id) finalizingTripIds.add(trip.id);
+      try {
+        if (trip) {
+          // Stop the native service BEFORE network I/O. It must never upload
+          // coordinates while an active recording is still in progress.
+          await drain(trip.id);
+          try { await send('stop', { tripId:trip.id }); }
+          catch (err) { notify('GPS 기록 종료 처리 오류 · ' + err.message); }
+        }
+        const result = await finish(...args);
+        if (trip?.id) {
+          try { await finalizeNativeTrip(trip.id); }
+          catch (err) { notify('원본 GPS 병합 대기 · ' + (err.message || err)); }
+        }
+        return result;
+      } finally {
+        if (trip?.id) finalizingTripIds.delete(trip.id);
+      }
+    };
+    return api;
+  }
+
+  // Existing app writes __rsRideApi once on every React render.
+  try {
+    let lastApi = window.__rsRideApi || null;
+    Object.defineProperty(window, '__rsRideApi', {
+      configurable:true,
+      get:() => lastApi,
+      set:value => { lastApi = wrap(value); currentApi = lastApi; }
+    });
+    if (lastApi) { currentApi = lastApi = wrap(lastApi); }
+  } catch (err) { console.warn('[RiderSpotNative] API wrapper failed', err); }
+
+  // A separate first-party localStorage active trip survives WebView restarts.
+  // The page normally restores it paused. The native state tells us whether
+  // background capture was still running when the WebView was recreated.
+  async function reconcile() {
+    if (reconciling) return;
+    reconciling = true;
+    try {
+      const state = await activeState();
+      const api = window.__rsRideApi;
+      if (!state || !api) return;
+      if (state.activeId && api.trip?.id === state.activeId) {
+        // If Android reclaimed the FGS, try restarting ONLY while app visible.
+        // Never start it from a hidden WebView (Android 14+ restriction).
+        if (state.gpsServiceActive === false && !state.paused && !document.hidden
+            && Date.now()-lastServiceRecoveryAt > 20000) {
+          lastServiceRecoveryAt=Date.now();
+          send('ensure-tracking',{tripId:state.activeId}).catch(err =>
+            notify('GPS 재연결이 필요해요. 라이더스팟 위치 권한을 확인해 주세요.'));
+        }
+        if (state.gpsLastSavedAt && Date.now()-state.gpsLastSavedAt>45000 && !state.paused
+            && Date.now()-lastGpsWarningAt>60000) {
+          lastGpsWarningAt=Date.now();
+          notify('GPS 좌표 저장이 지연되고 있어요. 알림창의 GPS 상태와 위치 설정을 확인해 주세요.');
+        }
+        if (api.paused && !state.paused) {
+          // React restored an active record in paused mode after reload.
+          api.togglePause();
+        } else if (!api.paused && state.paused) {
+          // Respect the service's paused state.
+          api.togglePause();
+        }
+        if (!window.__rsRideApi?.paused) await drain(state.activeId);
+        await syncActiveStops(state.activeId).catch(error => console.warn('[RiderSpotNative] stop scan',error));
+      } else if (state.activeId && !api.trip) {
+        // Recovery without creating a second trip; see recoverMissingTrip().
+        await recoverMissingTrip(state);
+      } else if (!state.activeId && state.lastStoppedId) {
+        const id = state.lastStoppedId;
+        if (api.trip?.id === id && !finalizingTripIds.has(id)) {
+          // The notification's "운행 종료" button already stopped Android
+          // capture. Finish the browser record now, then merge the complete
+          // SQLite route and upload it using this signed-in WebView session.
+          await api.finish();
+        } else if (!api.trip && !finalizingTripIds.has(id)) {
+          // WebView was destroyed while the user tapped the action.
+          // Recover the local unfinished record, then finish it.
+          await recoverStoppedTrip(id);
+        }
+      }
+    } finally { reconciling = false; }
+  }
+
+  async function loadAll(id) {
+    let seq = 0;
+    const points = [];
+    for (let page = 0; page < 90; page++) {
+      const batch = (await send('points', {tripId:id,afterSeq:seq,limit:180})).points || [];
+      if (!batch.length) break;
+      for (const p of batch) { points.push(p); seq = p.seq; }
+      if (batch.length < 180) break;
+    }
+    return points;
+  }
+
+  function mergeTrip(trip, source) {
+    const map = new Map();
+    for (const p of trip.points || []) if (p?.t) map.set(String(p.t), p);
+    for (const p of source) map.set(String(p.t), {
+      lat:p.lat, lng:p.lng, accuracy:p.accuracy, heading:p.heading, speed:p.speed, t:p.t
+    });
+    const points = [...map.values()].sort((a,b) => a.t - b.t).slice(0,14999);
+    // Missing satellite fixes cannot be fabricated. Clearly mark long real
+    // gaps as discontinuities instead of drawing a false straight road line.
+    for (let i = 1; i < points.length; i++) {
+      // A real satellite blackout is not a journey on a straight line.
+      if (points[i].t - points[i-1].t > 45_000) points[i].break = true;
+    }
+    let meters = 0;
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i-1], b = points[i];
+      const rad = Math.PI/180, dLat=(b.lat-a.lat)*rad, dLng=(b.lng-a.lng)*rad;
+      const h=Math.sin(dLat/2)**2 + Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+      const dist=6371000*2*Math.asin(Math.min(1,Math.sqrt(h)));
+      if (!b.break && dist > 4 && dist < 2500 && (b.t-a.t)>0) meters += dist;
+    }
+    const stops = detectStops(source);
+    const events = mergeStopEvents(trip.events, stops);
+    return {...trip,points,events,distance_km:Math.round(meters/10)/100};
+  }
+
+  // Always merge the complete SQLite capture into the FINISHED browser record.
+  // Replay through watchPosition alone is not sufficient: the React filter may
+  // drop delayed/duplicate samples, or the WebView can be suspended in sleep.
+  async function finalizeNativeTrip(tripId) {
+    const nativePoints = await loadAll(tripId);
+    if (!nativePoints.length) return;
+    const userId = await currentUserId();
+    const historyKey = 'trips:' + userId;
+    let records = [];
+    try { records = JSON.parse(localStorage.getItem(historyKey) || '[]'); }
+    catch { records = []; }
+    if (!Array.isArray(records)) records = [];
+    const existing = records.find(record => record?.id === tripId);
+    if (!existing) {
+      // Leave SQLite untouched: never construct a misleading successful trip
+      // when the web app itself did not finish its record.
+      throw new Error('기기의 완료 기록을 찾지 못했어요. 기록은 GPS 저장소에 남아 있습니다.');
+    }
+    const merged = mergeTrip(existing, nativePoints);
+    const next = records.map(record => record?.id === tripId ? merged : record);
+    // Persist locally before any network call; this is the recovery point.
+    localStorage.setItem(historyKey, JSON.stringify(next));
+    // The original React history array can stay mounted after the final write.
+    // Patch its entry as well; the web view listens for the event to re-render.
+    const onScreen = window.__rsRideApi?.history?.find(r => r?.id === tripId);
+    if (onScreen) Object.assign(onScreen, merged);
+    window.dispatchEvent(new Event('riderspot:native-events'));
+    if (userId === 'guest') return;
+    const pendingKey = 'rs:pending:trips:' + userId;
+    const pendingIds = () => {
+      try { const arr = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+        return Array.isArray(arr) ? arr.filter(id => typeof id === 'string') : []; }
+      catch { return []; }
+    };
+    const markPending = () => localStorage.setItem(
+      pendingKey, JSON.stringify([...new Set([...pendingIds(), tripId])])
+    );
+    // Queue BEFORE network: if the app dies, the existing trip-sync worker
+    // will retry this exact merged record on a future visit.
+    markPending();
+    if (!window.__rsClient) {
+      window.dispatchEvent(new Event('riderspot:trip-pending'));
+      return;
+    }
+    try {
+      const {error} = await window.__rsClient.from('trips').upsert({...merged, user_id:userId});
+      if (error) throw error;
+      localStorage.setItem(pendingKey, JSON.stringify(pendingIds().filter(id => id !== tripId)));
+    } catch (err) {
+      window.dispatchEvent(new Event('riderspot:trip-pending'));
+      notify('운행 경로를 기기에 보관했어요. 인터넷 연결 시 서버에 재전송합니다.');
+    }
+  }
+
+  async function currentUserId() {
+    try { return (await window.__rsClient?.auth.getUser())?.data?.user?.id || 'guest'; }
+    catch { return 'guest'; }
+  }
+
+  async function recoverMissingTrip(state) {
+    if (!document.body || !window.__rsClient) return;
+    const id = state.activeId;
+    const userId = await currentUserId();
+    let existing;
+    try { existing = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
+    catch { existing = null; }
+    const points = await loadAll(id);
+    if (existing?.id !== id && !points.length) return;
+    const record = existing?.id === id ? existing : {
+      id, user_id:userId === 'guest' ? null : userId,
+      started_at:new Date(state.startedAt || points[0].t).toISOString(),
+      ended_at:null, points:[], events:[{type:'네이티브 GPS 운행 복구',at:new Date().toISOString()}],
+      distance_km:0
+    };
+    const latest = await activeState();
+    if (latest?.activeId !== id) return;
+    restoreInPage(mergeTrip(record, points));
+  }
+
+  async function recoverStoppedTrip(id) {
+    const userId = await currentUserId();
+    let record;
+    try { record = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
+    catch { return; }
+    if (!record || record.id !== id) return;
+    const points = await loadAll(id);
+    const latest = await activeState();
+    if (latest?.activeId || latest?.lastStoppedId !== id) return;
+    // The next reconcile sees the restored React record and runs finish once.
+    restoreInPage(mergeTrip(record, points));
+  }
+
+  function restoreInPage(record) {
+    const api = window.__rsRideApi;
+    if (!api?.trip && typeof api?.restoreActive === 'function') {
+      api.restoreActive(record);
+    }
+  }
+
+  window.__rsNativeGpsDiagnostics = () => send('state');
+  window.__rsNativeResume = () => reconcile();
+  window.__rsNativeNotificationFinish = () => { void reconcile(); };
+  const timer = setInterval(() => { void reconcile(); }, 3000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void reconcile(); });
+  window.addEventListener('focus', () => { void reconcile(); });
+})();

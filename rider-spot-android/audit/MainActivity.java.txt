@@ -1,0 +1,672 @@
+package com.riderspot.android;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Insets;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
+import android.webkit.GeolocationPermissions;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import androidx.webkit.JavaScriptReplyProxy;
+import androidx.webkit.WebMessageCompat;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+
+/** Android location is the source of truth; WebView browser geolocation is only a fallback. */
+public final class MainActivity extends Activity implements LocationListener {
+    private static final String HOME = "https://rider-spot.jazzhjm.workers.dev/";
+    private static final String ORIGIN = "https://rider-spot.jazzhjm.workers.dev";
+    private static final String OAUTH_SCHEME = "riderspot-oauth";
+    private static final String OAUTH_HOST = "signin";
+    private static final String OAUTH_PATH = "/callback";
+    private static final String SUPABASE_AUTH_HOST = "qkcqzhkvfbymzjdktshp.supabase.co";
+    private static final String OAUTH_STATE_KEY = "oauth_state";
+    private static final String OAUTH_STATE_TIME_KEY = "oauth_state_created";
+    public static final String ACTION_FINISH_FROM_NOTIFICATION = "com.riderspot.android.FINISH_FROM_NOTIFICATION";
+    private static final int PERMISSION_REQUEST = 210;
+    private static final int FILE_PICK = 211;
+    private static final int NOTIFICATION_REQUEST = 212;
+    private WebView webView;
+    private TrackStore store;
+    private LocationManager locations;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private GeolocationPermissions.Callback geoCallback;
+    private String geoOrigin;
+    private ValueCallback<Uri[]> fileCallback;
+    private boolean permissionDialogShowing;
+    private boolean permissionRequestInFlight;
+    private boolean watchRequested;
+    private boolean watching;
+    private boolean foreground;
+    private boolean webReady;
+    private String pendingAccessToken;
+    private String pendingRefreshToken;
+    private final ArrayList<FixRequest> pendingFixes = new ArrayList<>();
+
+    private static final class FixRequest {
+        final int id;
+        final JavaScriptReplyProxy reply;
+        FixRequest(int id, JavaScriptReplyProxy reply) { this.id = id; this.reply = reply; }
+    }
+
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Android 13+ gesture Back may bypass onBackPressed() entirely.
+        // Route both predictive gestures and the legacy key to the same SPA handler.
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                () -> dispatchRiderBack());
+        }
+        store = new TrackStore(this);
+        locations = (LocationManager) getSystemService(LOCATION_SERVICE);
+        // Stop the native GPS service as soon as the user taps the notification
+        // action. The web bridge will finalize and upload once the page is ready.
+        handleNotificationFinish(getIntent());
+        webView = new WebView(this);
+        webView.setBackgroundColor(0xffFFFFFF);
+        // WebView.setPadding does NOT reliably constrain WebContents under
+        // Android 15/16 enforced edge-to-edge. Let an actual layout parent own
+        // system bar insets so WebView occupies only the safe content rectangle.
+        FrameLayout safeRoot = new FrameLayout(this);
+        safeRoot.setBackgroundColor(0xffFFFFFF);
+        safeRoot.addView(webView, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT));
+        if (Build.VERSION.SDK_INT >= 35) {
+            safeRoot.setOnApplyWindowInsetsListener((view, insets) -> {
+                Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                return insets;
+            });
+        }
+        setContentView(safeRoot);
+        if (Build.VERSION.SDK_INT >= 35) safeRoot.requestApplyInsets();
+        WebSettings config = webView.getSettings();
+        config.setJavaScriptEnabled(true);
+        config.setDomStorageEnabled(true);
+        config.setDatabaseEnabled(true);
+        config.setGeolocationEnabled(true);
+        config.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        config.setAllowFileAccess(false);
+        config.setAllowContentAccess(true);
+        config.setJavaScriptCanOpenWindowsAutomatically(false);
+        config.setSupportMultipleWindows(false);
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri url = request.getUrl();
+                if (isTrusted(url)) return false;
+                if (request.isForMainFrame() && ("https".equals(url.getScheme()) || "http".equals(url.getScheme()))) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, url)); } catch (Exception ignored) { }
+                }
+                return true;
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                onTrustedPageFinished(view, url);
+            }
+        });
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (!isTrusted(Uri.parse(origin))) { callback.invoke(origin, false, false); return; }
+                if (hasLocationPermission()) { callback.invoke(origin, true, false); return; }
+                geoCallback = callback;
+                geoOrigin = origin;
+                askLocationPermission();
+            }
+            @Override public void onGeolocationPermissionsHidePrompt() {
+                geoCallback = null;
+                geoOrigin = null;
+            }
+            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (fileCallback != null) fileCallback.onReceiveValue(null);
+                fileCallback = callback;
+                try {
+                    startActivityForResult(params.createIntent(), FILE_PICK);
+                    return true;
+                } catch (Exception ex) {
+                    fileCallback.onReceiveValue(null);
+                    fileCallback = null;
+                    return false;
+                }
+            }
+        });
+
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            new AlertDialog.Builder(this)
+                .setMessage("Android System WebView를 업데이트해야 라이더스팟 네이티브 GPS 기능을 사용할 수 있어요.")
+                .setPositiveButton("확인", (d, w) -> d.dismiss()).show();
+        } else {
+            WebViewCompat.addWebMessageListener(webView, "RiderSpotHost", Collections.singleton(ORIGIN),
+                (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
+                    if (!isMainFrame || !isTrusted(sourceOrigin)) return;
+                    if (message.getType() != WebMessageCompat.TYPE_STRING) return;
+                    try {
+                        JSONObject req = new JSONObject(message.getData());
+                        int requestId = req.optInt("id");
+                        if ("geo-current".equals(req.optString("action"))) {
+                            beginCurrentFix(requestId, replyProxy, req.optLong("maxAge", 0L));
+                            return;
+                        }
+                        try { sendResult(replyProxy, requestId, processRequest(req)); }
+                        catch (Exception ex) { sendError(replyProxy, requestId, ex.getMessage()); }
+                    } catch (JSONException ignored) { }
+                });
+        }
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            WebViewCompat.addDocumentStartJavaScript(webView, readAsset("native-bridge.js"), Collections.singleton(ORIGIN));
+        } else {
+            // The secure native message bridge remains available on older WebViews.
+            // Injecting at page finished may be too late for initial geolocation calls.
+            webView.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    Uri uri = request.getUrl();
+                    if (isTrusted(uri)) return false;
+                    if (request.isForMainFrame() && "https".equals(uri.getScheme())) {
+                        try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); } catch (Exception ignored) { }
+                    }
+                    return true;
+                }
+                @Override public void onPageFinished(WebView view, String url) {
+                    if (url.startsWith(ORIGIN)) view.evaluateJavascript(readAsset("native-bridge.js"), null);
+                    onTrustedPageFinished(view, url);
+                }
+            });
+        }
+        webView.loadUrl(HOME);
+        receiveOAuthIntent(getIntent());
+        // Unlike Chrome site permissions, the Android runtime dialog belongs to THIS app.
+        // A separate action is still required before any background route capture begins.
+        if (!hasLocationPermission()) handler.postDelayed(this::askLocationPermission, 450);
+    }
+
+    private void handleNotificationFinish(Intent intent) {
+        if (intent == null || !ACTION_FINISH_FROM_NOTIFICATION.equals(intent.getAction())) return;
+        String active = store.activeTrip();
+        if (!active.isEmpty()) {
+            store.stopTrip(active);
+            stopService(new Intent(this, TrackingService.class));
+        }
+        intent.setAction(Intent.ACTION_MAIN); // Never replay a stale stop action.
+        if (webView != null) {
+            webView.evaluateJavascript("window.__rsNativeResume&&window.__rsNativeResume()", null);
+        }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleNotificationFinish(intent);
+        receiveOAuthIntent(intent);
+    }
+
+    /** Chrome/Google callback is handled by the app; tokens are never sent to a web server. */
+    private void receiveOAuthIntent(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        Uri uri = intent.getData();
+        if (uri == null || !OAUTH_SCHEME.equalsIgnoreCase(uri.getScheme())
+            || !OAUTH_HOST.equalsIgnoreCase(uri.getHost())
+            || !OAUTH_PATH.equals(uri.getPath())) return;
+        // Consume the intent immediately so Android cannot accidentally replay it.
+        intent.setData(null);
+        intent.setAction(Intent.ACTION_MAIN);
+        String actual = uri.getQueryParameter("state");
+        String expected = getPreferences(MODE_PRIVATE).getString(OAUTH_STATE_KEY, "");
+        long created = getPreferences(MODE_PRIVATE).getLong(OAUTH_STATE_TIME_KEY, 0L);
+        boolean valid = actual != null && !actual.isEmpty() && actual.equals(expected)
+            && created > 0 && System.currentTimeMillis() - created < 600_000L;
+        if (!valid) {
+            showAuthMessage("로그인 요청이 만료되었거나 다른 기기에서 시작되었어요. 앱에서 구글 로그인을 다시 시도해 주세요.");
+            return;
+        }
+        getPreferences(MODE_PRIVATE).edit().remove(OAUTH_STATE_KEY).remove(OAUTH_STATE_TIME_KEY).apply();
+        String fragment = uri.getEncodedFragment();
+        Uri params = Uri.parse("https://localhost/?" + (fragment == null ? "" : fragment));
+        String access = params.getQueryParameter("access_token");
+        String refresh = params.getQueryParameter("refresh_token");
+        if (access == null || refresh == null || access.length() < 20 || refresh.length() < 10
+            || access.length() > 16_384 || refresh.length() > 16_384) {
+            String error = params.getQueryParameter("error_description");
+            showAuthMessage(error != null && !error.isEmpty() ? "구글 인증 오류: " + error :
+                "구글 로그인 인증 정보를 받지 못했어요. 다시 시도해 주세요.");
+            return;
+        }
+        pendingAccessToken = access;
+        pendingRefreshToken = refresh;
+        deliverOAuthSession();
+    }
+
+    private void showAuthMessage(String text) {
+        handler.post(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            new AlertDialog.Builder(this).setTitle("라이더스팟 로그인")
+                .setMessage(text).setPositiveButton("확인", (d,w)->d.dismiss()).show();
+        });
+    }
+
+    private void onTrustedPageFinished(WebView view, String url) {
+        if (!url.startsWith(ORIGIN)) return;
+        webReady = true;
+        view.evaluateJavascript("window.__rsNativeResume&&window.__rsNativeResume()", null);
+        deliverOAuthSession();
+    }
+
+    private void deliverOAuthSession() {
+        if (!webReady || webView == null || pendingAccessToken == null || pendingRefreshToken == null) return;
+        String access = JSONObject.quote(pendingAccessToken);
+        String refresh = JSONObject.quote(pendingRefreshToken);
+        // Tokens pass only to the trusted first-party WebView (not to Worker/network logs).
+        String js = "(function(){const token="+access+",refresh="+refresh+";let i=0;" +
+            "function apply(){const client=window.__rsClient;if(!client?.auth?.setSession){" +
+            "if(++i<50){setTimeout(apply,200);}else alert('앱의 로그인 초기화가 지연돼요. 다시 시도해 주세요.');return;}" +
+            "client.auth.setSession({access_token:token,refresh_token:refresh}).then(({error})=>{" +
+            "if(error){alert('구글 로그인 정보를 적용하지 못했어요: '+error.message);return;}" +
+            "if(!window.__rsRideApi?.trip){location.replace('/');}" +
+            "else {window.dispatchEvent(new Event('riderspot:auth-complete'));}" +
+            "}).catch(()=>alert('로그인 처리에 실패했어요. 다시 시도해 주세요.'));}" +
+            "apply();})();";
+        webView.evaluateJavascript(js, null);
+        // The JavaScript closure keeps credentials until setSession finishes; no native persistence.
+        pendingAccessToken = null;
+        pendingRefreshToken = null;
+    }
+
+    private JSONObject openOAuthInBrowser(String oauthUrl) throws Exception {
+        Uri target = Uri.parse(oauthUrl);
+        if (!"https".equalsIgnoreCase(target.getScheme()) || !SUPABASE_AUTH_HOST.equalsIgnoreCase(target.getHost())
+            || !"/auth/v1/authorize".equals(target.getPath())
+            || !"google".equals(target.getQueryParameter("provider"))
+            || !HOME.equals(target.getQueryParameter("redirect_to"))) {
+            throw new IllegalArgumentException("구글 인증 주소가 올바르지 않아요.");
+        }
+        byte[] random = new byte[16];
+        new SecureRandom().nextBytes(random);
+        StringBuilder state = new StringBuilder();
+        for (byte b : random) state.append(String.format(java.util.Locale.ROOT, "%02x", b & 0xff));
+        getPreferences(MODE_PRIVATE).edit().putString(OAUTH_STATE_KEY, state.toString())
+            .putLong(OAUTH_STATE_TIME_KEY, System.currentTimeMillis()).apply();
+        Uri start = Uri.parse(ORIGIN + "/__rs_android_oauth_start").buildUpon()
+            .appendQueryParameter("state", state.toString())
+            .appendQueryParameter("target", oauthUrl).build();
+        Intent browser = new Intent(Intent.ACTION_VIEW, start);
+        browser.addCategory(Intent.CATEGORY_BROWSABLE);
+        startActivity(browser);
+        return new JSONObject().put("opened", true);
+    }
+
+    private boolean isTrusted(Uri uri) {
+        return uri != null && "https".equalsIgnoreCase(uri.getScheme())
+            && "rider-spot.jazzhjm.workers.dev".equalsIgnoreCase(uri.getHost())
+            && (uri.getPort() == -1 || uri.getPort() == 443);
+    }
+
+    private String readAsset(String path) {
+        try (InputStream input = getAssets().open(path); ByteArrayOutputStream buf = new ByteArrayOutputStream()) {
+            byte[] b = new byte[4096]; int n;
+            while ((n = input.read(b)) != -1) buf.write(b, 0, n);
+            return buf.toString(StandardCharsets.UTF_8.name());
+        } catch (Exception ex) { return ""; }
+    }
+
+    private JSONObject processRequest(JSONObject req) throws Exception {
+        String action = req.optString("action");
+        String id = req.optString("tripId");
+        JSONObject result = new JSONObject();
+        switch (action) {
+            case "oauth-open":
+                return openOAuthInBrowser(req.optString("url", ""));
+            case "geo-watch":
+                watchRequested = true;
+                if (hasLocationPermission()) startListening(); else askLocationPermission();
+                result.put("subscribed", true);
+                return result;
+            case "geo-unwatch":
+                watchRequested = false;
+                stopIfUnneeded();
+                result.put("subscribed", false);
+                return result;
+            case "state": return store.getState();
+            case "points":
+                result.put("points", store.getPoints(id, req.optLong("afterSeq", 0L), req.optInt("limit", 200)));
+                return result;
+            case "ensure-tracking":
+                // Recovery is allowed only while this Activity is visible.
+                // Android 14+ forbids silently creating a location FGS from background.
+                if (!foreground || !hasLocationPermission()) throw new IllegalStateException("앱 화면에서 GPS 기록을 다시 시작해 주세요");
+                if (id.isEmpty() || !id.equals(store.activeTrip()) || store.isPaused()) throw new IllegalStateException("복구할 운행 기록이 없습니다");
+                startForegroundService(new Intent(this, TrackingService.class)
+                    .setAction(TrackingService.ACTION_START)
+                    .putExtra(TrackingService.EXTRA_ID,id));
+                result.put("restarted",true);
+                return result;
+            case "start":
+                if (Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_REQUEST);
+                }
+                if (!hasLocationPermission()) { askLocationPermission(); throw new IllegalStateException("라이더스팟 앱의 위치 권한을 허용해 주세요"); }
+                if (!isLocationEnabled()) {
+                    startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    throw new IllegalStateException("휴대폰의 위치 서비스를 켜 주세요");
+                }
+                if (!store.startTrip(id)) throw new IllegalStateException("다른 운행이 기록 중이거나 운행 ID가 잘못되었습니다");
+                try {
+                    Intent intent = new Intent(this, TrackingService.class).setAction(TrackingService.ACTION_START).putExtra(TrackingService.EXTRA_ID, id);
+                    startForegroundService(intent);
+                } catch (RuntimeException ex) {
+                    store.stopTrip(id);
+                    throw new IllegalStateException("GPS 서비스 실행 실패: 위치 권한과 알림 설정을 확인해 주세요");
+                }
+                result.put("activeId", id); return result;
+            case "pause":
+                if (!id.equals(store.activeTrip())) throw new IllegalStateException("기록 중인 운행이 아닙니다");
+                boolean paused = req.optBoolean("paused", false);
+                store.setPaused(id, paused);
+                startService(new Intent(this, TrackingService.class)
+                    .setAction(paused ? TrackingService.ACTION_PAUSE : TrackingService.ACTION_RESUME)
+                    .putExtra(TrackingService.EXTRA_ID, id));
+                result.put("paused", paused); return result;
+            case "stop":
+                if (id.equals(store.activeTrip())) {
+                    store.stopTrip(id);
+                    stopService(new Intent(this, TrackingService.class));
+                }
+                result.put("stopped", true); return result;
+            default: throw new IllegalArgumentException("알 수 없는 GPS 요청");
+        }
+    }
+
+    private void sendResult(JavaScriptReplyProxy proxy, int id, JSONObject data) {
+        try {
+            JSONObject resp = new JSONObject();
+            resp.put("id", id);
+            resp.put("ok", true);
+            resp.put("data", data);
+            proxy.postMessage(resp.toString());
+        } catch (JSONException ignored) { }
+    }
+
+    private void sendError(JavaScriptReplyProxy proxy, int id, String message) {
+        try {
+            JSONObject resp = new JSONObject();
+            resp.put("id", id);
+            resp.put("ok", false);
+            resp.put("error", message == null ? "GPS 위치 확인에 실패했어요" : message);
+            proxy.postMessage(resp.toString());
+        } catch (JSONException ignored) { }
+    }
+
+    private boolean isLocationEnabled() {
+        try {
+            return locations.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                || locations.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch (Exception ex) { return false; }
+    }
+
+    private boolean hasLocationPermission() {
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void askLocationPermission() {
+        if (hasLocationPermission() || permissionDialogShowing || permissionRequestInFlight || isFinishing()) return;
+        permissionDialogShowing = true;
+        boolean requestedBefore = getPreferences(MODE_PRIVATE).getBoolean("asked_location", false);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+            .setTitle("라이더스팟 위치 권한")
+            .setMessage("지도에 현재 위치를 표시하고 운행 경로를 기록하려면 라이더스팟 앱에 위치 권한이 필요합니다. '정확한 위치'와 '앱 사용 중에만 허용'을 선택해 주세요. 운행 기록은 직접 시작할 때만 백그라운드에서 실행됩니다.")
+            .setNegativeButton("나중에", (d,w) -> { permissionDialogShowing = false; completeGeoPrompt(false); failPending("라이더스팟 앱의 위치 권한이 필요합니다"); });
+        if (requestedBefore && !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+            && !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            builder.setPositiveButton("앱 권한 설정", (d, w) -> {
+                permissionDialogShowing = false;
+                startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", getPackageName(), null)));
+            });
+        } else {
+            builder.setPositiveButton("권한 허용", (d,w) -> {
+                permissionDialogShowing = false;
+                permissionRequestInFlight = true;
+                getPreferences(MODE_PRIVATE).edit().putBoolean("asked_location", true).apply();
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST);
+            });
+        }
+        builder.setOnCancelListener(d -> permissionDialogShowing = false).show();
+    }
+
+    private JSONObject fixToJson(Location loc) throws JSONException {
+        JSONObject p = new JSONObject();
+        p.put("lat", loc.getLatitude());
+        p.put("lng", loc.getLongitude());
+        p.put("accuracy", loc.hasAccuracy() ? loc.getAccuracy() : 100.0f);
+        p.put("heading", loc.hasBearing() ? loc.getBearing() : 0);
+        p.put("speed", loc.hasSpeed() ? loc.getSpeed() : 0);
+        p.put("t", loc.getTime() > 0 ? loc.getTime() : System.currentTimeMillis());
+        return p;
+    }
+
+    private Location cachedFix(long maxAgeMs) {
+        if (!hasLocationPermission() || maxAgeMs <= 0) return null;
+        Location best = null;
+        for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+            try {
+                Location fix = locations.getLastKnownLocation(provider);
+                if (fix != null && fix.getTime() > 0
+                    && System.currentTimeMillis() - fix.getTime() <= maxAgeMs
+                    && (best == null || fix.getTime() > best.getTime())) best = fix;
+            } catch (SecurityException | IllegalArgumentException ignored) { }
+        }
+        return best;
+    }
+
+    private void beginCurrentFix(int id, JavaScriptReplyProxy reply, long maxAge) {
+        if (!hasLocationPermission()) {
+            pendingFixes.add(new FixRequest(id, reply));
+            askLocationPermission();
+        } else if (!isLocationEnabled()) {
+            sendError(reply, id, "휴대폰의 위치 서비스를 켜 주세요");
+        } else {
+            Location cached = cachedFix(Math.max(0L, Math.min(maxAge, 120000L)));
+            if (cached != null) {
+                try { sendResult(reply, id, fixToJson(cached)); }
+                catch (JSONException ex) { sendError(reply, id, "GPS 좌표를 읽지 못했어요"); }
+                return;
+            }
+            pendingFixes.add(new FixRequest(id, reply));
+            startListening();
+        }
+        handler.postDelayed(() -> {
+            for (Iterator<FixRequest> it = pendingFixes.iterator(); it.hasNext();) {
+                FixRequest p = it.next();
+                if (p.id == id && p.reply == reply) {
+                    it.remove();
+                    sendError(reply, id, "GPS 응답이 지연됩니다. 위치 서비스와 라이더스팟 권한을 확인해 주세요");
+                    break;
+                }
+            }
+            stopIfUnneeded();
+        }, 20000L);
+    }
+
+    private void failPending(String message) {
+        for (FixRequest p : pendingFixes) sendError(p.reply, p.id, message);
+        pendingFixes.clear();
+        stopIfUnneeded();
+    }
+
+    private void startListening() {
+        if (watching || !foreground || !hasLocationPermission()) return;
+        if (!isLocationEnabled()) { failPending("휴대폰의 위치 서비스를 켜 주세요"); return; }
+        boolean started = false;
+        for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+            try {
+                if (locations.isProviderEnabled(provider)) {
+                    locations.requestLocationUpdates(provider, 1500L, 0f, this, Looper.getMainLooper());
+                    started = true;
+                }
+            } catch (SecurityException | IllegalArgumentException ignored) { }
+        }
+        watching = started;
+        if (!started) failPending("사용 가능한 GPS 공급자가 없습니다");
+        if (watchRequested) {
+            Location fix = cachedFix(10000L);
+            if (fix != null) onLocationChanged(fix);
+        }
+    }
+
+    private void stopListening() {
+        try { locations.removeUpdates(this); } catch (SecurityException ignored) { }
+        watching = false;
+    }
+
+    private void stopIfUnneeded() { if (!watchRequested && pendingFixes.isEmpty()) stopListening(); }
+
+    @Override public void onLocationChanged(Location location) {
+        if (location == null || !location.hasAccuracy() || location.getAccuracy() > 200f) return;
+        try {
+            JSONObject point = fixToJson(location);
+            for (FixRequest p : pendingFixes) sendResult(p.reply, p.id, point);
+            pendingFixes.clear();
+            if (watchRequested && foreground && webView != null) {
+                webView.evaluateJavascript("window.__rsNativePosition&&window.__rsNativePosition(" + point + ")", null);
+            }
+            stopIfUnneeded();
+        } catch (JSONException ignored) { }
+    }
+
+    @Override public void onProviderEnabled(String provider) {
+        if (watchRequested || !pendingFixes.isEmpty()) startListening();
+    }
+
+    @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code == PERMISSION_REQUEST) {
+            permissionRequestInFlight = false;
+            boolean granted = hasLocationPermission();
+            completeGeoPrompt(granted);
+            if (granted) {
+                if (watchRequested || !pendingFixes.isEmpty()) startListening();
+                if (webView != null) webView.evaluateJavascript("window.__rsNativePermissionGranted&&window.__rsNativePermissionGranted()", null);
+            } else failPending("라이더스팟 앱 설정에서 위치 권한을 허용해 주세요");
+        } else if (code == NOTIFICATION_REQUEST && Build.VERSION.SDK_INT >= 33
+            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            new AlertDialog.Builder(this)
+                .setTitle("운행 기록 알림")
+                .setMessage("알림 권한을 허용하면 운행 기록 중 상태와 '운행 종료' 버튼을 알림창에서 사용할 수 있습니다. 권한이 없어도 기기 내 GPS 기록은 계속할 수 있어요.")
+                .setPositiveButton("알림 설정", (d, w) -> {
+                    Intent settings = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                    settings.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                    startActivity(settings);
+                })
+                .setNegativeButton("나중에", (d, w) -> d.dismiss())
+                .show();
+        }
+    }
+
+    private void completeGeoPrompt(boolean allowed) {
+        if (geoCallback != null) {
+            geoCallback.invoke(geoOrigin, allowed, false);
+            geoCallback = null;
+            geoOrigin = null;
+        }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_PICK && fileCallback != null) {
+            Uri[] values = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            fileCallback.onReceiveValue(values);
+            fileCallback = null;
+        }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        foreground = true;
+        if (webView != null) {
+            deliverOAuthSession();
+            webView.onResume();
+            webView.evaluateJavascript("window.__rsNativeResume&&window.__rsNativeResume()", null);
+        }
+        if (hasLocationPermission() && (watchRequested || !pendingFixes.isEmpty())) startListening();
+        // A killed sticky foreground service may not restart immediately on
+        // every OEM. When the user visibly returns, reassert the active trip.
+        String active = store.activeTrip();
+        if (!active.isEmpty() && !store.isPaused() && hasLocationPermission()) {
+            try {
+                startForegroundService(new Intent(this, TrackingService.class)
+                    .setAction(TrackingService.ACTION_START)
+                    .putExtra(TrackingService.EXTRA_ID, active));
+            } catch (RuntimeException ignored) { /* retry on next visible resume */ }
+        }
+    }
+
+    @Override protected void onPause() {
+        foreground = false;
+        stopListening(); // User-started TrackingService retains GPS for an active trip.
+        if (webView != null) webView.onPause();
+        super.onPause();
+    }
+
+    // The SPA handles sheets; two root Back presses finish the Activity.
+    // canGoBack() alone ignores UI state and used to finish the Activity too early.
+    @Override public void onBackPressed() { dispatchRiderBack(); }
+
+    private void dispatchRiderBack() {
+        if (webView == null) { confirmExitFromBack(); return; }
+        webView.evaluateJavascript(
+            "(function(){try{if(typeof window.__rsHandleBack==='function'){return window.__rsHandleBack()?'handled':'exit';}}catch(e){}return 'fallback';})()",
+            result -> {
+                if ("\"handled\"".equals(result)) return;
+                if ("\"exit\"".equals(result)) { finish(); return; }
+                if (webView != null && webView.canGoBack()) webView.goBack();
+                else confirmExitFromBack();
+            });
+    }
+
+    private void confirmExitFromBack() {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+            .setTitle("라이더스팟 종료")
+            .setMessage("앱을 종료할까요?")
+            .setNegativeButton("계속 사용", (dialog, which) -> dialog.dismiss())
+            .setPositiveButton("종료", (dialog, which) -> finish())
+            .show();
+    }
+
+    @Override protected void onDestroy() {
+        stopListening();
+        failPending("앱 화면이 닫혔어요");
+        if (webView != null) {
+            webView.stopLoading();
+            webView.destroy();
+            webView = null;
+        }
+        super.onDestroy();
+    }
+}
