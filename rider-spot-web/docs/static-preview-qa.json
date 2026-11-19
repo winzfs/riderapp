@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-19T22:18:15.691Z",
+  "at": "2026-11-19T22:40:25.219Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
   "releaseHash": "16c1eecf6bac",
   "checks": [
@@ -27,6 +27,11 @@
       "name": "single app root",
       "passed": true,
       "details": ""
+    },
+    {
+      "name": "static bundle served from Cloudflare KV rather than GitHub",
+      "passed": true,
+      "details": "header workers-kv"
     },
     {
       "name": "HTTP 200 /assets/rider-spot-16c1eecf6bac/premium-shell.css",
