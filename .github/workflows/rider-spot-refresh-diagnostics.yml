@@ -29,4 +29,4 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/rider-native
           tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-native
-          grep -RInE 'onRenderProcessGone|onResume|onPause|onPageFinished|shouldOverrideUrlLoading|loadUrl\\(|reload\\(|onReceivedError|WebViewClient' /tmp/rider-native/app/src/main/java | head -110 || true
+          grep -RInE 'onRenderProcessGone|onResume|onPause|onPageFinished|shouldOverrideUrlLoading|loadUrl|reload|onReceivedError|WebViewClient' /tmp/rider-native/app/src/main/java | head -110 || true
