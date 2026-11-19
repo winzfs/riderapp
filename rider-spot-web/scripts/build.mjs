@@ -32,6 +32,8 @@ const [
   previousSw,
   design,
   workTools,
+  weatherHud,
+  weatherCss,
 ] = await Promise.all([
   build({
     ...buildOptions,
@@ -59,6 +61,8 @@ const [
     format: "iife",
     entryPoints: ["src/workspace-tools.js"],
   }),
+  build({ ...buildOptions, format: "iife", entryPoints: ["src/weather-bar.js"] }),
+  read("src/weather-bar.css"),
 ]);
 const encoded = {
   "app.mjs": app.outputFiles[0].text,
@@ -69,6 +73,8 @@ const encoded = {
   "workspace-tools.js": workTools.outputFiles[0].text,
   "tab-resume.js": tabResume,
   "daily-timeline.css": dailyCss,
+  "weather-bar.js": weatherHud.outputFiles[0].text,
+  "weather-bar.css": weatherCss,
 };
 const mapDataDir = join(root, "data/korean-map");
 const mapNames = await readdir(mapDataDir).catch(() => []);
@@ -108,7 +114,7 @@ const html = template
   .replace(/\bsrc="([^"]+)"/g, (_, path) => `src="${substitute(path)}"`)
   .replace(
     "</head>",
-    `<link rel="stylesheet" href="${base}/design-system.css"><link rel="stylesheet" href="${base}/daily-timeline.css"></head>`,
+    `<link rel="stylesheet" href="${base}/design-system.css"><link rel="stylesheet" href="${base}/daily-timeline.css"><link rel="stylesheet" href="${base}/weather-bar.css"><script defer src="${base}/weather-bar.js"></script></head>`,
   );
 const oldCore = JSON.parse(previousSw.match(/const CORE=(\[[^\n]+\]);/)[1]);
 const core = [
@@ -120,6 +126,8 @@ const core = [
   `${base}/route-worker.mjs`,
   `${base}/tab-resume.js`,
   `${base}/daily-timeline.css`,
+  `${base}/weather-bar.css`,
+  `${base}/weather-bar.js`,
 ];
 const serviceWorker = previousSw
   .replace(/^const CACHE=.*$/m, `const CACHE='rider-spot-shell-${hash}';`)
