@@ -72,8 +72,8 @@ export default {
     // uses an asset service binding instead, so it must explicitly dispatch
     // newly hashed paths here. Older hashed URLs fall back to the legacy Worker.
     if ((request.method === "GET" || request.method === "HEAD")
-        && (/^\\/assets\\/rider-spot-[0-9a-f]{12}\\//.test(path)
-          || /^\\/mapdata\\//.test(path))) {
+        && (/^\/assets\/rider-spot-[0-9a-f]{12}\//.test(path)
+          || /^\/mapdata\//.test(path))) {
       const candidate = await env.ASSETS.fetch(request);
       if (candidate.status !== 404) return candidate;
     }
