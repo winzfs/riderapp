@@ -172,8 +172,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
         orange:root.getPropertyValue("--signal-orange").trim(),
         ink:root.getPropertyValue("--signal-ink").trim()};
     });
-    assert.deepEqual(palette,{teal:"#25ccbe",orange:"#ff893b",ink:"#173d43"},
-      "every tab must use one bright Teal & Orange palette");
+    assert.deepEqual(palette,{teal:"#25C8BA",orange:"#FF8B43",ink:"#173D3C"},
+      "every tab must use the same premium teal, orange and ink tokens");
     if(smokeOnly){
       await nav("수익");
       await page.locator(".fin-hero-amount").waitFor();
@@ -514,16 +514,20 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     const financeAmount=financeDialog.locator('input[name="gross_won"]');
     await financeAmount.fill("85000");
     assert.equal(await financeAmount.inputValue(),"85,000");
-    page.once("dialog",dialog=>dialog.accept());
     await financeDialog.getByRole("button",{name:"닫기"}).click();
+    const discard=page.getByRole("dialog",{name:"확인"});
+    await discard.waitFor();
+    await discard.getByRole("button",{name:"버리고 닫기"}).click();
     await financeDialog.waitFor({state:"hidden"});
     await page.getByRole("button",{name:"수익 입력",exact:true}).click();
     await financeDialog.waitFor();
     assert.equal(await financeDialog.locator('input[name="gross_won"]').inputValue(),"85,000",
       "finance entry recovers unfinished draft");
     await shot("finance");
-    page.once("dialog",dialog=>dialog.accept());
     await financeDialog.getByRole("button",{name:"닫기"}).click();
+    const discard=page.getByRole("dialog",{name:"확인"});
+    await discard.waitFor();
+    await discard.getByRole("button",{name:"버리고 닫기"}).click();
     await financeDialog.waitFor({state:"hidden"});
 
     // A recurring plan is not a booked expense until the rider confirms it.
@@ -551,8 +555,10 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".fin-record").filter({hasText:"보험료"}).first().waitFor();
     await page.getByLabel("내역 검색").fill("");
     const actualExpense=page.locator(".fin-record").filter({hasText:"보험료"}).first();
-    page.once("dialog",dialog=>dialog.accept());
     await actualExpense.getByRole("button",{name:"삭제"}).click();
+    const deleteConfirm=page.getByRole("dialog",{name:"확인"});
+    await deleteConfirm.waitFor();
+    await deleteConfirm.getByRole("button",{name:"확인",exact:true}).click();
     await page.getByRole("button",{name:"삭제 실행 취소"}).click();
     await page.locator(".fin-record").filter({hasText:"보험료"}).first().waitFor();
     assert.equal(extraExpenses.length,1,"undo restores the original source record");
