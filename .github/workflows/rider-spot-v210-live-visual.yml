@@ -1,0 +1,91 @@
+name: Rider Spot v210 live mobile layout acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v210-live-visual.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/rider-spot-native-apk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run the actual production weather sheet on mobile Chromium
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            try {
+              for(const width of [360,390]){
+                const page=await browser.newPage({viewport:{width,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+                page.setDefaultTimeout(20000);
+                await page.goto('https://rider-spot.jazzhjm.workers.dev/',{waitUntil:'domcontentloaded'});
+                await page.locator('#rs-weather-hud').waitFor();
+                await page.evaluate(()=>{
+                  window.__rsMapPosition={lat:35.19,lng:126.83,t:Date.now()};
+                  window.dispatchEvent(new Event('riderspot:map'));
+                });
+                await page.waitForTimeout(1100);
+                await page.locator('#rs-weather-hud').click();
+                await page.locator('.rs-weather-sheet .rs-weather-head').waitFor();
+                const d=await page.evaluate(()=>{
+                  const sheet=document.querySelector('.rs-weather-sheet');
+                  const head=sheet?.querySelector('.rs-weather-head');
+                  const close=sheet?.querySelector(':scope>.close');
+                  const overview=sheet?.querySelector('.rs-weather-overview');
+                  const hours=sheet?.querySelector('.rs-weather-hours');
+                  const credit=sheet?.querySelector('.rs-weather-credit');
+                  const r=el=>el?.getBoundingClientRect();
+                  const a=r(head),b=r(close),c=r(sheet);
+                  const style=head?getComputedStyle(head):null;
+                  const bar=r(document.querySelector('#rs-weather-hud'));
+                  return {
+                    tag:head?.tagName,headBg:style?.backgroundColor,
+                    hasOverview:!!overview,hasHours:!!hours,hasCredit:!!credit,
+                    sheetHeight:c?.height,barHeight:bar?.height,
+                    closeOverlaps:!!(a&&b&&a.right>b.left&&a.left<b.right&&a.bottom>b.top&&a.top<b.bottom),
+                    outerOverflows:document.documentElement.scrollWidth>innerWidth+2,
+                    sheetOverflows:!!(c&&(c.left<0||c.right>innerWidth+2)),
+                    weatherSrc:document.querySelector('script[src*="rider-weather-ui-v210/weather-bar.js"]')?.getAttribute('src')
+                  };
+                });
+                console.log('MOBILE',width,JSON.stringify(d));
+                assert.equal(d.tag,'DIV','legacy dark header returned');
+                assert.match(d.headBg||'',/rgba?\(0, 0, 0, 0\)|transparent/,'head should not be filled');
+                assert.ok(d.hasOverview&&d.hasHours&&d.hasCredit,'forecast panel content absent');
+                assert.equal(d.closeOverlaps,false,'close icon overlaps heading');
+                assert.equal(d.outerOverflows,false,'page overflow');
+                assert.equal(d.sheetOverflows,false,'sheet overflow');
+                assert.ok(d.sheetHeight>=240&&d.sheetHeight<=660,'implausible bottom sheet geometry');
+                assert.ok(d.barHeight<=44,'map weather bar too tall');
+                assert.ok(d.weatherSrc,'production is not using the v210 weather bundle');
+                await page.screenshot({path:'/tmp/rider-v210-weather-'+width+'.png',fullPage:false});
+                await page.locator('.rs-weather-sheet>.close').click();
+                await page.locator('.rs-weather-sheet').waitFor({state:'detached'});
+                await page.close();
+              }
+            } finally {await browser.close();}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-v210-Live-Weather-Visual
+          path: /tmp/rider-v210-weather-*.png
+          retention-days: 7
