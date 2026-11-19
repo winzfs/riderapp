@@ -1,4 +1,4 @@
-name: Rider Spot finance v204 isolated verified build
+name: Rider Spot SIGNAL HUD v205 isolated verified build
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: finance-v204-isolated
+  group: finance-v205-isolated
   cancel-in-progress: false
 jobs:
   build:
@@ -29,7 +29,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - name: Freeze isolated v204 release without overwriting earlier production assets
+      - name: Freeze isolated v205 release without overwriting earlier production assets
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -44,31 +44,37 @@ jobs:
           assert.ok(css.includes('fin-recurring'));
           assert.ok(css.includes('fin-svg-chart'));
           assert.ok(css.includes('fin-record-search'));
+          assert.ok(css.includes('--signal-teal'), 'unified signal teal token missing');
+          assert.ok(css.includes('--signal-orange'), 'unified signal orange token missing');
+          assert.ok(css.includes('.bike-safety-detail'), 'compact safety guide missing');
+          assert.ok(css.includes('.bottom-nav button.active'), 'active tab marker missing');
+          assert.ok(app.includes('rs-game-profile'), 'level UI missing');
+          assert.ok(app.includes('bike-consumables'), 'maintenance grid missing');
           assert.ok(css.includes('.app .finance-page .fin-card>header'));
           assert.ok(css.includes('.app .finance-page .fin-no-records'));
           assert.ok(app.includes('fin-platform-card'));
           assert.ok(app.includes('fin-chart-card'));
           assert.ok(css.includes('fin-undo'));
           assert.ok(fs.readFileSync('dist/index.html','utf8').includes(rel.hash));
-          fs.mkdirSync('prebuilt-v204',{recursive:true});
+          fs.mkdirSync('prebuilt-v205',{recursive:true});
           for(const name of ['app.mjs','route-worker.mjs','native-gps.js','map-reports.js','design-system.css',
             'workspace-tools.js','tab-resume.js','daily-timeline.css'])
-            fs.copyFileSync(base+name,'prebuilt-v204/'+name);
+            fs.copyFileSync(base+name,'prebuilt-v205/'+name);
           for(const name of ['index.html','sw.js','release.json'])
-            fs.copyFileSync('dist/'+name,'prebuilt-v204/'+name);
-          console.log('PASS v204 isolated release hash',rel.hash);
+            fs.copyFileSync('dist/'+name,'prebuilt-v205/'+name);
+          console.log('PASS v205 isolated release hash',rel.hash);
           NODE
-      - name: Persist v204 candidate in its own immutable directory
+      - name: Persist v205 candidate in its own immutable directory
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add prebuilt-v204
-          git commit -m 'build: isolated tested finance v204 bundle [skip ci]'
+          git add prebuilt-v205
+          git commit -m 'build: isolated tested finance v205 bundle [skip ci]'
           git pull --rebase origin feature/rider-spot-native-apk
           git push origin HEAD:feature/rider-spot-native-apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: finance-v204-isolated
-          path: rider-spot-web/prebuilt-v204/
+          name: finance-v205-isolated
+          path: rider-spot-web/prebuilt-v205/
           retention-days: 7
