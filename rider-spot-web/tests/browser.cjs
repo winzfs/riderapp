@@ -444,7 +444,17 @@ async function mapTest() {
     await page.reload();
     await page.getByLabel(mapLabel, { exact: true }).waitFor();
     await page.waitForFunction(() => window.__rsRideApi.gpsStatus === "ready");
-    sameCamera(chosen, await camera(page));
+    if (baseline) {
+      sameCamera(chosen, await camera(page));
+    } else {
+      await page.waitForFunction(() => {
+        const p = window.__rsMap?.getCenter();
+        const gps = window.__rsRideApi?.position;
+        return p && gps && Math.abs(p.lat - gps.lat) < 0.0001 &&
+          Math.abs(p.lng - gps.lng) < 0.0001 &&
+          Math.abs(window.__rsMap.getZoom() - 16) < 0.01;
+      }, null, { timeout: 7000 });
+    }
     await page
       .getByRole("button", { name: "내 위치로 이동", exact: true })
       .click();
