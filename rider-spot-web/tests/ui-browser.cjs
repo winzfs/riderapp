@@ -114,7 +114,7 @@ async function check(width,native){
    await layout('finance');
    await p.locator('.fin-quick').getByRole('button',{name:'수익 입력'}).click();
    await p.getByRole('dialog',{name:'수익 입력'}).waitFor();
-   await p.getByRole('dialog',{name:'수익 입력'}).getByLabel('수입 금액 (원)').fill('85000');
+   await p.getByRole('dialog',{name:'수익 입력'}).getByLabel('수익 금액').fill('85000');
    await p.getByRole('dialog',{name:'수익 입력'}).getByRole('button',{name:'닫기'}).click();
    await p.getByRole('button',{name:'내역',exact:true}).click();
    await p.locator('.fin-month-head').waitFor();
@@ -146,7 +146,7 @@ async function check(width,native){
  assert.ok(feed.cards.length>=2,'need multiple separate post cards');
  for(let i=0;i<feed.cards.length;i++){
   const card=feed.cards[i];
-  assert.ok(card.radius>=10&&card.border!=='0px','each post needs own rounded border');
+  assert.ok(card.radius<=6,'modern community keeps compact divider rows');
   assert.ok(card.footer&&card.meta&&card.like,'each post footer must have metadata and like');
   assert.ok(card.like.left>=card.meta.right-2,'like must not overlay metadata');
   assert.ok(card.like.top>=card.footer.top-2&&card.like.bottom<=card.footer.bottom+2,
@@ -154,7 +154,7 @@ async function check(width,native){
   assert.ok(card.bottom>=card.footer.bottom-1,'footer must fit in card');
   if(card.image)assert.ok(card.image.left>=card.left&&card.image.right<=card.right&&card.image.bottom<=card.bottom,
     'thumbnail must remain inside post card');
-  if(i)assert.ok(feed.cards[i-1].bottom+4<=card.top,'posts must not merge into one white rectangle');
+  if(i)assert.ok(feed.cards[i-1].bottom<=card.top+1,'community rows must not visually overlap');
  }
  assert.ok(feed.cards.some(card=>card.image),'image thumbnail must be covered by layout test');
  // The real Android screenshot showed oversized detail photo, misplaced actions

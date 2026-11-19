@@ -61,7 +61,7 @@ fs.mkdirSync(output, { recursive: true });
       await page.screenshot({ path: output + '/' + width + '-journey.png' });
       await page.getByRole('button', { name: '나의 경로, 다시 달려보기' }).click();
       await page.locator('.rs33-timeline').waitFor();
-      await nav.getByRole('button', { name: '운행', exact: true }).click();
+      await nav.getByRole('button', { name: '타임라인', exact: true }).click();
       assert.equal(await page.locator('.rs-journey-entry').count(), 0, 'No Quest strip after returning to the map');
       await open();
       const original = await page.evaluate(() => JSON.parse(localStorage.getItem('rs:trips:guest')));
