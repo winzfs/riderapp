@@ -1,17 +1,43 @@
 {
-  "at": "2026-11-19T22:10:17.334Z",
+  "at": "2026-11-19T22:12:53.796Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev/",
   "screens": [
     {
       "width": 320,
-      "steps": [],
-      "errors": [
-        "Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag.",
-        "Failed to read the 'sessionStorage' property from 'Window': The document is sandboxed and lacks the 'allow-same-origin' flag."
+      "steps": [
+        "five bottom tabs",
+        "premium CSS linked",
+        "five tabs functional and no horizontal overflow",
+        "finance graph not displayed for anonymous session",
+        "no unexpected full-document reload"
       ],
-      "passed": false,
-      "error": "locator.waitFor: Timeout 50000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').first() to be visible\n\n    at /home/runner/work/riderapp/riderapp/rider-spot-web/tests/static-preview-browser.cjs:27:27"
+      "errors": [],
+      "passed": true
+    },
+    {
+      "width": 393,
+      "steps": [
+        "five bottom tabs",
+        "premium CSS linked",
+        "five tabs functional and no horizontal overflow",
+        "finance graph not displayed for anonymous session",
+        "no unexpected full-document reload"
+      ],
+      "errors": [],
+      "passed": true
+    },
+    {
+      "width": 412,
+      "steps": [
+        "five bottom tabs",
+        "premium CSS linked",
+        "five tabs functional and no horizontal overflow",
+        "finance graph not displayed for anonymous session",
+        "no unexpected full-document reload"
+      ],
+      "errors": [],
+      "passed": true
     }
   ],
-  "passed": false
+  "passed": true
 }
