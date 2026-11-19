@@ -1,5 +1,5 @@
 {
-  "$schema": "../node_modules/wrangler/config-schema.json",
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "rider-spot-static-preview",
   "main": "edge/static-edge.mjs",
   "compatibility_date": "2026-11-19",
