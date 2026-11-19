@@ -1,6 +1,7 @@
 import { rs33ISO } from "./timeline-dates.mjs";
 import {saveIncomeDay,financeWriteError} from "./finance-storage.mjs";
 import scooter from "./scooter.svg";
+import { bikeArtStyle } from "./bike-model-art.mjs";
 import { icons } from "./ui.mjs";
 import { maintenanceIcon } from "./maintenance-icons.mjs";
 import {bikeModels,bikeBrands,findBikeModel,inferBikeModel,modelLabel,modelParts,
@@ -552,6 +553,7 @@ export function createRecords(R, client) {
         h("div",{className:"bike-model-count"},available.length+"개 모델"),
         h("div",{className:"bike-model-list",role:"listbox","aria-label":"선택할 바이크 모델"},
           available.map(m=>btn(h(R.Fragment,null,
+            bikeArtStyle(m)&&h("span",{className:"bike-model-option-art",style:bikeArtStyle(m),"aria-hidden":true}),
             h("span",{className:"bike-model-list-name"},h("b",null,m.name),
               h("small",null,m.brandLabel+" · "+m.cc+"cc"+(m.kind==="electric"?" · 전기":""))),
             currentModel?.key===m.key&&h("span",{className:"bike-model-selected"},"선택됨")),
@@ -694,7 +696,9 @@ export function createRecords(R, client) {
             h("span",null,number(reading[0]))," ",h("small",null,"km"))),
           h("small",null,reading?.[1]||"입력일 미기록",
             !manual&&reading?" · 정비·주유 기록 기준":"")),
-        h("img",{src:scooter,alt:"스쿠터 일러스트",width:130,height:82})),
+        bikeArtStyle(model)
+          ?h("span",{className:"bike-vehicle-art",style:bikeArtStyle(model),role:"img","aria-label":modelLabel(model)+" 바이크 이미지"})
+          :h("img",{src:scooter,alt:"기본 스쿠터 일러스트",width:130,height:82})),
       h("div",{className:"bike-vehicle-actions"},
         btn(h(R.Fragment,null,h(Icon,{name:"gauge",size:19}),"계기판 입력"),
           ()=>vehicleAction("odometer"),{className:"bike-outline-action","aria-label":"계기판 입력",disabled:!!user&&!data}),
