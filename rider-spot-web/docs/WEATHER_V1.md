@@ -39,3 +39,10 @@
 검증: GitHub Node 테스트 및 앱 번들 빌드 성공. Worker 208 Version URL에서 /api/weather 응답 수신, Chrome 모바일 렌더링에서 HUD 표시 및 테스트용 위치로 실시간 텍스트 갱신 확인. 운영 트래픽 100% 전환 후 배포 버전 API 확인 완료.
 
 날씨 정보만 사용하며 위치 공유 설정, 운행 로그, 커뮤니티 DB, 바이크 기록, 수익 기록은 변경하지 않는다.
+
+## 2026-11-19 재배포 / APK WebView 갱신 문제
+- 설치형 Android WebView는 `MainActivity.java`에서 첫 생성 시에만 `webView.loadUrl(HOME)`를 실행하며, `onResume`에는 기존 문서 재사용(`webView.onResume()`)만 한다. 이전 화면을 실행 중이면 서버 배포만으로 현재 DOM을 새로고침하지 않는다.
+- 앱 최초 생성 또는 강제 중지 후 재실행하면 최신 HTML을 요청한다. **앱 데이터 삭제는 금지** (운행 기록 보존).
+- 캐시 완화 버전 209: `f72e41b7-a7a1-47e8-936b-53fef648b8fa`, 운영 100%, 이전 208 `58dd2cda-de43-4c72-af22-eb91725bf0dc`. 루트(/), /index.html, /sw.js에 Cache-Control: no-store로 변경하여 WebView/프록시 HTML 캐시 잔존 가능성 완화.
+- 운영 209에서 모바일 브라우저 렌더링 테스트로 `#rs-weather-hud` 및 날씨 JS/CSS 정상 로딩을 확인함. 다만 실제 사용자 휴대폰 WebView 내부 상태는 원격 확인 불가.
+- 향후 배포 때 no-store 헤더와 `/api/weather`를 유지해야 하고, Android 앱을 단순히 백그라운드에서 복귀시키는 행위만으로 새 웹 코드가 자동 적용된다고 안내하지 말 것.
