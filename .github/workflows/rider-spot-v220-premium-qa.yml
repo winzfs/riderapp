@@ -1,0 +1,108 @@
+name: Rider Spot v220 premium mobile preview acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-v220-premium-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_UI_URL: https://44fe53dc-rider-spot.jazzhjm.workers.dev/
+      RIDER_TEST_URL: https://44fe53dc-rider-spot.jazzhjm.workers.dev/
+      RIDER_SCREENSHOTS: /tmp/rider-v220-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Verify latest build, regression, and native anti-reload safeguards
+        run: |
+          npm run build
+          npm test
+          mkdir -p /tmp/rider-v220-native
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rider-v220-native
+          RIDER_ANDROID_SOURCE=/tmp/rider-v220-native node scripts/check-update-safety.mjs
+      - name: Verify preview HTTP assets are identical to tested prebuilt assets
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const root=process.env.RIDER_UI_URL.replace(/\/$/,'');
+          const rel=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(rel.hash,'06a4d2f6010a');
+          const base='/assets/rider-spot-'+rel.hash+'/';
+          const get=async url=>{const r=await fetch(root+url,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(30000)});assert.equal(r.status,200,url+' returned HTTP '+r.status);return r.text();};
+          for(const [path,file] of [['/','index.html'],['/index.html','index.html'],['/sw.js','sw.js'],...['app.mjs','route-worker.mjs','native-gps.js','map-reports.js','tab-resume.js','daily-timeline.css','design-system.css','workspace-tools.js','weather-bar.js','weather-bar.css','premium-shell.css'].map(n=>[base+n,n])]){
+            const got=await get(path),want=fs.readFileSync('prebuilt/'+file,'utf8');
+            if(file==='index.html'){
+              assert.ok(got.includes('/premium-shell.css'),'new design not present');
+              assert.ok(got.includes('rs-recovery-guard-v217'),'native recovery guard missing');
+              assert.equal(got.replace(/<script id="rs-recovery-guard-v217">[\s\S]*?<\/script>/,''),want,'HTML differs except intentional v217 recovery guard');
+            } else assert.equal(got,want,'different asset: '+path);
+            console.log('MATCH',path,got.length);
+          }
+          for(const path of ['/rider-spot-shell-v40.js','/rider-maintenance-v40-teal-defaults.js','/rider-finance-v23-b4471aa90f1e.js','/mapdata/manifest.json']){
+            const text=await get(path);assert.ok(text.length>100,'legacy asset missing: '+path);
+          }
+          console.log('PASS release hash, premium shell, guard, legacy APIs/assets');
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Check no forced reload and mobile navigation for 320, 393, 412 widths
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
+          (async()=>{
+            const b=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+            try{
+              for(const width of [320,393,412]){
+                const c=await b.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,timezoneId:'Asia/Seoul',serviceWorkers:'block',permissions:['geolocation'],geolocation:{latitude:35.17,longitude:126.83}});
+                const p=await c.newPage();let navs=0;const errors=[];
+                p.on('framenavigated',f=>{if(f===p.mainFrame())navs++});
+                p.on('pageerror',e=>errors.push(e.message));
+                await p.goto(process.env.RIDER_UI_URL,{waitUntil:'domcontentloaded',timeout:35000});
+                await p.locator('.bottom-nav button').first().waitFor({timeout:35000});
+                const buttons=p.locator('.bottom-nav button');
+                assert.equal(await buttons.count(),5,'5 main tabs');
+                assert.equal(await p.locator('link[href*="premium-shell.css"]').count(),1,'premium style missing');
+                for(const idx of [1,2,3,4,0]){
+                  await buttons.nth(idx).click();await p.waitForTimeout(280);
+                  const dims=await p.evaluate(()=>({width:innerWidth,html:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
+                  assert.ok(dims.html<=width+2&&dims.body<=width+2,'overflow '+width+' '+JSON.stringify(dims));
+                }
+                await p.waitForTimeout(1800);
+                assert.equal(navs,1,'unexpected page reload for '+width);
+                assert.deepEqual(errors,[],'JavaScript errors for '+width);
+                fs.mkdirSync('/tmp/rider-v220-ui',{recursive:true});
+                await p.screenshot({path:'/tmp/rider-v220-ui/nav-'+width+'.png',fullPage:false});
+                await c.close();
+                console.log('PASS mobile tabs / responsive / no reload',width);
+              }
+            }finally{await b.close()}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Run existing authenticated screen and timeline acceptance
+        run: |
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          node tests/ui-browser.cjs
+      - name: Run existing native bridge / offline trip completion checks
+        env:
+          RIDER_TEST_CASE: native
+          RIDER_APK_BRIDGE: /tmp/rider-v220-native/app/src/main/assets/native-bridge.js
+        run: node tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v220-preview-qa
+          path: /tmp/rider-v220-ui
+          retention-days: 7
