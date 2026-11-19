@@ -14,6 +14,9 @@ function createEnv(withGuard = true) {
         if (new URL(request.url).pathname === "/sw.js") {
           return new Response("const CACHE='safe';", { headers: { "content-type": "application/javascript" } });
         }
+        if (/^\/assets\/rider-spot-[0-9a-f]{12}\//.test(new URL(request.url).pathname) && !new URL(request.url).pathname.includes("16c1eecf6bac")) {
+          return new Response("Not found", { status: 404 });
+        }
         return new Response('<html><head><title>Rider Spot</title></head><body>v221</body></html>', {
           headers: { "content-type": "text/html" },
         });
@@ -78,4 +81,19 @@ test("service-worker updates remain no-cache without skipping the native safegua
   assert.equal(r.status, 200);
   assert.equal(r.headers.get("cache-control"), "no-cache, must-revalidate");
   assert.match(await r.text(), /const CACHE/);
+});
+
+test("current release asset requests use the isolated asset service", async () => {
+  requests.length=0;
+  const path="/assets/rider-spot-16c1eecf6bac/premium-shell.css";
+  const r=await worker.fetch(new Request("https://preview.example"+path),createEnv());
+  assert.equal(r.status,200);
+  assert.deepEqual(requests.map(x=>x[0]),["assets"]);
+});
+test("old hashed releases still fall back to the existing backend Worker", async () => {
+  requests.length=0;
+  const path="/assets/rider-spot-06a4d2f6010a/premium-shell.css";
+  const r=await worker.fetch(new Request("https://preview.example"+path),createEnv());
+  assert.equal(await r.text(),"legacy:"+path);
+  assert.deepEqual(requests.map(x=>x[0]),["assets","legacy"]);
 });
