@@ -77,3 +77,159 @@
 /* Individual trips retain road correction; the daily map stays three-button simple. */
 .rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:360px){.rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle){grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Timeline v213: lighter live/detail hierarchy, consistent with the teal + warm-orange HUD.
+   Presentation only: GPS, playback, event toggles and recording actions keep their handlers. */
+.app .rs33-trip-detail {padding-top:12px}
+.app .rs33-trip-detail .rs-timeline-detail-heading {
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;
+  gap:5px 12px;margin:0 0 11px;min-width:0;
+}
+.app .rs33-trip-detail .rs-timeline-detail-heading .rs-timeline-back {
+  flex:0 0 100%;min-height:30px;padding:2px 0;margin:0;
+  text-align:left;color:#547c7e;font-size:12px;font-weight:700;
+}
+.app .rs33-trip-detail .rs-timeline-heading-main {
+  display:grid;gap:1px;min-width:0;flex:1;
+}
+.app .rs33-trip-detail .rs-timeline-heading-eyebrow {
+  display:block;color:#6d8588;font-size:11px;font-weight:650;line-height:1.2;
+}
+.app .rs33-trip-detail .rs-timeline-heading-main h1 {
+  margin:0;color:#173d43;font-size:clamp(19px,5vw,24px);font-weight:800;
+  letter-spacing:-.05em;line-height:1.35;white-space:nowrap;
+}
+.app .rs33-trip-detail .rs-timeline-detail-heading .rs33-state {
+  flex:none;margin-left:auto;padding:7px 10px;border-radius:999px;
+  font-size:11px;line-height:1.2;font-weight:800;
+}
+.app .rs33-trip-detail .rs33-course-shell:not(.rs33-course-full) {
+  overflow:hidden;border:1px solid #dceae8;border-radius:18px;
+  background:#fff;box-shadow:0 2px 12px #126d7010;
+}
+.app .rs33-trip-detail .trip-map.rs33-course-map {
+  height:clamp(300px,45dvh,465px);min-height:300px;max-height:none;
+  overflow:hidden;margin:0;border:0;border-radius:0;box-shadow:none;
+}
+.app .rs33-trip-detail .rs33-course-shell.rs33-course-full .rs33-course-map {
+  flex:1;height:auto;min-height:0;border-radius:0;box-shadow:none;
+}
+.app .rs33-trip-detail .rs33-trip-body {
+  display:grid;gap:9px;padding-top:11px;
+}
+.app .rs33-trip-detail .rs-timeline-summary {
+  display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
+  gap:7px 14px;margin:0;padding:14px 16px;
+  background:#fff;border:1px solid #ddecea;border-radius:17px;
+  box-shadow:0 2px 9px #126d7010;
+}
+.app .rs33-trip-detail .rs-timeline-summary-distance,
+.app .rs33-trip-detail .rs-timeline-summary-time {
+  display:flex;flex-direction:column;justify-content:center;min-width:0;
+}
+.app .rs33-trip-detail .rs-timeline-summary :is(.rs-timeline-summary-distance,.rs-timeline-summary-time)>small {
+  margin:0 0 3px;color:#70888b;font-size:11px;line-height:1.35;font-weight:650;
+}
+.app .rs33-trip-detail .rs-timeline-summary-distance>strong {
+  color:#086d70;font-weight:850;letter-spacing:-.055em;
+  font-size:clamp(28px,8vw,39px);line-height:1.13;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.app .rs33-trip-detail .rs-timeline-summary-distance>strong span {
+  font-size:13px;letter-spacing:-.01em;font-weight:700;color:#4b7779;
+}
+.app .rs33-trip-detail .rs-timeline-summary-time {
+  border-left:1px solid #e3efed;padding-left:14px;
+}
+.app .rs33-trip-detail .rs-timeline-summary-time>strong {
+  color:#244e53;font-size:clamp(16px,4.3vw,20px);font-weight:800;
+  line-height:1.35;letter-spacing:-.035em;font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.app .rs33-trip-detail .rs-timeline-summary-time>span {
+  margin-top:2px;color:#74878a;font-size:11px;line-height:1.4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.app .rs33-trip-detail .rs-timeline-gps-note {
+  grid-column:1/-1;padding-top:7px;margin:1px 0 0;
+  border-top:1px solid #edf3f1;color:#90705b;font-size:11px;
+  line-height:1.3;font-weight:600;
+}
+.app .rs33-trip-detail .rs44-events {
+  margin:0;border:1px solid #e0ecea;border-radius:15px;
+  background:#fff;box-shadow:none;overflow:hidden;
+}
+.app .rs33-trip-detail .rs44-event-toggle {
+  display:flex;gap:8px;align-items:center;width:100%;
+  min-height:53px;padding:10px 14px;margin:0;border:0;
+  background:transparent;color:#284e52;font-size:14px;font-weight:750;
+}
+.app .rs33-trip-detail .rs44-count {
+  margin-left:auto;padding:3px 8px;border-radius:999px;
+  background:#e7f7f4;color:#127274;font-size:11px;font-weight:750;
+}
+.app .rs33-trip-detail .rs44-chevron {margin-left:1px;color:#789194;font-size:17px}
+.app .rs33-trip-detail .rs44-event-list {
+  padding:10px 14px 12px 30px;margin:0;
+  border-top:1px solid #edf2f0;background:#fff;
+}
+/* The map tools act as one quiet segmented bar rather than four competing cards. */
+.app .rs33-trip-detail .rs59-course-tools,
+.app .rs33-timeline .rs59-course-tools {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:center;gap:4px;padding:6px;
+  border-top:1px solid #e9f0ee;background:#fff;
+}
+.app .rs33-trip-detail .rs59-course-tools:has(.rs38-road-toggle) {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.app .rs33-trip-detail .rs59-course-tools button,
+.app .rs33-timeline .rs59-course-tools button {
+  min-width:0;min-height:40px;max-width:none;padding:7px 3px;
+  border:1px solid transparent;border-radius:10px;box-shadow:none;
+  background:transparent;color:#607e81;font-size:11px;font-weight:750;
+  letter-spacing:-.025em;white-space:nowrap;
+}
+.app .rs33-trip-detail .rs59-course-tools button[aria-pressed="true"],
+.app .rs33-timeline .rs59-course-tools button[aria-pressed="true"],
+.app .rs33-trip-detail .rs59-course-tools .rs33-expand,
+.app .rs33-timeline .rs59-course-tools .rs33-expand {
+  background:#e8f8f5;color:#0b7373;border-color:#d6efeb;
+}
+.app .rs33-trip-detail .rs59-course-tools .rs59-event-toggle[aria-pressed="true"],
+.app .rs33-timeline .rs59-course-tools .rs59-event-toggle[aria-pressed="true"] {
+  background:#fff2e7;border-color:#ffead6;color:#9b511d;
+}
+.app .rs33-trip-detail .rs59-course-tools button:disabled,
+.app .rs33-timeline .rs59-course-tools button:disabled {opacity:.44}
+.app .rs33-trip-detail .rs-ride-control-bar {
+  grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);
+  gap:7px;padding:6px;border:1px solid #deece9;
+  background:#fff;border-radius:17px;box-shadow:0 5px 18px #125c5e1c;
+}
+.app .rs33-trip-detail .rs-ride-control-bar button {
+  min-height:52px;padding:10px 6px;border-radius:12px;
+  font-size:14px;font-weight:800;letter-spacing:-.02em;
+}
+.app .rs33-trip-detail .rs-ride-control-bar .rs-ride-pause {
+  background:#e8f6f3;border:1px solid #d3ebe5;color:#126d6e;
+}
+@media(max-width:760px) {
+  .app .rs33-trip-detail.rs33-trip-live .rs-ride-control-bar {
+    bottom:calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 8px);
+    left:max(12px,env(safe-area-inset-left));
+    right:max(12px,env(safe-area-inset-right));
+  }
+  .app .rs33-trip-detail.rs33-trip-live .rs33-trip-body {
+    padding-bottom:calc(var(--rs-nav-height) + var(--rs-safe-bottom) + 100px);
+  }
+}
+@media(max-width:360px) {
+  .app .rs33-trip-detail .rs-timeline-summary{padding:12px;gap:7px 8px}
+  .app .rs33-trip-detail .rs-timeline-summary-time{padding-left:10px}
+  .app .rs33-trip-detail .rs-timeline-summary-distance>strong{font-size:29px}
+  .app .rs33-trip-detail .rs59-course-tools button{font-size:10px;padding-inline:1px}
+}
+@media(max-height:520px) and (orientation:landscape) {
+  .app .rs33-trip-detail .trip-map.rs33-course-map{height:clamp(230px,56dvh,330px);min-height:230px}
+}
