@@ -43,7 +43,7 @@ jobs:
             }));
             assert.equal(ph.includes('rs-recovery-guard-v217'),true);
             assert.equal(live.includes('rs-recovery-guard-v217'),false);
-            const cleaned=ph.replace(/<script id="rs-recovery-guard-v217">[\\s\\S]*?<\\/script>/,'');
+            const cleaned=ph.replace(/<script id="rs-recovery-guard-v217">[\s\S]*?<\/script>/,'');
             assert.equal(cleaned,live,'preview must differ from production ONLY by one guard script');
             assert.equal(ph.split('rs-recovery-guard-v217').length,2,'guard inserted exactly once');
             const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
