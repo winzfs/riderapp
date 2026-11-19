@@ -26,18 +26,29 @@
   });
   // Lightweight local-only lifecycle log. No GPS, identity or trip data.
   const DIAG_KEY = "rs:page-lifecycle:v1";
-  function recordLifecycle(type, detail = "") {
+  // Persist across Activity/WebView recreation: sessionStorage alone is lost
+  // when Android replaces the renderer, hiding the cause of repeated boots.
+  const PERSISTENT_DIAG_KEY = "rs:page-lifecycle:persistent:v2";
+  function readLog(storage, key) {
     try {
-      const rows = JSON.parse(sessionStorage.getItem(DIAG_KEY) || "[]");
-      if (!Array.isArray(rows)) return;
-      rows.push({ at: Date.now(), type, detail: String(detail).slice(0, 60) });
-      sessionStorage.setItem(DIAG_KEY, JSON.stringify(rows.slice(-32)));
-    } catch { /* Private browsing and disabled storage are supported. */ }
+      const value = JSON.parse(storage.getItem(key) || "[]");
+      return Array.isArray(value) ? value : [];
+    } catch { return []; }
   }
-  window.__rsReloadDiagnostics = () => {
-    try { return JSON.parse(sessionStorage.getItem(DIAG_KEY) || "[]"); }
-    catch { return []; }
-  };
+  function recordLifecycle(type, detail = "") {
+    const entry = { at: Date.now(), type, detail: String(detail).slice(0, 60) };
+    for (const [storage, key] of [[sessionStorage, DIAG_KEY], [localStorage, PERSISTENT_DIAG_KEY]]) {
+      try {
+        const rows = readLog(storage, key);
+        rows.push(entry);
+        storage.setItem(key, JSON.stringify(rows.slice(-64)));
+      } catch { /* Private browsing and disabled storage are supported. */ }
+    }
+  }
+  window.__rsReloadDiagnostics = () => ({
+    currentSession: readLog(sessionStorage, DIAG_KEY),
+    persistent: readLog(localStorage, PERSISTENT_DIAG_KEY),
+  });
   const navigationType = window.performance?.getEntriesByType?.("navigation")?.[0]?.type;
   recordLifecycle("boot", navigationType || "unknown");
   window.addEventListener("pagehide", event => recordLifecycle("pagehide", event.persisted ? "bfcache" : "unload"));
