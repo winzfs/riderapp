@@ -46,7 +46,7 @@ jobs:
           assert.ok(weather.includes('rs-weather-sheet'), 'weather modal not scoped');
           assert.ok(!weather.includes('createElement("header")'), 'old conflicting header markup');
           for(const needle of ['.rs-weather-sheet .rs-weather-head','.rs-public-poi-credit','.ride-launch.active button'])assert.ok(css.includes(needle),needle);
-          assert.ok(map.includes('공공 '), 'OSM count attribution missing');
+          assert.ok(map.includes('OpenStreetMap'), 'OSM attribution missing');
           assert.ok(map.includes('제보 '), 'reported toilet count ambiguous');
           assert.ok(html.includes('weather-bar.js') && html.includes('weather-bar.css'));
           assert.ok(sw.includes('weather-bar.js'));
