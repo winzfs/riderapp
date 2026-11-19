@@ -1,4 +1,3 @@
-<stdin>:11: SyntaxWarning: invalid escape sequence '\.'
 name: Rider Spot Android native recovery APK
 on:
   push:
