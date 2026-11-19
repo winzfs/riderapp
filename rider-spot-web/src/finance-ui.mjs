@@ -36,11 +36,37 @@ export function createFinance(R, client) {
       onInput:e=>{const raw=e.currentTarget.value.replace(/\D/g,"").slice(0,9);
         const normalized=raw?new Intl.NumberFormat("ko-KR").format(Number(raw)):"";
         if(e.currentTarget.value!==normalized)e.currentTarget.value=normalized;}}));
+  function ConfirmModal({message,cancel,accept,danger=false}) {
+    const node=R.useRef(null);
+    const cancelRef=R.useRef(cancel);
+    cancelRef.current=cancel;
+    R.useLayoutEffect(()=>{
+      const dialog=node.current;
+      if(dialog&&!dialog.open)dialog.showModal();
+      return ()=>{if(dialog?.open)dialog.close();};
+    },[]);
+    R.useEffect(()=>{
+      if(!window.__rsNavigation)return;
+      return window.__rsNavigation.registerLayer("finance-confirm",()=>{cancelRef.current();return true;});
+    },[]);
+    return h("dialog",{ref:node,className:"rs-app-confirm","aria-label":"확인",
+      onCancel:e=>{e.preventDefault();cancel();},
+      onClick:e=>{if(e.target===e.currentTarget)cancel();}},
+      h("div",{className:"rs-app-confirm-inner"},
+        h("h3",{className:"rs-app-confirm-title"},"확인해 주세요"),
+        h("p",{className:"rs-app-confirm-text"},message),
+        h("div",{className:"rs-app-confirm-actions"},
+          button("취소",cancel,"rs-app-confirm-cancel"),
+          button(danger?"버리고 닫기":"확인",accept,
+            "rs-app-confirm-accept"+(danger?" is-danger":"")))));
+  }
   function FinanceSheet({editor,close,save,busy,error,userId}) {
     const ref=R.useRef(null),formRef=R.useRef(null),drag=R.useRef(null),dirty=R.useRef(false);
     const closer=R.useRef(close),key="rs:fin-draft:v2:"+userId+":"+editor.kind;
+    const [discardOpen,setDiscardOpen]=R.useState(false);
     const dismiss=()=>{if(busy)return;
-      if(dirty.current&&!window.confirm("작성 중인 내용을 닫을까요?"))return;
+      if(discardOpen){setDiscardOpen(false);return;}
+      if(dirty.current){setDiscardOpen(true);return;}
       close();};
     closer.current=dismiss;
     const draftChange=e=>{
@@ -170,7 +196,9 @@ export function createFinance(R, client) {
               {min:1,max:31,step:1}),
             txt("p","fin-hint","예정일만 표시 · 입금은 별도 확인"))),
         h("footer",null,error&&txt("p","fin-error",error),
-          h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기"))));
+          h("button",{type:"submit",className:"fin-primary",disabled:busy},busy?"저장 중…":"저장하기")),
+        discardOpen&&h(ConfirmModal,{message:"작성 중인 내용을 버리고 닫을까요?",
+          cancel:()=>setDiscardOpen(false),accept:close,danger:true})));
   }
 
   function Finance({user,login,onBike}) {
@@ -186,6 +214,18 @@ export function createFinance(R, client) {
     const [rev,refresh]=R.useState(0);
     const [editor,setEditor]=R.useState(null);
     const [sheetError,setSheetError]=R.useState("");
+    const [confirmation,setConfirmation]=R.useState(null);
+    const confirmationResolver=R.useRef(null);
+    const askConfirm=message=>new Promise(resolve=>{
+      confirmationResolver.current=resolve;
+      setConfirmation(message);
+    });
+    const settleConfirm=accepted=>{
+      const resolve=confirmationResolver.current;
+      confirmationResolver.current=null;
+      setConfirmation(null);
+      resolve?.(accepted);
+    };
     const [busy,setBusy]=R.useState(false);
     const [filter,setFilter]=R.useState("all");
     const [detailFilter,setDetailFilter]=R.useState("all");
@@ -364,7 +404,7 @@ export function createFinance(R, client) {
             if(hasExisting){
               if(!["쿠팡이츠","배민"].includes(values.platform)||detailed)
                 throw Error("기존 수익의 세부 내용을 변경하려면 내역에서 해당 기록을 선택해 주세요.");
-              if(!window.confirm(values.work_date+" "+values.platform+
+              if(!await askConfirm(values.work_date+" "+values.platform+
                 " 기존 수익 "+money(previous)+"을 새 금액 "+money(amount)+"으로 변경할까요?")){
                 setSheetError("기존 기록을 유지했어요.");return;
               }
@@ -398,7 +438,7 @@ export function createFinance(R, client) {
       finally{setBusy(false);}
     }
     async function remove(kind,row) {
-      if(!user||!row||busy||!window.confirm("이 기록을 삭제할까요?"))return;
+      if(!user||!row||busy||!await askConfirm("이 기록을 삭제할까요?"))return;
       const table={income:"rider_earnings",fuel:"rider_fuel_logs",expense:"rider_extra_expenses"}[kind];
       if(!table)return;
       setBusy(true);
@@ -450,7 +490,7 @@ export function createFinance(R, client) {
         setNotice("등록된 실제 지출이 있는 반복 규칙은 '활성화'를 꺼서 중지해 주세요.");
         return;
       }
-      if(!window.confirm("반복 지출 일정을 삭제할까요?"))return;
+      if(!await askConfirm("반복 지출 일정을 삭제할까요?"))return;
       setBusy(true);
       try{
         const res=await client.from("rider_recurring_expenses").delete()
@@ -462,7 +502,7 @@ export function createFinance(R, client) {
       finally{setBusy(false);}
     }
     async function paid(row) {
-      if(!user||busy||!row.paid_at||!window.confirm("입금 확인을 취소할까요?"))return;
+      if(!user||busy||!row.paid_at||!await askConfirm("입금 확인을 취소할까요?"))return;
       setBusy(true);
       try{const r=await client.from("rider_earnings")
         .update({paid_at:null,paid_won:null}).eq("id",row.id)
@@ -779,7 +819,10 @@ export function createFinance(R, client) {
           undo?.forUser===user.id&&button("삭제 실행 취소",restoreDeleted,"fin-undo",{disabled:busy})),
         section==="overview"?overview():section==="records"?records():
         section==="settlements"?settlements():analysis()),
-      editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}));
+      editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}),
+      confirmation&&h(ConfirmModal,{message:confirmation,
+        cancel:()=>settleConfirm(false),accept:()=>settleConfirm(true),
+        danger:/삭제|취소/.test(confirmation)}));
   }
   return Finance;
 }

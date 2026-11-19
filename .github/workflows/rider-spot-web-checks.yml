@@ -71,7 +71,7 @@ jobs:
           cp dist/release.json prebuilt/release.json
           bundle_dir="dist/assets/rider-spot-$(node -p "require('./dist/release.json').hash")"
           test -s "$bundle_dir/app.mjs"
-          for name in app.mjs route-worker.mjs native-gps.js map-reports.js tab-resume.js daily-timeline.css design-system.css workspace-tools.js weather-bar.js weather-bar.css; do
+          for name in app.mjs route-worker.mjs native-gps.js map-reports.js tab-resume.js daily-timeline.css design-system.css workspace-tools.js weather-bar.js weather-bar.css premium-shell.css; do
             cp "$bundle_dir/$name" "prebuilt/$name"
           done
           git config user.name "github-actions[bot]"

@@ -695,7 +695,9 @@ export function createRecords(R, client) {
           h("strong",{className:"bike-distance"},reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
             h("span",null,number(reading[0]))," ",h("small",null,"km"))),
           h("small",null,reading?.[1]||"입력일 미기록",
-            !manual&&reading?" · 정비·주유 기록 기준":"")),
+            !manual&&reading?" · 정비·주유 기록 기준":""),
+          model&&h("small",{className:"bike-model-note"},
+            explicitModel?modelLabel(model)+" 기준 정비 주기":"참고용 정비 주기")),
         bikeArtSource(model)
           ?h("img",{className:"bike-vehicle-art",src:bikeArtSource(model),alt:modelLabel(model)+" 바이크 이미지",width:1100,height:660,decoding:"async"})
           :h("img",{src:scooter,alt:"기본 스쿠터 일러스트",width:130,height:82})),
