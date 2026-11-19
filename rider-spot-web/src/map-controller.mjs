@@ -92,8 +92,9 @@ export function createMapController(L, node, cameraId, fallback) {
     height = node.clientHeight;
     resizing = true;
     try {
+      // Resizing the WebView must not trigger a camera reset or a fresh GPS follow.
+      // Leaflet already keeps the geographical center when invalidating size.
       map.invalidateSize({ pan: false, animate: false });
-      map.setView(center, zoom, { animate: false, reset: true });
     } finally {
       resizing = false;
     }
@@ -146,9 +147,9 @@ export function createMapController(L, node, cameraId, fallback) {
     moveTo,
     showBounds,
     initialLocation(position) {
-      if (!isCourse && !window.__rsStartupMainCameraSet && !userInteracted && !touch) {
-        moveTo(position, 16);
-      } else if (!cameraChosen && !touch && !userInteracted) {
+      // A saved camera is an intentional view: GPS updates must never override it.
+      // Only the initial unsaved map may center on the first valid GPS fix.
+      if (!isCourse && !cameraChosen && !window.__rsStartupMainCameraSet && !userInteracted && !touch) {
         moveTo(position, 16);
       }
     },
