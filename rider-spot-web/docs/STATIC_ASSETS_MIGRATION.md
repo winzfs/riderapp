@@ -74,3 +74,43 @@ Before replacing the original production name:
 
 Until these are verified, the existing production Worker remains at its
 known-good version; no production migration is claimed.
+
+## Live staging status (2026-11-19)
+
+The isolated preview is deployed at
+https://rider-spot-static-preview.jazzhjm.workers.dev/ .
+It is NOT yet a true Workers Static Assets deployment. The Cloudflare
+connector successfully opened an assets-upload session, but the upload
+endpoint rejected its credentials (401): it requires the session JWT, which
+this connector cannot send as a per-request Authorization override.
+
+To validate routing without changing production, two small Workers were
+deployed independently:
+- `rider-spot-static-candidate-assets`: preview-only, immutable GitHub
+  resource gateway for release `16c1eecf6bac`, pinned to commit
+  `6e6bd2d905db57d34408b22aa1b4292e01d92d37`.
+- `rider-spot-static-preview`: separate front Worker with service bindings
+  `ASSETS` to the candidate gateway and `LEGACY` to original `rider-spot`.
+
+An initial mobile regression exposed a sandbox Content-Security-Policy from
+raw.githubusercontent.com. The gateway now creates its own content headers
+instead of forwarding GitHub's sandbox restrictions, with a versioned cache
+key so restricted cached copies are not reused.
+
+Automated reports:
+- `docs/static-preview-qa.json`: live HTTP, current and previous release
+  assets, native recovery guard, offline Service Worker, map data and
+  read-only legacy API status/content-type parity.
+- `docs/static-preview-browser-qa.json`: anonymous Chromium at 320, 393
+  and 412 px, five tabs, no horizontal overflow, no runtime JS errors or
+  unexpected full-page reloads.
+
+Authenticated income charts and real Android ride recording have not been
+certified on this new hostname. The original `rider-spot` production Worker
+remains unchanged.
+
+**Production cutover remains blocked** until a legitimate JWT-capable
+Static Assets upload/CI route is available AND the oversized legacy Worker
+can be reproduced as a separately bound, verified backend. Do not point
+`LEGACY` back at `rider-spot` if this front is ever deployed under that
+same name: that would create a circular binding.
