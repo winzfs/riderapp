@@ -41,6 +41,8 @@ fs.mkdirSync(output, { recursive: true });
       assert.equal(await page.locator('.rs-journey-entry').count(), 0, 'Quest card must not appear on map');
       await open();
       assert.equal(await page.locator('.rs-profile-page .rs-game-profile').count(), 1, 'Progress is embedded in My Info');
+      assert.equal(await page.locator('.rs-game-xp-head span').innerText(), 'XP',
+        'minimal SIGNAL HUD renders the XP label instead of an explanatory sentence');
       await page.waitForFunction(() => document.querySelectorAll('.rs-journey-day.is-recorded').length === 1);
       assert.equal(await page.locator('.rs-journey-counter').innerText(), '1 / 3');
       assert.equal(await page.locator('.rs-rhythm').count(), 1, 'habit insight stays in My Info');
