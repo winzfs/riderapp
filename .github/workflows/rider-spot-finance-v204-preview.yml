@@ -1,4 +1,4 @@
-name: Rider Spot finance v204 live preview verification
+name: Rider Spot SIGNAL HUD v205 preview verification
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -18,14 +18,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Compare actual Cloudflare v204 preview assets with tested build
+      - name: Compare actual Cloudflare v205 preview assets with tested build
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
-          const origin='https://9d507131-rider-spot.jazzhjm.workers.dev';
-          const release=JSON.parse(fs.readFileSync('rider-spot-web/prebuilt-v204/release.json','utf8'));
-          assert.equal(release.hash,'112278c10edb');
+          const origin='https://b35815bf-rider-spot.jazzhjm.workers.dev';
+          const release=JSON.parse(fs.readFileSync('rider-spot-web/prebuilt-v205/release.json','utf8'));
+          assert.equal(release.hash,'efe99d2ccbd0');
           const base='/assets/rider-spot-'+release.hash+'/';
           const list=[['/','index.html'],['/index.html','index.html'],['/sw.js','sw.js'],
             ...['app.mjs','route-worker.mjs','native-gps.js','map-reports.js','design-system.css',
@@ -34,14 +34,14 @@ jobs:
             const res=await fetch(origin+url,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(20000)});
             assert.equal(res.status,200,'unexpected HTTP '+res.status+' on '+url);
             const actual=await res.text();
-            const expected=fs.readFileSync('rider-spot-web/prebuilt-v204/'+file,'utf8');
+            const expected=fs.readFileSync('rider-spot-web/prebuilt-v205/'+file,'utf8');
             assert.equal(actual,expected,'bytes differ: '+url);
             console.log('PASS',url,actual.length);
           }
           const map=await fetch(origin+'/mapdata/manifest.json',{signal:AbortSignal.timeout(20000)});
           assert.equal(map.status,200,'Korean map dataset missing');
           assert.ok((await map.json()).counts,'map source manifest not preserved');
-          const old=await fetch(origin+'/assets/rider-spot-9ffd5433f0b3/app.mjs',{signal:AbortSignal.timeout(20000)});
+          const old=await fetch(origin+'/assets/rider-spot-112278c10edb/app.mjs',{signal:AbortSignal.timeout(20000)});
           assert.equal(old.status,200,'previous published app bundle removed');
-          console.log('PASS preview 112278c10edb + previous assets');
+          console.log('PASS SIGNAL HUD v205 preview efe99d2ccbd0 + previous assets');
           NODE
