@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rider-spot-static-candidate-assets",
+  "main": "edge/kv-preview-assets.mjs",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "RS_ASSETS",
+      "id": "d268cb25c64445cf9bb67242b79edc28"
+    }
+  ]
+}
