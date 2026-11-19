@@ -19,6 +19,10 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/rs-weather-native
           tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-weather-native
+          echo "=== MainActivity full startup source (1..235) ==="
+          sed -n '1,235p' /tmp/rs-weather-native/app/src/main/java/com/riderspot/android/MainActivity.java
+          echo "=== Manifest webview version information ==="
+          sed -n '1,120p' /tmp/rs-weather-native/app/build.gradle
           echo "=== MainActivity relevant lines ==="
           grep -RnE 'loadUrl|ROOT_URL|BASE_URL|workers.dev|setCacheMode|LOAD_CACHE|setDomStorageEnabled|ServiceWorker|shouldInterceptRequest|clearCache|onPageFinished|onResume' /tmp/rs-weather-native/app/src/main/java /tmp/rs-weather-native/app/src/main/assets 2>/dev/null | head -90 || true
           echo "=== Android Asset file list ==="
