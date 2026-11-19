@@ -24,8 +24,6 @@ jobs:
           cache-dependency-path: rider-spot-web/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Compare weather enabled, weather disabled and service worker disabled
-        run: node tests/weather-reload-live.cjs
       - name: Scan all live scripts for forced navigation and update hooks
         run: |
           node --input-type=module <<'NODE'
@@ -48,3 +46,6 @@ jobs:
             }catch(e){console.log('SCRIPT_ERR',path,String(e))}
           }
           NODE
+
+      - name: Compare weather enabled, weather disabled and service worker disabled
+        run: node tests/weather-reload-live.cjs
