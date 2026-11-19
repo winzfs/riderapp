@@ -154,13 +154,17 @@ function openDetails() {
   openMapSheet(root, "운행 날씨");
   document.querySelector(".rs-sheet-backdrop .rs-map-sheet:has(.rs-weather-details)")?.classList.add("rs-weather-sheet");
 }
+let retryAfter = 0;
 async function refresh(force = false) {
   const bar = barElement(); if (!bar || document.hidden) return;
   const point = gridPosition(); if (!point) { paint(); return; }
   const key = point.lat + "," + point.lon;
   if (pending) return; // At most one request; tab and GPS events cannot overlap it.
   if (!force && currentKey === key && current && Date.now() - loadedAt < REFRESH_MS) { paint(); return; }
-  if (!force && currentKey !== key) {
+  if (!force && currentKey === key && Date.now() < retryAfter) { paint(); return; }
+  if (currentKey !== key) {
+    loadedAt = 0;
+    retryAfter = 0;
     current = null;
     try {
       const saved = JSON.parse(sessionStorage.getItem(CACHE) || "null");
@@ -178,11 +182,11 @@ async function refresh(force = false) {
       const data = await res.json();
       if (!data || data.source !== "MET Norway" || !data.current) throw Error("Invalid weather");
       if (currentKey === key) {
-        current = data; loadedAt = Date.now();
+        current = data; loadedAt = Date.now(); retryAfter = 0;
         try { sessionStorage.setItem(CACHE,JSON.stringify({key,data,savedAt:loadedAt})); } catch {}
       }
     }).catch(() => {
-      if (currentKey === key && !current) loadedAt = Date.now() - REFRESH_MS + 5 * 60000;
+      if (currentKey === key) retryAfter = Date.now() + 5 * 60000;
     }).finally(() => { clearTimeout(timeout); pending = null; paint(); });
   paint();
   await pending;

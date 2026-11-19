@@ -9,7 +9,7 @@ self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
   if(url.origin!==self.location.origin)return;
   if(event.request.mode==='navigate'){
-    event.respondWith(fetch(event.request).catch(async()=>await caches.match('/index.html')||await caches.match('/offline.html')));
+    event.respondWith(navigate(event.request));
     return;
   }
   if(url.pathname.startsWith('/assets/')){
@@ -18,3 +18,20 @@ self.addEventListener('fetch',event=>{
   }
   event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request)));
 });
+async function navigate(request) {
+  let response;
+  try {
+    response = await fetch(request);
+    if (response.status < 500) return response;
+  } catch {
+    // Fetch rejects when the connection drops. HTTP failures resolve normally.
+  }
+  try {
+    const cache = await caches.open(CACHE);
+    const shell = await cache.match('/index.html') || await cache.match('/offline.html');
+    if (shell) return shell;
+  } catch {
+    // A browser can revoke storage access; keep the original network response.
+  }
+  return response || Response.error();
+}
