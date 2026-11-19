@@ -161,8 +161,13 @@ anonymous Chromium evidence is not a replacement for those release gates.
 ### The remaining production blocker
 
 Cloudflare's connected management API successfully created an official
-Static Assets upload session, but uploading through that connector failed
-HTTP 401: it could not provide the session JWT as the required bearer token.
+Static Assets upload session, but **the asset upload failed HTTP 401**.
+The same result occurred when the returned session JWT was explicitly used
+as the Authorization bearer token for a direct upload request. The session
+exists, but this connection cannot complete the official upload; the precise
+authorization restriction remains unresolved. Do not interpret successful
+session creation as successful asset deployment.
+
 GitHub Actions currently has no configured Cloudflare deploy secret; its
 native Static Assets workflow can run builds but cannot publish assets.
 A user-authorized Wrangler CI token or JWT-capable upload client is needed
