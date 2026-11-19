@@ -1,7 +1,7 @@
 @import './legacy-components.css';
 @import './journey.css';
 /* Rider Spot — Premium Urban Mobility. Unlayered tokens/primitives are authoritative. */
-:root{color-scheme:light;--rs-primary:#0b655b;--rs-primary-hover:#084e47;--rs-soft:#eaf4f0;--rs-bg:#f7f8f6;--rs-surface:#fff;--rs-text:#202d2b;--rs-muted:#67736f;--rs-line:#e5eae6;--rs-warning:#a75d21;--rs-warning-bg:#fff3e7;--rs-danger:#b44343;--rs-radius:16px;--rs-shadow:0 4px 18px #15332b0d;--rs-safe-top:env(safe-area-inset-top,0px);--rs-safe-bottom:env(safe-area-inset-bottom,0px);--rs-nav-height:70px;--rs-header-height:56px;--rs-space:20px;--green:var(--rs-primary);--green-deep:var(--rs-primary-hover);--ink:var(--rs-text);--muted:var(--rs-muted);--border:var(--rs-line);--paper:var(--rs-surface);--canvas:var(--rs-bg);--rc-ink:var(--rs-text);--rs33-ink:var(--rs-text);--rs33-muted:var(--rs-muted);--rs33-accent:var(--rs-primary);--rs33-line:var(--rs-line)}
+:root{color-scheme:light;--rs-primary:#087f80;--rs-primary-hover:#056367;--rs-teal:#25ccbe;--rs-teal-soft:#e3f9f6;--rs-orange:#ff893b;--rs-orange-hover:#ff7827;--rs-orange-ink:#48260c;--rs-soft:#e8f9f6;--rs-bg:#f5fbfa;--rs-surface:#fff;--rs-text:#173d43;--rs-muted:#5e787c;--rs-line:#deebe9;--rs-warning:#aa5116;--rs-warning-bg:#fff3e8;--rs-danger:#b44343;--rs-radius:16px;--rs-shadow:0 4px 18px #15332b0d;--rs-safe-top:env(safe-area-inset-top,0px);--rs-safe-bottom:env(safe-area-inset-bottom,0px);--rs-nav-height:70px;--rs-header-height:56px;--rs-space:20px;--green:var(--rs-primary);--green-deep:var(--rs-primary-hover);--ink:var(--rs-text);--muted:var(--rs-muted);--border:var(--rs-line);--paper:var(--rs-surface);--canvas:var(--rs-bg);--rc-ink:var(--rs-text);--rs33-ink:var(--rs-text);--rs33-muted:var(--rs-muted);--rs33-accent:var(--rs-primary);--rs33-line:var(--rs-line)}
 /* The installed APK already pads its WebView using systemBars insets. */
 html.rs-native-shell{--rs-safe-top:0px;--rs-safe-bottom:0px}
 html{scroll-padding-bottom:90px;-webkit-text-size-adjust:100%;background:var(--rs-bg)}
@@ -2271,4 +2271,155 @@ dialog.record-mini-dialog::backdrop{
 }
 @media(prefers-reduced-motion:reduce){
   .app .finance-page .fin-svg-chart-bar{transition:none}
+}
+
+/* SIGNAL HUD / v205
+ * Minimal teal & orange across every tab.
+ * Actions remain visibly labeled; map and Neo-Flat part sprites remain untouched.
+ * Teal and orange are bright accents; body text uses higher-contrast deep teal.
+ */
+:root{
+  --signal-teal:#25ccbe;
+  --signal-teal-dark:#087f80;
+  --signal-teal-deep:#10545b;
+  --signal-orange:#ff893b;
+  --signal-orange-ink:#48260c;
+  --signal-mist:#f5fbfa;
+  --signal-line:#deebe9;
+  --signal-ink:#173d43;
+}
+.app,.app .workspace>main{background:var(--signal-mist);color:var(--signal-ink)}
+.app>header{background:#fff;border-bottom:1px solid var(--signal-line)}
+.app .brand{color:var(--signal-ink);font-weight:800;letter-spacing:-.055em}
+.app .brand:before{background:var(--signal-teal)!important;border:0;box-shadow:none;border-radius:9px}
+.app .header-user{color:var(--signal-teal-dark)}
+.app .bottom-nav{background:#fff;border-top:1px solid var(--signal-line);box-shadow:0 -2px 15px #0b777409}
+.app .bottom-nav button{position:relative;color:#6c8386;font-weight:550;transition:color .15s ease,transform .15s ease}
+.app .bottom-nav button.active{color:var(--signal-teal-dark);font-weight:800}
+.app .bottom-nav button.active svg{color:var(--signal-teal-dark);background:var(--signal-teal-soft,#e3f9f6);box-shadow:0 0 0 6px #e3f9f6;border-radius:6px}
+.app .bottom-nav button.active::before{content:"";position:absolute;top:0;left:calc(50% - 12px);width:24px;height:3px;border-radius:0 0 6px 6px;background:var(--signal-orange)}
+.app .bottom-nav button:focus-visible{outline:2px solid var(--signal-teal-dark);outline-offset:-2px}
+.app :is(.primary,.rs-primary)[type=button],
+.app :is(.primary,.rs-primary)[type=submit]{background:var(--signal-teal-dark);color:#fff;border-color:transparent}
+.app :is(.primary,.rs-primary):active{background:#056367}
+.app .page :is(h1,h2,h3){color:var(--signal-ink)}
+.app .rs33-map-bar{background:#fff}
+.app .rs33-region-toggle{color:var(--signal-ink)}
+.app .rs33-map-filters button{background:#f0f8f7;color:#527278;font-weight:700}
+.app .rs33-map-filters button[aria-pressed=true]{background:#d8f8f3;color:#076768}
+.app .rs33-map-share{background:#f0f8f7;color:#496f70}
+.app .rs33-map-share.active{background:#dbf9f5;color:#046b6c}
+.app .map-wrap .rs-gps-state{width:auto;right:auto;max-width:calc(100% - 95px);border-radius:999px;padding:7px 12px;background:#fff;color:#527078;border:1px solid #e2eeec;box-shadow:0 3px 14px #075f6011;font-weight:700;min-height:38px;white-space:normal}
+.app .map-wrap .rs-gps-state.rs-gps-ok{color:var(--signal-teal-dark)}
+.app .map-wrap .rs-gps-state .rs-gps-indicator{background:var(--signal-teal);box-shadow:0 0 0 3px #d6faf4}
+.app .map-wrap .rs-gps-state.rs-gps-error .rs-gps-indicator{background:#cc4141;box-shadow:none}
+.app .map-wrap .rs-gps-state.rs-gps-stale .rs-gps-indicator{background:var(--signal-orange);box-shadow:none}
+.app .map-wrap .locate{color:var(--signal-teal-dark);background:#fff}
+.app .ride-launch button{background:var(--signal-teal-dark);color:#fff;border-color:transparent}
+.app .recording-strip{background:#e0f8f4;color:#086e70;border-left:3px solid var(--signal-teal);font-weight:700}
+.app .recording-strip>span{background:var(--signal-orange)}
+.app .rs33-week button[aria-pressed=true]{background:var(--signal-teal-dark);color:#fff}
+.app .rs33-week button span[data-has-record=true]{background:var(--signal-orange)}
+.app .rs33-week button[aria-pressed=true] span[data-has-record=true]{background:#fff}
+.app .rs33-state{background:#e2f9f6;color:var(--signal-teal-dark)}
+.app .rs33-trip-summary{background:#fff;border:1px solid #e5efed;border-radius:15px;padding:14px 15px}
+.app .rs33-trip-summary>strong{font-variant-numeric:tabular-nums;font-size:clamp(25px,7vw,32px);color:var(--signal-teal-dark)}
+.app .rs33-trip-summary>.rs-metrics{padding:5px 0}
+.app .rs33-course-shell{border-color:#dceae8}
+.app .rs59-course-tools button,.app .rs33-course-controls button{background:#f1f9f7;color:#57737a}
+.app .rs59-course-tools button[aria-pressed=true],.app .rs33-course-controls button[aria-pressed=true]{background:#daf8f3;color:#086f73}
+.app .rs-ride-finish,.app .rs61-home-dock>button{background:var(--signal-orange)!important;color:var(--signal-orange-ink)!important;border-color:transparent!important}
+.app .rc-community{background:transparent}
+.app .rc-community .rc-head h1{color:var(--signal-ink);font-size:24px}
+.app .rc-community .rc-search{background:#eff8f6;border:1px solid #e2edeb;border-radius:13px;color:#637d81}
+.app .rc-community .rc-categories{gap:6px}
+.app .rc-community .rc-categories button{background:#eef8f6;color:#56787b}
+.app .rc-community .rc-categories button[aria-pressed=true]{background:var(--signal-teal);color:#073d43}
+.app .rc-community .rc-card-main{padding:15px 0}
+.app .rc-community .rc-card-grid h2{font-size:15px;line-height:1.4;margin:4px 0 3px}
+.app .rc-community .rc-card-grid p{font-size:12px;line-height:1.5;-webkit-line-clamp:1;margin-bottom:7px}
+.app .rc-community .rc-row-meta{font-size:11px;line-height:1.45;color:#6e8588}
+.app .rc-community .rc-tag,.app .rc-community .rc-local-tag{background:#e0f9f5;color:#087a7b}
+.app .rc-community .rc-write{background:var(--signal-orange)!important;color:var(--signal-orange-ink)!important;font-weight:800;border:0}
+.app .finance-page{color:var(--signal-ink)}
+.app .finance-page .fin-hero{background:linear-gradient(120deg,#097d7e,#0c9895 92%);box-shadow:0 4px 13px #08797718;border:0}
+.app .finance-page .fin-hero-top,.app .finance-page .fin-hero-range,.app .finance-page .fin-hero-bottom span{color:#e4faf6}
+.app .finance-page .fin-hero-bottom strong{color:#fff}
+.app .finance-page .fin-hero-bottom span:last-child strong{color:#ffe0b5}
+.app .finance-page .fin-primary{background:var(--signal-orange);border:0;color:var(--signal-orange-ink);font-weight:850}
+.app .finance-page .fin-primary:active{background:#ff7728}
+.app .finance-page .fin-secondary{background:#fff;border-color:#dbe9e7;color:var(--signal-ink);font-weight:750}
+.app .finance-page .fin-subnav{background:#eaf5f3;border-color:#e1efeb}
+.app .finance-page .fin-subnav .fin-subnav-btn{color:#688285}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected{background:#fff;color:#077d7c;box-shadow:0 2px 6px #0a6a6912}
+.app .finance-page .fin-period-btn.selected{background:#d9f9f4;color:#08777a;border-color:#87e5dc}
+.app .finance-page .fin-card{border-color:#e0eeeb;box-shadow:0 2px 9px #0c706909}
+.app .finance-page .fin-card>header h2{color:var(--signal-ink)}
+.app .finance-page .fin-stat strong,.app .finance-page .fin-platform-title strong,.app .finance-page .fin-goal-amount strong{color:#104e54}
+.app .finance-page .fin-goal-track,.app .finance-page .fin-bar-track{background:#e4f2ef}
+.app .finance-page .fin-goal-track>div{background:var(--signal-orange)}
+.app .finance-page .fin-bar-value{background:var(--signal-teal)}
+.app .finance-page .fin-svg-chart{color:var(--signal-teal)}
+.app .finance-page .fin-chart-point.selected .fin-svg-chart{color:var(--signal-orange)}
+.app .finance-page .fin-chart-point.selected .fin-chart-track{background:#fff6ed;outline-color:var(--signal-orange)}
+.app .finance-page .fin-chart-point.selected .fin-chart-date{color:#9d4710}
+.app .finance-page .fin-chart-today{background:var(--signal-orange)}
+.app .finance-page .fin-filter.current{background:var(--signal-teal-dark);color:white}
+.app .finance-page .fin-record-icon.gain{background:#fff0e2;color:#bd5d17}
+.app .finance-page .fin-record-icon.spend{background:#e6f8f5;color:#087b7a}
+.app .finance-page .fin-record-end>strong.gain,.app .finance-page .fin-textbtn{color:#af551c}
+.app .finance-page .fin-insights,.app .finance-page .fin-recurring{border-color:#deebe8}
+.app .fin-dialog .fin-platform-choice input:checked+span{color:#066f70;border-color:#5fd8ca;background:#e6faf6}
+.app .fin-dialog .fin-sheet footer .fin-primary{background:var(--signal-orange);color:var(--signal-orange-ink);border:0}
+.app .fin-dialog .fin-sheet-head small{color:#087b7d}
+.app .bike-page .bike-vehicle{background:#eafaf7;border:1px solid #daefea;box-shadow:none}
+.app .bike-page .bike-vehicle h2,.app .bike-page .bike-distance{color:var(--signal-ink)}
+.app .bike-page .bike-consumables .bike-tile{border-color:#e0ecea;background:#fff;box-shadow:0 2px 9px #086c6509}
+.app .bike-page .bike-tile-status.bike-state-ok{background:#e0f8f3;color:#087570}
+.app .bike-page .bike-tile-status.bike-state-soon{background:#fff0df;color:#a95211}
+.app .bike-page .bike-tile-status.bike-state-overdue{background:#fff0ef;color:#b63f37}
+.app .bike-page .record-primary,.record-sheet .record-primary{background:var(--signal-orange);color:var(--signal-orange-ink);border:0}
+.app .bike-page .bike-model-banner{background:#e9f9f5;border-color:#d6ede7;color:#21575a}
+.app .bike-page .bike-model-change{color:var(--signal-teal-dark)}
+.bike-safety-detail{display:block;margin:0 0 12px;color:#5e777a}
+.bike-safety-detail>summary{min-height:34px;padding:7px 1px;list-style:none;display:flex;gap:7px;align-items:center;font-size:11px;font-weight:700;color:#52777b;cursor:pointer}
+.bike-safety-detail>summary:before{content:"ⓘ";color:var(--signal-teal-dark);font-size:14px}
+.bike-safety-detail>summary::-webkit-details-marker{display:none}
+.bike-safety-detail[open]>summary:after{content:"⌃";margin-left:1px}
+.bike-safety-detail .bike-safety-message{margin:0 0 8px;padding:10px 12px;border-radius:10px;background:#f2faf8;color:#496b6e;font-size:11px;line-height:1.55}
+.record-cycle-panel .record-cycle-heading strong{color:var(--signal-ink)}
+.record-cycle-panel .record-cycle-edit{color:var(--signal-teal-dark)}
+.record-sheet .record-grab,.fin-drag-handle{background:#b7d6d1}
+.record-sheet .record-cycle-save,.record-mini-actions .record-cycle-save{background:var(--signal-orange);color:var(--signal-orange-ink)}
+.record-mini-form input:focus-visible{outline-color:var(--signal-teal-dark)}
+.rs-profile-page .rs-game-profile{background:linear-gradient(125deg,#0b6d75,#0a8688);border:1px solid #1c9894;box-shadow:0 5px 18px #0a69681b;color:#fff;overflow:hidden}
+.rs-profile-page .rs-game-profile-title strong,.rs-profile-page .rs-game-xp-head strong,.rs-profile-page .rs-game-mini-stats b{color:#fff}
+.rs-profile-page .rs-game-profile-title small,.rs-profile-page .rs-game-profile-title span,.rs-profile-page .rs-game-xp-head span,.rs-profile-page .rs-game-mini-stats small{color:#c6f2ec}
+.rs-profile-page .rs-game-level-disc{background:#f2fffd;color:#096f71;border:0;box-shadow:none}
+.rs-profile-page .rs-game-level-disc strong,.rs-profile-page .rs-game-level-disc span{color:#08777b}
+.rs-profile-page .rs-game-xp-track{background:#ffffff3b}
+.rs-profile-page .rs-game-xp-track>span{background:var(--signal-orange)}
+.rs-profile-page .rs-game-profile-star{color:#ffb177;filter:none}
+.rs-profile-page .rs-journey-day.is-recorded>b{background:#ddf7f1;border-color:#8fddd6;color:#087879;box-shadow:none}
+.rs-profile-page .rs-journey-day.is-today>b{outline-color:var(--signal-orange)}
+.rs-profile-page .rs-journey-mission.is-done .rs-journey-mission-icon{background:#e2f8f5;color:#087878}
+.rs-profile-page .rs-journey-next-medal{background:#fff0da;color:#bd6018;border-color:#ffd49e;box-shadow:none}
+.rs-profile-page .rs-game-recap{background:#fff;border-color:#daebe8;box-shadow:0 3px 12px #087a7810}
+.rs-profile-page .rs-game-xp-earned,.rs-game-recap .rs-game-xp-earned{color:#ad581b;background:#fff0df}
+.rs-game-recap .rs-game-recap-heading h2{font-size:17px}
+.rs-game-recap .rs-game-recap-stats{gap:8px}
+.rs-game-recap .rs-game-recap-stats>div{border-color:#e1eeeb}
+.rs-game-recap .rs-game-recap-stats strong{font-variant-numeric:tabular-nums;color:var(--signal-teal-dark)}
+.rs-game-recap .rs-game-recap-flare{color:var(--signal-orange)}
+@media(hover:none) and (prefers-reduced-motion:no-preference){
+  .app :is(.fin-quick>button,.bike-tile,.rs33-course-controls button,.rc-write,.record-primary):active{transform:scale(.985)}
+}
+@media(prefers-reduced-motion:reduce){
+  .app :is(.fin-quick>button,.bike-tile,.rs33-course-controls button,.rc-write,.record-primary){transition:none!important}
+  .app .bottom-nav button{transition:none!important}
+}
+@media(max-width:360px){
+  .app .rc-community .rc-card-grid h2{font-size:14px}
+  .app .rs33-trip-summary{padding:11px 12px}
+  .app .finance-page .fin-hero{padding:16px 17px}
 }
