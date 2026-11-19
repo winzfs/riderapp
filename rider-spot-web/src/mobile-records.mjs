@@ -410,7 +410,7 @@ export function createRecords(R, client) {
     };
     return h(R.Fragment,null,h(Sheet,{title:item+" 관리",detail:true,leading:h(PartIcon,{name:item,size:30}),
       close,
-      action:{label:"＋ 정비 기록",onClick:()=>add(item)}},
+      action:{label:"＋ 부품 기록",onClick:()=>add(item)}},
       h("div",{className:"record-detail-summary"},
         metric("최근 교환일",recent?.serviced_on || "이력 없음"),
         metric("최근 교환 거리",baseline ? km(baseline.odometer_km) : "거리 미입력"),
