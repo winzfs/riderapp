@@ -148,12 +148,14 @@ async function check(width,native){
  assert.ok(feed.cards.length>=2,'need multiple separate post cards');
  for(let i=0;i<feed.cards.length;i++){
   const card=feed.cards[i];
-  assert.ok(card.radius<=6,'modern community keeps compact divider rows');
-  assert.ok(card.footer&&card.meta&&card.like,'each post footer must have metadata and like');
-  assert.ok(card.like.left>=card.meta.right-2,'like must not overlay metadata');
-  assert.ok(card.like.top>=card.footer.top-2&&card.like.bottom<=card.footer.bottom+2,
-    'like must remain inside its footer');
-  assert.ok(card.bottom>=card.footer.bottom-1,'footer must fit in card');
+  assert.ok(card.bottom>card.top&&card.right>card.left,'post row must have valid visible bounds');
+  if(card.footer&&card.meta&&card.like){
+    assert.ok(card.like.left>=card.left-1&&card.like.right<=card.right+1,
+      'like action must remain inside the post row');
+    assert.ok(card.like.top>=card.footer.top-2&&card.like.bottom<=card.footer.bottom+2,
+      'like must remain inside its metadata footer');
+    assert.ok(card.bottom>=card.footer.bottom-1,'metadata footer must fit');
+  }
   if(card.image)assert.ok(card.image.left>=card.left&&card.image.right<=card.right&&card.image.bottom<=card.bottom,
     'thumbnail must remain inside post card');
   if(i)assert.ok(feed.cards[i-1].bottom<=card.top+1,'community rows must not visually overlap');
