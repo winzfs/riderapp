@@ -115,7 +115,9 @@ async function check(width,native){
    await p.locator('.fin-quick').getByRole('button',{name:'수익 입력'}).click();
    await p.getByRole('dialog',{name:'수익 입력'}).waitFor();
    await p.getByRole('dialog',{name:'수익 입력'}).getByLabel('수익 금액').fill('85000');
+   p.once('dialog',dialog=>dialog.accept());
    await p.getByRole('dialog',{name:'수익 입력'}).getByRole('button',{name:'닫기'}).click();
+   await p.getByRole('dialog',{name:'수익 입력'}).waitFor({state:'hidden'});
    await p.getByRole('button',{name:'내역',exact:true}).click();
    await p.locator('.fin-month-head').waitFor();
    await p.getByRole('button',{name:'정산',exact:true}).click();
