@@ -13,13 +13,16 @@ const BASE = process.env.RS_DIAG_URL || 'https://rider-spot.jazzhjm.workers.dev/
     ]) {
       const context=await browser.newContext({viewport:{width:393,height:830},deviceScaleFactor:3,isMobile:true,hasTouch:true,serviceWorkers:config.serviceWorkers,locale:'ko-KR',timezoneId:'Asia/Seoul'});
       const page=await context.newPage();
-      const log={scenario:config.name,navigation:0,boot:0,crashes:0,errors:[],weatherRequests:0,weatherFailures:0,events:[],weatherVisible:false,assets:[]};
+      const log={scenario:config.name,navigation:0,boot:0,crashes:0,errors:[],weatherRequests:0,weatherFailures:0,httpFailures:[],events:[],weatherVisible:false,assets:[]};
       page.on('framenavigated',f=>{if(f===page.mainFrame())log.navigation++});
       page.on('crash',()=>log.crashes++);
       page.on('pageerror',e=>{if(log.errors.length<10)log.errors.push(e.message.slice(0,260))});
       page.on('console',m=>{if(m.type()==='error' && log.errors.length<10)log.errors.push('console:'+m.text().slice(0,220))});
       page.on('request',r=>{if(r.url().includes('/api/weather'))log.weatherRequests++});
       page.on('requestfailed',r=>{if(r.url().includes('/api/weather'))log.weatherFailures++});
+      page.on('response',resp=>{if(resp.status()>=400 && log.httpFailures.length<15) {
+        const u=new URL(resp.url());log.httpFailures.push({status:resp.status(),path:u.pathname,host:u.hostname});
+      }});
       await page.addInitScript(() => {
         window.__rsTestBoot = (window.__rsTestBoot || 0)+1;
         const save=(name)=>{try{const rows=JSON.parse(sessionStorage.getItem('__rsQAEvents')||'[]');rows.push({name,t:Date.now()});sessionStorage.setItem('__rsQAEvents',JSON.stringify(rows.slice(-100)))}catch{}};
@@ -50,7 +53,7 @@ const BASE = process.env.RS_DIAG_URL || 'https://rider-spot.jazzhjm.workers.dev/
           await page.waitForTimeout(2000);
           if(await page.locator('.rs-weather-sheet .close').count()) await page.locator('.rs-weather-sheet .close').click().catch(()=>{});
         }
-        await page.waitForTimeout(10000);
+        await page.waitForTimeout(config.name==='live-normal' ? 70000 : 10000);
         const diagnostic=await page.evaluate(()=>({
           weatherVisible:!!document.querySelector('#rs-weather-hud'),
           activeTab:window.__rsActiveTab||null,
@@ -65,7 +68,7 @@ const BASE = process.env.RS_DIAG_URL || 'https://rider-spot.jazzhjm.workers.dev/
       results.push(log);
       await context.close();
     }
-    assert.ok(results.filter(x=>x.navigation>1).length===0,'unexpected main-frame navigation in smoke');
+    assert.ok(results.every(x=>x.events.filter(e=>e.startsWith('boot:')).length===1 && !x.events.includes('beforeunload')), 'document reload detected in a scenario');
     console.log('DIAGNOSTICS_COMPLETE');
   } finally {await browser.close()}
 })().catch(e=>{console.error(e);process.exit(1)});
