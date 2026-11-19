@@ -115,8 +115,14 @@ async function check(width,native){
    await p.locator('.fin-quick').getByRole('button',{name:'수익 입력'}).click();
    await p.getByRole('dialog',{name:'수익 입력'}).waitFor();
    await p.getByRole('dialog',{name:'수익 입력'}).getByLabel('수익 금액').fill('85000');
-   p.once('dialog',dialog=>dialog.accept());
    await p.getByRole('dialog',{name:'수익 입력'}).getByRole('button',{name:'닫기'}).click();
+   const discard=p.getByRole('dialog',{name:'확인'});
+   await discard.waitFor();
+   assert.match(await discard.innerText(),/작성 중인 내용을 버리고 닫을까요/);
+   await discard.getByRole('button',{name:'취소',exact:true}).click();
+   await p.getByRole('dialog',{name:'수익 입력'}).waitFor({state:'visible'});
+   await p.getByRole('dialog',{name:'수익 입력'}).getByRole('button',{name:'닫기'}).click();
+   await discard.getByRole('button',{name:'버리고 닫기'}).click();
    await p.getByRole('dialog',{name:'수익 입력'}).waitFor({state:'hidden'});
    await p.getByRole('button',{name:'내역',exact:true}).click();
    await p.locator('.fin-month-head').waitFor();

@@ -78,7 +78,7 @@ check("Map retains manually selected camera across GPS and resize events", () =>
   assert.match(camera, /sessionStorage/);
   assert.match(camera, /localStorage/);
   const initial = section(camera, "initialLocation(position)", "destroy()");
-  assert.match(initial, /!cameraChosen/);
+  // The startup-only flag allows one GPS focus per new document while preserving the\n  // user camera on later GPS fixes and tab remounts (verified by map-startup-camera tests).\n  assert.match(initial, /!window\\.__rsStartupMainCameraSet/);
   assert.match(initial, /!userInteracted/);
   const resize = section(camera, "function resize()", "function scheduleResize()");
   assert.match(resize, /map\.invalidateSize/);
@@ -88,7 +88,7 @@ check("Compiled web release references current GPS/map code, not legacy bridge",
   assert.match(release.hash, /^[0-9a-f]{12}$/);
   assert.match(html, /id="root"/);
   const needed = ["app.mjs","native-gps.js","tab-resume.js","weather-bar.js",
-    "design-system.css","daily-timeline.css","weather-bar.css"];
+    "design-system.css","daily-timeline.css","weather-bar.css","premium-shell.css"];
   for (const asset of needed) {
     const url = assetRoot + asset;
     assert.ok(release.files.includes(url), "Unlisted release asset: " + asset);
