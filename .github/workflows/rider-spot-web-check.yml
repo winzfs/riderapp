@@ -37,14 +37,13 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Verify facility registration sheet, map pin and Android Back
+        run: RIDER_TEST_CASE=facility node tests/browser.cjs
       - name: Exercise mobile record forms and timeline
         env:
           RIDER_SCREENSHOTS: /tmp/mobile-records
-        run: |
-          npx playwright install --with-deps chromium
-          node tests/mobile-records-browser.cjs
-      - name: Verify facility registration sheet, map pin and Android Back
-        run: RIDER_TEST_CASE=facility node tests/browser.cjs
+        run: node tests/mobile-records-browser.cjs
       - name: Verify native bridge finish, skipped income and offline retry
         env:
           RIDER_TEST_CASE: native
