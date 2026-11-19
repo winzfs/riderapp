@@ -1,65 +1,8 @@
-not ok 120 - stale saved community tab never forces a new navigation
-  ---
-  duration_ms: 2.037364
-  type: 'test'
-  location: '/home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:32:1'
-  failureType: 'testCodeFailure'
-  error: 'sessionStorage is not defined'
-  code: 'ERR_TEST_FAILURE'
-  name: 'ReferenceError'
-  stack: |-
-    recordLifecycle (evalmachine.<anonymous>:40:36)
-    evalmachine.<anonymous>:53:3
-    evalmachine.<anonymous>:63:3
-    Script.runInContext (node:vm:149:12)
-    Script.runInNewContext (node:vm:154:17)
-    runInNewContext (node:vm:310:38)
-    mount (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:20:3)
-    TestContext.<anonymous> (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:34:15)
---
-not ok 121 - a real user tab navigation can be remembered without a repair loop
-  ---
-  duration_ms: 0.678868
-  type: 'test'
-  location: '/home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:40:1'
-  failureType: 'testCodeFailure'
-  error: 'sessionStorage is not defined'
-  code: 'ERR_TEST_FAILURE'
-  name: 'ReferenceError'
-  stack: |-
-    recordLifecycle (evalmachine.<anonymous>:40:36)
-    evalmachine.<anonymous>:53:3
-    evalmachine.<anonymous>:63:3
-    Script.runInContext (node:vm:149:12)
-    Script.runInNewContext (node:vm:154:17)
-    runInNewContext (node:vm:310:38)
-    mount (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:20:3)
-    TestContext.<anonymous> (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:42:15)
---
-not ok 122 - restored events reject invalid tabs and never call navigation APIs
-  ---
-  duration_ms: 1.907247
-  type: 'test'
-  location: '/home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:51:1'
-  failureType: 'testCodeFailure'
-  error: 'sessionStorage is not defined'
-  code: 'ERR_TEST_FAILURE'
-  name: 'ReferenceError'
-  stack: |-
-    recordLifecycle (evalmachine.<anonymous>:40:36)
-    evalmachine.<anonymous>:53:3
-    evalmachine.<anonymous>:63:3
-    Script.runInContext (node:vm:149:12)
-    Script.runInNewContext (node:vm:154:17)
-    runInNewContext (node:vm:310:38)
-    mount (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:20:3)
-    TestContext.<anonymous> (file:///home/runner/work/riderapp/riderapp/rider-spot-web/tests/tab-resume.test.mjs:53:15)
---
 # tests 143
 # suites 0
-# pass 140
-# fail 3
+# pass 143
+# fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 891.676279
+# duration_ms 1346.089724
