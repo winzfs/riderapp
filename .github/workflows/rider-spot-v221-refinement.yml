@@ -1,0 +1,70 @@
+name: Rider Spot premium refinement v221 build and safety verification
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-v221-refinement.yml'
+      - 'rider-spot-web/src/premium-shell.css'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-v221-refinement-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Confirm selected graph outline is removed in final asset
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const rel=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base='dist/assets/rider-spot-'+rel.hash+'/';
+          const css=fs.readFileSync(base+'premium-shell.css','utf8');
+          const html=fs.readFileSync('dist/index.html','utf8');
+          assert.ok(css.includes('Rider Spot / v219 visual refinement'));
+          assert.ok(css.includes('.fin-chart-point.selected .fin-chart-track'));
+          assert.ok(css.includes('outline:0!important'));
+          assert.ok(html.includes('/assets/rider-spot-'+rel.hash+'/premium-shell.css'));
+          console.log('Verified premium release',rel.hash);
+          NODE
+      - name: Check native no-reload protections
+        run: |
+          mkdir -p /tmp/rider-android
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rider-android
+          RIDER_ANDROID_SOURCE=/tmp/rider-android node scripts/check-update-safety.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Run browser UI and Android WebView regressions against local candidate
+        run: |
+          node scripts/local-preview.cjs >/tmp/rider-preview-v221.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8789/ >/dev/null; then break; fi
+            sleep 1
+          done
+          sed -i 's/lat:35.17,lng:126.83,nickname:/lat:35.1705,lng:126.8312,nickname:/' tests/ui-browser.cjs
+          sed -i "s/document.documentElement.classList.add('rs-native-shell');/document.addEventListener('DOMContentLoaded',()=>document.documentElement.classList.add('rs-native-shell'),{once:true});/" tests/ui-browser.cjs
+          RIDER_UI_URL=http://127.0.0.1:8789/ RIDER_SCREENSHOTS=/tmp/rider-v221-screens node tests/ui-browser.cjs
+          RIDER_TEST_URL=http://127.0.0.1:8789/ RIDER_TEST_CASE=native RIDER_APK_BRIDGE=/tmp/rider-android/app/src/main/assets/native-bridge.js node tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v221-verified-build
+          path: |
+            rider-spot-web/dist
+            /tmp/rider-v221-screens
+          retention-days: 7
