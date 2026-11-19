@@ -1,0 +1,249 @@
+<stdin>:11: SyntaxWarning: invalid escape sequence '\.'
+name: Rider Spot Android native recovery APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-native-recovery-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore native source and verify WebView startup
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-spot-android
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-spot-android
+          cd /tmp/rider-spot-android
+          patch --batch -p1 <<'RECOVERY_PATCH'
+          --- a/app/build.gradle
+          +++ b/app/build.gradle
+          @@ -8,8 +8,8 @@
+                   applicationId 'com.riderspot.android'
+                   minSdk 26
+                   targetSdk 36
+          -        versionCode 9
+          -        versionName '1.0.9-webview-config-guard'
+          +        versionCode 11
+          +        versionName '1.0.11-native-recovery'
+               }
+           
+               buildTypes {
+          --- a/app/src/main/assets/native-bridge.js
+          +++ b/app/src/main/assets/native-bridge.js
+          @@ -17,7 +17,6 @@
+             let lastServiceRecoveryAt = 0;
+             let lastGpsWarningAt = 0;
+             let reconciling = false;
+          -  let initialized = false;
+             const finalizingTripIds = new Set();
+             let stopScanAt = 0;
+             const stopPointCache = { id:null, seq:0, points:[] };
+          @@ -420,7 +419,7 @@
+                   } else if (!api.trip && !finalizingTripIds.has(id)) {
+                     // WebView was destroyed while the user tapped the action.
+                     // Recover the local unfinished record, then finish it.
+          -          await recoverStoppedTrip(id, api);
+          +          await recoverStoppedTrip(id);
+                   }
+                 }
+               } finally { reconciling = false; }
+          @@ -524,48 +523,47 @@
+             }
+           
+             async function recoverMissingTrip(state) {
+          -    if (initialized && sessionStorage.getItem('rs-native-recovery:' + state.activeId)) return;
+               if (!document.body || !window.__rsClient) return;
+          -    initialized = true;
+               const id = state.activeId;
+               const userId = await currentUserId();
+          -    const key = 'active:' + userId;
+               let existing;
+          -    try { existing = JSON.parse(localStorage.getItem(key) || 'null'); } catch { existing = null; }
+          -    if (existing?.id === id) return;
+          +    try { existing = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
+          +    catch { existing = null; }
+               const points = await loadAll(id);
+          -    if (!points.length) return;
+          -    const restored = mergeTrip({
+          +    if (existing?.id !== id && !points.length) return;
+          +    const record = existing?.id === id ? existing : {
+                 id, user_id:userId === 'guest' ? null : userId,
+                 started_at:new Date(state.startedAt || points[0].t).toISOString(),
+                 ended_at:null, points:[], events:[{type:'네이티브 GPS 운행 복구',at:new Date().toISOString()}],
+                 distance_km:0
+          -    }, points);
+          -    localStorage.setItem(key, JSON.stringify(restored));
+          -    sessionStorage.setItem('rs-native-recovery:' + id, '1');
+          -    location.reload(); // Existing React app recovers its local active trip.
+          -  }
+          -
+          -  async function recoverStoppedTrip(id, api) {
+          -    const marker = 'rs-native-finalize:' + id;
+          -    if (sessionStorage.getItem(marker) === 'merged') {
+          -      sessionStorage.removeItem(marker);
+          -      if (api.trip?.id === id) await api.finish();
+          -      return;
+          -    }
+          +    };
+          +    const latest = await activeState();
+          +    if (latest?.activeId !== id) return;
+          +    restoreInPage(mergeTrip(record, points));
+          +  }
+          +
+          +  async function recoverStoppedTrip(id) {
+               const userId = await currentUserId();
+          -    const key = 'active:' + userId;
+               let record;
+          -    try { record = JSON.parse(localStorage.getItem(key) || 'null'); } catch { return; }
+          +    try { record = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
+          +    catch { return; }
+               if (!record || record.id !== id) return;
+               const points = await loadAll(id);
+          -    localStorage.setItem(key, JSON.stringify(mergeTrip(record, points)));
+          -    sessionStorage.setItem(marker, 'merged');
+          -    location.reload();
+          +    const latest = await activeState();
+          +    if (latest?.activeId || latest?.lastStoppedId !== id) return;
+          +    // The next reconcile sees the restored React record and runs finish once.
+          +    restoreInPage(mergeTrip(record, points));
+          +  }
+          +
+          +  function restoreInPage(record) {
+          +    const api = window.__rsRideApi;
+          +    if (!api?.trip && typeof api?.restoreActive === 'function') {
+          +      api.restoreActive(record);
+          +    }
+             }
+           
+             window.__rsNativeGpsDiagnostics = () => send('state');
+          -  window.__rsNativeResume = () => { void reconcile(); };
+          +  window.__rsNativeResume = () => reconcile();
+             window.__rsNativeNotificationFinish = () => { void reconcile(); };
+             const timer = setInterval(() => { void reconcile(); }, 3000);
+             document.addEventListener('visibilitychange', () => { if (!document.hidden) void reconcile(); });
+          --- a/tests/native-bridge.test.cjs
+          +++ b/tests/native-bridge.test.cjs
+          @@ -292,3 +292,64 @@
+             assert.equal(called,'github');
+             assert.ok(!recorded.some(x=>x.action==='oauth-open'));
+           });
+          +
+          +test('an active SQLite ride is restored into React without reloading the document', async () => {
+          +  const {ctx,db} = setup();
+          +  const id = '11111111-1111-4111-8111-111111111112';
+          +  ctx.document.body = {};
+          +  ctx.window.__rsClient = {auth:{getUser:async()=>({data:{user:null}})}};
+          +  let reloads = 0;
+          +  ctx.location.reload = () => reloads++;
+          +  const api = {
+          +    trip:null, paused:false,
+          +    async startTrip() { api.trip = {id}; },
+          +    togglePause() {},
+          +    async finish() {},
+          +    restoreActive(record) { api.trip = record; },
+          +  };
+          +  ctx.window.__rsRideApi = api;
+          +  await api.startTrip();
+          +  db.push({seq:1,lat:35.1,lng:126.9,accuracy:8,t:1760000000000});
+          +  api.trip = null;
+          +  await ctx.window.__rsNativeResume();
+          +  assert.equal(api.trip.id,id);
+          +  assert.equal(api.trip.points.length,1);
+          +  assert.equal(reloads,0);
+          +});
+          +
+          +test('a notification-stopped ride is restored and finalized once without navigation', async () => {
+          +  const {ctx,db,storage,recorded} = setup();
+          +  const id = '11111111-1111-4111-8111-111111111113';
+          +  const t = 1760000000000;
+          +  ctx.window.__rsClient = {auth:{getUser:async()=>({data:{user:null}})}};
+          +  let reloads = 0, finishes = 0;
+          +  ctx.location.reload = () => reloads++;
+          +  const api = {
+          +    trip:null, paused:false,
+          +    async startTrip() { api.trip = {id}; },
+          +    togglePause() {},
+          +    async finish() {},
+          +    restoreActive(record) { api.trip = record; },
+          +  };
+          +  ctx.window.__rsRideApi = api;
+          +  await api.startTrip();
+          +  await api.finish();
+          +  db.push({seq:1,lat:35.1,lng:126.9,accuracy:8,t});
+          +  storage.setItem('active:guest',JSON.stringify({id,started_at:new Date(t).toISOString(),points:[]}));
+          +  const remounted = {
+          +    ...api, trip:null,
+          +    restoreActive(record) { this.trip = record; },
+          +    async finish() {
+          +      finishes++;
+          +      storage.setItem('trips:guest',JSON.stringify([{...remounted.trip,ended_at:new Date(t+1000).toISOString()}]));
+          +      storage.removeItem('active:guest');
+          +      remounted.trip = null;
+          +    },
+          +  };
+          +  ctx.window.__rsRideApi = remounted;
+          +  assert.equal(recorded.filter(row=>row.action==='stop').length,1);
+          +  for (let tick=0;tick<3;tick++) await ctx.window.__rsNativeResume();
+          +  assert.equal(finishes,1);
+          +  assert.equal(JSON.parse(storage.getItem('trips:guest'))[0].points.length,1);
+          +  assert.equal(reloads,0);
+          +});
+          RECOVERY_PATCH
+          ! grep -n 'location\.reload(' app/src/main/assets/native-bridge.js
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Native GPS, data and navigation regression tests
+        working-directory: /tmp/rider-spot-android
+        run: node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Android SDK 36
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Compile native Android app
+        working-directory: /tmp/rider-spot-android
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Freeze updated original and separate safe-test APKs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-android-artifacts
+          cp /tmp/rider-spot-android/app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-debug.apk
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/rider-spot-android')
+          gradle=root/'app/build.gradle'
+          content=gradle.read_text()
+          assert content.count('defaultConfig {')==1
+          gradle.write_text(content.replace('defaultConfig {','defaultConfig {\n        applicationIdSuffix ".recoverytest"',1))
+          manifest=root/'app/src/main/AndroidManifest.xml'
+          s=manifest.read_text()
+          s,n=re.subn(r'android:label="[^"]+"','android:label="라이더스팟 복구 테스트"',s,count=1)
+          assert n==1
+          manifest.write_text(s)
+          PY
+          cd /tmp/rider-spot-android
+          gradle --no-daemon :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-SideBySide.apk
+          test -s /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-debug.apk
+          test -s /tmp/rs-android-artifacts/RiderSpot-Native-Recovery-SideBySide.apk
+          find /tmp/rs-android-artifacts -type f -printf "%f %k KB\n"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: RiderSpot-Native-Recovery-APK
+          path: /tmp/rs-android-artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 30
