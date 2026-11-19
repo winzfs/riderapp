@@ -470,26 +470,27 @@ export function createTimeline(S, Zo, Income) {
         rs33J("button", {
           type: "button", className: "rs59-event-toggle",
           "aria-pressed": showEvents,
-          "aria-label": showEvents ? "이벤트 끄기" : "이벤트 켜기",
+          "aria-label": showEvents ? "이벤트 표시 끄기" : "이벤트 표시 켜기",
           onClick: toggleEvents,
-        }, showEvents ? "● 이벤트" : "○ 이벤트"),
-        rs33J("button", {
-          type: "button", className: "rs33-expand",
-          "aria-label": expanded ? "닫기" : "크게 보기",
-          "aria-expanded": expanded,
-          onClick: () => setExpanded((value) => !value),
-        }, expanded ? "↙ 닫기" : "⛶ 확대"),
+        }, "이벤트"),
         rs33J("button", {
           type: "button", className: "rs45-stamp-toggle",
           "aria-pressed": showStamps,
-          "aria-label": showStamps ? "시간 끄기" : "시간 켜기",
+          "aria-label": showStamps ? "시간 표시 끄기" : "시간 표시 켜기",
           onClick: toggleStamps,
-        }, showStamps ? "◷ 시간" : "◷ 시간"),
+        }, "시간"),
+        rs33J("button", {
+          type: "button", className: "rs33-expand",
+          "aria-label": expanded ? "전체 화면 닫기" : "지도를 전체 화면으로 보기",
+          "aria-expanded": expanded,
+          onClick: () => setExpanded((value) => !value),
+        }, expanded ? "닫기" : "전체 화면"),
         !isDaily ? rs33J("button", {
           type: "button", className: "rs38-road-toggle",
           "aria-pressed": !!activeRoad,
+          "aria-label": activeRoad ? "GPS 원본 경로 보기" : "GPS 도로 보정",
           disabled: roadBusy || !raw, onClick: rs38MatchRoads,
-        }, roadBusy ? "확인 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
+        }, roadBusy ? "보정 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
       );
     }
     if (current) {
@@ -524,33 +525,34 @@ export function createTimeline(S, Zo, Income) {
         { className: "trip-page rs33-trip-detail" + (!ended ? " rs33-trip-live" : "") },
         rs33J(
           "div",
-          { className: "trip-heading" },
+          { className: "trip-heading rs-timeline-detail-heading" },
+          ended
+            ? rs33J("button", {
+                type: "button",
+                className: "back rs-timeline-back",
+                onClick: back,
+                "aria-label": "하루 전체 경로로 돌아가기",
+              }, "‹ 하루 전체")
+            : null,
           rs33J(
-            "button",
-            {
-              type: "button",
-              className: "back",
-              onClick: back,
-              disabled: !ended,
-            },
-            ended ? "‹ 하루 전체" : "운행 기록 중",
-          ),
-          rs33J(
-            "h1",
-            null,
-            start
-              ? new Intl.DateTimeFormat("ko-KR", {
-                  timeZone: rs33Zone,
-                  month: "long",
-                  day: "numeric",
-                  weekday: "short",
-                }).format(new Date(start))
-              : "운행 기록",
+            "div",
+            { className: "rs-timeline-heading-main" },
+            rs33J("small", { className: "rs-timeline-heading-eyebrow" },
+              ended ? "운행 상세" : "실시간 운행"),
+            rs33J("h1", null,
+              start
+                ? new Intl.DateTimeFormat("ko-KR", {
+                    timeZone: rs33Zone,
+                    month: "long",
+                    day: "numeric",
+                    weekday: "short",
+                  }).format(new Date(start))
+                : "운행 기록"),
           ),
           rs33J(
             "span",
             { className: "rs33-state" + (!ended ? (ride.paused ? " rs33-state-rest" : " rs33-state-live") : "") },
-            ended ? "나만 보기" : ride.paused ? "휴식 중" : "기록 중",
+            ended ? "완료" : ride.paused ? "휴식 중" : "기록 중",
           ),
         ),
         rs33J(
@@ -624,32 +626,34 @@ export function createTimeline(S, Zo, Income) {
           { className: "trip-details rs33-trip-body" },
           rs33J(
             "div",
-            { className: "rs33-trip-summary" + (!ended ? " rs33-trip-summary-live" : "") },
+            { className: "rs33-trip-summary rs-timeline-summary" + (!ended ? " rs33-trip-summary-live" : "") },
             rs33J(
-              "strong",
-              null,
-              rs33Format.format(Number(current.distance_km) || 0) + " km",
+              "div",
+              { className: "rs-timeline-summary-distance" },
+              rs33J("small", null, "주행 거리"),
+              rs33J("strong", null,
+                rs33Format.format(Number(current.distance_km) || 0),
+                rs33J("span", null, " km"),
+              ),
             ),
             rs33J(
-              "span",
-              null,
-              [
-                start ? rs33Time(start) : "",
-                end
-                  ? start && rs33ISO(start) === rs33ISO(end)
-                    ? rs33Time(end)
-                    : rs33ISO(end).slice(5) + " " + rs33Time(end)
-                  : "운행 중",
-              ]
-                .filter(Boolean)
-                .join(" – "),
+              "div",
+              { className: "rs-timeline-summary-time" },
+              rs33J("small", null, ended ? "운행 시간" : "시작 시각"),
+              rs33J("strong", null,
+                ended && end && start ? rs33Duration(Math.max(0, end - start))
+                  : start ? rs33Time(start) : "—",
+              ),
+              rs33J("span", null,
+                ended
+                  ? [start ? rs33Time(start) : "", end ? rs33Time(end) : ""].filter(Boolean).join(" – ")
+                  : ride.paused ? "현재 휴식 중" : "운행 중",
+              ),
             ),
-            rs33J(
-              "small",
-              null,
-              end && start ? rs33Duration(end - start) : "운행 중",
-              raw?.gapCount ? " · GPS 기록 공백 " + raw.gapCount + "구간" : "",
-            ),
+            raw?.gapCount
+              ? rs33J("small", { className: "rs-timeline-gps-note" },
+                  "GPS 기록 공백 " + raw.gapCount + "구간")
+              : null,
           ),
           !ended
             ? rs33J(
@@ -707,13 +711,6 @@ export function createTimeline(S, Zo, Income) {
                 ),
               )
             : null,
-          ended
-            ? null
-            : rs33J(
-                "p",
-                { className: "rs33-muted" },
-                "운행 경로는 기기에 기록 중입니다. GPS 저장 상태를 확인할 수 있어요.",
-              ),
           rs33J(
             "section",
             { className: "rs44-events" },
