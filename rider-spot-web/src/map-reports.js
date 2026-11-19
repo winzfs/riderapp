@@ -366,7 +366,7 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
             : "위치 공유를 켜면 주변 라이더를 볼 수 있어요."
           : filter === "roads"
             ? "이 화면의 도로 제보 " + records.length + "건"
-            : "화장실 " + records.length + "곳";
+            : "제보 " + records.length + "곳";
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = filter === "roads" ? "제보 올리기" : "시설 등록";
