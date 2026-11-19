@@ -2,20 +2,21 @@ const MIN_ZOOM = 7.5;
 const MAX_ZOOM = 19;
 
 function readCamera(key) {
-  try {
-    const saved = JSON.parse(
-      sessionStorage.getItem(key) || localStorage.getItem(key),
-    );
-    if (
-      saved &&
-      Number.isFinite(saved.lat) &&
-      Math.abs(saved.lat) <= 90 &&
-      Number.isFinite(saved.lng) &&
-      Number.isFinite(saved.zoom)
-    )
-      return saved;
-  } catch {
-    /* Storage can be disabled. */
+  // A denied or corrupted sessionStorage value must not mask a valid
+  // persistent camera after a WebView renderer restart.
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      const saved = JSON.parse(storage.getItem(key) || "null");
+      if (
+        saved &&
+        Number.isFinite(saved.lat) && Math.abs(saved.lat) <= 90 &&
+        Number.isFinite(saved.lng) && Math.abs(saved.lng) <= 180 &&
+        Number.isFinite(saved.zoom) &&
+        saved.zoom >= MIN_ZOOM && saved.zoom <= MAX_ZOOM
+      ) return saved;
+    } catch {
+      /* Keep trying the next independent storage location. */
+    }
   }
   return null;
 }
@@ -57,12 +58,11 @@ export function createMapController(L, node, cameraId, fallback) {
 
   function save() {
     if (!readyToSave) return;
-    try {
-      const value = JSON.stringify({ lat: center.lat, lng: center.lng, zoom });
-      sessionStorage.setItem(key, value);
-      localStorage.setItem(key, value);
-    } catch {
-      /* Camera persistence is optional. */
+    const value = JSON.stringify({ lat: center.lat, lng: center.lng, zoom });
+    // One unavailable storage backend must never disable the other.
+    for (const storage of [window.sessionStorage, window.localStorage]) {
+      try { storage.setItem(key, value); }
+      catch { /* Camera persistence is optional. */ }
     }
   }
   function begin() {
