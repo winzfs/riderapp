@@ -119,3 +119,18 @@ test("blocked sheet save keeps layer open instead of counting an exit press", ()
   release();
   nav.destroy();
 });
+
+
+test("a real document reload with current-version history.state installs a fresh Back guard", () => {
+  const h = harness();
+  h.host.history.replaceState({
+    __rsNav: { version: 192, tab: "trips", step: 1 },
+  });
+  const nav = createNavigationController(h.host);
+  assert.equal(nav.tab, "trips");
+  assert.equal(h.host.history.length, 2, "the new document needs its own Back entry");
+  h.host.history.back();
+  assert.equal(nav.tab, "trips");
+  assert.equal(h.events.filter(e => e.type === "riderspot:root-back").length, 1);
+  nav.destroy();
+});

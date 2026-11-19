@@ -29,12 +29,16 @@ export function createNavigationController(win = window) {
   const state = next => ({ version: VERSION, tab: next, step: 1 });
   const url = () => win.location?.href;
 
-  // A guard keeps one Back event inside the PWA/WebView. Migrating from the old
-  // tab-history scheme deliberately starts at the map, not a stale saved tab.
-  if (previous?.version !== VERSION) {
-    history.replaceState(copy({ [KEY]: state(DEFAULT), [LAYER]: undefined, recordSheet: undefined }), "", url());
-    history.pushState(copy({ [KEY]: state(DEFAULT), [LAYER]: undefined, recordSheet: undefined }), "", url());
-  }
+  // Install a fresh Back guard for EVERY document load, not just migrations.
+  // Android WebView and browsers may restore history.state on reload or after
+  // renderer recreation. A matching version does not mean that this new page
+  // has a usable same-document Back entry; without it Back can unload the app.
+  history.replaceState(copy({
+    [KEY]: state(tab), [LAYER]: undefined, recordSheet: undefined,
+  }), "", url());
+  history.pushState(copy({
+    [KEY]: state(tab), [LAYER]: undefined, recordSheet: undefined,
+  }), "", url());
 
   function publish(next) {
     if (!TABS.has(next)) return;
