@@ -32,6 +32,8 @@ try {
   const serviceWorker=await get("/sw.js");
   check("current no-forced-reload service worker",serviceWorker.includes("rider-spot-shell-"+rel.hash));
   check("no immediate skipWaiting introduced",!serviceWorker.includes("skipWaiting("));
+  const previousCss=await get("/assets/rider-spot-06a4d2f6010a/premium-shell.css");
+  check("previous release immutable assets still accessible",previousCss.length>1000);
   const legacy=await get("/rider-spot-shell-v40.js");
   check("legacy static route kept",legacy.length>1000,"size "+legacy.length);
   const manifest=await get("/mapdata/manifest.json");
