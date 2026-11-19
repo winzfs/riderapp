@@ -1,0 +1,63 @@
+name: Rider Spot update regression safety gate
+
+# Read-only verification. No Worker, APK or user-data changes.
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - 'rider-spot-web/**'
+      - 'rider-spot-android/**'
+      - '.github/workflows/rider-spot-update-safety-gate.yml'
+  pull_request:
+    paths:
+      - 'rider-spot-web/**'
+      - 'rider-spot-android/**'
+      - '.github/workflows/rider-spot-update-safety-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rider-spot-update-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run existing web unit regressions
+        run: npm test
+      - name: Compile candidate web application without deployment
+        run: npm run build
+      - name: Extract actual Android APK source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-spot-update-safety-android
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rider-spot-update-safety-android
+          test -s /tmp/rider-spot-update-safety-android/app/src/main/assets/native-bridge.js
+          test -s /tmp/rider-spot-update-safety-android/app/src/main/AndroidManifest.xml
+      - name: Run existing Android GPS tests
+        working-directory: /tmp/rider-spot-update-safety-android
+        run: node --test tests/*.test.cjs
+      - name: Block previous ride revival, forced reload and unsafe APK regression
+        env:
+          RIDER_ANDROID_SOURCE: /tmp/rider-spot-update-safety-android
+        run: node scripts/check-update-safety.mjs
+      - name: Print verified commit
+        run: echo "Rider Spot candidate passed safety gate at $GITHUB_SHA"
