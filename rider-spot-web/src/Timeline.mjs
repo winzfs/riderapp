@@ -1015,7 +1015,7 @@ export function createTimeline(S, Zo, Income) {
                   showEvents && dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
                     ? rs33J("details", { className: "rs56-stop-events" },
                         rs33J("summary", null,
-                          ""정차 ",
+                          "정차 ",
                           rs33J("strong", null, dailyCourse.course.stamps.filter((stamp) => stamp.kind === "stop").length + "건"),
                           rs33J("span", { "aria-hidden": true }, "⌄")),
                         rs33J("div", { className: "rs56-stop-list" },
