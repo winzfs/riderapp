@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-19T22:09:21.148Z",
+  "at": "2026-11-19T22:14:48.435Z",
   "origin": "https://rider-spot-static-preview.jazzhjm.workers.dev",
   "releaseHash": "16c1eecf6bac",
   "checks": [
@@ -97,6 +97,16 @@
       "name": "legacy static route kept",
       "passed": true,
       "details": "size 176"
+    },
+    {
+      "name": "read-only API response status parity",
+      "passed": true,
+      "details": "original 502 candidate 502"
+    },
+    {
+      "name": "read-only API content type parity",
+      "passed": true,
+      "details": ""
     },
     {
       "name": "HTTP 200 /mapdata/manifest.json",
