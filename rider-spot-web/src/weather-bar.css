@@ -54,3 +54,213 @@
  .rs-weather-hour{gap:7px}
  .rs-weather-hour small{font-size:9px}
 }
+
+
+/* Rider Spot v210 | compact map + weather-detail polish.
+   These deliberately scoped overrides load after the legacy/production styles.
+   They do NOT move the map camera, change markers' coordinates or alter riding. */
+.nearby.nearby-full .rs33-map-bar{
+  padding:7px 12px 8px!important;
+  gap:5px!important;
+  border-bottom:1px solid #edf1f0;
+  box-shadow:none;
+}
+.nearby.nearby-full .rs33-map-bar-top{min-height:35px;align-items:center;gap:8px;margin:0!important}
+.nearby.nearby-full .rs33-region-toggle{
+  padding:4px 2px;min-height:35px!important;
+  font-size:17px!important;font-weight:730;letter-spacing:-.045em;
+  color:#173e3c;background:transparent!important;
+}
+.nearby.nearby-full .rs33-map-share{
+  min-height:32px!important;gap:7px;padding:5px 10px!important;
+  border-radius:10px;background:#f0f7f6!important;
+  color:#617f7a;font-size:11px!important;font-weight:660;
+}
+.nearby.nearby-full .rs33-map-filters{
+  gap:6px!important;padding:1px 0 3px!important;
+  margin:0!important;
+}
+.nearby.nearby-full .rs33-map-filters button{
+  min-height:35px!important;padding:6px 11px!important;
+  border-radius:10px!important;font-size:12px!important;
+  font-weight:650;gap:6px!important;
+  background:#f2f7f6!important;color:#617b78!important;
+}
+.nearby.nearby-full .rs33-map-filters button[aria-pressed=true]{
+  color:#007e78!important;background:#dff6f3!important;
+}
+.nearby.nearby-full .rs-weather-hud{
+  height:35px!important;min-height:35px!important;max-width:100%;
+  gap:7px;border-radius:9px;background:#fbfcfc;
+  border:1px solid #e5ecea;padding-inline:10px;
+}
+.nearby.nearby-full .rs-weather-notice{color:#527e7b;font-weight:590}
+.nearby.nearby-full .rs-weather-chevron{opacity:.78}
+/* Map overlays use a single consistent 38px touch target and light elevation. */
+.nearby.nearby-full .map-wrap .rs-gps-state{
+  min-height:35px!important;top:10px!important;left:10px!important;
+  border:1px solid #e4eeec;box-shadow:0 3px 9px #173f3912!important;
+}
+.nearby.nearby-full .map-wrap #rs-presence-btn{
+  top:53px!important;left:10px!important;min-height:36px!important;
+  border:1px solid #e4eeec!important;box-shadow:0 3px 9px #173f3912!important;
+}
+.nearby.nearby-full .map-wrap #rs-demo-toggle{
+  top:96px!important;left:10px!important;min-height:34px!important;
+  border-radius:10px!important;
+}
+.nearby.nearby-full .map-wrap .locate{
+  top:103px!important;right:10px!important;
+  width:42px;height:42px;min-width:42px;min-height:42px;
+  border-radius:11px;box-shadow:0 3px 10px #173f3918!important;
+}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar{
+  border-radius:11px!important;border-color:#e7eeec!important;
+  box-shadow:0 3px 10px #173f3918!important;
+}
+.nearby.nearby-full .leaflet-control-zoom.leaflet-bar a{min-height:40px!important;width:40px!important;height:40px!important;line-height:40px!important}
+.nearby.nearby-full .rs-public-marker--toilet .rs-public-marker-face{
+  width:29px;height:29px;font-size:11px;
+  border-radius:10px 10px 10px 4px;
+  box-shadow:0 2px 6px #17394738;
+}
+.nearby.nearby-full .map-wrap #rs-sos-fab{
+  right:10px;bottom:99px!important;min-height:42px;
+  padding:8px 12px;border-radius:11px!important;
+  box-shadow:0 3px 9px #173f3918!important;
+}
+.nearby.nearby-full .rs33-map-wrap #rs-report-legend{
+  bottom:9px!important;left:10px!important;right:10px!important;
+  max-width:none!important;min-height:43px!important;
+  padding:5px 6px 5px 13px!important;
+  background:#fffffff7;border:1px solid #e6eeeb;
+  border-radius:12px!important;box-shadow:0 3px 10px #173f3910!important;
+  font-size:12px!important;line-height:1.3!important;color:#335753;
+  gap:8px!important;
+}
+.nearby.nearby-full .rs33-map-wrap #rs-report-legend .rs33-map-register{
+  border:0;border-radius:9px;min-height:34px;
+  padding:6px 11px;background:#e5f6f3;color:#067f77;
+  font-size:12px!important;font-weight:720;
+}
+.nearby.nearby-full .rs33-map-wrap .rs-public-poi-credit{
+  left:10px!important;bottom:63px!important;right:auto;
+  max-width:calc(100% - 124px);
+  gap:5px;padding:5px 7px;border:1px solid #e5ecea;
+  border-radius:8px;background:#fffffff0;box-shadow:none;
+  font-size:9.5px;line-height:1.3;
+}
+.nearby.nearby-full .rs33-map-wrap .rs-public-poi-credit a{
+  font-size:9.5px;text-decoration:underline;text-underline-offset:2px;
+}
+.nearby.nearby-full .ride-launch{
+  padding:7px 12px 9px!important;
+  border-top:1px solid #f0f3f2;background:#fff!important;
+}
+.nearby.nearby-full .ride-launch button,
+.nearby.nearby-full .ride-launch.active button{
+  width:100%!important;max-width:540px;
+  border-radius:12px!important;min-height:52px!important;
+  background:#00827d!important;color:#fff!important;
+  font-size:16px!important;font-weight:750;
+  box-shadow:none;
+}
+.nearby.nearby-full .ride-launch.active button:before{
+  vertical-align:middle;background:#ff9956;margin-right:9px;
+}
+/* Weather is a separate surface. Never inherit global header styles. */
+.rs-sheet-backdrop:has(.rs-weather-details){background:rgba(13,36,35,.44)}
+.rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet{
+  box-sizing:border-box;width:100%;max-width:540px;
+  max-height:min(78dvh,640px);
+  border-radius:22px 22px 0 0;
+  padding:31px 18px max(20px,env(safe-area-inset-bottom));
+  background:#fff;box-shadow:0 -12px 38px #142e301f;
+  overflow-x:hidden;overflow-y:auto;
+}
+.rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet:before{
+  top:9px;width:34px;height:4px;left:calc(50% - 17px);background:#dee8e5;
+}
+.rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet>.close{
+  top:31px;right:15px;z-index:2;
+  width:40px;height:40px;min-width:40px;min-height:40px;
+  border:0;border-radius:11px;box-shadow:none;
+  background:#f4f8f7;color:#597875;
+  font-size:23px;
+}
+.rs-weather-sheet .rs-weather-details{
+  box-sizing:border-box;color:#183b38;padding:0;
+  width:100%;min-width:0;
+}
+.rs-weather-sheet .rs-weather-head{
+  display:flex!important;flex-direction:column;align-items:flex-start;
+  justify-content:center;gap:3px;
+  height:auto!important;min-height:48px;
+  margin:0 48px 14px 0;padding:0!important;
+  background:transparent!important;color:#173c39!important;
+  box-shadow:none!important;border:0!important;
+}
+.rs-weather-sheet .rs-weather-head h2{
+  color:#183d3a!important;font-size:19px;font-weight:760;
+  line-height:1.25;letter-spacing:-.045em;margin:0!important;
+}
+.rs-weather-sheet .rs-weather-head small{
+  color:#849793!important;font-size:11px;font-weight:520;
+  line-height:1.3;
+}
+.rs-weather-sheet .rs-weather-overview{
+  margin:0 0 14px;gap:9px;align-items:center;
+}
+.rs-weather-sheet .rs-weather-large-icon{color:#168b83}
+.rs-weather-sheet .rs-weather-overview strong{
+  font-size:38px;line-height:1;letter-spacing:-.055em;color:#103f3c;
+}
+.rs-weather-sheet .rs-weather-overview>span:last-child{
+  font-size:14px;font-weight:580;color:#58716e;
+}
+.rs-weather-sheet .rs-weather-stats{
+  gap:7px;margin:0 0 20px;
+}
+.rs-weather-sheet .rs-weather-stat{
+  display:grid;grid-template-columns:17px minmax(0,1fr);
+  grid-template-rows:auto auto;align-items:center;
+  column-gap:5px;row-gap:6px;min-width:0;
+  padding:11px 9px;border-radius:11px;
+  background:#f7faf9;border:1px solid #e9f0ee;
+}
+.rs-weather-sheet .rs-weather-stat svg{grid-column:1;grid-row:1;color:#5c9994}
+.rs-weather-sheet .rs-weather-stat span{grid-column:2;grid-row:1;font-size:10.5px;color:#6e8884;white-space:nowrap}
+.rs-weather-sheet .rs-weather-stat strong{grid-column:1/3;grid-row:2;font-size:13px;color:#17413d;font-weight:720}
+.rs-weather-sheet .rs-weather-details h3{font-size:13px;font-weight:740;color:#204642;margin:0 0 10px}
+.rs-weather-sheet .rs-weather-hours{
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:5px;margin:0;
+}
+.rs-weather-sheet .rs-weather-hour{
+  background:#f6f9f8;border:1px solid #f1f4f3;
+  border-radius:10px;gap:9px;padding:10px 1px 11px;
+  align-items:center;
+}
+.rs-weather-sheet .rs-weather-hour>span:first-child{font-size:10.5px;font-weight:530;color:#748b86}
+.rs-weather-sheet .rs-weather-hour>span:nth-child(2){color:#4b9d98}
+.rs-weather-sheet .rs-weather-hour strong{font-size:13.5px;font-weight:740;color:#19423f}
+.rs-weather-sheet .rs-weather-hour small{font-size:9.5px;white-space:nowrap;color:#7d8e8c}
+.rs-weather-sheet .rs-weather-credit{
+  margin:16px 0 0;max-width:100%;
+  font-size:10px;line-height:1.5;color:#849491;
+  overflow-wrap:anywhere;
+}
+@media(max-width:365px){
+  .nearby.nearby-full .rs33-map-filters button{padding-inline:9px!important;gap:4px!important}
+  .nearby.nearby-full .rs33-map-wrap .rs-public-poi-credit{font-size:9px;gap:3px;max-width:calc(100% - 120px)}
+  .rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet{padding-inline:15px}
+  .rs-weather-sheet .rs-weather-stat{padding-inline:7px}
+  .rs-weather-sheet .rs-weather-hour{gap:7px}
+  .rs-weather-sheet .rs-weather-hour small{font-size:9px}
+}
+@media(max-height:620px){
+  .rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet{max-height:90dvh}
+}
+@media(prefers-reduced-motion:reduce){
+  .rs-sheet-backdrop .rs-map-sheet.rs-weather-sheet{animation:none}
+}
