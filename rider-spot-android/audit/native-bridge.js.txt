@@ -522,13 +522,41 @@
     catch { return 'guest'; }
   }
 
+  function isTripCompleted(userId, id) {
+    if (!id) return false;
+    try {
+      if (JSON.parse(localStorage.getItem('rs:native-merged:' + userId + ':' + id) || 'false') === true)
+        return true;
+    } catch { /* Best effort, history remains authoritative. */ }
+    for (const key of ['rs:trips:' + userId, 'trips:' + userId]) {
+      try {
+        const rows = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(rows) && rows.some(row => row?.id === id && row.ended_at))
+          return true;
+      } catch { /* Keep checking independent stores. */ }
+    }
+    return false;
+  }
+
+  function readActiveTrip(userId, id) {
+    for (const key of ['rs:active:' + userId, 'active:' + userId]) {
+      try {
+        const row = JSON.parse(localStorage.getItem(key) || 'null');
+        if (row?.id === id && !row.ended_at) return row;
+      } catch { /* Keep checking the other store. */ }
+    }
+    return null;
+  }
+
   async function recoverMissingTrip(state) {
     if (!document.body || !window.__rsClient) return;
     const id = state.activeId;
     const userId = await currentUserId();
-    let existing;
-    try { existing = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
-    catch { existing = null; }
+    // The old bridge read an unprefixed legacy key while React uses rs:active:.
+    // A completed trip must NEVER be resurrected, even if the native service
+    // has stale state following a process restart.
+    if (isTripCompleted(userId, id)) return;
+    const existing = readActiveTrip(userId, id);
     const points = await loadAll(id);
     if (existing?.id !== id && !points.length) return;
     const record = existing?.id === id ? existing : {
@@ -544,10 +572,18 @@
 
   async function recoverStoppedTrip(id) {
     const userId = await currentUserId();
-    let record;
-    try { record = JSON.parse(localStorage.getItem('active:' + userId) || 'null'); }
-    catch { return; }
-    if (!record || record.id !== id) return;
+    if (isTripCompleted(userId, id)) {
+      // Only delete a legacy active pointer after durable completion is proven.
+      // Native SQLite GPS samples and completed history remain untouched.
+      const legacy = 'active:' + userId;
+      try {
+        if (JSON.parse(localStorage.getItem(legacy) || 'null')?.id === id)
+          localStorage.removeItem(legacy);
+      } catch { /* Store may be temporarily unavailable. */ }
+      return;
+    }
+    const record = readActiveTrip(userId, id);
+    if (!record) return;
     const points = await loadAll(id);
     const latest = await activeState();
     if (latest?.activeId || latest?.lastStoppedId !== id) return;
