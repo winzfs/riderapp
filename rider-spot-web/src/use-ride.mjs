@@ -525,13 +525,30 @@ export function createUseRide({
     function restoreActive(record) {
       if (
         !sameAccount() ||
+        !record?.id ||
         record.ended_at ||
         (record.user_id && record.user_id !== uid)
       )
-        return;
+        return false;
+      // Android keeps lastStoppedId after completion. An old native bridge can
+      // retry its legacy unprefixed active record every three seconds. Never
+      // resurrect a trip that was already committed as finished.
+      const completed = read(mergeKey(uid, record.id), false) ||
+        storage.getHistory(uid).some(row => row?.id === record.id && row.ended_at) ||
+        (() => {
+          try {
+            const rows = JSON.parse(localStorage.getItem(historyKey(uid)) || "[]");
+            return Array.isArray(rows) &&
+              rows.some(row => row?.id === record.id && row.ended_at);
+          } catch { return false; }
+        })();
+      if (completed || stopping.current || (active.current && active.current.id !== record.id))
+        return false;
+      if (active.current?.id === record.id) return false;
       saveActive(record);
       isPaused.current = false;
       setPaused(false);
+      return true;
     }
     async function sync(record) {
       if (uid === "guest") {
