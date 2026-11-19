@@ -21,6 +21,14 @@ jobs:
           mkdir -p rider-spot-android/build-src
           tar -xJf rider-spot-android/source.tar.xz -C rider-spot-android/build-src
           test -s rider-spot-android/build-src/app/src/main/java/com/riderspot/android/TrackingService.java
+      - name: Guard WebView against multi-window Activity recreation
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest=rider-spot-android/build-src/app/src/main/AndroidManifest.xml
+          grep -Fq 'smallestScreenSize|screenLayout|' "$manifest"
+          grep -Fq 'uiMode|density|fontScale|layoutDirection' "$manifest"
+          echo 'Verified WebView config changes in APK source archive'
       - name: Inspect native WebView lifecycle sources
         shell: bash
         run: |
