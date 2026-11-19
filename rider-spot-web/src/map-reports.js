@@ -710,16 +710,32 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     }
   }, 15000);
   function boot() {
-    new MutationObserver(() => {
-      install();
-      initializeClient();
+    // Leaflet continuously inserts/updates tile and marker DOM. Scanning the
+    // entire page on every mutation AND every 900 ms wastes WebView CPU.
+    // The map's own rider/map/layer events already cover updates in-place.
+    let queued = false;
+    const selector = '.map-wrap, #rs-tools-host, form[data-rs-form="places"], form[data-rs-form="roads"]';
+    new MutationObserver(records => {
+      if (!records.some(record => [...record.addedNodes].some(node =>
+        node.nodeType === 1 &&
+        (node.matches?.(selector) || node.querySelector?.(selector))))) return;
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        install();
+        initializeClient();
+      });
     }).observe(document.body, { childList: true, subtree: true });
-    setInterval(() => {
-      install();
+    // Auth may initialize after DOMContentLoaded, but it only needs retries
+    // until the client becomes available, not a permanent 900ms page scan.
+    const retry = setInterval(() => {
+      if (RS.client) { clearInterval(retry); return; }
       initializeClient();
-    }, 900);
+    }, 1500);
     install();
     initializeClient();
+    if (RS.client) clearInterval(retry);
   }
   if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", boot, { once: true });
