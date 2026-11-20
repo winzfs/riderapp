@@ -235,7 +235,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     }
     await page.locator(".ride-launch button").scrollIntoViewIfNeeded();await shot("ride");await nav("내 바이크");
     const bikeDistance=page.locator(".bike-page:visible .bike-distance");
-    try {await bikeDistance.getByText("24,500 km",{exact:true}).waitFor();}
+    try {await bikeDistance.waitFor({state:"visible"});assert.match(await bikeDistance.innerText(),/24,500\s*km/);}
     catch(error){console.error("BIKE_ROUTE_DIAGNOSTIC",await page.evaluate(()=>({tab:window.__rsNavigation?.tab,active:window.__rsActiveTab,visible:[...document.querySelectorAll(".bike-distance")].map(e=>({text:e.textContent,visibility:getComputedStyle(e).visibility,display:getComputedStyle(e).display,rect:e.getBoundingClientRect().toJSON(),parent:e.closest(".bike-page")?.outerHTML.slice(0,130)}))})));throw error;}
     await shot("bike");
     assert.equal(await page.evaluate(()=>window.__rsNavigation?.tab),"bike","native and browser routing controller initialized");
