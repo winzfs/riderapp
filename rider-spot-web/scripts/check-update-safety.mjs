@@ -124,7 +124,12 @@ check("Production Worker stays modular with v220 fallback and native OAuth callb
   assert.match(front,/x-rs-fallback/);
   assert.match(front,/VISUAL_PATH/);
   const visual=web("edge/visual-v2-worker.mjs");
-  assert.ok(visual.length<18000,"Presentation service should remain lightweight");
+  // The v3 premium CSS increases the static literal but still ships as one
+  // isolated, binding-free stylesheet Worker; reject unintended runtime growth.
+  assert.ok(visual.length<26000,"Presentation service should remain lightweight");
+  assert.match(visual,/^const CSS=/m,"Visual Worker must embed only static CSS");
+  assert.doesNotMatch(visual,/\b(?:import|require)\s*\(|\bWebSocket\s*\(|\blocalStorage\b/,
+    "Presentation Worker must not acquire application or network side effects");
   assert.doesNotMatch(visual,/navigator\.geolocation|serviceWorker\.register|\.reload\s*\(/);
   assert.match(front,/const original = \(\) =>/);
   assert.match(api,/LEGACY_BACKEND/);
