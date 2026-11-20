@@ -2,7 +2,9 @@ name: Rider Spot isolated staging APK Android emulator smoke
 on:
   push:
     branches: [feature/rider-spot-native-apk]
-    paths: ['.github/workflows/rider-spot-backend-staging-emulator-qa.yml']
+    paths:
+      - '.github/workflows/rider-spot-backend-staging-emulator-qa.yml'
+      - 'rider-spot-android/qa/verify-webview-cdp.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,22 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Retrieve verified side-by-side test APK
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Retrieve separately built QA APK with test-only WebView debugging
         uses: actions/download-artifact@v4
         with:
           name: RiderSpot-Backend-Staging-Parallel-APK
           repository: winzfs/riderapp
-          run-id: 44690579269
+          run-id: 44694226110
           github-token: ${{ github.token }}
           path: /tmp/rider-spot-android-qa
-      - name: Check installed binary
-        run: test -s /tmp/rider-spot-android-qa/app-debug.apk
-      - name: Enable Android emulator acceleration
+      - name: Check verified build artifact and emulator acceleration
         shell: bash
         run: |
           set -euo pipefail
+          test -s /tmp/rider-spot-android-qa/app-debug.apk
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
-      - name: Prepare a single-shell Android emulator check script
+      - name: Prepare a single-shell CDP-enabled WebView acceptance script
         shell: bash
         run: |
           cat > /tmp/rider-spot-emulator-smoke.sh <<'SCRIPT'
@@ -34,8 +39,8 @@ jobs:
           set -euo pipefail
           APK=/tmp/rider-spot-android-qa/app-debug.apk
           PACKAGE=com.riderspot.android.migrationqa
-          mkdir -p /tmp/rider-spot-emulator-evidence
-          # Prepare online connectivity and avoid obscuring native permission dialogs.
+          EVIDENCE=/tmp/rider-spot-emulator-evidence
+          mkdir -p "$EVIDENCE"
           adb shell settings put global airplane_mode_on 0 || true
           adb shell svc wifi enable || true
           adb shell svc data enable || true
@@ -44,70 +49,58 @@ jobs:
           adb shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION || true
           adb shell pm grant "$PACKAGE" android.permission.ACCESS_COARSE_LOCATION || true
           adb shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS || true
-          adb shell dumpsys connectivity > /tmp/rider-spot-emulator-evidence/connectivity.txt || true
+          adb shell dumpsys connectivity > "$EVIDENCE/connectivity.txt" || true
           adb logcat -c
-          passed=0
-          for attempt in 1 2 3 4 5 6; do
-            adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
-            sleep 9
+          open_cdp() {
+            local pid
+            pid=$(adb shell pidof "$PACKAGE" | tr -d '\r' | awk '{print $1}')
+            test -n "$pid"
+            adb forward --remove tcp:9222 >/dev/null 2>&1 || true
+            adb forward tcp:9222 "localabstract:webview_devtools_remote_$pid"
+          }
+          dismiss_system_anr() {
+            local path="$EVIDENCE/system-window.xml"
             adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
-            adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/first-window.xml || true
-            # Pixel Launcher may hang briefly on fresh headless emulator boot,
-            # overlaying an otherwise healthy WebView with a SYSTEM ANR dialog.
-            # Dismiss only that known system dialog, never app-specific errors.
-            if grep -Fq "Pixel Launcher isn't responding" /tmp/rider-spot-emulator-evidence/first-window.xml; then
-              echo "Dismissing emulator system launcher ANR (not Rider Spot)"
+            adb shell cat /sdcard/rs-window.xml > "$path" || true
+            if grep -Fq "Pixel Launcher isn't responding" "$path"; then
+              echo "Closing ANR overlay belonging to emulator Pixel Launcher"
               adb shell input tap 540 1233
-              sleep 4
-              adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
-              adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/first-window.xml || true
+              sleep 3
             fi
-            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
-            if grep -Eq '(지도|타임라인|수익|내 바이크)' /tmp/rider-spot-emulator-evidence/first-window.xml \
-              && ! grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/first-window.xml; then
-              passed=1
-              break
-            fi
-            echo "Staging WebView has not rendered navigation, attempt $attempt"
-            adb shell am force-stop "$PACKAGE" || true
-          done
-          adb logcat -d -v brief > /tmp/rider-spot-emulator-evidence/logcat.txt || true
-          if [ "$passed" -ne 1 ]; then
-            echo "FAIL: Android process was able to start, but loaded staging UI was NOT proven."
-            grep -Eo '(Webpage not available|ERR_INTERNET_DISCONNECTED|지도|타임라인)' /tmp/rider-spot-emulator-evidence/first-window.xml || true
+          }
+          adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+          sleep 12
+          dismiss_system_anr
+          open_cdp
+          if ! node rider-spot-android/qa/verify-webview-cdp.mjs first-launch; then
+            adb exec-out screencap -p > "$EVIDENCE/first-launch.png"
+            adb logcat -d -v brief > "$EVIDENCE/logcat.txt" || true
+            echo "FAIL: First QA WebView did not expose all five Rider Spot tabs"
             exit 1
           fi
+          adb exec-out screencap -p > "$EVIDENCE/first-launch.png"
           adb shell input keyevent KEYCODE_HOME
-          sleep 2
-          adb shell monkey -p "$PACKAGE" 1
-          sleep 8
-          adb shell pidof "$PACKAGE" >/dev/null
-          adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
-          adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/relaunch-window.xml || true
-          if grep -Fq "Pixel Launcher isn't responding" /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
-            adb shell input tap 540 1233
-            sleep 3
-            adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
-            adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/relaunch-window.xml || true
-          fi
-          adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
-          if ! grep -Eq '(지도|타임라인|수익|내 바이크)' /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
-            echo "FAIL: Rider Spot navigation not visible after relaunch"
+          sleep 3
+          adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+          sleep 7
+          dismiss_system_anr
+          open_cdp
+          if ! node rider-spot-android/qa/verify-webview-cdp.mjs relaunch; then
+            adb exec-out screencap -p > "$EVIDENCE/relaunch.png"
+            adb logcat -d -v brief > "$EVIDENCE/logcat.txt" || true
+            echo "FAIL: WebView lost the five-tab application after Android relaunch"
             exit 1
           fi
-          if grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
-            echo "FAIL: WebView disconnected after relaunch"
+          adb exec-out screencap -p > "$EVIDENCE/relaunch.png"
+          adb logcat -d -s AndroidRuntime:E > "$EVIDENCE/runtime-errors.log"
+          if grep -Fq 'FATAL EXCEPTION' "$EVIDENCE/runtime-errors.log"; then
+            echo 'FAIL: AndroidRuntime exception'
             exit 1
           fi
-          adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
-          if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
-            echo "FAIL: AndroidRuntime exception detected"
-            exit 1
-          fi
-          echo "PASS: Separate QA APK displayed real Rider Spot navigation and survived relaunch"
+          echo 'PASS isolated QA Android WebView DOM (5 tabs), first launch and relaunch'
           SCRIPT
           chmod +x /tmp/rider-spot-emulator-smoke.sh
-      - name: Install and launch preview APK without sharing production app data
+      - name: Install and verify actual WebView DOM and app relaunch
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -120,7 +113,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: RiderSpot-Staging-Android-Emulator-QA
+          name: RiderSpot-Staging-Android-Emulator-CDP-QA
           path: /tmp/rider-spot-emulator-evidence
           if-no-files-found: warn
           retention-days: 14
