@@ -17,11 +17,12 @@ test("KV preview gateway and front have independent names",()=>{
   assert.equal(gateway.kv_namespaces?.[0].binding,"RS_ASSETS");
   assert.match(gateway.kv_namespaces?.[0].id||"",/^[0-9a-f]{32}$/);
 });
-test("staging front binds to separate KV gateway and existing backend, never itself",()=>{
+test("staging front binds to separate KV gateway and isolated backend, never itself",()=>{
   const front=read("wrangler.kv-front-preview.json");
   const bindings=Object.fromEntries(front.services.map(b=>[b.binding,b.service]));
   assert.equal(bindings.ASSETS,"rider-spot-static-candidate-assets");
-  assert.equal(bindings.LEGACY,production);
+  assert.equal(bindings.LEGACY,"rider-spot-backend");
+  assert.notEqual(bindings.LEGACY,production);
   assert.notEqual(bindings.ASSETS,front.name);
   assert.notEqual(bindings.LEGACY,front.name);
   assert.deepEqual(front.services.map(b=>b.binding).sort(),["ASSETS","LEGACY"]);
@@ -34,4 +35,5 @@ test("future direct Static Assets preview cannot accidentally overwrite producti
   assert.equal(target.assets.binding,"ASSETS");
   assert.equal(target.services.length,1);
   assert.notEqual(target.name,target.services[0].service);
+  assert.equal(target.services[0].service,"rider-spot-backend");
 });
