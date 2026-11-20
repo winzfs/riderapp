@@ -1,11 +1,13 @@
 # Rider Spot — staged migration to Workers Static Assets
 
-## Production must remain unchanged until backend separation is verified
+## Historical staging precautions (before 2026-11-20 production cutover)
 
-The live service remains at https://rider-spot.jazzhjm.workers.dev/ and uses
-the original Worker named rider-spot. Its script contains API routes, OAuth,
-legacy JS/CSS and a native-recovery safeguard. It cannot safely be replaced
-with a static-only Worker. DO NOT overwrite rider-spot using the preview config.
+Before cutover, the live service at https://rider-spot.jazzhjm.workers.dev/
+used the original monolithic Worker containing API routes, OAuth, legacy
+JS/CSS and a native recovery safeguard. The preview config must **never** be
+used to overwrite the production Worker. The verified KV release config is
+`wrangler.kv-front-production.json`; rollback details are in
+`docs/PRODUCTION_RELEASE_RUNBOOK.md`.
 
 The v217 native recovery guard is inserted into the HTML by the existing
 Worker and is not in dist/index.html. The preview front loads only that guard
@@ -347,3 +349,29 @@ No production cutover was performed in this follow-up.
 - Original `rider-spot` version `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
   remains untouched. Native Static Assets upload and supervised real
   account/real device checks remain outstanding.
+
+## Production cutover confirmed — 2026-11-20
+
+The final production Worker release is **live**, superseding the earlier
+staging-only status above:
+
+- `rider-spot` running version `f764543b-35c5-48a7-9b4e-3b2b76b07b3c`,
+  100% traffic; original v220 rollback version
+  `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` preserved.
+- Four-part layout: 4.7KB front → pinned Workers KV assets and 13.8KB API
+  core → 56MB original backend clone for historical compatibility.
+- KV asset/HTML failure returns guarded v220 HTML (`X-RS-Fallback: v220`)
+  instead of a blank shell. Native Android OAuth nonce callback is explicitly
+  forwarded before the SPA root handler.
+- [Live production smoke run 44756948291](https://github.com/winzfs/riderapp/actions/runs/44756948291)
+  passed **read-only HTTP/legacy parity and the 320/393/412px five-tab
+  mobile browser checks**, including no unexpected reloads.
+- Actual phone GPS/SQLite long-session checks, real-account OAuth and
+  authenticated record CRUD have **not** been verified by these automated
+  tests. Follow post-release field checklist and rollback on regressions.
+- Native Static Assets direct upload is still unauthorized (401). This
+  release uses the vetted KV asset gateway, so that restriction does not
+  prevent the present deployed architecture.
+
+Authoritative operations and rollback guide:
+`docs/PRODUCTION_RELEASE_RUNBOOK.md`.
