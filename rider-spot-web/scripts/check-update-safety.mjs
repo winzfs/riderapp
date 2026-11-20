@@ -104,4 +104,26 @@ check("PWA updates cannot force-restart a delivery session", () => {
   assert.match(worker, /async function navigate\(request\)/);
   assert.doesNotMatch(worker, /location\.reload\s*\(/);
 });
+check("Production Worker stays modular with v220 fallback and native OAuth callback", () => {
+  const config=JSON.parse(web("wrangler.kv-front-production.json"));
+  assert.equal(config.name,"rider-spot");
+  assert.equal(config.main,"edge/static-edge.mjs");
+  assert.deepEqual(config.services,[
+    {binding:"ASSETS",service:"rider-spot-static-candidate-assets"},
+    {binding:"LEGACY",service:"rider-spot-api-core-qa"}
+  ]);
+  assert.ok(config.services.every(binding=>binding.service!==config.name));
+  assert.equal(config.assets,undefined);
+  const front=web("edge/static-edge.mjs");
+  const api=web("edge/api-core.mjs");
+  assert.ok(front.length<12000,"Front Worker became monolithic");
+  assert.ok(api.length<35000,"API core became monolithic");
+  assert.match(front,/ANDROID_OAUTH_COOKIE/);
+  assert.match(front,/rs-recovery-guard-v217/);
+  assert.match(front,/x-rs-fallback/);
+  assert.match(front,/const original = \(\) =>/);
+  assert.match(api,/LEGACY_BACKEND/);
+  assert.doesNotMatch(front,/const rsNewAssets\s*=/);
+  assert.doesNotMatch(api,/const rsNewAssets\s*=/);
+});
 console.log("RIDER_SPOT_UPDATE_SAFETY_GATE=PASS (" + release.hash + ")");
