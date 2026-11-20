@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const origin = process.env.RIDER_STATIC_PREVIEW_ORIGIN || "https://rider-spot-static-preview.jazzhjm.workers.dev/";
 const report={at:new Date().toISOString(),origin,screens:[],passed:false};
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+  const browser=await chromium.launch({headless:true,channel:process.env.RIDER_CHROME_CHANNEL||undefined,args:["--no-sandbox","--disable-dev-shm-usage"]});
   try {
     for(const width of [320,393,412]) {
       const ctx=await browser.newContext({
