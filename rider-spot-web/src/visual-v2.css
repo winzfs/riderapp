@@ -590,7 +590,7 @@ body,.app,.app .workspace>main{background:var(--rs-bg);color:var(--rs-text)}
  */
 :root {
   --rs-bg:#F5F7F5;
-  --rs-text:#20332F;
+  --rs-text:#173D3C;
   --rs-muted:#71817A;
   --rs-line:#E8EDE9;
   --rs-primary:#067A71;

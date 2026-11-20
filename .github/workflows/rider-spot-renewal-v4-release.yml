@@ -47,6 +47,7 @@ jobs:
           assert.ok(fs.readFileSync('dist/assets/rider-spot-'+release.hash+'/renewal-layout.css','utf8').includes('fin-hero-renewal'));
           const html=fs.readFileSync('dist/index.html','utf8');
           assert.ok(html.includes('rider-spot-'+release.hash+'/app.mjs'));
+          assert.ok(fs.readFileSync('src/renewal-layout.css','utf8').includes('--rs-text:#173D3C'));
           console.log('RENEWAL_V4_BUILD_PASS',release.hash,app.length);
           NODE
       - name: Preserve no-reload, GPS, WebView and update safety checks
