@@ -1,0 +1,60 @@
+name: Rider Spot premium v3 live production smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-premium-v3-live.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-premium-v3-live
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Check live Worker shell, cache-busted CSS and immutable native recovery guard
+        run: |
+          curl --retry 2 --retry-delay 2 -fsSL -H 'Cache-Control: no-cache'             'https://rider-spot.jazzhjm.workers.dev/' > /tmp/rider-v3-live.html
+          curl --retry 2 --retry-delay 2 -fsSL             'https://rider-spot.jazzhjm.workers.dev/rider-spot-visual-v2-20261121.css?rev=20261121-p3' > /tmp/rider-v3-live.css
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html=fs.readFileSync('/tmp/rider-v3-live.html','utf8');
+          const css=fs.readFileSync('/tmp/rider-v3-live.css','utf8');
+          assert.match(html,/rs-recovery-guard-v217/,'native reload protection retained');
+          assert.match(html,/rider-spot-visual-v2-20261121\\.css\\?rev=20261121-p3/,'fresh immutable CSS URL injected');
+          assert.match(css,/Premium v3.*2026-11-21/,'new premium CSS present on live service');
+          assert.match(css,/fin-chart-point:focus-visible/);
+          assert.match(css,/bike-tile-status\\.bike-state-soon/);
+          assert.ok(css.length>18000&&css.length<26000);
+          console.log('LIVE_V3_ASSETS=PASS',html.length,css.length);
+          NODE
+      - name: Verify native safety and visual service isolation
+        run: |
+          node --test tests/visual-v2.test.mjs tests/static-edge.test.mjs tests/kv-preview-config.test.mjs
+      - name: Install Chromium for mobile visual and reload checks
+        run: npx playwright install --with-deps chromium
+      - name: Verify 320, 393, 412px, 5 tabs, overflow and no full reload on live origin
+        env:
+          RIDER_VISUAL_URL: https://rider-spot.jazzhjm.workers.dev
+        run: node tests/visual-v2-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-premium-v3-live-screenshots
+          path: /tmp/rider-spot-visual-v2
+          if-no-files-found: warn
+          retention-days: 7
