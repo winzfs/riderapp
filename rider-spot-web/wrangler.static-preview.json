@@ -11,6 +11,6 @@
     "run_worker_first": ["/", "/index.html", "/sw.js", "/api/*", "/auth/*", "/oauth/*"]
   },
   "services": [
-    { "binding": "LEGACY", "service": "rider-spot-backend" }
+    { "binding": "LEGACY", "service": "rider-spot-api-core-qa" }
   ]
 }
