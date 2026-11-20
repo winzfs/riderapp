@@ -329,3 +329,21 @@ Before promoting **any** new Worker under the public `rider-spot` name:
    `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`.
 
 No production cutover was performed in this follow-up.
+
+### Final staging CI evidence after API-core connection (2026-11-20)
+
+- [Isolated API-core staging acceptance — run 44698546291](https://github.com/winzfs/riderapp/actions/runs/44698546291):
+  **22/22** unit/configuration/routing tests, **16/16** real HTTP
+  assertions (including synthetic native OAuth cookie expiry, recovery
+  guard, legacy asset byte parity, weather 400, route matching 405),
+  **3/3** mobile Chromium widths (320, 393, 412px); authenticated
+  finance/maintenance/timeline exercises passed using **local mocked fixtures**.
+- [Android WebView emulator rerun — run 44698813634](https://github.com/winzfs/riderapp/actions/runs/44698813634):
+  finished **success** on the small API-core staging topology. Its first
+  boot attempted a DNS-error page, then a retry completed successfully;
+  CDP DOM verified the correct staging hostname, map/start control,
+  all five tabs and no browser error on first launch **and relaunch**.
+  This is not equivalent to a real physical device's GNSS/battery behavior.
+- Original `rider-spot` version `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
+  remains untouched. Native Static Assets upload and supervised real
+  account/real device checks remain outstanding.
