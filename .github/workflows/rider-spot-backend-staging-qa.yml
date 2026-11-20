@@ -13,7 +13,7 @@ permissions:
 jobs:
   acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: rider-spot-web
@@ -32,6 +32,13 @@ jobs:
         run: node scripts/verify-backend-staging.mjs
       - name: Verify real 320 / 393 / 412px mobile navigation, layout and refresh stability
         run: node tests/static-preview-browser.cjs
+      - name: Verify authenticated finance, maintenance, route UI through local-only fixtures
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot-static-preview.jazzhjm.workers.dev
+          RIDER_SCREENSHOTS: /tmp/rider-spot-isolated-ui
+        run: |
+          npm run build
+          node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -39,4 +46,5 @@ jobs:
           path: |
             rider-spot-web/backend-staging-qa.json
             rider-spot-web/docs/static-preview-browser-qa.json
+            /tmp/rider-spot-isolated-ui/
           if-no-files-found: ignore
