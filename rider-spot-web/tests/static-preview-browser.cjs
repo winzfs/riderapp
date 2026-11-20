@@ -2,7 +2,7 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
-const origin = "https://rider-spot-static-preview.jazzhjm.workers.dev/";
+const origin = process.env.RIDER_STATIC_PREVIEW_ORIGIN || "https://rider-spot-static-preview.jazzhjm.workers.dev/";
 const report={at:new Date().toISOString(),origin,screens:[],passed:false};
 (async()=>{
   const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
