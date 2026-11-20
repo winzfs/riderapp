@@ -12,6 +12,10 @@
     {
       "binding": "LEGACY",
       "service": "rider-spot-api-core-qa"
+    },
+    {
+      "binding": "DESIGN",
+      "service": "rider-spot-visual-v2"
     }
   ]
 }
