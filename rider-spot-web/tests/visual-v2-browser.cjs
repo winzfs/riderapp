@@ -5,7 +5,7 @@ const origin=process.env.RIDER_VISUAL_URL||"https://rider-spot-static-preview.ja
 const cssPath="/rider-spot-visual-v2-20261121.css";
 const report={origin,at:new Date().toISOString(),screens:[],passed:false};
 (async()=>{
- const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+ const browser=await chromium.launch({headless:true,channel:process.env.RIDER_CHROME_CHANNEL||undefined,args:["--no-sandbox","--disable-dev-shm-usage"]});
  try{
   fs.mkdirSync("/tmp/rider-spot-visual-v2",{recursive:true});
   for(const width of [320,393,412]){
