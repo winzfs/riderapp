@@ -40,7 +40,7 @@ try{
     const [live,preview,version]=await Promise.all([
       get(production,path),get(staging,path),get(candidate,path)
     ]);
-    const originalExpected=path.includes("/assets/rider-spot-16c1eecf6bac/") ? 404 : status;
+    const originalExpected=status; // The currently deployed split release already serves pinned assets.
     check("candidate path parity "+path,version.status===status&&preview.status===status&&live.status===originalExpected,{
       path,original:live.status,staging:preview.status,candidate:version.status});
     check("candidate payload parity "+path,sha(version.body)===sha(preview.body),{path,bytes:version.body.length});
