@@ -6,7 +6,7 @@ const production="https://rider-spot.jazzhjm.workers.dev";
 const staging="https://rider-spot-static-preview.jazzhjm.workers.dev";
 const report={at:new Date().toISOString(),production,staging,checks:[],warnings:[],passed:false};
 const check=(label,ok,info="")=>{report.checks.push({label,passed:!!ok,info:String(info).slice(0,180)});assert.ok(ok,label+": "+info);};
-const get=async(base,path)=>{const res=await fetch(base+path,{headers:{"cache-control":"no-cache"},signal:AbortSignal.timeout(30000)});return {status:res.status,type:(res.headers.get("content-type")||"").split(";")[0],body:await res.text()};};
+const get=async(base,path,headers={})=>{const res=await fetch(base+path,{headers:{"cache-control":"no-cache",...headers},redirect:"manual",signal:AbortSignal.timeout(30000)});return {status:res.status,type:(res.headers.get("content-type")||"").split(";")[0],body:await res.text(),cookie:res.headers.get("set-cookie")||"",cache:res.headers.get("cache-control")||""};};
 const hash=s=>createHash("sha256").update(s).digest("hex");
 try{
  const [live,preview]=await Promise.all([get(production,"/"),get(staging,"/")]);
@@ -24,9 +24,27 @@ try{
   const [old,current]=await Promise.all([get(production,path),get(staging,path)]);
   check("legacy file parity "+path,old.status===200&&current.status===200&&hash(old.body)===hash(current.body),old.status+"/"+current.status);
  }
+ // End-to-end callback checks use a synthetic nonce; no user token or data are touched.
+ const nonce="a".repeat(32);
+ const [authOld,authNew]=await Promise.all([
+   get(production,"/",{cookie:"rs_android_oauth="+nonce}),
+   get(staging,"/",{cookie:"rs_android_oauth="+nonce})
+ ]);
+ check("native OAuth callback HTTP and deep-link parity",authOld.status===200&&authNew.status===200&&
+   authOld.body.includes("riderspot-oauth://signin/callback")&&authNew.body.includes("riderspot-oauth://signin/callback"));
+ check("native OAuth nonce cookie invalidated",authOld.cookie.includes("Max-Age=0")&&authNew.cookie.includes("Max-Age=0"));
+ check("native OAuth callback never cached",authOld.cache.includes("no-store")&&authNew.cache.includes("no-store"));
+ for(const path of ["/api/weather?lat=0&lon=0","/api/route-match"]){
+   const [old,next]=await Promise.all([get(production,path),get(staging,path)]);
+   check("API validation parity "+path,old.status===next.status&&old.type===next.type&&hash(old.body)===hash(next.body),
+     old.status+"/"+next.status);
+ }
  const [oldApi,currentApi]=await Promise.all([get(production,"/api/industry-news"),get(staging,"/api/industry-news")]);
- check("read-only API status/type parity",oldApi.status===currentApi.status&&oldApi.type===currentApi.type,oldApi.status+"/"+currentApi.status);
- if(oldApi.status>=500)report.warnings.push("Both APIs returned "+oldApi.status+"; parity is not health.");
+ const okNews=entry=>[200,502].includes(entry.status)&&entry.type==="application/json"&&
+   Array.isArray(JSON.parse(entry.body).items);
+ check("news endpoint shape and compatible status",okNews(oldApi)&&okNews(currentApi),oldApi.status+"/"+currentApi.status);
+ if(oldApi.status>=500||currentApi.status>=500)
+   report.warnings.push("Industry-news upstream returned "+oldApi.status+"/"+currentApi.status+"; status may vary by request, not API health.");
  report.passed=true;
 }catch(e){report.error=String(e?.stack||e).slice(0,1400);process.exitCode=1;}
 finally{
