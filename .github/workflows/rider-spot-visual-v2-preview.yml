@@ -1,0 +1,51 @@
+name: Rider Spot visual v2 premium UI preview acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-visual-v2-preview.yml'
+      - 'rider-spot-web/edge/visual-v2-worker.mjs'
+      - 'rider-spot-web/edge/static-edge.mjs'
+      - 'rider-spot-web/src/visual-v2.css'
+      - 'rider-spot-web/tests/visual-v2-browser.cjs'
+      - 'rider-spot-web/tests/visual-v2.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install project and Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Unit tests for design-only Worker, routing and release isolation
+        run: node --test tests/visual-v2.test.mjs tests/static-edge.test.mjs tests/kv-preview-config.test.mjs
+      - name: Verify live preview visually with 320, 393, 412px
+        env:
+          RIDER_VISUAL_URL: https://rider-spot-static-preview.jazzhjm.workers.dev
+        run: node tests/visual-v2-browser.cjs
+      - name: Exercise finance, bike and timeline fixtures without real user data
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot-static-preview.jazzhjm.workers.dev
+          RIDER_SCREENSHOTS: /tmp/rider-spot-visual-v2-fixtures
+        run: |
+          npm run build
+          node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-visual-v2-ui-preview
+          path: |
+            /tmp/rider-spot-visual-v2
+            /tmp/rider-spot-visual-v2-fixtures
+          if-no-files-found: warn
