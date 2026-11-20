@@ -1,6 +1,6 @@
 # Rider Spot — production split Worker release and rollback
 
-Last verified: **2026-11-20**. This file describes the live Worker **version**
+Last verified: **2026-11-21**. This file describes the live Worker **version**
 and the independently deployed services. Always compare actual Cloudflare
 deployment state with this record before any change.
 
@@ -8,7 +8,9 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active premium visual-v2 front version: `ea399918-cbff-4de4-994f-5530e1672cef`
+- Active premium-v3 front version: `6a484cb5-1a83-400e-ad3a-6e8c5abb874e`
+- Active premium-v3 CSS Worker version: `97c68a72-c0ae-4870-b040-2e4fb37d57d4`
+- Previous visual-v2 front version (safe CSS-link rollback): `ea399918-cbff-4de4-994f-5530e1672cef`
 - Prior split front version (last known functional fallback): `f764543b-35c5-48a7-9b4e-3b2b76b07b3c`
 - Previous monolithic v220 version, **retain for rollback**:
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
