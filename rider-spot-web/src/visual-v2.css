@@ -845,3 +845,6 @@ body,.app,.app .workspace>main{background:var(--rs-bg);color:var(--rs-text)}
 @media(prefers-reduced-motion:reduce){
  .app .bike-page .bike-tile,.app .finance-page .fin-chart-track {transition:none;}
 }
+
+/* Preserve the existing semantic orange brand token across all tabs. */
+:root{--rs-orange:#FF8B43;}
