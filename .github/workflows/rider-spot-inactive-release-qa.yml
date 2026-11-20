@@ -33,6 +33,7 @@ jobs:
         run: |
           npm ci
           if command -v google-chrome >/dev/null 2>&1; then
+            export RIDER_CHROME_CHANNEL=chrome
             echo RIDER_CHROME_CHANNEL=chrome >> "$GITHUB_ENV"
             google-chrome --version
           else
