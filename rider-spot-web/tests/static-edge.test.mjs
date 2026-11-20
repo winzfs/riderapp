@@ -173,3 +173,27 @@ test("old hashed releases still fall back to the existing backend Worker", async
   assert.equal(await r.text(),"legacy:"+path);
   assert.deepEqual(requests.map(x=>x[0]),["assets","legacy"]);
 });
+
+
+test("visual refresh CSS link is inserted after existing styles and preserves one native guard",async()=>{
+  const env=createEnv();
+  const res=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"),env);
+  assert.equal(res.status,200);
+  const html=await res.text();
+  const premium=html.indexOf("premium-shell.css");
+  const visual=html.indexOf("rider-spot-visual-v2-20261121.css");
+  assert.ok(premium>=0&&visual>premium,"visual layer must load last");
+  assert.equal((html.match(/rider-spot-visual-v2-20261121.css/g)||[]).length,1);
+  assert.equal((html.match(/id="rs-recovery-guard-v217"/g)||[]).length,1);
+});
+test("visual CSS request is dispatched only to isolated design Worker",async()=>{
+  const env=createEnv();
+  let calls=0;
+  env.DESIGN={async fetch(req){calls++;return new Response("/* v2 */",{headers:{"content-type":"text/css"}})}};
+  const req=new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/rider-spot-visual-v2-20261121.css");
+  const res=await worker.fetch(req,env);
+  assert.equal(res.status,200);
+  assert.equal(res.headers.get("content-type"),"text/css");
+  assert.equal(await res.text(),"/* v2 */");
+  assert.equal(calls,1);
+});
