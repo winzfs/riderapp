@@ -65,6 +65,7 @@ jobs:
       - name: Auth-mocked finance, maintenance and timeline CRUD checks on preview
         env:
           RIDER_TEST_ORIGIN: https://rider-spot-renewal-preview.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
           RIDER_SCREENSHOTS: /tmp/rider-v4-preview-fixtures
         run: node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4

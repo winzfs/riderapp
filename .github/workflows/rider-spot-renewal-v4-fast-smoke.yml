@@ -29,6 +29,7 @@ jobs:
       - name: Preview authenticated synthetic finance, maintenance, timeline CRUD
         env:
           RIDER_TEST_ORIGIN: https://rider-spot-renewal-preview.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
           RIDER_SCREENSHOTS: /tmp/rider-v4-fast-preview
         run: node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4

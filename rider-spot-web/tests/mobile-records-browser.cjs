@@ -151,6 +151,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       if(fs.existsSync(target)&&fs.statSync(target).isFile())return route.fulfill({path:target,contentType:/\.m?js$/.test(file)?"application/javascript":undefined});
     }
     if(route.request().method()==="GET" && /^\/(?:rider-|pwa-init|icons\/|mapdata\/)/.test(url.pathname))return route.continue();
+    // Remote preview deliberately loads its pinned Worker KV assets over HTTP;
+    // only the already-matched first-party origin is allowed through.
+    if(process.env.RIDER_TEST_REMOTE_SOURCE==="1" && url.origin===origin && route.request().method()==="GET")return route.continue();
     return route.abort();
   });
   const page=await context.newPage();page.setDefaultTimeout(8000);
