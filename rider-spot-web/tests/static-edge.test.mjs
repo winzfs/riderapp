@@ -50,6 +50,46 @@ test("shell includes the current production native guard exactly once", async ()
   assert.equal(r.headers.get("cache-control"), "no-store");
   assert.deepEqual(requests.map(x => x[0]), ["assets", "legacy"]);
 });
+test("native OAuth callback nonce at root reaches backend, not the new shell", async () => {
+  const nonce = "a".repeat(32);
+  const calls = [];
+  const env = {
+    ASSETS: { async fetch() { throw Error("OAuth callback must not load assets"); } },
+    LEGACY: { async fetch(req) {
+      calls.push(req);
+      return new Response("<html>native oauth return</html>", {
+        headers: {
+          "set-cookie": "rs_android_oauth=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax",
+          "content-security-policy": "default-src 'none'",
+          "cache-control": "no-store"
+        }
+      });
+    }}
+  };
+  const req = new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/?from=oauth", {
+    headers: {cookie: "preferences=dark; rs_android_oauth="+nonce, accept: "text/html"}
+  });
+  const res = await worker.fetch(req, env);
+  assert.equal(await res.text(), "<html>native oauth return</html>");
+  assert.equal(res.headers.get("set-cookie")?.startsWith("rs_android_oauth=;"), true);
+  assert.equal(res.headers.get("content-security-policy"), "default-src 'none'");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://rider-spot.jazzhjm.workers.dev/?from=oauth");
+  assert.equal(calls[0].headers.get("cookie"), "preferences=dark; rs_android_oauth="+nonce);
+});
+
+test("normal or malformed OAuth cookie never bypasses guarded preview shell", async () => {
+  for (const cookie of ["", "rs_android_oauth=not-valid", "other=rs_android_oauth="+"a".repeat(32)]) {
+    requests.length = 0;
+    const req = new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/",
+      { headers: cookie ? {cookie} : {} });
+    const res = await worker.fetch(req, createEnv());
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /rs-recovery-guard-v217/);
+    assert.deepEqual(requests.map(x=>x[0]), ["assets", "legacy"]);
+  }
+});
+
 test("missing native recovery guard fails closed; do not serve a broken new UI", async () => {
   const r = await serveShell(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"), createEnv(false));
   assert.equal(r.status, 503);
