@@ -8,6 +8,10 @@
 const BACKEND_ORIGIN = "https://rider-spot.jazzhjm.workers.dev";
 const GUARD = /<script\s+id=["']rs-recovery-guard-v217["'][^>]*>[\s\S]*?<\/script>/i;
 
+// Native Android OAuth returns to '/' with an HttpOnly ten-minute nonce.
+// That callback must take priority over the public SPA shell.
+const ANDROID_OAUTH_COOKIE = /(?:^|;\s*)rs_android_oauth=[0-9a-f]{32}(?=;|$)/i;
+
 export function backendRequest(request) {
   const source = new URL(request.url);
   const destination = new URL(BACKEND_ORIGIN);
@@ -55,6 +59,11 @@ export default {
     const path = url.pathname;
     // This is an intentionally isolated service-name. Production remains
     // unchanged; never bind LEGACY to itself in the eventual cutover.
+    if (request.method === "GET" && path === "/" &&
+        ANDROID_OAUTH_COOKIE.test(request.headers.get("cookie") || "")) {
+      // Preserve the nonce cookie, callback HTML, cookie deletion, and CSP.
+      return env.LEGACY.fetch(backendRequest(request));
+    }
     if ((request.method === "GET" || request.method === "HEAD")
         && (path === "/" || path === "/index.html")) {
       return serveShell(request, env);
