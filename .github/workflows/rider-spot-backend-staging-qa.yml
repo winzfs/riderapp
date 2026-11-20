@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/rider-spot-backend-staging-qa.yml'
       - 'rider-spot-web/scripts/verify-backend-staging.mjs'
+      - 'rider-spot-web/tests/mobile-records-browser.cjs'
+      - 'rider-spot-web/src/premium-shell.css'
       - 'rider-spot-web/wrangler.kv-front-preview.json'
       - 'rider-spot-web/wrangler.static-preview.json'
   workflow_dispatch:
