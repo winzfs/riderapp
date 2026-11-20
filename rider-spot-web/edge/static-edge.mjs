@@ -37,12 +37,26 @@ export async function serveShell(request, env) {
       method: "GET", headers: { accept: "text/html" },
     })),
   ]);
-  if (!asset.ok || !legacy.ok) return failClosed("Migration preview shell unavailable");
-  const [html, source] = await Promise.all([asset.text(), legacy.text()]);
+  if (!legacy.ok) return failClosed("Original app fallback unavailable");
+  // Preserve the already-verified v220 recovery guard even if Workers KV,
+  // a new release key or a static asset response fails temporarily.
+  let source;
+  try { source = await legacy.text(); }
+  catch { return failClosed("Original app fallback unreadable"); }
   const guard = source.match(GUARD)?.[0];
-  if (!guard || !html.includes("</head>")) {
-    return failClosed("Native recovery guard missing from migration preview");
-  }
+  if (!guard) return failClosed("Native recovery guard missing from original app");
+  const original = () => {
+    const headers = new Headers(legacy.headers);
+    headers.set("cache-control", "no-store");
+    headers.set("x-rs-fallback", "v220");
+    headers.delete("content-length");
+    return new Response(request.method === "HEAD" ? null : source, {status:200, headers});
+  };
+  if (!asset.ok) return original();
+  let html;
+  try { html = await asset.text(); }
+  catch { return original(); }
+  if (!html.includes("</head>")) return original();
   const output = GUARD.test(html) ? html : html.replace("</head>", guard + "</head>");
   const headers = new Headers(asset.headers);
   headers.set("content-type", "text/html; charset=utf-8");
