@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 
-const candidate = process.env.RIDER_CANDIDATE_URL || "https://430e0ec4-rider-spot.jazzhjm.workers.dev";
+const candidate = process.env.RIDER_CANDIDATE_URL || "https://f764543b-rider-spot.jazzhjm.workers.dev";
 const staging = "https://rider-spot-static-preview.jazzhjm.workers.dev";
 const production = "https://rider-spot.jazzhjm.workers.dev";
 const out = {checkedAt:new Date().toISOString(),candidate,staging,production,tests:[],passed:false};
