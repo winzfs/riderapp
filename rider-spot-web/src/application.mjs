@@ -1294,7 +1294,7 @@ export function mountApplication({
     );
     return H(
       "section",
-      { className: "page rc-community rc-home rc-community-v32" },
+      { className: "page rc-community rc-home rc-community-v32 rs-community-renewal" },
       datalist,
       H(
         "div",
@@ -1509,7 +1509,7 @@ export function mountApplication({
       rows.length
         ? H(
             "div",
-            { className: "rc-card-list" },
+            { className: "rc-card-list rc-feed-renewal" },
             ...rows.map((row) => row.node),
           )
         : loading || (isNews && newsBusy)

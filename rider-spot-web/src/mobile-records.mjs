@@ -619,6 +619,7 @@ export function createRecords(R, client) {
     const [editor,setEditor]=R.useState(null),[detailItem,setDetailItem]=R.useState(null);
     const [vehicleEdit,setVehicleEdit]=R.useState(null);
     const [modelPicker,setModelPicker]=R.useState(false);
+    const [showAllHistory,setShowAllHistory]=R.useState(false);
     const changed = payload => {
       if (payload?.deletedId) setData(current => current ? {
         ...current,rows:current.rows.filter(row=>row.id!==payload.deletedId)
@@ -700,13 +701,13 @@ export function createRecords(R, client) {
             explicitModel?modelLabel(model)+" 기준 정비 주기":"참고용 정비 주기")),
         bikeArtSource(model)
           ?h("img",{className:"bike-vehicle-art",src:bikeArtSource(model),alt:modelLabel(model)+" 바이크 이미지",width:1100,height:660,decoding:"async"})
-          :h("img",{src:scooter,alt:"기본 스쿠터 일러스트",width:130,height:82})),
-      h("div",{className:"bike-vehicle-actions"},
+          :h("img",{src:scooter,alt:"기본 스쿠터 일러스트",width:130,height:82}),
+      h("div",{className:"bike-vehicle-actions bike-vehicle-tools"},
         btn(h(R.Fragment,null,h(Icon,{name:"gauge",size:19}),"계기판 입력"),
           ()=>vehicleAction("odometer"),{className:"bike-outline-action","aria-label":"계기판 입력",disabled:!!user&&!data}),
         btn(h(R.Fragment,null,h(Icon,{name:"edit",size:18}),"모델 선택"),
           ()=>user?setModelPicker(true):login(),
-          {className:"bike-outline-action","aria-label":"모델 선택",disabled:!!user&&!data})),
+          {className:"bike-outline-action","aria-label":"모델 선택",disabled:!!user&&!data}))),
       model && h("div",{className:"bike-model-banner"},
         h("div",null,h("strong",null,modelLabel(model)),
           h("small",null,model.kind==="electric"?"전기 스쿠터 · 엔진오일 제외":
@@ -740,8 +741,8 @@ export function createRecords(R, client) {
         })),
       h("div",{className:"bike-heading bike-history-head"},
         h("h2",null,h(Icon,{name:"history",size:19}),"정비 이력"),
-        h("small",null,rows.length+"건")),
-      rows.length ? rows.map((row,i)=>h(R.Fragment,{key:row.id},
+        h("small",null,rows.length+"건 · 최신순")),
+      rows.length ? (showAllHistory?rows:rows.slice(0,3)).map((row,i)=>h(R.Fragment,{key:row.id},
         (!i||rows[i-1].serviced_on?.slice(0,7)!==row.serviced_on?.slice(0,7)) &&
           h("h3",null,row.serviced_on.slice(0,7).replace("-","년 ")+"월"),
         btn(h(R.Fragment,null,
@@ -753,6 +754,8 @@ export function createRecords(R, client) {
             h(Icon,{name:"chevron",size:17}))),
         ()=>edit({row}),{className:"bike-row bike-history-row","aria-label":itemsOf(row).join(" · ")+" "+row.serviced_on+" "+(row.cost_won==null?"비용 미입력":number(row.cost_won)+"원")})))
         :h("p",{className:"bike-empty"},user&&!data&&!error?"기록을 읽고 있어요…":"등록된 정비 기록이 없어요."),
+      rows.length>3&&btn(showAllHistory?"이력 접기":"정비 이력 "+(rows.length-3)+"건 더 보기",
+        ()=>setShowAllHistory(v=>!v),{className:"bike-history-more","aria-expanded":showAllHistory}),
       vehicleEdit && h(VehicleEditor,{kind:vehicleEdit,user,vehicle,
         close:()=>setVehicleEdit(null),changed}),
       modelPicker && h(ModelPicker,{user,vehicle,cycles,settings:modelSettings,

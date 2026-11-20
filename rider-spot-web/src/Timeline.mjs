@@ -885,7 +885,7 @@ export function createTimeline(S, Zo, Income) {
       ),
       rs33J(
         "div",
-        { className: "rs33-week", role: "group", "aria-label": "운행 날짜" },
+        { className: "rs33-week rs-renewal-calendar", role: "group", "aria-label": "운행 날짜" },
         ...labels.map((label, i) => {
           const date = rs33DateAdd(week, i);
           return rs33J(
@@ -923,7 +923,7 @@ export function createTimeline(S, Zo, Income) {
       !allDays ? rs33J(DayRideCard, { history: ride.history, day, income:rs33J(Income,{key:day,day,user,login}) }) : null,
       !allDays && daily
         ? rs33J("section", {
-            className: "rs56-day-overview", "aria-label": "하루 통합 운행 경로",
+            className: "rs56-day-overview rs-renewal-route", "aria-label": "하루 통합 운행 경로",
           },
             daily.route.points.length
               ? rs33J(
