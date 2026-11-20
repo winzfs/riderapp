@@ -51,3 +51,22 @@ test("API core is independently named, tiny and has only the frozen legacy fallb
   assert.notEqual(core.services[0].service,core.name);
   assert.equal(front.services.find(x=>x.binding==="LEGACY").service,core.name);
 });
+
+
+test("production config matches live split routing and never loops to its own Worker",()=>{
+  const live=read("wrangler.kv-front-production.json");
+  assert.equal(live.name,production);
+  assert.equal(live.main,"edge/static-edge.mjs");
+  assert.equal(live.workers_dev,true);
+  assert.equal(live.compatibility_date,"2026-11-19");
+  assert.equal(live.assets,undefined,"Cloudflare static upload is not configured on KV production path");
+  assert.deepEqual(live.services,[
+    {binding:"ASSETS",service:"rider-spot-static-candidate-assets"},
+    {binding:"LEGACY",service:"rider-spot-api-core-qa"}
+  ]);
+  assert.ok(live.services.every(x=>x.service!==production));
+  assert.equal(read("wrangler.api-core-preview.json").services[0].service,"rider-spot-backend");
+  const edge=readFileSync(new URL("../edge/static-edge.mjs",import.meta.url),"utf8");
+  assert.ok(edge.includes('"x-rs-fallback"')&&edge.includes('const original = () =>'),
+    "v220 emergency shell failover must remain available");
+});
