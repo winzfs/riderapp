@@ -357,6 +357,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     await dialog.getByRole("button",{name:"엔진오일",exact:true}).click();await dialog.getByLabel("정비 날짜").fill("2026-11-10");
     await dialog.getByLabel("계기판").fill("22000");await dialog.getByRole("button",{name:"정비 기록 저장"}).click();
+    await page.getByRole("button",{name:/정비 이력 \d+건 더 보기/}).click();
     await page.getByRole("button",{name:/엔진오일.*2026-11-10.*비용 미입력/}).click();
     await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
     await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();

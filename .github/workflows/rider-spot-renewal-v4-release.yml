@@ -44,6 +44,8 @@ jobs:
             assert.ok(app.includes(marker),'Missing v4 React marker '+marker);
           }
           assert.ok(visual.includes('Native-first Renewal v4'));
+          assert.ok(bike.includes('showAllHistory?rows:rows.slice(0,3)'));
+          console.log('Bike history default collapsed; full records remain accessible by expand control');
           assert.ok(fs.readFileSync('dist/assets/rider-spot-'+release.hash+'/renewal-layout.css','utf8').includes('fin-hero-renewal'));
           const html=fs.readFileSync('dist/index.html','utf8');
           assert.ok(html.includes('rider-spot-'+release.hash+'/app.mjs'));
