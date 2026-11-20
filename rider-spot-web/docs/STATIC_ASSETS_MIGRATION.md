@@ -205,8 +205,37 @@ fallback with an empty `items` array, demonstrating dynamic upstream data and
 why anonymous response bodies must not be compared byte-for-byte. No
 state-changing API request or authenticated session was used.
 
-The GitHub Actions runs triggered by this branch are currently marked
-`startup_failure` without any jobs, so the committed read-only parity workflow
-has **not** passed. Run that workflow or the equivalent test manually when
-Actions recovers; do not substitute the smoke checks for signed-in/native
-acceptance. The public production Worker was never redeployed.
+Initial GitHub Actions jobs returned `startup_failure` (Nov 20 around 06:15Z),
+but execution recovered. **Run 44689230402 passed** the isolated staging
+acceptance at 06:40Z: 11/11 configuration/routing unit tests, 11/11
+read-only structural HTTP assertions, and live Playwright navigation at
+320, 393 and 412px with zero page errors, overflow or full document reload.
+The industry-news API returned **502 on both environments**; the successful
+check demonstrates routing parity, **not API health**. All tests were
+anonymous/read-only; no real Android GPS, OAuth callback, authenticated
+records or rollback acceptance has been claimed. Production was not redeployed.
+
+### Direct Static Assets re-test — 2026-11-20
+
+An isolated one-file probe registered `/__rs_static_upload_probe.txt` in an
+official staging-only asset-upload session. The returned upload JWT had a
+nonempty missing-asset bucket, but the documented `POST /workers/assets/upload`
+with `base64=true`, bearer upload JWT and multipart file content returned
+**HTTP 401 Unauthorized** again. No candidate asset was attached to a Worker
+version. The existing KV-backed staging service remains operational. A
+properly authorized Wrangler/CI upload environment is still required for
+native Static Assets; this does not block current staging browser tests.
+
+### Automated staging acceptance — 2026-11-20
+
+- GitHub Action: https://github.com/winzfs/riderapp/actions/runs/44689230402
+- Repository: `feature/rider-spot-native-apk`.
+- Static preview front `LEGACY` binds to `rider-spot-backend` (not production).
+- 11/11 isolated routing and native protection unit tests passed.
+- 11/11 HTTP route/asset assertions passed; both news APIs returned 502, so
+  upstream health remains unresolved.
+- Anonymous Chromium browser checks passed at 320, 393 and 412px: 5 tabs,
+  no horizontal overflow, runtime errors or document reloads.
+- Finance chart selection was not exercised: anonymous session has no chart.
+- Production cutover remains blocked on signed-in data read/write, native
+  GPS/background SQLite restore, OAuth return and rollback verification.
