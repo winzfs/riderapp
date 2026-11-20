@@ -32,7 +32,12 @@ jobs:
       - name: Install Chromium and run three-width browser tests
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo RIDER_CHROME_CHANNEL=chrome >> "$GITHUB_ENV"
+            google-chrome --version
+          else
+            npx playwright install chromium
+          fi
           node tests/static-preview-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
