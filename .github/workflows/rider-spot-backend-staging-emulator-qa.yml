@@ -1,0 +1,68 @@
+name: Rider Spot isolated staging APK Android emulator smoke
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-backend-staging-emulator-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Retrieve verified side-by-side test APK
+        uses: actions/download-artifact@v4
+        with:
+          name: RiderSpot-Backend-Staging-Parallel-APK
+          repository: winzfs/riderapp
+          run-id: 44690579269
+          github-token: ${{ github.token }}
+          path: /tmp/rider-spot-android-qa
+      - name: Check installed binary
+        run: test -s /tmp/rider-spot-android-qa/app-debug.apk
+      - name: Enable Android emulator acceleration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+      - name: Install and launch preview APK without sharing production app data
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            set -euo pipefail
+            APK=/tmp/rider-spot-android-qa/app-debug.apk
+            PACKAGE=com.riderspot.android.migrationqa
+            adb install -r "$APK"
+            adb shell pm path "$PACKAGE"
+            adb logcat -c
+            adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+            sleep 20
+            adb shell pidof "$PACKAGE" >/dev/null
+            mkdir -p /tmp/rider-spot-emulator-evidence
+            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
+            adb shell input keyevent KEYCODE_HOME
+            sleep 3
+            adb shell monkey -p "$PACKAGE" 1
+            sleep 8
+            adb shell pidof "$PACKAGE" >/dev/null
+            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
+            adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
+            if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
+              echo "Android fatal exception detected"
+              exit 1
+            fi
+            echo "PASS APK installed and survived Activity foreground/background/relaunch without AndroidRuntime crash"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-Staging-Android-Emulator-QA
+          path: /tmp/rider-spot-emulator-evidence
+          if-no-files-found: warn
+          retention-days: 14
