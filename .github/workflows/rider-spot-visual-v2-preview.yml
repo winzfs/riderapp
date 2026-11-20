@@ -27,7 +27,12 @@ jobs:
       - name: Install project and Chromium
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo RIDER_CHROME_CHANNEL=chrome >> "$GITHUB_ENV"
+            google-chrome --version
+          else
+            npx playwright install chromium
+          fi
       - name: Unit tests for design-only Worker, routing and release isolation
         run: node --test tests/visual-v2.test.mjs tests/static-edge.test.mjs tests/kv-preview-config.test.mjs
       - name: Verify live preview visually with 320, 393, 412px
