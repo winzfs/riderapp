@@ -35,25 +35,56 @@ jobs:
           APK=/tmp/rider-spot-android-qa/app-debug.apk
           PACKAGE=com.riderspot.android.migrationqa
           mkdir -p /tmp/rider-spot-emulator-evidence
+          # Prepare online connectivity and avoid obscuring native permission dialogs.
+          adb shell settings put global airplane_mode_on 0 || true
+          adb shell svc wifi enable || true
+          adb shell svc data enable || true
           adb install -r "$APK"
           adb shell pm path "$PACKAGE"
+          adb shell pm grant "$PACKAGE" android.permission.ACCESS_FINE_LOCATION || true
+          adb shell pm grant "$PACKAGE" android.permission.ACCESS_COARSE_LOCATION || true
+          adb shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS || true
+          adb shell dumpsys connectivity > /tmp/rider-spot-emulator-evidence/connectivity.txt || true
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
-          sleep 18
-          adb shell pidof "$PACKAGE" >/dev/null
-          adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
+          passed=0
+          for attempt in 1 2 3 4 5 6; do
+            adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+            sleep 9
+            adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
+            adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/first-window.xml || true
+            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
+            if grep -Eq '(지도|타임라인|수익|내 바이크)' /tmp/rider-spot-emulator-evidence/first-window.xml \
+              && ! grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/first-window.xml; then
+              passed=1
+              break
+            fi
+            echo "Staging WebView has not rendered navigation, attempt $attempt"
+            adb shell am force-stop "$PACKAGE" || true
+          done
+          adb logcat -d -v brief > /tmp/rider-spot-emulator-evidence/logcat.txt || true
+          if [ "$passed" -ne 1 ]; then
+            echo "FAIL: Android process was able to start, but loaded staging UI was NOT proven."
+            grep -Eo '(Webpage not available|ERR_INTERNET_DISCONNECTED|지도|타임라인)' /tmp/rider-spot-emulator-evidence/first-window.xml || true
+            exit 1
+          fi
           adb shell input keyevent KEYCODE_HOME
-          sleep 3
+          sleep 2
           adb shell monkey -p "$PACKAGE" 1
           sleep 8
           adb shell pidof "$PACKAGE" >/dev/null
+          adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
+          adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/relaunch-window.xml || true
           adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
-          adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
-          if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
-            echo "Android fatal exception detected"
+          if grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
+            echo "FAIL: WebView disconnected after relaunch"
             exit 1
           fi
-          echo "PASS isolated APK installed and survived foreground/background/relaunch"
+          adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
+          if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
+            echo "FAIL: AndroidRuntime exception detected"
+            exit 1
+          fi
+          echo "PASS: Separate QA APK displayed real Rider Spot navigation and survived relaunch"
           SCRIPT
           chmod +x /tmp/rider-spot-emulator-smoke.sh
       - name: Install and launch preview APK without sharing production app data
