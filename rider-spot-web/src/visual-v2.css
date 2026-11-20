@@ -8,10 +8,15 @@
 }
 body,.app,.app .workspace>main{background:#F5F7F6;color:var(--rs-text)}
 .app>header{
- background:#FFF;border-bottom:1px solid #E9EFED;box-shadow:none;
+ background:linear-gradient(105deg,#123C39 0%,#08655F 100%);
+ border-bottom:1px solid #0A5954;box-shadow:0 3px 12px rgba(12,55,48,.12);
 }
-.app .brand{font-size:18px;font-weight:850;letter-spacing:-.07em;color:#102F2E}
-.app .header-user{border-radius:12px}
+.app .brand{font-size:18px;font-weight:850;letter-spacing:-.07em;color:#FFF}
+.app>header .header-user{
+ border-radius:12px;color:#E6FFFA;background:rgba(255,255,255,.10);
+}
+.app>header .header-user svg{color:#E6FFFA}
+.app>header :is(button,a):focus-visible{outline-color:#BDF7ED}
 .app .page h1,.app .trip-page h1{font-size:25px;font-weight:840;letter-spacing:-.055em;color:#162B2B}
 .app .page h2,.app .trip-page h2{letter-spacing:-.045em}
 .app .bottom-nav{
