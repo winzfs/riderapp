@@ -35,10 +35,10 @@ jobs:
           const html=fs.readFileSync('/tmp/rider-v3-live.html','utf8');
           const css=fs.readFileSync('/tmp/rider-v3-live.css','utf8');
           assert.match(html,/rs-recovery-guard-v217/,'native reload protection retained');
-          assert.match(html,/rider-spot-visual-v2-20261121\\.css\\?rev=20261121-p3/,'fresh immutable CSS URL injected');
+          assert.match(html,/rider-spot-visual-v2-20261121\.css\?rev=20261121-p3/,'fresh immutable CSS URL injected');
           assert.match(css,/Premium v3.*2026-11-21/,'new premium CSS present on live service');
           assert.match(css,/fin-chart-point:focus-visible/);
-          assert.match(css,/bike-tile-status\\.bike-state-soon/);
+          assert.match(css,/bike-tile-status\.bike-state-soon/);
           assert.ok(css.length>18000&&css.length<26000);
           console.log('LIVE_V3_ASSETS=PASS',html.length,css.length);
           NODE
