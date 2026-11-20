@@ -192,3 +192,21 @@ the original production version.
 - Both Worker scripts contain 56,608,825 source characters; independent checksum pairs matched (`3a12274c` and `fa280302`). Compatibility dates and bindings match.
 - Staging front now routes `LEGACY` to the isolated backend; static files continue through the preview-only KV gateway.
 - Native Static Assets upload still returned 401 on 2026-11-19. Do not cut over production until upload, authenticated end-to-end testing, Android WebView and rollback checks pass.
+
+### Browser Run smoke checks — 2026-11-20
+
+Cloudflare Browser Rendering confirmed that the newly re-bound staging root
+returns rendered HTML containing the v217 native recovery guard and the pinned
+`16c1eecf6bac` UI assets. A 393px mobile Chromium session with JavaScript
+enabled rendered the bottom navigation and timeline/finance elements.
+The staging `/api/industry-news` endpoint returned JSON news items from the
+isolated backend; the production endpoint separately returned its valid JSON
+fallback with an empty `items` array, demonstrating dynamic upstream data and
+why anonymous response bodies must not be compared byte-for-byte. No
+state-changing API request or authenticated session was used.
+
+The GitHub Actions runs triggered by this branch are currently marked
+`startup_failure` without any jobs, so the committed read-only parity workflow
+has **not** passed. Run that workflow or the equivalent test manually when
+Actions recovers; do not substitute the smoke checks for signed-in/native
+acceptance. The public production Worker was never redeployed.
