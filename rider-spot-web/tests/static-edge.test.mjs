@@ -39,7 +39,7 @@ test("static assets binding is isolated from production and missing URLs fall ba
   assert.equal(config.assets.binding, "ASSETS");
   assert.ok(config.assets.run_worker_first.includes("/api/*"));
   assert.ok(config.assets.run_worker_first.includes("/"));
-  assert.equal(config.services[0].service, "rider-spot-backend");
+  assert.equal(config.services[0].service, "rider-spot-api-core-qa");
   assert.notEqual(config.services[0].service, "rider-spot");
 });
 test("shell includes the current production native guard exactly once", async () => {
