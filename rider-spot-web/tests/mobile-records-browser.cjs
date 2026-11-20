@@ -583,8 +583,22 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.getByRole("button",{name:"분석",exact:true}).click();
     await page.getByRole("button",{name:"월별",exact:true}).click();
     assert.equal(await page.locator(".fin-chart-month .fin-chart-point").count(),6);
-    await page.locator(".fin-chart-month .fin-chart-point").last().click();
+    const selectedChartPoint=page.locator(".fin-chart-month .fin-chart-point").last();
+    await selectedChartPoint.click();
     await page.locator(".fin-chart-detail").waitFor();
+    const chartSelectionStyle=await selectedChartPoint.evaluate(node=>{
+      const track=node.querySelector(".fin-chart-track");
+      if(!track)return {hasTrack:false};
+      const style=getComputedStyle(track);
+      return {hasTrack:true,selected:node.classList.contains("selected"),
+        outlineWidth:style.outlineWidth,boxShadow:style.boxShadow,
+        borderTopWidth:style.borderTopWidth};
+    });
+    assert.equal(chartSelectionStyle.hasTrack,true,"selected finance graph has a track");
+    assert.equal(chartSelectionStyle.selected,true,"tapped graph point activates selection");
+    assert.equal(chartSelectionStyle.outlineWidth,"0px","selected finance graph must not show the old outline");
+    assert.equal(chartSelectionStyle.boxShadow,"none","selected finance graph must not show a highlight ring");
+    assert.equal(chartSelectionStyle.borderTopWidth,"0px","selected finance graph must not show a border");
     await shot("finance-analysis");
     await page.getByRole("button",{name:"내역",exact:true}).click();
     await page.getByRole("button",{name:/엔진오일.*기록 보기/}).first().click();
