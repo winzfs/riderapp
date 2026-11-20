@@ -9,6 +9,12 @@ on:
       - 'rider-spot-web/src/premium-shell.css'
       - 'rider-spot-web/wrangler.kv-front-preview.json'
       - 'rider-spot-web/wrangler.static-preview.json'
+      - 'rider-spot-web/wrangler.api-core-preview.json'
+      - 'rider-spot-web/edge/api-core.mjs'
+      - 'rider-spot-web/edge/static-edge.mjs'
+      - 'rider-spot-web/tests/api-core.test.mjs'
+      - 'rider-spot-web/tests/kv-preview-config.test.mjs'
+      - 'rider-spot-web/tests/static-edge.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,7 +35,7 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
       - name: Verify preview settings and routing tests
-        run: node --test tests/kv-preview-config.test.mjs tests/static-edge.test.mjs
+        run: node --test tests/api-core.test.mjs tests/kv-preview-config.test.mjs tests/static-edge.test.mjs
       - name: Check public staged backend responses (read-only)
         run: node scripts/verify-backend-staging.mjs
       - name: Verify real 320 / 393 / 412px mobile navigation, layout and refresh stability
