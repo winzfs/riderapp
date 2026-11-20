@@ -8,18 +8,21 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active premium-v3 front version: `6a484cb5-1a83-400e-ad3a-6e8c5abb874e`
-- Active premium-v3 CSS Worker version: `97c68a72-c0ae-4870-b040-2e4fb37d57d4`
+- Active native-first **v4 React** front: `543b2213-2f6c-4f3b-9ae6-bd2a359675a9`
+- Active isolated v4 design Worker: `rider-spot-visual-v4`, version `449b51d4-2eac-4e92-bb4e-04d7d01ee9e3`
+- Active v4 hashed assets: `8eb44596629f`, pinned GitHub commit `b715913001e0b55f2d29cbc17acdb72d35a025aa`
+- Prior v3 front (first-line rollback): `6a484cb5-1a83-400e-ad3a-6e8c5abb874e`
+- Prior v3 CSS Worker: `rider-spot-visual-v2`, version `97c68a72-c0ae-4870-b040-2e4fb37d57d4`
 - Previous visual-v2 front version (safe CSS-link rollback): `ea399918-cbff-4de4-994f-5530e1672cef`
 - Prior split front version (last known functional fallback): `f764543b-35c5-48a7-9b4e-3b2b76b07b3c`
 - Previous monolithic v220 version, **retain for rollback**:
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
 - Front code: `rider-spot-web/edge/static-edge.mjs` (4.7KB)
-- Asset service binding `ASSETS` → `rider-spot-static-candidate-assets`
-  (pinned `16c1eecf6bac` assets in Workers KV)
+- Asset service binding `ASSETS` → `rider-spot-renewal-assets` (KV `rs-asset-v4::` isolated keys; pinned `8eb44596629f`; old KV mapdata shared read-only)
+- Previous v3 asset gateway retained: `rider-spot-static-candidate-assets` (pinned `16c1eecf6bac`)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
-- Design `DESIGN` → `rider-spot-visual-v2` (isolated immutable CSS; no user-data or GPS bindings; loaded last)
+- Design `DESIGN` → `rider-spot-visual-v4` (isolated v4 visual CSS; no user-data or GPS bindings; loaded last)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -156,3 +159,38 @@ local trip data or production backend services for a style rollback. The
 original monolithic v220 fallback version
 `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` remains a separate last-resort
 rollback, to be used only for critical core failures.
+
+## Native-first v4 React renewal — 2026-11-21
+
+Cloudflare production deployed version `543b2213-2f6c-4f3b-9ae6-bd2a359675a9` at
+**100%**, after isolated preview on
+`rider-spot-renewal-preview.jazzhjm.workers.dev` passed the 320, 393,
+412px five-tab UI/no-reload checks, synthetic finance/maintenance CRUD, and
+native safety gates. The frontend now serves new hashed **React**
+`app.mjs` plus `renewal-layout.css` from `rider-spot-renewal-assets`;
+this is not a CSS-only overlay. Design CSS is independently served from
+`rider-spot-visual-v4`. Immutable release `8eb44596629f` is
+pinned to GitHub build commit `b715913001e0b55f2d29cbc17acdb72d35a025aa`.
+
+Specific changes include chart-before-goal information hierarchy and smaller
+finance summary, embedded bike odometer/model controls, 3-record bike history
+with opt-in full history, smaller timeline calendar/map playback UI, and
+flat community feed rows. All original CRUD data and GPS/map/storage flows
+are retained.
+
+- Screen-by-screen design and invariants: `docs/RENEWAL_V4_DESIGN_SPEC.md`
+- Build QA: https://github.com/winzfs/riderapp/actions/runs/44815250975
+- Preview QA: https://github.com/winzfs/riderapp/actions/runs/44816368268
+- Live QA: https://github.com/winzfs/riderapp/actions/workflows/rider-spot-renewal-v4-live.yml
+
+**Immediate non-destructive rollback**: Deploy previous `rider-spot`
+version `6a484cb5-1a83-400e-ad3a-6e8c5abb874e` at **100%**.
+That version retains its original `ASSETS` gateway and `DESIGN` binding;
+no KV key, Supabase row, SQLite record or WebView cache deletion is needed.
+If both split releases are unavailable, monolith v220
+`44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` remains the deeper emergency
+rollback. Never deploy a 1%/99% mixed-hash front split.
+
+Native personal-account OAuth, several-hour real GPS tracking through lock
+screen, and split-screen device behavior still require real-device
+acceptance; browser fixtures cannot prove those conditions.

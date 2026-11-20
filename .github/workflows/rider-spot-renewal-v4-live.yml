@@ -1,0 +1,76 @@
+name: Rider Spot v4 LIVE native WebView acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-renewal-v4-live.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_ORIGIN: https://rider-spot.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Verify actual production Worker serves v4 HTML/SW/asset/design
+        run: |
+          set -euo pipefail
+          curl --fail --retry 3 --retry-delay 2 -sSL "$RIDER_ORIGIN/" > /tmp/v4-live.html
+          curl --fail --retry 3 --retry-delay 2 -sSL "$RIDER_ORIGIN/sw.js" > /tmp/v4-live-sw.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html=fs.readFileSync('/tmp/v4-live.html','utf8');
+          const sw=fs.readFileSync('/tmp/v4-live-sw.js','utf8');
+          const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(release.hash,'8eb44596629f');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/app.mjs'),'v4 React hash not deployed');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/renewal-layout.css'),'v4 layout bundle missing');
+          assert.ok(html.includes('rs-recovery-guard-v217'),'original native recovery guard missing');
+          assert.ok(html.includes('rev=20261121-v4'),'v4 presentation layer missing');
+          assert.ok(sw.includes('rider-spot-shell-'+release.hash),'Service Worker is not v4');
+          const names=['app.mjs','renewal-layout.css','design-system.css','premium-shell.css'];
+          for(const name of names){
+            const response=await fetch(process.env.RIDER_ORIGIN+'/assets/rider-spot-'+release.hash+'/'+name,{signal:AbortSignal.timeout(30000)});
+            assert.equal(response.status,200,name+' HTTP '+response.status);
+            assert.equal(response.headers.get('x-rs-release'),release.hash,'unexpected asset binding '+name);
+            const bytes=await response.arrayBuffer();
+            assert.ok(bytes.byteLength>300,name+' too short');
+            console.log('LIVE_ASSET_PASS',name,bytes.byteLength);
+          }
+          const css=await fetch(process.env.RIDER_ORIGIN+'/rider-spot-visual-v2-20261121.css?rev=20261121-v4',{signal:AbortSignal.timeout(30000)});
+          assert.equal(css.status,200);
+          const text=await css.text();
+          assert.ok(text.includes('Native-first Renewal v4'));
+          console.log('LIVE_V4_DEPLOYMENT_PASS',release.hash);
+          NODE
+      - run: npx playwright install chromium
+      - name: Live five-tab UI 320px 393px 412px, no overflow or reload
+        env:
+          RIDER_VISUAL_URL: https://rider-spot.jazzhjm.workers.dev
+        run: node tests/visual-v2-browser.cjs
+      - name: Real live shell, synthetic auth and record CRUD mock test
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
+          RIDER_SCREENSHOTS: /tmp/rider-v4-live-fixtures
+        run: node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v4-live-acceptance
+          path: |
+            /tmp/rider-spot-visual-v2
+            /tmp/rider-v4-live-fixtures
+          retention-days: 7
+          if-no-files-found: warn
