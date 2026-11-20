@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rider-spot-visual-v2",
+  "main": "edge/visual-v2-worker.mjs",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": false
+}
