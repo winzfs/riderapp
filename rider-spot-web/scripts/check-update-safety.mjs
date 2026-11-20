@@ -110,7 +110,8 @@ check("Production Worker stays modular with v220 fallback and native OAuth callb
   assert.equal(config.main,"edge/static-edge.mjs");
   assert.deepEqual(config.services,[
     {binding:"ASSETS",service:"rider-spot-static-candidate-assets"},
-    {binding:"LEGACY",service:"rider-spot-api-core-qa"}
+    {binding:"LEGACY",service:"rider-spot-api-core-qa"},
+    {binding:"DESIGN",service:"rider-spot-visual-v2"}
   ]);
   assert.ok(config.services.every(binding=>binding.service!==config.name));
   assert.equal(config.assets,undefined);
@@ -121,6 +122,10 @@ check("Production Worker stays modular with v220 fallback and native OAuth callb
   assert.match(front,/ANDROID_OAUTH_COOKIE/);
   assert.match(front,/rs-recovery-guard-v217/);
   assert.match(front,/x-rs-fallback/);
+  assert.match(front,/VISUAL_PATH/);
+  const visual=web("edge/visual-v2-worker.mjs");
+  assert.ok(visual.length<18000,"Presentation service should remain lightweight");
+  assert.doesNotMatch(visual,/navigator\.geolocation|serviceWorker\.register|\.reload\s*\(/);
   assert.match(front,/const original = \(\) =>/);
   assert.match(api,/LEGACY_BACKEND/);
   assert.doesNotMatch(front,/const rsNewAssets\s*=/);
