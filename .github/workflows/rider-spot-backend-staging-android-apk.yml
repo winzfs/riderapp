@@ -31,7 +31,7 @@ jobs:
           # actual rendered DOM, rather than relying on uiautomator text dumps.
           creation='webView = new WebView(this);'
           assert src.count(creation)==1,'WebView initialization unexpectedly changed'
-          src=src.replace(creation,'WebView.setWebContentsDebuggingEnabled(true);\\n        '+creation,1)
+          src=src.replace(creation,'WebView.setWebContentsDebuggingEnabled(true);\n        '+creation,1)
           host='rider-spot.jazzhjm.workers.dev'
           preview='rider-spot-static-preview.jazzhjm.workers.dev'
           patches={
