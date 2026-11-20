@@ -5,6 +5,10 @@ on:
     paths:
       - '.github/workflows/rider-spot-backend-staging-emulator-qa.yml'
       - 'rider-spot-android/qa/verify-webview-cdp.mjs'
+      - 'rider-spot-web/edge/api-core.mjs'
+      - 'rider-spot-web/edge/static-edge.mjs'
+      - 'rider-spot-web/wrangler.kv-front-preview.json'
+      - 'rider-spot-web/wrangler.api-core-preview.json'
   workflow_dispatch:
 permissions:
   contents: read
