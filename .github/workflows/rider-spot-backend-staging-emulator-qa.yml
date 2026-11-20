@@ -50,6 +50,8 @@ jobs:
           adb shell pm grant "$PACKAGE" android.permission.ACCESS_COARSE_LOCATION || true
           adb shell pm grant "$PACKAGE" android.permission.POST_NOTIFICATIONS || true
           adb shell dumpsys connectivity > "$EVIDENCE/connectivity.txt" || true
+          adb shell getprop net.dns1 > "$EVIDENCE/android-dns.txt" || true
+          adb shell ping -c 1 rider-spot-static-preview.jazzhjm.workers.dev > "$EVIDENCE/guest-dns-probe.txt" 2>&1 || true
           adb logcat -c
           open_cdp() {
             local pid
@@ -68,17 +70,29 @@ jobs:
               sleep 3
             fi
           }
-          adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
-          sleep 12
-          dismiss_system_anr
-          open_cdp
-          if ! node rider-spot-android/qa/verify-webview-cdp.mjs first-launch; then
-            adb exec-out screencap -p > "$EVIDENCE/first-launch.png"
+          # Android official emulator guidance recommends explicit DNS when the
+          # virtual device gets net::ERR_NAME_NOT_RESOLVED on an otherwise
+          # connected virtual network. Retry only the isolated QA app boot.
+          first_ok=0
+          for attempt in 1 2 3; do
+            adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+            sleep 12
+            dismiss_system_anr
+            open_cdp
+            if node rider-spot-android/qa/verify-webview-cdp.mjs first-launch; then
+              first_ok=1
+              break
+            fi
+            echo "Staging WebView DNS/initialization retry $attempt"
+            adb shell am force-stop "$PACKAGE" || true
+            sleep 3
+          done
+          adb exec-out screencap -p > "$EVIDENCE/first-launch.png"
+          if [ "$first_ok" -ne 1 ]; then
             adb logcat -d -v brief > "$EVIDENCE/logcat.txt" || true
             echo "FAIL: First QA WebView did not expose all five Rider Spot tabs"
             exit 1
           fi
-          adb exec-out screencap -p > "$EVIDENCE/first-launch.png"
           adb shell input keyevent KEYCODE_HOME
           sleep 3
           adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
@@ -108,7 +122,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -dns-server 8.8.8.8,1.1.1.1
           script: bash /tmp/rider-spot-emulator-smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
