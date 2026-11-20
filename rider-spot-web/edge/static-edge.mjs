@@ -11,6 +11,8 @@ const GUARD = /<script\s+id=["']rs-recovery-guard-v217["'][^>]*>[\s\S]*?<\/scrip
 // Native Android OAuth returns to '/' with an HttpOnly ten-minute nonce.
 // That callback must take priority over the public SPA shell.
 const ANDROID_OAUTH_COOKIE = /(?:^|;\s*)rs_android_oauth=[0-9a-f]{32}(?=;|$)/i;
+const VISUAL_PATH = "/rider-spot-visual-v2-20261121.css";
+const VISUAL_LINK = '<link rel="stylesheet" href="'+VISUAL_PATH+'">';
 
 export function backendRequest(request) {
   const source = new URL(request.url);
@@ -57,7 +59,11 @@ export async function serveShell(request, env) {
   try { html = await asset.text(); }
   catch { return original(); }
   if (!html.includes("</head>")) return original();
-  const output = GUARD.test(html) ? html : html.replace("</head>", guard + "</head>");
+  const guarded = GUARD.test(html) ? html : html.replace("</head>", guard + "</head>");
+  // Visual refresh has its own immutable URL. Backend, GPS and app JavaScript
+  // are byte-identical; if style load fails, original styling remains.
+  const output = guarded.includes(VISUAL_PATH) ? guarded :
+    guarded.replace("</head>", VISUAL_LINK + "</head>");
   const headers = new Headers(asset.headers);
   headers.set("content-type", "text/html; charset=utf-8");
   headers.set("cache-control", "no-store");
@@ -77,6 +83,10 @@ export default {
         ANDROID_OAUTH_COOKIE.test(request.headers.get("cookie") || "")) {
       // Preserve the nonce cookie, callback HTML, cookie deletion, and CSP.
       return env.LEGACY.fetch(backendRequest(request));
+    }
+    if (path === VISUAL_PATH) {
+      if (!env.DESIGN) return new Response("Not found",{status:404});
+      return env.DESIGN.fetch(request);
     }
     if ((request.method === "GET" || request.method === "HEAD")
         && (path === "/" || path === "/index.html")) {
