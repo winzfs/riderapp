@@ -37,3 +37,17 @@ test("future direct Static Assets preview cannot accidentally overwrite producti
   assert.notEqual(target.name,target.services[0].service);
   assert.equal(target.services[0].service,"rider-spot-api-core-qa");
 });
+
+
+test("API core is independently named, tiny and has only the frozen legacy fallback",()=>{
+  const core=read("wrangler.api-core-preview.json");
+  const front=read("wrangler.kv-front-preview.json");
+  assert.equal(core.name,"rider-spot-api-core-qa");
+  assert.equal(core.main,"edge/api-core.mjs");
+  assert.equal(core.workers_dev,false);
+  assert.notEqual(core.name,production);
+  assert.notEqual(core.name,front.name);
+  assert.deepEqual(core.services,[{binding:"LEGACY_BACKEND",service:"rider-spot-backend"}]);
+  assert.notEqual(core.services[0].service,core.name);
+  assert.equal(front.services.find(x=>x.binding==="LEGACY").service,core.name);
+});
