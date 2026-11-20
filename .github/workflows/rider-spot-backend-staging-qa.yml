@@ -1,0 +1,34 @@
+name: Rider Spot isolated backend staging acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-backend-staging-qa.yml'
+      - 'rider-spot-web/scripts/verify-backend-staging.mjs'
+      - 'rider-spot-web/wrangler.kv-front-preview.json'
+      - 'rider-spot-web/wrangler.static-preview.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify preview settings and routing tests
+        run: node --test tests/kv-preview-config.test.mjs tests/static-edge.test.mjs
+      - name: Check public staged backend responses (read-only)
+        run: node scripts/verify-backend-staging.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-backend-staging-qa
+          path: rider-spot-web/backend-staging-qa.json
+          if-no-files-found: ignore
