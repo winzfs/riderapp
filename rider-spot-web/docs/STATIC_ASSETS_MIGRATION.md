@@ -58,13 +58,13 @@ The second deployment step MUST NOT be changed to a production Worker name.
 Before replacing the original production name:
 
 1. Export a complete, tested copy of the exact existing backend Worker script
-   and all bindings/OAuth settings. The connected API could not retrieve its
-   oversized inline source without exceeding memory limits.
-2. Deploy that backend as a separate stable service (e.g. rider-spot-backend).
+   and all bindings/OAuth settings. The full inline source was streamed successfully on 2026-11-20,
+   without duplicating the 56 MB payload in memory.
+2. Deploy that backend as a separate stable service (`rider-spot-backend` deployed 2026-11-20).
    Compare auth, every API method, old asset URLs, mapdata, errors and native
    offline trip restoration against the original. Do not guess API code.
-3. Change LEGACY service binding in the front Worker to this verified
-   independent backend service and retest. The target must never be self.
+3. Change LEGACY service binding in the front Worker to this independent backend
+   service and retest. Staging binding updated 2026-11-20. The target must never be self.
 4. Confirm Android WebView and browser sessions on the original origin can
    still load historic Service Worker caches and immutable legacy URLs.
 5. Only then release the slim front under the original rider-spot name,
@@ -79,12 +79,13 @@ known-good version; no production migration is claimed.
 
 ### What has actually been deployed
 
-Two small **non-production** Workers are active:
+Three **non-production** Workers are now active, including the backend clone:
 
 | Worker | Purpose | Binding |
 | --- | --- | --- |
-| `rider-spot-static-preview` | Front-end entry point, native recovery guard insertion and legacy pass-through | `ASSETS` service to candidate worker; `LEGACY` service to `rider-spot` |
+| `rider-spot-static-preview` | Front-end entry point, native recovery guard insertion and legacy pass-through | `ASSETS` service to candidate worker; `LEGACY` service to `rider-spot-backend` |
 | `rider-spot-static-candidate-assets` | Serve pinned static UI and public map data from Cloudflare Workers KV | `RS_ASSETS` KV namespace `d268cb25c64445cf9bb67242b79edc28` |
+| `rider-spot-backend` | Exact v220 source clone, APIs/OAuth/old URLs | No bindings; public workers.dev disabled |
 
 The test origin is https://rider-spot-static-preview.jazzhjm.workers.dev/ .
 The original https://rider-spot.jazzhjm.workers.dev/ still uses **v220
@@ -173,17 +174,21 @@ native Static Assets workflow can run builds but cannot publish assets.
 A user-authorized Wrangler CI token or JWT-capable upload client is needed
 to enable native Workers Static Assets.
 
-**More importantly**, the existing monolithic production backend (APIs,
-OAuth and historical assets) must be exported completely and deployed as
-a separate tested backend Worker before changing the public `rider-spot`
-script. The connector cannot currently retrieve that oversized script
-without exceeding its memory limit. Do not attempt to reconstruct or
-overwrite it from guessed endpoints. The staging front's `LEGACY`
-binding currently targets `rider-spot`; reusing that binding under the
-same Worker name would cause circular routing.
+**More importantly**, the monolithic v220 backend has been cloned using
+streaming, but authenticated API, native GPS, restore and production cutover
+tests are still outstanding. The staging front binds to `rider-spot-backend`,
+not the live `rider-spot`, and must never bind to itself.
 
 The current KV bridge removes the immediate GitHub runtime dependency and
 proves that a lean front can delegate server work, but it is **not** the
 final no-KV-charge native Static Assets solution and **not** a completed
 production cutover. Both staging Workers can be disabled without changing
 the original production version.
+
+## Update — 2026-11-20: backend clone is deployed
+
+- Production script (v220) remains version `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`.
+- Backend clone is deployed as `rider-spot-backend`, version `d39faa62-f131-42a0-acea-788e978cdfec`, with public workers.dev disabled.
+- Both Worker scripts contain 56,608,825 source characters; independent checksum pairs matched (`3a12274c` and `fa280302`). Compatibility dates and bindings match.
+- Staging front now routes `LEGACY` to the isolated backend; static files continue through the preview-only KV gateway.
+- Native Static Assets upload still returned 401 on 2026-11-19. Do not cut over production until upload, authenticated end-to-end testing, Android WebView and rollback checks pass.
