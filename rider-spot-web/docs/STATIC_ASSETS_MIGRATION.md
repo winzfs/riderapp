@@ -267,3 +267,65 @@ The production cutover is still blocked on those gates and a successful
 native Workers Static Assets upload (currently 401). Preview KV bridge
 remains available for testing. Production rider-spot v220 version
 `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` remains unchanged.
+
+## 2026-11-20 follow-up — 13.8KB API core and native OAuth callback gate
+
+This migration now has **four distinct responsibilities**:
+- Public production `rider-spot`: existing v220 script and original client state; **not modified**.
+- `rider-spot-static-preview`: 4.1KB front router (Service `ASSETS` to KV gateway; Service `LEGACY` to isolated API core).
+- `rider-spot-api-core-qa`: **13,769-character** Worker extracted from the exact deployed v220 handlers for `/api/weather`, `/api/route-match`, `/api/industry-news`, Android OAuth start and root callback. Frozen legacy assets and unknown routes transparently delegate through its `LEGACY_BACKEND` service binding.
+- `rider-spot-backend`: unchanged **56,608,825-character** source clone retained for existing, immutable historical files and fallback. It has not been deleted or cut over.
+
+The small core is version-controlled in `edge/api-core.mjs`. Its
+`wrangler.api-core-preview.json` is isolated, has `workers_dev: false`,
+and binds `LEGACY_BACKEND` only to `rider-spot-backend`. Front
+configurations and CI enforce the chain `front → api-core → legacy-clone`,
+never `front → production` and never a self-binding.
+
+### Blocking native Android OAuth issue found and fixed
+
+Previously `static-edge.mjs` intercepted **every** `GET /` and served the
+new app shell, including the one-time browser-to-app OAuth callback that uses
+an HttpOnly `rs_android_oauth` nonce cookie. That would have broken native
+Google login after a production cutover even though anonymous browser tests
+were green.
+
+Now `GET /` with a properly shaped 32-hex-character OAuth nonce cookie
+passes through to the API core before ordinary shell routing; other
+requests retain the native v217 recovery guard. The native callback's
+`Set-Cookie`, CSP and response body are preserved unchanged.
+New unit tests enforce both cases. This fix is **deployed to staging only**.
+Cloudflare Browser Rendering verified after the front bound to the small API
+core: app shell HTTP 200 with 5 tabs and recovery guard, OAuth return HTML
+HTTP 200, invalid weather coordinates HTTP 400, and legacy JS HTTP 200.
+
+### Data integrity and remaining release blockers
+
+Read-only Supabase inspection verified that the 28 public tables in the
+currently connected project have RLS enabled. The primary private
+ride/finance/maintenance/user settings policies have `auth.uid() = user_id`
+ownership checks. No production data were altered by this inspection.
+
+Cloudflare native Static Assets direct upload continues to return HTTP
+401 Unauthorized with this connection; the existing KV-backed staging
+gateway remains the functioning fallback. The original 56MB legacy clone
+must remain for historical paths until replacement assets and older clients
+are accounted for. This architecture avoids large changes to the frontend
+Worker but **does not yet eliminate** the legacy clone dependency.
+
+Before promoting **any** new Worker under the public `rider-spot` name:
+1. Confirm current login with a real account and successful OAuth return on
+   the production hostname; synthetic nonce tests alone are not sufficient.
+2. Perform a signed-in read/write/readback/update/delete test with a
+   disposable record owned by a consenting test user; never mutate existing
+   trip, finance or maintenance history.
+3. Run real phone Android WebView/GPS/SQLite active ride, background, screen
+   lock, completion and relaunch recovery checks with the existing app.
+4. Confirm public static assets, historical URL parity, update/rollback and
+   clean start after Service Worker cache transitions.
+5. Obtain working Workers Static Assets upload permission or explicitly
+   accept KV as the long-term hosting path, then plan a reversible
+   production deployment. Original production version to retain:
+   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`.
+
+No production cutover was performed in this follow-up.
