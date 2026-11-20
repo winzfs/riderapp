@@ -95,6 +95,41 @@ test("missing native recovery guard fails closed; do not serve a broken new UI",
   assert.equal(r.status, 503);
   assert.match(await r.text(), /guard missing/);
 });
+test("new KV shell outage fails over to the verified v220 shell instead of a blank page", async () => {
+  requests.length=0;
+  const env=createEnv();
+  env.ASSETS.fetch=async()=>new Response("temporary KV outage",{status:503});
+  const res=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"),env);
+  assert.equal(res.status,200);
+  assert.equal(res.headers.get("x-rs-fallback"),"v220");
+  assert.equal(res.headers.get("cache-control"),"no-store");
+  const html=await res.text();
+  assert.match(html,/rs-recovery-guard-v217/);
+  assert.ok(!html.includes("v221"));
+  assert.deepEqual(requests.map(x=>x[0]),["legacy"]);
+});
+
+test("invalid candidate HTML fails over and HEAD fallback remains bodyless", async () => {
+  const env=createEnv();
+  env.ASSETS.fetch=async()=>new Response("<html>bad shell</html>");
+  const get=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"),env);
+  assert.equal(get.status,200);
+  assert.equal(get.headers.get("x-rs-fallback"),"v220");
+  const head=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/",{method:"HEAD"}),env);
+  assert.equal(head.status,200);
+  assert.equal(head.headers.get("x-rs-fallback"),"v220");
+  assert.equal(await head.text(),"");
+});
+
+test("both candidate and original app failures stop safely", async () => {
+  const env=createEnv();
+  env.ASSETS.fetch=async()=>new Response("temporary KV outage",{status:503});
+  env.LEGACY.fetch=async()=>new Response("upstream unavailable",{status:503});
+  const res=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"),env);
+  assert.equal(res.status,503);
+  assert.match(await res.text(),/fallback unavailable/);
+});
+
 test("all API methods and query strings are forwarded without asset interception", async () => {
   requests.length = 0;
   const req = new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/api/trips?date=2026-11-19", {
