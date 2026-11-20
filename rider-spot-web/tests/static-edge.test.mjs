@@ -177,6 +177,11 @@ test("old hashed releases still fall back to the existing backend Worker", async
 
 test("visual refresh CSS link is inserted after existing styles and preserves one native guard",async()=>{
   const env=createEnv();
+  const original=env.ASSETS.fetch;
+  env.ASSETS.fetch=async(req)=>{
+    const response=await original(req);
+    return new Response('<html><head><link rel="stylesheet" href="/assets/rider-spot-16c1eecf6bac/premium-shell.css"></head><body>v221</body></html>',{headers:response.headers});
+  };
   const res=await worker.fetch(new Request("https://rider-spot-static-preview.jazzhjm.workers.dev/"),env);
   assert.equal(res.status,200);
   const html=await res.text();
