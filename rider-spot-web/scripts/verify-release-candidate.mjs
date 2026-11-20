@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 
-const candidate = process.env.RIDER_CANDIDATE_URL || "https://f764543b-rider-spot.jazzhjm.workers.dev";
+const candidate = process.env.RIDER_CANDIDATE_URL || "https://ea399918-rider-spot.jazzhjm.workers.dev";
 const staging = "https://rider-spot-static-preview.jazzhjm.workers.dev";
 const production = "https://rider-spot.jazzhjm.workers.dev";
 const out = {checkedAt:new Date().toISOString(),candidate,staging,production,tests:[],passed:false};
@@ -23,6 +23,9 @@ try{
   check("native recovery guard remains attached",staged.body.includes("rs-recovery-guard-v217")&&cand.body.includes("rs-recovery-guard-v217"));
   check("candidate release hash",cand.body.includes("/assets/rider-spot-16c1eecf6bac/app.mjs"));
   check("single app root",(cand.body.match(/id="root"/g)||[]).length===1);
+  check("visual v2 stylesheet linked last",cand.body.includes('href="/rider-spot-visual-v2-20261121.css"'));
+  const visual=await get(candidate,"/rider-spot-visual-v2-20261121.css");
+  check("visual v2 CSS present on inactive Worker",visual.status===200&&visual.body.length>9000&&visual.body.includes(".finance-page .fin-hero"),{status:visual.status,bytes:visual.body.length});
   const paths=[
     ["/sw.js",200],
     ["/assets/rider-spot-16c1eecf6bac/premium-shell.css",200],
