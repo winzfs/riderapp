@@ -62,14 +62,25 @@ jobs:
           gradle.write_text(g)
           assert f'https://{preview}/' in src
           assert f'private static final String ORIGIN = "https://{preview}"' in src
-          assert 'google' not in m.lower() or True
           print('PASS separate package, preview WebView origin, isolated native bridge, non-conflicting OAuth scheme')
           PY
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: Run native GPS, service and SQLite regression tests
+      - name: Verify original production OAuth contract remains intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-spot-pristine-archive
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-spot-pristine-archive
+          (cd /tmp/rider-spot-pristine-archive && node --test tests/native-oauth.test.cjs)
+      - name: Run native GPS, service and SQLite tests for side-by-side QA package
         working-directory: /tmp/rider-spot-staging-apk
-        run: node --test tests/*.test.cjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # QA deliberately uses a non-conflicting OAuth scheme and disables
+          # production Google login; run the original OAuth test above instead.
+          find tests -maxdepth 1 -name '*.test.cjs' ! -name 'native-oauth.test.cjs' -print0 | xargs -0 node --test
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '17'}
       - name: Install Android SDK 36
