@@ -127,3 +127,30 @@ KV home loads. For emergency full rollback deploy the prior split Worker
 version `f764543b-35c5-48a7-9b4e-3b2b76b07b3c` at 100%, or use
 monolithic `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` if the split stack
 itself has failed. Do not delete local app data or Service Worker caches.
+
+## Premium v3 rollout — 2026-11-21
+
+The production front Worker `rider-spot` was deployed with **100%** traffic to
+version `6a484cb5-1a83-400e-ad3a-6e8c5abb874e`. The isolated design
+Worker `rider-spot-visual-v2` was deployed with **100%** traffic to version
+`97c68a72-c0ae-4870-b040-2e4fb37d57d4`.
+
+The front changes only the visual stylesheet link by appending
+`?rev=20261121-p3`; the isolated design Worker serves the new CSS from
+`src/visual-v2.css`. The existing API routing, Android OAuth cookie handler,
+recovery guard, hashed assets, Supabase data, service worker, trip storage,
+map camera and GPS implementations remain untouched. The stylesheet is
+presentation-only; navigation and recorded data are not migrated.
+
+- Production: https://rider-spot.jazzhjm.workers.dev/
+- Live CSS: https://rider-spot.jazzhjm.workers.dev/rider-spot-visual-v2-20261121.css?rev=20261121-p3
+- Browser + regression CI: https://github.com/winzfs/riderapp/actions/workflows/rider-spot-premium-v3-live.yml
+
+**Code rollback**: Set `rider-spot` Worker deployment to front version
+`ea399918-cbff-4de4-994f-5530e1672cef` at 100%. If the CSS worker itself
+is problematic, also restore design Worker version
+`6f4b2318-3526-40fb-9310-792390ff8558` to 100%. Never delete KV keys,
+local trip data or production backend services for a style rollback. The
+original monolithic v220 fallback version
+`44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` remains a separate last-resort
+rollback, to be used only for critical core failures.
