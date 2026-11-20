@@ -67,7 +67,8 @@ jobs:
           gradle.write_text(g)
           assert f'https://{preview}/' in src
           assert f'private static final String ORIGIN = "https://{preview}"' in src
-          assert 'WebView.setWebContentsDebuggingEnabled(true);' in src\n          print('PASS separate package, preview WebView origin, QA-only DevTools, isolated OAuth scheme')
+          assert 'WebView.setWebContentsDebuggingEnabled(true);' in src
+          print('PASS separate package, preview WebView origin, QA-only DevTools, isolated OAuth scheme')
           PY
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
