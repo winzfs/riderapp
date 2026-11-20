@@ -26,6 +26,36 @@ jobs:
         run: |
           set -euo pipefail
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+      - name: Prepare a single-shell Android emulator check script
+        shell: bash
+        run: |
+          cat > /tmp/rider-spot-emulator-smoke.sh <<'SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APK=/tmp/rider-spot-android-qa/app-debug.apk
+          PACKAGE=com.riderspot.android.migrationqa
+          mkdir -p /tmp/rider-spot-emulator-evidence
+          adb install -r "$APK"
+          adb shell pm path "$PACKAGE"
+          adb logcat -c
+          adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
+          sleep 18
+          adb shell pidof "$PACKAGE" >/dev/null
+          adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
+          adb shell input keyevent KEYCODE_HOME
+          sleep 3
+          adb shell monkey -p "$PACKAGE" 1
+          sleep 8
+          adb shell pidof "$PACKAGE" >/dev/null
+          adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
+          adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
+          if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
+            echo "Android fatal exception detected"
+            exit 1
+          fi
+          echo "PASS isolated APK installed and survived foreground/background/relaunch"
+          SCRIPT
+          chmod +x /tmp/rider-spot-emulator-smoke.sh
       - name: Install and launch preview APK without sharing production app data
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -35,30 +65,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: |
-            set -euo pipefail
-            APK=/tmp/rider-spot-android-qa/app-debug.apk
-            PACKAGE=com.riderspot.android.migrationqa
-            adb install -r "$APK"
-            adb shell pm path "$PACKAGE"
-            adb logcat -c
-            adb shell am start -W -n "$PACKAGE/com.riderspot.android.MainActivity"
-            sleep 20
-            adb shell pidof "$PACKAGE" >/dev/null
-            mkdir -p /tmp/rider-spot-emulator-evidence
-            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
-            adb shell input keyevent KEYCODE_HOME
-            sleep 3
-            adb shell monkey -p "$PACKAGE" 1
-            sleep 8
-            adb shell pidof "$PACKAGE" >/dev/null
-            adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
-            adb logcat -d -s AndroidRuntime:E > /tmp/rider-spot-emulator-evidence/runtime-errors.log
-            if grep -F 'FATAL EXCEPTION' /tmp/rider-spot-emulator-evidence/runtime-errors.log; then
-              echo "Android fatal exception detected"
-              exit 1
-            fi
-            echo "PASS APK installed and survived Activity foreground/background/relaunch without AndroidRuntime crash"
+          script: bash /tmp/rider-spot-emulator-smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
