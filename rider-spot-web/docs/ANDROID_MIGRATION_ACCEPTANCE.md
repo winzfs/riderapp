@@ -73,3 +73,12 @@ Record date, app build, Android version, initial state, exact steps and result
 for every manual test, excluding GPS coordinates, passwords and tokens.
 Any regression, missing record, repeated full reload or OAuth failure blocks
 production promotion and should be fixed in the isolated staging branch first.
+
+## Latest automated emulator result
+
+[Run 44698813634](https://github.com/winzfs/riderapp/actions/runs/44698813634)
+passed for the new API core, with staging WebView CDP confirming the correct
+hostname, five tabs, map and ride-start control on first launch and relaunch.
+The initial emulator DNS error recovered on retry; this remains a limitation
+of hosted test-network conditions. Physical GPS, lock-screen persistence
+and genuine user OAuth are still **not** verified.
