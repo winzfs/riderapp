@@ -22,7 +22,7 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
     const nav=page.locator(".bottom-nav button");
     await nav.first().waitFor({timeout:50000});
     assert.equal(await nav.count(),5);
-    const link=page.locator('link[href="'+cssPath+'"]');
+    const link=page.locator('link[href^="'+cssPath+'"]');
     assert.equal(await link.count(),1,"visual link present once");
     const css=await page.request.get(origin+cssPath,{timeout:20000});
     assert.equal(css.status(),200,"visual stylesheet status");

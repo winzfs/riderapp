@@ -13,6 +13,9 @@ test("new visual stylesheet is a dedicated static asset with no backend access",
   assert.ok(css.includes(".finance-page .fin-hero"));
   assert.ok(css.includes(".bike-page .bike-vehicle"));
   assert.ok(css.includes(".bottom-nav button.active"));
+  assert.ok(css.includes("Premium v3 · 2026-11-21"));
+  assert.ok(css.includes(".fin-chart-point:focus-visible"));
+  assert.ok(css.includes(".bike-tile-status.bike-state-soon"));
   for(const token of ["navigator.geolocation","localStorage.clear(","location.reload(","window.location.assign("]){
     assert.ok(!css.includes(token),"visual layer must never change runtime state");
   }
