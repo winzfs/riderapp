@@ -21,7 +21,7 @@ test("staging front binds to separate KV gateway and isolated backend, never its
   const front=read("wrangler.kv-front-preview.json");
   const bindings=Object.fromEntries(front.services.map(b=>[b.binding,b.service]));
   assert.equal(bindings.ASSETS,"rider-spot-static-candidate-assets");
-  assert.equal(bindings.LEGACY,"rider-spot-backend");
+  assert.equal(bindings.LEGACY,"rider-spot-api-core-qa");
   assert.notEqual(bindings.LEGACY,production);
   assert.notEqual(bindings.ASSETS,front.name);
   assert.notEqual(bindings.LEGACY,front.name);
@@ -35,5 +35,5 @@ test("future direct Static Assets preview cannot accidentally overwrite producti
   assert.equal(target.assets.binding,"ASSETS");
   assert.equal(target.services.length,1);
   assert.notEqual(target.name,target.services[0].service);
-  assert.equal(target.services[0].service,"rider-spot-backend");
+  assert.equal(target.services[0].service,"rider-spot-api-core-qa");
 });
