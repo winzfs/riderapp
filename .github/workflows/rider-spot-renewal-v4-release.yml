@@ -44,6 +44,7 @@ jobs:
             assert.ok(app.includes(marker),'Missing v4 React marker '+marker);
           }
           assert.ok(visual.includes('Native-first Renewal v4'));
+          assert.ok(fs.readFileSync('dist/assets/rider-spot-'+release.hash+'/renewal-layout.css','utf8').includes('fin-hero-renewal'));
           const html=fs.readFileSync('dist/index.html','utf8');
           assert.ok(html.includes('rider-spot-'+release.hash+'/app.mjs'));
           console.log('RENEWAL_V4_BUILD_PASS',release.hash,app.length);
@@ -70,7 +71,7 @@ jobs:
           import path from 'node:path';
           const release=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
           const dir='dist/assets/rider-spot-'+release.hash;
-          const names=['app.mjs','route-worker.mjs','native-gps.js','map-reports.js','design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css','weather-bar.js','weather-bar.css','premium-shell.css'];
+          const names=['app.mjs','route-worker.mjs','native-gps.js','map-reports.js','design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css','weather-bar.js','weather-bar.css','premium-shell.css','renewal-layout.css'];
           for(const name of names)fs.copyFileSync(path.join(dir,name),path.join('prebuilt',name));
           for(const name of ['index.html','sw.js','release.json'])fs.copyFileSync(path.join('dist',name),path.join('prebuilt',name));
           console.log('V4_FROZEN',release.hash,names.length+3);
