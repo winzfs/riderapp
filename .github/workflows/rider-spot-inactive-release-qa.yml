@@ -20,8 +20,8 @@ jobs:
       run:
         working-directory: rider-spot-web
     env:
-      RIDER_CANDIDATE_URL: https://430e0ec4-rider-spot.jazzhjm.workers.dev
-      RIDER_STATIC_PREVIEW_ORIGIN: https://430e0ec4-rider-spot.jazzhjm.workers.dev/
+      RIDER_CANDIDATE_URL: https://f764543b-rider-spot.jazzhjm.workers.dev
+      RIDER_STATIC_PREVIEW_ORIGIN: https://f764543b-rider-spot.jazzhjm.workers.dev/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
