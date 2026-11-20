@@ -239,3 +239,31 @@ native Static Assets; this does not block current staging browser tests.
 - Finance chart selection was not exercised: anonymous session has no chart.
 - Production cutover remains blocked on signed-in data read/write, native
   GPS/background SQLite restore, OAuth return and rollback verification.
+
+## 2026-11-20 — Android emulator WebView DOM acceptance
+
+The separately installable staging QA app (applicationIdSuffix `.migrationqa`)
+was built by [GitHub Actions run 44694226110](https://github.com/winzfs/riderapp/actions/runs/44694226110).
+It loads the isolated preview hostname with a non-conflicting OAuth deep-link
+scheme; production Google OAuth is intentionally disabled in the QA app.
+Only the QA APK enables WebView debugging for local CDP DOM inspection;
+the production Android source and Worker were not modified.
+
+[GitHub Actions run 44695080469](https://github.com/winzfs/riderapp/actions/runs/44695080469)
+PASSED Android API 35 emulator acceptance after DNS fallback.
+Both initial launch and return from Home exposed all five tabs (지도, 타임라인,
+동네, 수익, 내 바이크), a Leaflet map, and the 운행 시작 button, with
+no webpage error or AndroidRuntime fatal exception. Screenshots, first/relaunch
+CDP JSON proof, and network diagnostics are preserved in the workflow artifact.
+
+Earlier headless emulator attempts exposed transient DNS errors and a Pixel
+Launcher system ANR, not Rider Spot app crashes. The new gate asserts actual
+rendered WebView DOM, not just a surviving Android process.
+
+This emulator test is not evidence for physical Android 17 background GPS,
+real-world 6–9-hour rides, force-stop SQLite recovery, real OAuth callback,
+or authenticated cloud records. QA APK must never be used for real deliveries.
+The production cutover is still blocked on those gates and a successful
+native Workers Static Assets upload (currently 401). Preview KV bridge
+remains available for testing. Production rider-spot v220 version
+`44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` remains unchanged.
