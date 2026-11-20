@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rider-spot-api-core-qa",
+  "main": "edge/api-core.mjs",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": false,
+  "services": [
+    {
+      "binding": "LEGACY_BACKEND",
+      "service": "rider-spot-backend"
+    }
+  ]
+}
