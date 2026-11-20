@@ -52,6 +52,16 @@ jobs:
             sleep 9
             adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
             adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/first-window.xml || true
+            # Pixel Launcher may hang briefly on fresh headless emulator boot,
+            # overlaying an otherwise healthy WebView with a SYSTEM ANR dialog.
+            # Dismiss only that known system dialog, never app-specific errors.
+            if grep -Fq "Pixel Launcher isn't responding" /tmp/rider-spot-emulator-evidence/first-window.xml; then
+              echo "Dismissing emulator system launcher ANR (not Rider Spot)"
+              adb shell input tap 540 1233
+              sleep 4
+              adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
+              adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/first-window.xml || true
+            fi
             adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/first-launch.png
             if grep -Eq '(지도|타임라인|수익|내 바이크)' /tmp/rider-spot-emulator-evidence/first-window.xml \
               && ! grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/first-window.xml; then
@@ -74,7 +84,17 @@ jobs:
           adb shell pidof "$PACKAGE" >/dev/null
           adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
           adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/relaunch-window.xml || true
+          if grep -Fq "Pixel Launcher isn't responding" /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
+            adb shell input tap 540 1233
+            sleep 3
+            adb shell uiautomator dump /sdcard/rs-window.xml >/dev/null 2>&1 || true
+            adb shell cat /sdcard/rs-window.xml > /tmp/rider-spot-emulator-evidence/relaunch-window.xml || true
+          fi
           adb exec-out screencap -p > /tmp/rider-spot-emulator-evidence/relaunch.png
+          if ! grep -Eq '(지도|타임라인|수익|내 바이크)' /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
+            echo "FAIL: Rider Spot navigation not visible after relaunch"
+            exit 1
+          fi
           if grep -Eq '(Webpage not available|ERR_INTERNET_DISCONNECTED)' /tmp/rider-spot-emulator-evidence/relaunch-window.xml; then
             echo "FAIL: WebView disconnected after relaunch"
             exit 1
