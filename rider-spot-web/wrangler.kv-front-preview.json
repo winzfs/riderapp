@@ -11,7 +11,7 @@
     },
     {
       "binding": "LEGACY",
-      "service": "rider-spot-backend"
+      "service": "rider-spot-api-core-qa"
     }
   ]
 }
