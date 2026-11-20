@@ -1,9 +1,13 @@
 # Rider Spot — physical Android release acceptance (pending operator execution)
 
-**Scope:** A production cutover is NOT approved by emulator tests alone. The
-original Rider Spot v220 at `https://rider-spot.jazzhjm.workers.dev/`
-must remain deployed until each gate has evidence. Its known rollback
-version is `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`.
+**Current status (2026-11-20):** The split Worker was promoted to
+production as version `f764543b-35c5-48a7-9b4e-3b2b76b07b3c` after
+successful browser, API, OAuth nonce and emulator acceptance. **Real phone
+GPS/SQLite and real-account OAuth/CRUD are still unverified**, so the items
+below are required post-release field acceptance, not completed tests.
+Rollback Worker v220 remains available as
+`44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`.
+See `docs/PRODUCTION_RELEASE_RUNBOOK.md`.
 
 ## Verified automatically
 
@@ -50,7 +54,7 @@ so it cannot validate the end-to-end Google login callback.
 - [ ] Check the production app one more time. Existing records and login
   should be unchanged; the QA APK has its own local files/database.
 
-## Still blocked / separate acceptance
+## Remaining field checks and optional hosting improvement
 
 1. **Native Workers Static Assets:** authenticated asset upload returns 401
    with this connector. Reconnect the Cloudflare integration or authorize a
@@ -63,16 +67,18 @@ so it cannot validate the end-to-end Google login callback.
 3. **Real Google OAuth end-to-end:** the isolated APK intentionally blocks
    external Google login to prevent intercepting production OAuth. This
    needs a separate, supervised first-party-origin test.
-4. **Deploy/rollback:** verify old version assets and Service Worker cache
-   transition, then test a reversible production Worker version release
-   **only after** all gates above pass.
+4. **Post-release and rollback:** after field checks, compare prior app state,
+   older asset URLs and Service Worker cache transitions. If a critical issue
+   appears, revert using the preserved v220 Worker deployment; never clear
+   phone SQLite or Supabase rows as part of rollback.
 
 ## Pass/fail and evidence
 
 Record date, app build, Android version, initial state, exact steps and result
 for every manual test, excluding GPS coordinates, passwords and tokens.
-Any regression, missing record, repeated full reload or OAuth failure blocks
-production promotion and should be fixed in the isolated staging branch first.
+Any regression, missing record, repeated full reload or OAuth failure after
+release calls for immediate assessment and possible rollback to v220. Fix and
+retest on the isolated staging branch before the next production promotion.
 
 ## Latest automated emulator result
 
