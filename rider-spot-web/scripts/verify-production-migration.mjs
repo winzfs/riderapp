@@ -18,6 +18,14 @@ try {
   check("current release references pinned CSS and JS",a.body.includes(expectedRelease+"app.mjs")&&a.body.includes(expectedRelease+"premium-shell.css"));
   check("native recovery guard included only once",a.body.includes("rs-recovery-guard-v217")&&(a.body.match(/id="rs-recovery-guard-v217"/g)||[]).length===1);
   check("HTML matches vetted staging version",sha(a.body)===sha(b.body));
+  check("visual v2 stylesheet linked after original premium CSS",a.body.includes('href="/rider-spot-visual-v2-20261121.css"'));
+  const design=await get(live,"/rider-spot-visual-v2-20261121.css");
+  check("new design CSS served with premium header and finance styles",
+    design.status===200&&design.body.length>10000&&
+    design.body.includes("linear-gradient(105deg,#123C39")&&
+    design.body.includes(".finance-page .fin-hero"),
+    {status:design.status,bytes:design.body.length});
+
   check("no-cache on HTML",a.headers.get("cache-control")?.includes("no-store"));
   for(const path of ["/sw.js",expectedRelease+"app.mjs",expectedRelease+"premium-shell.css",
     "/rider-spot-shell-v40.js","/rider-gps-recovery-v42.js?gps=v50",
