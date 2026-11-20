@@ -8,7 +8,8 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active split front version: `f764543b-35c5-48a7-9b4e-3b2b76b07b3c`
+- Active premium visual-v2 front version: `ea399918-cbff-4de4-994f-5530e1672cef`
+- Prior split front version (last known functional fallback): `f764543b-35c5-48a7-9b4e-3b2b76b07b3c`
 - Previous monolithic v220 version, **retain for rollback**:
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
@@ -16,6 +17,7 @@ deployment state with this record before any change.
 - Asset service binding `ASSETS` → `rider-spot-static-candidate-assets`
   (pinned `16c1eecf6bac` assets in Workers KV)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
+- Design `DESIGN` → `rider-spot-visual-v2` (isolated immutable CSS; no user-data or GPS bindings; loaded last)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -105,3 +107,23 @@ GitHub Actions currently contains neither `CLOUDFLARE_API_TOKEN` nor
 presence/absence and does not expose secrets. Native Workers Static Assets
 upload also returned HTTP 401 with the connected Cloudflare session. No
 secret was committed to source control.
+
+## Visual-v2 update — 2026-11-21
+
+The new presentation-only overlay includes a deep-teal Rider Spot header,
+a new active bottom-nav treatment, stronger financial hero hierarchy, clearer
+bike/model and maintenance tiles, timeline summary/calendar styling and
+cleaner community cards. Source of truth:
+
+- `src/visual-v2.css` — visual stylesheet
+- `edge/visual-v2-worker.mjs` — the corresponding CSS delivery Worker
+- `edge/static-edge.mjs` — link insertion and dedicated immutable CSS route
+- `wrangler.kv-front-production.json` — production service bindings
+
+No APK code, React routing, GPS events, Supabase tables or existing KV
+release bundles were modified. Old UI remains the automatic fallback if
+the new CSS request fails; the v220 shell fallback still handles failed
+KV home loads. For emergency full rollback deploy the prior split Worker
+version `f764543b-35c5-48a7-9b4e-3b2b76b07b3c` at 100%, or use
+monolithic `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8` if the split stack
+itself has failed. Do not delete local app data or Service Worker caches.
