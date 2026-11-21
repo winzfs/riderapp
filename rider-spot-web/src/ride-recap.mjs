@@ -155,16 +155,26 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
       ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=p.accent;ctx.stroke();
     }
     const visible=paths.flat(),first=visible[0],last=visible[visible.length-1];
-    for(const [pt,color] of [[first,p.accent],[last,p.ink]]){
-      ctx.beginPath();ctx.arc(x+pt.x,y+pt.y,11,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
-      ctx.beginPath();ctx.arc(x+pt.x,y+pt.y,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    // Distinguish first recorded fix from last recorded fix. These are ride
+    // tracking endpoints, not pickup/dropoff locations.
+    for(const [pt,color,letter] of [[first,p.accent,"출발"],[last,p.ink,"종료"]]){
+      const cx=x+pt.x,cy=y+pt.y;
+      ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      const chipW=letter==="출발"?68:68;
+      const chipX=Math.max(x+8,Math.min(x+w-chipW-8,cx+15));
+      const chipY=Math.max(y+73,Math.min(y+h-42,cy-17));
+      rounded(ctx,chipX,chipY,chipW,35,10,p.panel);
+      label(ctx,letter,chipX+chipW/2,chipY+25,20,p.ink,770,"center");
     }
   }
   rounded(ctx,x+22,y+20,157,46,12,actualMap?"rgba(255,255,255,.89)":p.panel);
   label(ctx,"주행 경로",x+39,y+51,24,p.ink,750);
   if(actualMap){
-    rounded(ctx,x+14,y+h-42,w-28,28,8,"rgba(255,255,255,.80)");
-    label(ctx,"지도 © OpenStreetMap · OpenMapTiles · OpenFreeMap · V-World",x+w-27,y+h-23,17,"#596B73",500,"right");
+    // Tile and source attribution is required on exported/printed imagery.
+    // Avoid the intrusive full-width white bar, but retain a readable credit.
+    rounded(ctx,x+w-295,y+h-30,281,22,5,"rgba(255,255,255,.86)");
+    label(ctx,"© OpenMapTiles · © OpenStreetMap",x+w-21,y+h-14,13,"#5A6B74",500,"right");
   }
   ctx.restore();
 }
@@ -172,11 +182,7 @@ function stat(ctx,title,value,x,y,w,p) {
   label(ctx,title,x,y,23,p.muted,600);
   label(ctx,value,x,y+60,36,p.ink,750);
 }
-function footer(ctx,p,W,H) {
-  line(ctx,72,H-112,W-72,H-112,p.grid,2);
-  label(ctx,"라이더스팟",72,H-61,23,p.ink,750);
-}
-
+ 
 // Pure Canvas 2D export, not a screenshot of the live map. No external images,
 // remote font requests or cross-origin tiles: PNG export cannot be tainted.
 export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="light",showRoute=true,showIncome=true,mapSnapshot=null}={}) {
@@ -200,7 +206,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       ["총수익",income],
       ["업무 비용",showIncome&&recap.financeLoaded?won(recap.cost):"비공개"],
       ["비용 차감 후",!showIncome?"비공개":recap.uncertain?"확인 필요":abbreviatedMoney(recap.net)],
-      ["배달 건수",recap.deliveries===null?"미입력":recap.deliveries+"건"],
+      ...(recap.deliveries===null?[]:[["배달 건수",recap.deliveries+"건"]]),
       ["운행 거리",recap.trips?km(recap.distanceKm):"기록 없음"],
     ];
     const spacing=Math.min(121,(H-690)/rows.length);
@@ -227,29 +233,34 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
     const mapSize=recapMapDimensions(mode,ratio);
     const mapLeft=Math.round((W-mapSize.width)/2),mapTop=177;
     drawRoute(ctx,recap.segments,mapLeft,mapTop,mapSize.width,mapSize.height,p,showRoute,mapSnapshot);
-    const top=997;
-    rounded(ctx,72,top,936,224,28,p.panel);
-    // First row: gross amount emphasized, net amount clearly differentiated.
-    label(ctx,"하루 수익",105,top+33,22,p.muted,650);
-    label(ctx,income,105,top+83,45,p.ink,800);
-    label(ctx,"순수익",967,top+33,20,p.muted,650,"right");
+    const top=995;
+    // One compact receipt. Metrics reflow between two and three columns when
+    // deliveries are missing, without generating misleading placeholder text.
+    const showCost=showIncome&&recap.financeLoaded&&recap.cost>0;
+    const receiptHeight=showCost?202:176;
+    rounded(ctx,72,top,936,receiptHeight,26,p.panel);
+    label(ctx,"하루 수익",104,top+31,20,p.muted,660);
+    label(ctx,income,104,top+79,43,p.ink,800);
+    label(ctx,"순수익",970,top+31,20,p.muted,660,"right");
     label(ctx,showIncome?(recap.uncertain?"확인 필요":abbreviatedMoney(recap.net)):"비공개",
-      967,top+81,31,p.ink,760,"right");
-    line(ctx,105,top+102,975,top+102,p.grid,2);
-    // Second row: ride metrics. Missing deliveries are not replaced with zero.
-    const metrics=[
-      ["거리",recap.trips?km(recap.distanceKm):"기록 없음",105],
-      ["시간",duration(recap.durationMs),409],
-      ["배달",recap.deliveries===null?"미입력":recap.deliveries+"건",757],
+      970,top+77,31,p.ink,760,"right");
+    line(ctx,104,top+92,976,top+92,p.grid,1.5);
+    const rideMetrics=[
+      ["거리",recap.trips?km(recap.distanceKm):"기록 없음"],
+      ["시간",duration(recap.durationMs)],
     ];
-    metrics.forEach(([name,value,x])=>{
-      label(ctx,name,x,top+130,20,p.muted,650);
-      label(ctx,value,x,top+165,28,p.ink,760);
+    if(recap.deliveries!==null)rideMetrics.push(["배달",recap.deliveries+"건"]);
+    const columnW=872/rideMetrics.length;
+    rideMetrics.forEach(([name,value],i)=>{
+      const colX=104+i*columnW;
+      label(ctx,name,colX,top+117,19,p.muted,650);
+      label(ctx,value,colX,top+156,28,p.ink,770);
     });
-    line(ctx,105,top+179,975,top+179,p.grid,2);
-    label(ctx,"업무 비용",105,top+206,20,p.muted,650);
-    label(ctx,!showIncome?"비공개":recap.financeLoaded?won(recap.cost):"미입력",
-      975,top+206,25,p.ink,710,"right");
+    if(showCost){
+      line(ctx,104,top+166,976,top+166,p.grid,1.5);
+      label(ctx,"업무 비용",104,top+191,19,p.muted,620);
+      label(ctx,won(recap.cost),975,top+191,21,p.ink,720,"right");
+    }
   } else {
     const mapTop=207;
     const mapHeight=recapMapDimensions(mode,ratio).height;
@@ -273,7 +284,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       const metricY=panelTop+233;
       stat(ctx,"거리",recap.trips?km(recap.distanceKm):"기록 없음",112,metricY,0,p);
       stat(ctx,"시간",duration(recap.durationMs),438,metricY,0,p);
-      stat(ctx,"배달",recap.deliveries===null?"미입력":recap.deliveries+"건",764,metricY,0,p);
+      if(recap.deliveries!==null)stat(ctx,"배달",recap.deliveries+"건",764,metricY,0,p);
       if(panelHeight>378) {
         line(ctx,112,panelTop+337,968,panelTop+337,p.grid,2);
         label(ctx,"업무 비용",112,panelTop+394,24,p.muted,600);
@@ -285,7 +296,6 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       }
     }
   }
-  footer(ctx,p,W,H);
   return canvas;
 }
 const dimensions = ratio => ratio==="9:16"?"1080 × 1920":ratio==="1:1"?"1080 × 1080":"1080 × 1350";
