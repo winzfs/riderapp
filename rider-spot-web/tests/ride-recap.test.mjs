@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas} from "../src/ride-recap.mjs";
+import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout} from "../src/ride-recap.mjs";
 
 const point=(lat,lng,t,extra={})=>({lat,lng,t,...extra});
 const trip=(id,start,end,points,distance=0)=>({
@@ -102,4 +102,49 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
   assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
   assert.equal(textValues.filter(x=>x==="라이더스팟").length,5,"Only one top brand per rendered image, no footer");
+});
+
+test("round-trip rides never hide the start label under the finish",()=>{
+  const a=recapEndpointLayout([[{x:415,y:540},{x:520,y:290},{x:419,y:542}]],800,800);
+  assert.ok(a.coincident);
+  assert.deepEqual(a.first,{x:415,y:540});
+  assert.deepEqual(a.last,{x:419,y:542});
+  const overlap=(p,q)=>p.x<q.x+q.width+8&&p.x+p.width+8>q.x&&
+    p.y<q.y+q.height+8&&p.y+p.height+8>q.y;
+  assert.ok(!overlap(a.start,a.end),"Start and end text chips must not overlap");
+  for(const chip of [a.start,a.end]){
+    assert.ok(chip.x>=8&&chip.x+chip.width<=792);
+    assert.ok(chip.y>=76&&chip.y+chip.height<=792);
+  }
+});
+
+test("start and end labels stay separately visible near each map edge",()=>{
+  const tracks=[
+    [{x:2,y:2},{x:4,y:4}],
+    [{x:797,y:780},{x:798,y:785}],
+    [{x:4,y:780},{x:4,y:780}],
+    [{x:796,y:4},{x:797,y:3}],
+    [{x:70,y:90},{x:750,y:750}],
+  ];
+  for(const trip of tracks) {
+    const v=recapEndpointLayout([trip],800,800);
+    const a=v.start,b=v.end;
+    assert.ok(a.x>=8&&a.x+a.width<=792);
+    assert.ok(b.x>=8&&b.x+b.width<=792);
+    assert.ok(a.y>=76&&a.y+a.height<=792);
+    assert.ok(b.y>=76&&b.y+b.height<=792);
+    assert.ok(a.x+a.width+8<=b.x||b.x+b.width+8<=a.x||
+      a.y+a.height+8<=b.y||b.y+b.height+8<=a.y,
+      "Must not overlap at edge: "+JSON.stringify({trip,a,b}));
+  }
+});
+
+test("multiple daily segments use the earliest fix and latest fix, not segment join points",()=>{
+  const v=recapEndpointLayout([
+    [{x:95,y:110},{x:250,y:170}],
+    [{x:430,y:410},{x:600,y:650}],
+  ],800,800);
+  assert.deepEqual(v.first,{x:95,y:110});
+  assert.deepEqual(v.last,{x:600,y:650});
+  assert.equal(v.coincident,false);
 });
