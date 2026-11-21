@@ -1,0 +1,1260 @@
+/*
+ RIDER SPOT / URBAN EDITORIAL v6 / original shared visual grammar
+ 2026-11-21 · quiet streetwear × active utility
+ Intentional design-system replacement, not a layer of decorative widgets.
+ Real screens: map, timeline, neighborhood, earnings, garage.
+ DO NOT modify map canvas transforms, navigation or WebView lifecycle here.
+*/
+:root {
+ --ur-canvas:#F5F5F1;--ur-white:#FFFFFF;--ur-ink:#192321;
+ --ur-charcoal:#172622;--ur-secondary:#485A53;--ur-dim:#7A8882;
+ --ur-hairline:#E5E9E3;--ur-soft:#EDF1EB;--ur-teal:#087B70;
+ --ur-mint:#E3F2EA;--ur-lime:#DBF26A;--ur-danger:#BD584A;
+ --ur-focus:#0B8578;--ur-ease:cubic-bezier(.22,1,.36,1);
+ --ur-round:16px;--ur-tight:11px;
+}
+/* Quiet global foundation: colors, type, rhythm. */
+body, .app, .app .workspace>main {
+ background:var(--ur-canvas);color:var(--ur-ink);
+ font-family: "Pretendard Variable",Pretendard,"SUIT Variable",SUIT,
+  -apple-system,BlinkMacSystemFont,"Noto Sans KR",system-ui,sans-serif;
+}
+.app .page,.app .trip-page {padding-inline:17px;}
+.app .page :is(h1,h2,h3),.app .trip-page :is(h1,h2,h3) {
+ color:var(--ur-ink);letter-spacing:-.048em;word-break:keep-all;
+}
+.app .page h1,.app .trip-page h1 {
+ font-size:clamp(23px,5.8vw,27px);font-weight:830;line-height:1.24;
+}
+.app .page h2,.app .trip-page h2 {font-weight:760;}
+.app .page small,.app .trip-page small {letter-spacing:-.015em;}
+.app :is(.fin-hero-amount,.fin-hero-bottom strong,.fin-goal-amount strong,
+ .fin-chart-value,.bike-distance,.bike-tile-status,.rs-game-recap-stats strong,
+ .rs33-trip-summary strong,.rs-metrics dd) {
+ font-variant-numeric:tabular-nums lining-nums;
+}
+.app :is(button,input,select,textarea) {font:inherit;}
+.app button {touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.app :is(button,a,[role="button"]):focus-visible {
+ outline:2px solid var(--ur-focus);outline-offset:2px;
+}
+.app :is(button,a,[role="button"]):not(:disabled) {
+ transition:background-color .17s ease,color .17s ease,border-color .17s ease,
+  box-shadow .17s ease,opacity .17s ease;
+}
+.app button:disabled {opacity:.55;}
+/* Clean identity: no gloss, stripes, swooshes or oversized brand motif. */
+.app>header {
+ background:var(--ur-charcoal);border:0;box-shadow:none;
+ padding-left:18px;padding-right:17px;
+}
+.app .brand {
+ color:#F6F8F1;font-size:19px;letter-spacing:-.055em;
+ font-weight:820;line-height:1.1;gap:0;
+}
+.app .brand:before {display:none!important;}
+.app .brand:after {
+ content:"";display:inline-block;align-self:center;
+ width:6px;height:6px;flex:none;margin-left:6px;margin-top:13px;
+ border-radius:2px;background:var(--ur-lime);transform:rotate(15deg);
+}
+.app .brand-dot {display:none;}
+.app>header .header-user {
+ background:transparent;border:1px solid rgba(255,255,255,.22);
+ border-radius:12px;min-width:43px;min-height:43px;color:#EAF4EC;
+ box-shadow:none;
+}
+.app>header .header-user svg {color:#EAF4EC;}
+.app>header :is(button,a):focus-visible {outline-color:var(--ur-lime);}
+/* Fixed nav reads like an app toolbar, not five floating cards. */
+.app .bottom-nav {
+ background:#FDFEF9;border-top:1px solid var(--ur-hairline);
+ padding:5px 7px calc(5px + var(--rs-safe-bottom));
+ box-shadow:0 -2px 12px rgba(17,34,29,.025);
+}
+.app .bottom-nav button {
+ background:transparent!important;color:#818B86;min-height:56px;
+ font-size:10.5px;font-weight:630;border-radius:9px;gap:3px;
+ letter-spacing:-.035em;box-shadow:none!important;
+}
+.app .bottom-nav button svg {
+ width:23px;height:23px;padding:0;background:transparent;
+ border-radius:8px;filter:none;
+}
+.app .bottom-nav button.active {
+ background:transparent!important;color:var(--ur-ink);font-weight:800;
+}
+.app .bottom-nav button.active svg {
+ color:var(--ur-teal);background:transparent;box-shadow:none;
+ filter:none;
+}
+.app .bottom-nav button.active:after {
+ content:"";display:block;position:absolute;top:3px;
+ width:18px;height:2px;background:var(--ur-lime);border-radius:2px;
+}
+.app .bottom-nav button {position:relative;}
+/* Controls: strong action, quiet secondary, clear neutral inputs. */
+.app :is(input:not([type=checkbox]):not([type=range]),select,textarea) {
+ background:#FFF;color:var(--ur-ink);
+ border:1px solid #DDE4DD;box-shadow:none;border-radius:10px;
+}
+.app :is(input:not([type=checkbox]):not([type=range]),select,textarea):focus-visible {
+ outline:2px solid rgba(8,123,112,.45);outline-offset:0;
+}
+.app :is(.primary,.record-primary,.fin-primary,.rs-primary):not(.fin-hero) {
+ background:var(--ur-teal);color:#FFF;border-color:var(--ur-teal);
+ border-radius:11px;box-shadow:none;
+}
+.app :is(.secondary,.fin-secondary,.record-secondary) {
+ background:#FFF;border:1px solid #DDE5DD;color:var(--ur-charcoal);
+ border-radius:11px;box-shadow:none;
+}
+.app button:active:not(:disabled) {filter:brightness(.96);}
+@media(hover:hover){
+ .app :is(.primary,.fin-primary,.record-primary):hover:not(:disabled) {
+  background:#08685F;border-color:#08685F;
+ }
+}
+/* MAP — the city is the hero, the UI is a calm instrument panel. */
+.app .nearby.nearby-full {background:var(--ur-canvas);}
+.app .nearby.nearby-full .rs33-map-bar {
+ background:#FAFBF6;padding:9px 13px 8px;gap:6px;
+ border:0;border-bottom:1px solid var(--ur-hairline);
+}
+.app .nearby .rs33-region-toggle {
+ color:var(--ur-ink);font-size:17px;font-weight:800;letter-spacing:-.04em;
+}
+.app .nearby .rs33-map-filters {gap:6px;}
+.app .nearby .rs33-map-filters button {
+ min-height:36px;border:1px solid #E0E7DE;padding:6px 11px;
+ background:#FFF;color:var(--ur-secondary);border-radius:9px;
+ font-size:12px;font-weight:700;box-shadow:none;
+}
+.app .nearby .rs33-map-filters button[aria-pressed=true] {
+ background:var(--ur-charcoal);color:#FFF;border-color:var(--ur-charcoal);
+}
+.app .nearby .rs-weather-hud {
+ background:#F6F7F2;height:34px;min-height:34px;
+ border-radius:9px;border:1px solid var(--ur-hairline);
+ box-shadow:none;color:var(--ur-secondary);
+}
+.app .nearby .map-wrap :is(.rs-gps-state,#rs-presence-btn,.locate) {
+ background:rgba(255,255,255,.97);color:var(--ur-charcoal);
+ border:1px solid #E7EAE4;border-radius:11px;
+ box-shadow:0 2px 10px rgba(18,38,33,.09);
+}
+.app .nearby .rs-gps-state {font-size:11px;font-weight:720;}
+.app .nearby .map-wrap .leaflet-control-zoom a {
+ background:rgba(255,255,255,.97);color:var(--ur-charcoal);
+ border-color:#E9EEE7;
+}
+.app .nearby .map-wrap .rs33-map-footer,
+.app .nearby .rs33-report-footer {
+ background:rgba(255,255,255,.96);border-color:#E6EAE4;
+ border-radius:12px;box-shadow:none;
+}
+.app .nearby .ride-launch,
+.app .ride-launch {padding:9px 15px 10px;background:#FAFBF7;}
+.app .ride-launch button {
+ position:relative;min-height:52px;border:0;border-radius:12px;
+ background:var(--ur-charcoal)!important;box-shadow:none;
+ color:#FFF;font-weight:790;font-size:15px;letter-spacing:-.035em;
+}
+.app .ride-launch button:before {
+ content:"";display:inline-block;width:8px;height:8px;
+ margin-right:10px;border-radius:2px;background:var(--ur-lime);
+ transform:rotate(12deg);vertical-align:1px;
+}
+.app .ride-launch.active button {background:var(--ur-teal)!important;}
+/* TIMELINE — a riding log, not a gamified dashboard full of boxes. */
+.app .rs33-timeline .rs33-title {margin:0 0 13px;align-items:center;}
+.app .rs33-timeline .rs33-title>button {
+ border-radius:10px;min-height:43px;background:var(--ur-charcoal);
+ color:#FFF;border:0;padding:8px 16px;font-weight:750;
+}
+.app .rs33-timeline .rs33-week-head {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-bottom:0;border-radius:15px 15px 0 0;
+ margin:0;padding:8px 11px 2px;
+}
+.app .rs33-timeline .rs33-week-head strong {
+ font-size:15px;font-weight:790;letter-spacing:-.03em;
+}
+.app .rs33-timeline .rs33-week-head button {
+ width:39px;height:39px;min-height:39px;color:var(--ur-ink);
+ font-size:21px;border-radius:9px;
+}
+.app .rs33-timeline .rs33-week-head .rs61-today {
+ width:auto;min-width:46px;padding:0 10px;
+ color:var(--ur-teal);font-size:12px;font-weight:770;
+ background:var(--ur-mint);
+}
+.app .rs33-timeline .rs33-week {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-top:0;border-radius:0 0 15px 15px;
+ padding:1px 9px 9px;margin:0 0 13px;box-shadow:none;
+}
+.app .rs33-timeline .rs33-week button {
+ min-height:56px;border:0;border-radius:9px;
+ color:var(--ur-secondary);background:transparent;
+}
+.app .rs33-timeline .rs33-week button[aria-pressed=true] {
+ background:var(--ur-charcoal);color:#FFF;box-shadow:none;
+}
+.app .rs33-timeline .rs33-week button span[data-has-record=true] {
+ background:var(--ur-teal);
+}
+.app .rs33-timeline .rs33-week button[aria-pressed=true] span[data-has-record=true] {
+ background:var(--ur-lime);
+}
+.app .rs33-timeline .rs-game-recap {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:16px;box-shadow:none;margin:0 0 12px;
+ padding:15px 15px 13px;isolation:isolate;
+}
+.app .rs33-timeline .rs-game-recap:before,
+.app .rs33-timeline .rs-game-recap:after {display:none;}
+.app .rs33-timeline .rs-game-recap-heading {margin-bottom:10px;gap:10px;}
+.app .rs33-timeline .rs-game-recap-heading .rs-game-recap-flare {
+ background:var(--ur-lime);color:var(--ur-charcoal);
+ border:0;border-radius:8px;width:31px;height:31px;flex-basis:31px;
+ font-size:17px;box-shadow:none;
+}
+.app .rs33-timeline .rs-game-recap-heading small {
+ color:var(--ur-dim);font-size:11px;font-weight:580;
+}
+.app .rs33-timeline .rs-game-recap-heading h2 {
+ margin:1px 0 0;color:var(--ur-ink);
+ font-size:17px;font-weight:790;
+}
+.app .rs33-timeline .rs-game-xp-earned {
+ background:#EAF2CA;color:#344328;border:0;
+ border-radius:8px;font-weight:780;font-size:11px;
+ padding:7px 9px;
+}
+.app .rs33-timeline .rs-game-recap-stats {gap:0;}
+.app .rs33-timeline .rs-game-recap-stats>div {
+ background:transparent;border:0;
+ border-right:1px solid var(--ur-hairline);
+ border-radius:0;padding:2px 8px;gap:5px;
+}
+.app .rs33-timeline .rs-game-recap-stats>div:first-child {padding-left:0;}
+.app .rs33-timeline .rs-game-recap-stats>div:last-child {
+ border-right:0;padding-right:0;
+}
+.app .rs33-timeline .rs-game-recap-stats span {
+ font-size:11px;color:var(--ur-dim);
+}
+.app .rs33-timeline .rs-game-recap-stats strong,
+.app .rs33-timeline .rs-game-recap-stats>div:nth-child(2) strong {
+ font-size:clamp(16px,4.4vw,22px);font-weight:805;
+ color:var(--ur-charcoal);letter-spacing:-.035em;
+}
+.app .rs33-timeline .rs-game-recap-stats strong small {color:var(--ur-dim);}
+.app .rs33-timeline .rs56-day-overview {margin:0 0 12px;}
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full) {
+ border:1px solid var(--ur-hairline);
+ border-radius:15px;box-shadow:none;overflow:hidden;
+}
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full) .rs56-day-map {
+ min-height:290px;height:clamp(290px,75vw,370px);
+}
+.app .rs33-timeline .rs59-player {
+ background:#FFF;border-top:1px solid var(--ur-hairline);
+ padding:10px 12px;
+}
+.app .rs33-timeline .rs59-player .rs59-play {
+ background:var(--ur-charcoal);border:0;border-radius:10px;
+ min-height:45px;color:#FFF;font-weight:740;
+}
+.app .rs33-timeline .rs59-player select,
+.app .rs33-timeline .rs59-player .rs59-reset {
+ min-height:43px;border-radius:10px;
+ background:#F5F7F3;border:1px solid #E1E7DF;
+ color:var(--ur-ink);
+}
+.app .rs33-timeline .rs59-course-tools {
+ background:#FFF;border-color:var(--ur-hairline);
+ gap:6px;padding:7px 10px;
+}
+.app .rs33-timeline .rs59-course-tools button {
+ min-height:39px;border-radius:9px;
+ background:#F5F7F3;border:1px solid transparent;
+ font-size:12px;font-weight:680;
+}
+.app .rs33-timeline .rs59-course-tools button[aria-pressed=true] {
+ background:var(--ur-mint);color:var(--ur-teal);
+ border-color:#CEE3D6;
+}
+.app .rs33-timeline .rs33-list-title {margin:19px 0 6px;}
+.app .rs33-timeline .rs56-ride-choice {
+ border-bottom:1px solid var(--ur-hairline);
+}
+.app .rs33-timeline .rs56-ride-choice>button {border-radius:10px;}
+/* FINANCE — strong typographic balance, the numbers do the work. */
+.app .finance-page .fin-page-head {margin-bottom:12px;}
+.app .finance-page .fin-subnav {
+ background:transparent;border:0;border-bottom:1px solid var(--ur-hairline);
+ border-radius:0;padding:0;gap:0;box-shadow:none;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn {
+ background:transparent;border:0;border-radius:0;
+ color:var(--ur-dim);font-size:13px;font-weight:680;
+ min-height:44px;position:relative;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected {
+ background:transparent;color:var(--ur-ink);box-shadow:none;
+ font-weight:800;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected:after {
+ content:"";position:absolute;bottom:-1px;left:23%;right:23%;
+ height:3px;border-radius:2px;background:var(--ur-teal);
+}
+.app .finance-page .fin-stack {gap:12px;}
+.app .finance-page .fin-period {gap:7px;margin-top:3px;}
+.app .finance-page .fin-period-btn {
+ border:0;border-radius:9px;background:#ECEFE9;
+ color:var(--ur-secondary);font-weight:720;font-size:12px;
+ min-height:40px;
+}
+.app .finance-page .fin-period-btn.selected {
+ background:var(--ur-charcoal);color:#FFF;border:0;
+}
+.app .finance-page .fin-hero.fin-hero-renewal {
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(98px,32%);
+ column-gap:13px;min-height:0;
+ padding:19px 16px 19px;border:0;border-radius:16px;
+ background:var(--ur-charcoal);color:#FFF;box-shadow:none;
+}
+.app .finance-page .fin-hero.fin-hero-renewal:before {display:none;}
+.app .finance-page .fin-hero-main {min-width:0;}
+.app .finance-page .fin-hero-top {display:flex;justify-content:flex-start;}
+.app .finance-page .fin-hero-top span {
+ display:inline-flex;align-items:center;gap:7px;
+ color:#C5DBCF;font-weight:650;font-size:11px;
+}
+.app .finance-page .fin-hero-top span:before {
+ content:"";width:6px;height:6px;background:var(--ur-lime);
+ border-radius:2px;transform:rotate(12deg);flex:none;
+}
+.app .finance-page .fin-hero-amount {
+ display:block;color:#FFF;font-size:clamp(29px,8.1vw,38px);
+ font-weight:840;letter-spacing:-.065em;
+ line-height:1.12;margin:10px 0 0;
+ overflow-wrap:anywhere;
+}
+.app .finance-page .fin-hero-range {
+ font-size:10px;color:#A5B9AF;line-height:1.4;margin-top:9px;
+}
+.app .finance-page .fin-hero-divider {display:none;}
+.app .finance-page .fin-hero-bottom {
+ min-width:0;padding-left:13px;margin:0;
+ border-left:1px solid rgba(255,255,255,.17);
+ display:flex;flex-direction:column;justify-content:center;
+ gap:12px;
+}
+.app .finance-page .fin-hero-bottom span {
+ display:grid;gap:2px;color:#ABC1B5;
+ font-size:10px;font-weight:550;line-height:1.3;
+ overflow-wrap:anywhere;
+}
+.app .finance-page .fin-hero-bottom strong {
+ color:#FFF;font-size:clamp(13px,3.6vw,16px);
+ font-weight:760;letter-spacing:-.03em;line-height:1.4;
+}
+.app .finance-page .fin-quick {gap:7px;margin:0;}
+.app .finance-page .fin-quick>button {
+ min-height:48px;font-size:13px;font-weight:750;
+ border-radius:10px;box-shadow:none;
+}
+.app .finance-page .fin-quick .fin-primary {
+ background:var(--ur-teal);border:1px solid var(--ur-teal);color:#FFF;
+}
+.app .finance-page .fin-quick .fin-secondary {
+ background:#FFF;border:1px solid var(--ur-hairline);color:var(--ur-ink);
+}
+.app .finance-page .fin-chart-spotlight {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:15px;padding:15px 13px 12px;box-shadow:none;
+ gap:10px;overflow:hidden;
+}
+.app .finance-page .fin-chart-spotlight>header h2 {
+ font-size:16px;font-weight:790;letter-spacing:-.04em;
+}
+.app .finance-page .fin-chart-spotlight>header small {
+ font-size:11px;color:var(--ur-dim);
+}
+.app .finance-page .fin-chart {
+ min-width:0;gap:4px;
+}
+.app .finance-page .fin-chart-point,
+.app .finance-page .fin-chart-point.selected,
+.app .finance-page .fin-chart-point:focus {
+ background:transparent;outline:0!important;
+ border:0!important;box-shadow:none!important;
+}
+.app .finance-page .fin-chart-point:focus-visible {
+ outline:2px solid var(--ur-focus)!important;outline-offset:2px;
+}
+.app .finance-page .fin-chart-track,
+.app .finance-page .fin-chart-point.selected .fin-chart-track,
+.app .finance-page .fin-chart-point:focus .fin-chart-track {
+ width:min(100%,30px);height:91px;border:0!important;
+ background:#F0F2EF!important;outline:0!important;box-shadow:none!important;
+ border-radius:5px 5px 2px 2px;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-track {
+ background:#E4EDE8!important;
+}
+.app .finance-page .fin-svg-chart {color:#8CB5A5;}
+.app .finance-page .fin-chart-point.selected .fin-svg-chart {
+ color:var(--ur-teal);
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-date {
+ color:var(--ur-ink);font-weight:830;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-value {
+ color:var(--ur-teal);font-weight:820;
+}
+.app .finance-page .fin-chart-detail-renewal {
+ background:var(--ur-soft);border:0;border-radius:10px;
+ padding:10px 12px;gap:5px 12px;color:var(--ur-secondary);
+}
+.app .finance-page .fin-chart-detail-renewal strong {color:var(--ur-ink);}
+.app .finance-page .fin-card.fin-goal,
+.app .finance-page .fin-card.fin-platform-card {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:15px;box-shadow:none;
+ padding:15px 16px;
+}
+.app .finance-page .fin-card.fin-goal {gap:8px;}
+.app .finance-page .fin-goal header h2,
+.app .finance-page .fin-platform-card header h2 {
+ font-size:15px;font-weight:790;
+}
+.app .finance-page .fin-goal-amount strong {
+ font-size:clamp(20px,5.6vw,26px);
+ font-weight:820;color:var(--ur-charcoal);
+}
+.app .finance-page .fin-goal-track,
+.app .finance-page .fin-bar-track {
+ height:6px;border-radius:99px;background:#E9EEE7;overflow:hidden;
+}
+.app .finance-page .fin-goal-track>div {
+ background:var(--ur-teal);border-radius:99px;
+}
+.app .finance-page .fin-goal-numbers,
+.app .finance-page .fin-goal-amount small {color:var(--ur-dim);}
+.app .finance-page .fin-platform .fin-bar-value {background:#9ABAAE;}
+.app .finance-page .fin-textbtn {color:var(--ur-teal);}
+.app .finance-page .fin-insights {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:14px;box-shadow:none;
+}
+/* GARAGE — the existing crisp bike art, without a fake 3D showroom. */
+.app .bike-page .bike-heading {margin-bottom:9px;}
+.app .bike-page .bike-quiet-action {
+ background:transparent;border:0;color:var(--ur-secondary);
+ font-size:11px;font-weight:660;
+}
+.app .bike-page .bike-vehicle {
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(94px,38%);
+ min-height:0;column-gap:9px;row-gap:9px;
+ background:#E9EFEB;border:1px solid #DBE5DD;border-radius:16px;
+ box-shadow:none;padding:17px 15px 13px;margin:0;
+}
+.app .bike-page .bike-vehicle:before {display:none;}
+.app .bike-page .bike-vehicle-data {
+ grid-row:1;grid-column:1;min-width:0;
+}
+.app .bike-page .bike-vehicle-data h2 {
+ font-size:16px;line-height:1.3;font-weight:805;
+ letter-spacing:-.04em;color:var(--ur-ink);margin:0 0 10px;
+}
+.app .bike-page .bike-odometer-label {
+ color:var(--ur-secondary);font-size:10px;gap:5px;
+}
+.app .bike-page .bike-distance {
+ font-size:clamp(24px,6.6vw,31px);line-height:1.13;
+ letter-spacing:-.05em;color:var(--ur-charcoal);font-weight:850;
+}
+.app .bike-page .bike-distance small {font-weight:670;font-size:13px;}
+.app .bike-page .bike-vehicle-data>small {
+ color:var(--ur-secondary);font-size:10px;line-height:1.35;
+}
+.app .bike-page .bike-vehicle :is(.bike-vehicle-art,img) {
+ grid-row:1;grid-column:2;max-width:100%;width:100%;
+ height:auto;aspect-ratio:5/3;object-fit:contain;
+ filter:drop-shadow(0 4px 5px rgba(25,34,30,.13));
+}
+.app .bike-page .bike-vehicle-tools {
+ grid-row:2;grid-column:1/-1;display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+ padding:10px 0 0;margin:0;
+ border-top:1px solid rgba(28,59,40,.12);
+}
+.app .bike-page .bike-vehicle-tools .bike-outline-action {
+ display:flex;gap:5px;justify-content:center;align-items:center;
+ background:rgba(255,255,255,.8);border:1px solid #DBE5DF;
+ border-radius:9px;min-height:39px;padding:8px 5px;
+ color:var(--ur-secondary);font-size:11px;font-weight:760;
+}
+.app .bike-page .bike-actions {gap:8px;margin:10px 0 17px;}
+.app .bike-page .bike-actions button {
+ min-height:47px;border-radius:10px;font-size:13px;font-weight:780;
+}
+.app .bike-page .bike-actions button:first-child {
+ background:var(--ur-charcoal);border-color:var(--ur-charcoal);
+}
+.app .bike-page .bike-actions button+button {
+ background:#FFF;border:1px solid var(--ur-hairline);color:var(--ur-ink);
+}
+.app .bike-page .bike-section-head {margin:17px 0 10px;}
+.app .bike-page .bike-section-head h2,
+.app .bike-page .bike-history-head h2 {font-size:17px;font-weight:805;}
+.app .bike-page .bike-consumables {gap:7px;}
+.app .bike-page .bike-consumables .bike-tile {
+ min-height:123px;padding:11px 3px 9px;
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:12px;box-shadow:none;
+}
+.app .bike-page .bike-consumables .bike-tile:active {
+ background:#F4F8F3;transform:scale(.985);
+}
+.app .bike-page .bike-tile-icon {width:52px;height:48px;margin:0 0 4px;}
+.app .bike-page .bike-tile-icon img {
+ object-fit:contain;image-rendering:auto;
+}
+.app .bike-page .bike-tile-name {
+ font-size:11px;font-weight:760;color:var(--ur-ink);
+}
+.app .bike-page .bike-tile-status {
+ font-size:10px;font-weight:685;margin-top:6px;
+ padding:3px 1px;line-height:1.27;
+ font-variant-numeric:tabular-nums;
+}
+.app .bike-page .bike-tile-status.bike-state-ok {
+ color:var(--ur-dim);background:transparent;
+}
+.app .bike-page .bike-tile-status.bike-state-soon {
+ color:#97652C;background:#FFF3D8;border-radius:6px;
+}
+.app .bike-page .bike-tile-status.bike-state-overdue {
+ color:var(--ur-danger);background:#FBEAE7;border-radius:6px;
+}
+.app .bike-page .bike-history-head {margin-top:23px;}
+.app .bike-page .bike-history-row {
+ background:transparent;min-height:60px;padding:9px 0;
+ border-bottom:1px solid var(--ur-hairline);
+}
+.app .bike-page .bike-history-row .bike-row-meta b {
+ color:var(--ur-secondary);
+}
+.app .bike-page .bike-history-more {
+ background:transparent;border:1px solid var(--ur-hairline);
+ border-radius:10px;color:var(--ur-teal);
+ min-height:44px;font-size:12px;font-weight:760;
+}
+/* NEIGHBORHOOD — faster scanning, less framing. */
+.app .rc-community.rs-community-renewal .rc-head {
+ margin:0 0 13px;align-items:center;
+}
+.app .rc-community.rs-community-renewal .rc-head .rc-write {
+ background:var(--ur-charcoal);border:0;color:#FFF;
+ min-height:41px;border-radius:9px;box-shadow:none;
+ padding:8px 13px;font-weight:760;font-size:12px;
+}
+.app .rc-community.rs-community-renewal .rc-search {
+ background:#FFF;border:1px solid var(--ur-hairline);
+ min-height:44px;border-radius:10px;color:var(--ur-ink);
+}
+.app .rc-community.rs-community-renewal .rc-filter-row {gap:6px;}
+.app .rc-community.rs-community-renewal .rc-area-button {
+ color:var(--ur-secondary);font-weight:680;
+}
+.app .rc-community.rs-community-renewal .rc-filter-row select {
+ background:transparent;border:1px solid var(--ur-hairline);
+ border-radius:9px;min-height:38px;
+}
+.app .rc-community.rs-community-renewal .rc-category-wrap {
+ margin:0 0 13px;
+}
+.app .rc-community.rs-community-renewal .rc-categories button {
+ min-height:35px;border-radius:9px;
+ font-weight:680;font-size:11px;
+ background:#F0F2ED;border:1px solid transparent;
+ color:var(--ur-secondary);padding:7px 11px;
+}
+.app .rc-community.rs-community-renewal .rc-categories button[aria-pressed=true] {
+ background:var(--ur-charcoal);color:#FFF;border-color:var(--ur-charcoal);
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal {
+ display:flex;flex-direction:column;gap:0;
+ background:#FFF;border:1px solid var(--ur-hairline);
+ border-radius:14px;overflow:hidden;box-shadow:none;
+ margin:0;padding:0;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-feed-row {
+ min-height:0;margin:0;padding:15px 14px 12px;
+ border:0;border-radius:0;
+ border-bottom:1px solid var(--ur-hairline);
+ background:#FFF;box-shadow:none;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-feed-row:last-child {
+ border-bottom:0;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-main {
+ min-height:0;padding:0;margin:0;gap:4px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid {
+ align-items:center;gap:12px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid h2 {
+ font-size:14px;font-weight:780;color:var(--ur-ink);
+ line-height:1.48;margin:2px 0 3px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid p {
+ font-size:12px;line-height:1.5;color:var(--ur-dim);
+ -webkit-line-clamp:2;margin:0;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid img {
+ width:62px;height:62px;flex-basis:62px;
+ border-radius:9px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-row-meta {
+ font-size:10px;color:var(--ur-dim);line-height:1.48;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-bottom {
+ margin-top:5px;
+}
+.app .rc-community.rs-community-renewal :is(.rc-tag,.rc-local-tag) {
+ background:#EDF2ED;color:var(--ur-secondary);
+ border:0;border-radius:5px;padding:3px 7px;
+ font-size:10px;font-weight:690;
+}
+.app .rc-community.rs-community-renewal .rc-row-like button {
+ color:var(--ur-secondary);min-width:43px;min-height:42px;
+}
+/* Sheets and edit flows: no behavior changes to drag gestures or close handling. */
+.app .fin-dialog .fin-sheet,.app .record-surface .record-sheet {
+ background:#FFF;border-radius:20px 20px 0 0;
+ box-shadow:0 -8px 30px rgba(19,37,32,.11);
+}
+.app .fin-dialog .fin-sheet-head,
+.app .record-sheet .record-heading {
+ border-color:var(--ur-hairline);
+}
+.app .fin-dialog .fin-close,
+.app .record-sheet .record-close {
+ min-width:44px;min-height:44px;background:#F3F5F0;
+ border-radius:10px;
+}
+.app .fin-dialog .fin-sheet footer .fin-primary,
+.app .record-sheet .record-primary,
+.app .record-sheet .record-cycle-save {
+ background:var(--ur-teal);min-height:49px;border-radius:10px;
+ color:#FFF;font-weight:770;
+}
+.app .record-sheet .record-grab,.app .fin-drag-handle {
+ background:#C5D0C5;border-radius:99px;
+}
+@media(max-width:355px){
+ .app .page,.app .trip-page {padding-inline:13px;}
+ .app .finance-page .fin-hero.fin-hero-renewal {
+  padding:16px 13px;grid-template-columns:minmax(0,1fr) 95px;gap:9px;
+ }
+ .app .finance-page .fin-hero-amount {font-size:28px;}
+ .app .finance-page .fin-hero-bottom {padding-left:9px;}
+ .app .bike-page .bike-vehicle {
+  padding:14px 12px 12px;grid-template-columns:minmax(0,1fr) minmax(90px,34%);
+ }
+ .app .bike-page .bike-consumables {gap:6px;}
+ .app .bike-page .bike-consumables .bike-tile {padding-inline:2px;}
+ .app .rc-community.rs-community-renewal .rc-feed-renewal .rc-feed-row {padding:12px 11px;}
+}
+@media(prefers-reduced-motion:reduce){
+ .app :is(button,a,[role="button"]) {transition:none;}
+ .app .bike-page .bike-tile {transition:none;}
+}
+
+
+/* =====================================================================
+ URBAN EDITORIAL v6 — REAL COMPONENT / INFORMATION ARCHITECTURE RENEWAL
+ Not a new color theme: these rules target re-parented screen components.
+ 1. Map controls now float *inside* the map viewport.
+ 2. Earnings stage now contains its period controls, numbers and actions.
+ 3. Bike stage / service board / ledger are independent zones, 2-column tiles.
+ 4. Timeline is route-first; daily activity summary follows the map.
+ 5. Community has a search masthead and an unboxed chronological feed.
+ ===================================================================== */
+
+/* SECTION 01 — Immersive map, with the weather, region and filters
+   in a floating field panel. Pointer events pass through empty panel space. */
+.app .nearby.nearby-full .rs6-map-stage {
+ position:relative;isolation:isolate;min-height:250px;
+ flex:1 1 auto;width:100%;
+ overflow:hidden;background:#E9EFEA;
+}
+.app .nearby.nearby-full .rs6-map-stage>.map {
+ position:relative;height:100%;min-height:100%;width:100%;
+}
+.app .nearby.nearby-full .rs6-map-stage>.rs33-map-bar {
+ position:absolute;z-index:930;
+ inset:10px 12px auto 12px;
+ display:flex;flex-direction:column;align-items:stretch;
+ gap:7px;width:auto;min-width:0;margin:0;padding:0;
+ background:none;border:0;box-shadow:none;
+ pointer-events:none;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-bar-top {
+ display:flex;min-height:47px;align-items:center;gap:7px;
+ padding:4px 7px 4px 12px;
+ border-radius:12px;
+ border:1px solid rgba(210,222,210,.93);
+ background:rgba(255,255,252,.97);
+ box-shadow:0 4px 18px rgba(22,36,28,.12);
+ backdrop-filter:blur(11px);
+ pointer-events:auto;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-region-toggle {
+ min-height:37px;padding:5px 0;
+ color:#182B23;font-size:16px;font-weight:820;
+ line-height:1.25;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-share {
+ min-height:34px;padding:5px 9px;
+ background:#E9EEE8;border:0;border-radius:8px;
+ font-size:10px;font-weight:740;color:#58675A;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-share.active {
+ background:#E0F0E5;color:#08675E;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-filters {
+ display:flex;gap:6px;max-width:100%;
+ overflow-x:auto;white-space:nowrap;scrollbar-width:none;
+ margin:0;padding:0 0 2px;
+ pointer-events:auto;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-filters button {
+ min-height:35px;padding:6px 10px;gap:5px;
+ border:1px solid rgba(215,225,215,.98);
+ border-radius:10px;background:rgba(255,255,253,.97);
+ color:#3F554A;font-size:11px;line-height:1.2;
+ box-shadow:0 3px 11px rgba(25,35,28,.08);
+}
+.app .nearby.nearby-full .rs6-map-stage .rs33-map-filters button[aria-pressed=true] {
+ background:#192C24;border-color:#192C24;color:#FFF;
+ box-shadow:0 3px 12px rgba(25,40,29,.11);
+}
+.app .nearby.nearby-full .rs6-map-stage .rs-weather-slot {
+ width:min(100%,295px);max-width:100%;
+ pointer-events:auto;align-self:flex-start;
+}
+.app .nearby.nearby-full .rs6-map-stage .rs-weather-hud {
+ min-height:32px;height:auto;max-width:100%;
+ border:1px solid rgba(219,228,218,.95);
+ border-radius:9px;background:rgba(255,255,252,.97);
+ box-shadow:0 3px 10px rgba(15,40,26,.075);
+}
+.app .nearby .rs6-map-stage .rs-gps-state {
+ top:158px!important;left:12px!important;
+ right:auto!important;max-width:calc(100% - 84px)!important;
+ min-height:34px;border-radius:9px!important;
+ background:rgba(255,255,255,.97);
+ font-size:10.5px;
+ box-shadow:0 3px 11px rgba(18,35,30,.1);
+ z-index:900;
+}
+.app .nearby .rs6-map-stage #rs-presence-btn {
+ top:203px!important;left:12px!important;
+ min-height:36px;border-radius:9px!important;
+ z-index:900;
+}
+.app .nearby .rs6-map-stage .locate {
+ top:260px!important;right:12px!important;
+ width:44px;height:44px;border-radius:10px!important;
+ z-index:900;
+}
+.app .nearby .rs6-map-stage .leaflet-top.leaflet-right {
+ top:155px;
+}
+.app .nearby.nearby-full .ride-launch {
+ flex:none;padding:8px 12px 9px;background:#F9FAF5;
+ border-top:1px solid #E5EBE4;
+}
+.app .nearby.nearby-full .ride-launch button {
+ min-height:51px;border-radius:11px;font-size:15px;
+}
+/* Keep the map real and interactive: never style the Leaflet camera, map
+   transform, pinch touch listener, native location provider or map tiles. */
+
+/* SECTION 02 — Earnings is now a single workbench, not a stack of cards.
+   Date filters and record actions physically live in the stage element. */
+.app .finance-page .rs6-finance-dashboard {
+ display:flex;flex-direction:column;gap:14px;
+}
+.app .finance-page .rs6-finance-stage {
+ display:flex;flex-direction:column;gap:0;
+ min-width:0;margin:0;
+ background:#192B25;color:#FFF;border-radius:17px;
+ padding:18px 16px 15px;overflow:hidden;
+}
+.app .finance-page .rs6-finance-stage-id {
+ display:flex;justify-content:space-between;align-items:center;
+ gap:8px;margin:0 0 13px;min-width:0;
+}
+.app .finance-page .rs6-finance-stage-id span {
+ font-size:10px;font-weight:800;letter-spacing:.13em;
+ color:#D9EDB6;white-space:nowrap;
+}
+.app .finance-page .rs6-finance-stage-id strong {
+ font-size:11px;font-weight:680;color:#DBE5DD;
+}
+.app .finance-page .rs6-finance-stage .fin-period {
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:5px;margin:0;padding:4px;
+ border-radius:10px;background:#30443B;
+}
+.app .finance-page .rs6-finance-stage .fin-period-btn {
+ min-height:37px;min-width:0;padding:5px 4px;
+ border:0;border-radius:7px;background:transparent;
+ color:#BFCFC3;font-size:12px;font-weight:680;
+}
+.app .finance-page .rs6-finance-stage .fin-period-btn.selected {
+ background:#F9FCF3;border:0;color:#1B3428;
+ font-weight:830;box-shadow:none;
+}
+.app .finance-page .rs6-finance-stage .fin-month-head {
+ color:#FFF;background:transparent;
+ margin:7px 0 0;padding:0;
+}
+.app .finance-page .rs6-finance-stage .fin-month-head strong {color:#E7EEE9;}
+.app .finance-page .rs6-finance-stage .fin-month-head button {color:#E7EEE9;}
+.app .finance-page .rs6-finance-stage .fin-hero.fin-hero-renewal {
+ background:transparent;border:0!important;border-radius:0;
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(92px,32%);
+ gap:12px;padding:21px 1px 17px;margin:0;
+ box-shadow:none;min-height:0;color:#FFF;
+}
+.app .finance-page .rs6-finance-stage .fin-hero:before,
+.app .finance-page .rs6-finance-stage .fin-hero:after {display:none;}
+.app .finance-page .rs6-finance-stage .fin-hero-top span {
+ font-size:11px;color:#B5CDBE;
+}
+.app .finance-page .rs6-finance-stage .fin-hero-amount {
+ color:#FFF;font-size:clamp(28px,8.1vw,42px);
+ letter-spacing:-.065em;line-height:1.1;
+ font-weight:860;margin-top:8px;
+}
+.app .finance-page .rs6-finance-stage .fin-hero-range {
+ color:#A6B8AA;margin-top:8px;
+}
+.app .finance-page .rs6-finance-stage .fin-hero-bottom {
+ display:flex;flex-direction:column;justify-content:center;
+ gap:12px;border-left:1px solid rgba(255,255,255,.19);
+ padding-left:12px;margin:0;
+}
+.app .finance-page .rs6-finance-stage .fin-hero-bottom span {
+ font-size:10px;color:#BACBBF;line-height:1.32;
+}
+.app .finance-page .rs6-finance-stage .fin-hero-bottom strong {
+ color:#FFF;font-weight:765;font-size:clamp(13px,3.2vw,16px);
+}
+.app .finance-page .rs6-finance-stage .fin-warning {
+ color:#E8C89D;background:transparent;border:0;
+ margin:0 0 7px;
+}
+.app .finance-page .rs6-finance-stage .fin-quick {
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px;margin:0;padding-top:12px;
+ border-top:1px solid rgba(255,255,255,.2);
+}
+.app .finance-page .rs6-finance-stage .fin-quick>button {
+ min-height:46px;min-width:0;
+ border-radius:9px;font-weight:770;font-size:12px;
+}
+.app .finance-page .rs6-finance-stage .fin-quick .fin-primary {
+ background:#DDF1E2;border:1px solid #DDF1E2;
+ color:#16382C;
+}
+.app .finance-page .rs6-finance-stage .fin-quick .fin-secondary {
+ background:rgba(255,255,255,.1);color:#FFF;
+ border:1px solid rgba(255,255,255,.19);
+}
+.app .finance-page .rs6-finance-analysis-grid {
+ display:grid;grid-template-columns:minmax(0,1fr);
+ gap:12px;min-width:0;
+}
+.app .finance-page .rs6-finance-analysis-grid .fin-chart-spotlight {
+ padding:17px 14px 13px;border-radius:14px;
+}
+.app .finance-page .rs6-finance-analysis-grid .fin-goal {
+ padding:14px 15px;border-radius:13px;
+}
+.app .finance-page .rs6-finance-analysis-grid .fin-chart-track {height:96px;}
+.app .finance-page .fin-chart-point:focus-visible {
+ outline:2px solid #047F74!important;outline-offset:2px;
+}
+@media(min-width:640px) {
+ .app .finance-page .rs6-finance-analysis-grid {
+  grid-template-columns:minmax(0,1.65fr) minmax(225px,1fr);
+  align-items:start;
+ }
+}
+
+/* SECTION 03 — My Garage has three actual content zones.
+   Two-column service instruments replace six cookie-cutter square cards. */
+.app .bike-page .rs6-garage-stage {
+ margin:0;display:flex;flex-direction:column;gap:0;
+ padding:15px 14px 13px;
+ border:1px solid #DEE8DC;border-radius:16px;
+ background:#E8EFE7;min-width:0;
+}
+.app .bike-page .rs6-garage-id,
+.app .bike-page .rs6-section-kicker {
+ display:flex;justify-content:space-between;
+ font-size:10px;letter-spacing:.115em;font-weight:820;
+ color:#496357;padding:0 1px;
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle {
+ background:transparent;border:0;box-shadow:none;
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,39%);
+ padding:12px 0 6px;margin:0;
+ border-radius:0;column-gap:9px;row-gap:11px;
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle:before,
+.app .bike-page .rs6-garage-stage .bike-vehicle:after {display:none;}
+.app .bike-page .rs6-garage-stage .bike-vehicle-data h2 {
+ font-size:17px;font-weight:810;margin:0 0 11px;
+ color:#1B3026;
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle-data .bike-distance {
+ font-size:clamp(26px,7vw,37px);
+ letter-spacing:-.067em;color:#152B21;
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle-art {
+ width:100%;height:auto;max-height:160px;
+ object-fit:contain;filter:drop-shadow(0 7px 5px rgba(20,45,30,.12));
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle-tools {
+ grid-column:1/-1;grid-row:2;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px;border-top:1px solid #D1DBD2;
+ padding:10px 0 0;margin:0;
+}
+.app .bike-page .rs6-garage-stage .bike-vehicle-tools .bike-outline-action {
+ min-height:38px;background:rgba(255,255,255,.7);
+ border:1px solid #D2DFD2;color:#234437;
+ border-radius:8px;font-weight:780;font-size:11px;
+}
+.app .bike-page .rs6-garage-stage .bike-model-banner {
+ display:flex;justify-content:space-between;align-items:center;
+ gap:7px;margin:2px 0 8px;padding:7px 2px;
+ border:0;border-top:1px solid #D8E2D8;
+ background:transparent;border-radius:0;
+ box-shadow:none;min-height:0;
+}
+.app .bike-page .rs6-garage-stage .bike-model-banner strong {
+ font-size:11px;font-weight:740;color:#355B47;
+}
+.app .bike-page .rs6-garage-stage .bike-model-banner small {
+ font-size:10px;color:#6D8873;
+}
+.app .bike-page .rs6-garage-stage .bike-model-change {
+ font-size:11px;min-height:34px;background:transparent;
+ border:0;padding:5px 6px;color:#1A6350;
+}
+.app .bike-page .rs6-garage-stage .bike-actions {
+ margin:8px 0 0;display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+}
+.app .bike-page .rs6-garage-stage .bike-actions button {
+ border-radius:9px;min-height:47px;font-weight:770;
+}
+.app .bike-page .rs6-garage-stage .bike-actions button:first-child {
+ background:#172A20;color:#FFF;border-color:#172A20;
+}
+.app .bike-page .rs6-garage-stage .bike-actions button:last-child {
+ background:#FFF;border:1px solid #D5E1D4;color:#213F33;
+}
+.app .bike-page .rs6-service-board {min-width:0;margin:20px 0 5px;}
+.app .bike-page .rs6-service-board .bike-section-head {
+ margin:0 0 5px;display:flex;justify-content:space-between;
+ align-items:end;gap:10px;
+}
+.app .bike-page .rs6-service-board .bike-section-head h2 {
+ font-size:18px;font-weight:830;letter-spacing:-.05em;
+}
+.app .bike-page .rs6-service-count {
+ white-space:nowrap;color:#708577;
+ font-size:10px;font-weight:650;
+}
+.app .bike-page .rs6-service-board .bike-safety-detail {
+ margin:0 0 9px;border:0;background:transparent;
+ padding:0;box-shadow:none;
+}
+.app .bike-page .rs6-service-board .bike-safety-detail summary {
+ font-size:10px;color:#718477;
+}
+.app .bike-page .rs6-service-board .bike-consumables {
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px;min-width:0;
+}
+.app .bike-page .rs6-service-board .bike-consumables .bike-tile {
+ min-width:0;min-height:85px;
+ display:grid;grid-template-columns:48px minmax(0,1fr);
+ grid-template-rows:auto auto;align-content:center;
+ align-items:center;justify-items:start;
+ column-gap:7px;row-gap:3px;
+ background:#FFF;border:1px solid #E2E7E0;
+ border-radius:12px;padding:10px 8px;
+ box-shadow:none;text-align:left;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-icon {
+ grid-column:1;grid-row:1/3;
+ width:46px;height:46px;margin:0;display:grid;place-items:center;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-icon :is(img,svg) {
+ max-width:100%;max-height:100%;object-fit:contain;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-name {
+ grid-column:2;grid-row:1;
+ font-size:11px;font-weight:800;line-height:1.2;
+ text-align:left;word-break:keep-all;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-status {
+ grid-column:2;grid-row:2;
+ font-size:10px;line-height:1.25;
+ margin:0;padding:0;min-width:0;max-width:100%;
+ color:#677A6E;text-align:left;white-space:normal;
+ overflow-wrap:anywhere;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-status.bike-state-overdue {
+ color:#BB4F47;background:transparent;font-weight:850;
+}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-status.bike-state-soon {
+ color:#9A6129;background:transparent;font-weight:780;
+}
+.app .bike-page .rs6-service-board .bike-tile:focus-visible {
+ outline:2px solid #0A8575;outline-offset:1px;
+}
+.app .bike-page .rs6-history-board {
+ margin:18px 0 0;padding:0;min-width:0;
+ border-top:2px solid #253D2F;
+}
+.app .bike-page .rs6-history-board .bike-history-head {
+ padding-top:12px;margin:0 0 8px;align-items:center;
+}
+.app .bike-page .rs6-history-board .bike-history-head h2 {
+ font-size:17px;font-weight:830;
+}
+.app .bike-page .rs6-history-board h3 {
+ font-size:11px;color:#718577;font-weight:740;
+ margin:14px 0 5px;
+}
+.app .bike-page .rs6-history-board .bike-history-row {
+ background:transparent;border:0;border-bottom:1px solid #E2E8E1;
+ border-radius:0;box-shadow:none;margin:0;padding:9px 3px;
+ min-height:60px;
+}
+.app .bike-page .rs6-history-board .bike-history-more {
+ width:100%;margin:7px 0 0;
+ background:#ECF1EB;border:0;border-radius:9px;
+ min-height:43px;color:#1D6551;
+}
+
+/* SECTION 04 — Timeline is map-first; calendar is an integrated date rail. */
+.app .rs33-timeline .rs33-title {margin-bottom:12px;}
+.app .rs33-timeline .rs6-timeline-controller {
+ margin:0 0 12px;background:#FDFEF9;
+ border:1px solid #E2E7E0;border-radius:14px;
+ padding:10px 11px 9px;
+}
+.app .rs33-timeline .rs6-timeline-date-title,
+.app .rs33-timeline .rs6-route-bar strong {
+ display:block;margin:0 0 5px;
+ font-size:10px;letter-spacing:.115em;font-weight:820;
+ color:#60796D;
+}
+.app .rs33-timeline .rs6-timeline-controller .rs33-week-head {
+ padding:0;margin:0;background:transparent;border:0;
+ border-radius:0;
+}
+.app .rs33-timeline .rs6-timeline-controller .rs33-week {
+ margin:0;padding:2px 0 0;background:transparent;
+ border:0;border-radius:0;
+}
+.app .rs33-timeline .rs6-timeline-controller .rs33-week button {
+ min-height:56px;border-radius:9px;
+}
+.app .rs33-timeline .rs6-timeline-controller .rs33-week button[aria-pressed=true] {
+ background:#1E352B;color:#FFF;
+}
+.app .rs33-timeline .rs6-route-bar {
+ display:flex;align-items:center;justify-content:space-between;
+ gap:10px;padding:11px 13px;
+ background:#1B3125;border-radius:14px 14px 0 0;
+ color:#FFF;
+}
+.app .rs33-timeline .rs6-route-bar strong {
+ color:#E3F19E;letter-spacing:.12em;margin:0;
+}
+.app .rs33-timeline .rs6-route-bar span {
+ font-size:12px;font-weight:760;
+ color:#E2ECE2;font-variant-numeric:tabular-nums;
+}
+.app .rs33-timeline .rs56-day-overview.rs-renewal-route {
+ background:transparent;border:0;box-shadow:none;
+ margin:0 0 12px;
+}
+.app .rs33-timeline .rs56-day-overview .rs56-day-course:not(.rs33-course-full) {
+ border:1px solid #E2E7E0;border-top:0;
+ border-radius:0 0 14px 14px;margin:0;overflow:hidden;
+}
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full) .rs56-day-map {
+ height:clamp(320px,85vw,405px);min-height:320px;
+}
+.app .rs33-timeline .rs6-route-bar + .rs56-day-empty {
+ background:#FFF;padding:30px 20px;
+ border-radius:0 0 14px 14px;
+}
+.app .rs33-timeline .rs-game-recap {
+ border:0;border-radius:0;
+ background:transparent;box-shadow:none;
+ border-top:2px solid #263D30;
+ padding:15px 2px 10px;margin:6px 0 10px;
+}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-stats {
+ gap:3px;
+}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-stats>div {
+ background:transparent;border-right:1px solid #DDE6DD;
+ padding:4px 11px;min-height:55px;
+}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-stats>div:first-child {padding-left:0;}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-stats>div:last-child {border:0;}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-heading {
+ margin:0 0 11px;
+}
+.app .rs33-timeline .rs-game-recap .rs-game-recap-flare {
+ background:#DCE9CD;color:#24422D;
+ border:0;border-radius:7px;
+ font-size:16px;width:30px;height:30px;flex-basis:30px;
+}
+.app .rs33-timeline .rs-game-recap .rs-game-xp-earned {
+ background:#E5EECF;color:#30523A;
+ border-radius:7px;
+}
+.app .rs33-timeline .rs59-player {
+ border-top:1px solid #E2E7E0;background:#FFF;
+}
+.app .rs33-timeline .rs33-list-title {
+ margin-top:20px;border-bottom:1px solid #E2E7E0;
+ padding-bottom:7px;
+}
+
+/* SECTION 05 — Community becomes a compact editorial feed. */
+.app .rc-community.rs-community-renewal .rs6-community-deck {
+ margin:0 -17px 17px;
+ padding:16px 17px 15px;
+ background:#E6EEE7;
+ border:0;border-bottom:1px solid #DBE5DB;
+}
+.app .rc-community.rs-community-renewal .rs6-community-id {
+ font-size:10px;letter-spacing:.13em;
+ font-weight:850;color:#506A59;
+ display:block;margin:0 0 7px;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-head {
+ margin:0 0 14px;gap:11px;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-head h1 {
+ letter-spacing:-.06em;font-size:26px;font-weight:850;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-write {
+ min-height:40px;border-radius:8px;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-controls {
+ gap:9px;margin:0;min-width:0;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-search {
+ background:#FFF;border:1px solid #D2DFD4;
+ border-radius:10px;min-height:44px;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-filter-row {
+ display:flex;justify-content:space-between;
+ align-items:center;gap:10px;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-category-wrap {
+ margin:0;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-categories button {
+ min-height:34px;border:0;border-radius:8px;
+ background:#F7FAF5;color:#476354;
+}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-categories button[aria-pressed=true] {
+ background:#1C3529;color:#FFF;
+}
+.app .rc-community.rs-community-renewal .rs6-community-feed-head {
+ display:flex;justify-content:space-between;align-items:baseline;
+ gap:8px;padding:0 2px 9px;
+ border-bottom:2px solid #263D30;margin:0;
+}
+.app .rc-community.rs-community-renewal .rs6-community-feed-head h2 {
+ font-size:17px;font-weight:830;letter-spacing:-.04em;
+ margin:0;
+}
+.app .rc-community.rs-community-renewal .rs6-community-feed-head span {
+ font-size:11px;color:#789080;white-space:nowrap;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal {
+ background:transparent;border:0;border-radius:0;
+ box-shadow:none;gap:0;overflow:visible;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-feed-row {
+ border:0;border-bottom:1px solid #DEE6DD;
+ background:transparent;border-radius:0;box-shadow:none;
+ margin:0;padding:16px 2px 13px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-feed-row:last-child {
+ border-bottom:1px solid #DEE6DD;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-main {
+ padding:0;gap:5px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid h2 {
+ font-size:15px;font-weight:790;line-height:1.44;
+ margin:4px 0 6px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid img {
+ width:71px;height:71px;border-radius:9px;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-card-grid p {
+ font-size:12px;line-height:1.5;-webkit-line-clamp:2;
+}
+.app .rc-community.rs-community-renewal .rc-feed-renewal .rc-tag {
+ color:#295847;background:#E9F0E6;
+}
+/* Component layout must remain usable on small Android split screens. */
+@media(max-width:355px) {
+ .app .rc-community.rs-community-renewal .rs6-community-deck {
+  margin-inline:-13px;padding-inline:13px;
+ }
+ .app .nearby.nearby-full .rs6-map-stage>.rs33-map-bar {
+  left:9px;right:9px;top:8px;
+ }
+ .app .nearby .rs6-map-stage .rs-gps-state {left:9px!important;}
+ .app .nearby .rs6-map-stage #rs-presence-btn {left:9px!important;}
+ .app .finance-page .rs6-finance-stage {padding:15px 12px;}
+ .app .bike-page .rs6-service-board .bike-consumables {gap:6px;}
+ .app .bike-page .rs6-service-board .bike-consumables .bike-tile {
+  grid-template-columns:41px minmax(0,1fr);padding:8px 5px;column-gap:4px;
+ }
+ .app .bike-page .rs6-service-board .bike-tile .bike-tile-icon {width:41px;height:41px;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .app .rs6-map-stage .rs33-map-bar,.app .rs6-finance-stage,
+ .app .rs6-garage-stage,.app .rs6-timeline-controller {
+  transition:none!important;animation:none!important;
+ }
+}
