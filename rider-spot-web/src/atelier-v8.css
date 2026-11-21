@@ -1,0 +1,223 @@
+/*
+ RIDER SPOT / ATELIER v8 — real screen components, not a recolor.
+ The core design-system, premium shell and native bridge are unchanged.
+*/
+:root{--a8-bg:#F7F5F0;--a8-fg:#1C2924;--a8-deep:#172923;--a8-orange:#ED8656;--a8-line:#DDE4DC;--a8-dim:#738378}
+body,.app,.app .workspace>main{background:var(--a8-bg);color:var(--a8-fg)}
+.app :is(.page,.trip-page){padding-inline:16px}
+.app :is(.page,.trip-page) h1{font-size:26px;font-weight:850;letter-spacing:-.07em;color:var(--a8-fg)}
+.app :is(.page,.trip-page) h2{font-weight:810;letter-spacing:-.05em}
+.app>header{background:var(--a8-bg)!important;border:0;border-bottom:1px solid #E0E4D9;box-shadow:none!important}
+.app>header :is(.brand,.brand a,.brand strong){color:var(--a8-fg)!important;font-weight:850;font-size:21px;letter-spacing:-.065em}
+.app>header .header-user{background:#E9EDE4!important;color:var(--a8-fg)!important;border:0!important;border-radius:12px}
+.app .brand:after,.app .brand:before,.app .brand-dot{display:none!important;content:none!important}
+.app .bottom-nav{background:#FFFEFB!important;border-top:1px solid #E1E5DD;box-shadow:0 -5px 15px rgba(15,29,20,.035)!important}
+.app .bottom-nav button{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;min-height:59px;color:#87938A;font-weight:610;font-size:10px}
+.app .bottom-nav button.active{background:none!important;color:#1B3026!important;font-weight:850}
+.app .bottom-nav button.active svg{color:#1B3026!important}
+.app .bottom-nav button:before,.app .bottom-nav button:after{display:none!important;content:none!important}
+.app :is(button,a,[role=button]):focus-visible,.app summary:focus-visible{outline:2px solid #0E8D7A!important;outline-offset:2px}
+.app button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+/* MAP: 1 floating location/weather row + tucked-away functional tool drawer. */
+.app .nearby.nearby-full .rs6-map-stage{position:relative;isolation:isolate;min-height:260px;flex:1 1 auto;overflow:hidden;width:100%}
+.app .nearby.nearby-full .rs6-map-stage>.map{position:relative;width:100%;height:100%;min-height:100%}
+.app .nearby.nearby-full .rs6-map-stage>.rs8-map-overlay{position:absolute;z-index:930;inset:10px 11px auto 11px;width:auto;display:flex;flex-direction:column;align-items:stretch;gap:0;margin:0;padding:0;background:none;border:0;box-shadow:none;pointer-events:none}
+.app .nearby.nearby-full .rs8-map-searchline{min-height:45px;display:flex;align-items:center;gap:8px;padding:4px 7px 4px 12px;background:rgba(255,254,249,.97);border:1px solid #DFE7DF;border-radius:11px;box-shadow:0 3px 15px rgba(19,36,27,.13);pointer-events:auto;min-width:0}
+.app .nearby.nearby-full .rs8-map-searchline .rs33-region-toggle{min-height:36px;max-width:142px;flex:none;margin:0;padding:4px 0;border:0;background:none;box-shadow:none;font-size:15px;font-weight:850;color:#15271F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .nearby.nearby-full .rs8-map-searchline .rs-weather-slot{flex:1;min-width:0;max-width:none;overflow:hidden;pointer-events:auto}
+.app .nearby.nearby-full .rs8-map-searchline .rs-weather-hud{height:34px;min-height:34px;width:100%;max-width:100%;border:0!important;border-radius:8px!important;background:#F0F4EF!important;box-shadow:none!important;overflow:hidden;white-space:nowrap;padding:3px 5px}
+.app .nearby.nearby-full .rs8-map-tools{align-self:flex-end;position:relative;margin:8px 0 0;z-index:940;pointer-events:auto}
+.app .nearby.nearby-full .rs8-map-tools-button{display:flex;align-items:center;justify-content:center;gap:7px;min-width:104px;min-height:43px;padding:8px 11px;border-radius:10px;background:#172923;color:#FFF;box-shadow:0 3px 14px rgba(23,41,35,.16);cursor:pointer;list-style:none;font-size:12px;font-weight:800}
+.app .nearby.nearby-full .rs8-map-tools-button::-webkit-details-marker{display:none}
+.app .nearby.nearby-full .rs8-map-tools[open] .rs8-map-tools-button{border-radius:10px 10px 0 0}
+.app .nearby.nearby-full .rs8-map-tools-panel{position:absolute;right:0;top:100%;padding:11px;min-width:min(312px,calc(100vw - 24px));background:#FFFEFB;border:1px solid #E2E9E0;border-radius:10px 0 11px 11px;box-shadow:0 14px 28px rgba(20,35,26,.23)}
+.app .nearby.nearby-full .rs8-map-tools-panel>p{font-size:11px;font-weight:780;color:#67816C;margin:0 0 8px}
+.app .nearby.nearby-full .rs8-map-tools-panel .rs33-map-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0;margin:0;background:none;overflow:visible;white-space:normal}
+.app .nearby.nearby-full .rs8-map-tools-panel .rs33-map-filters button{display:flex;justify-content:flex-start;align-items:center;gap:7px;width:100%;min-width:0;min-height:45px;padding:9px 10px;border:1px solid #E0E7DD;border-radius:8px;background:#F2F5EE;color:#53675A;box-shadow:none;font-size:12px}
+.app .nearby.nearby-full .rs8-map-tools-panel .rs33-map-filters button[aria-pressed=true]{background:#172923;color:#FFF;border-color:#172923}
+.app .nearby.nearby-full .rs8-map-tools-panel .rs33-map-filters .rs7-share-chip{background:#F2F5EE;color:#526C5D}
+.app .nearby.nearby-full .rs8-map-tools-panel .rs33-map-filters .rs7-share-chip.active{background:#E1F0E5;color:#147668}
+.app .nearby .rs6-map-stage .rs-gps-state{top:72px!important;left:11px!important;right:auto!important;max-width:calc(100% - 142px)!important;min-height:33px;border-radius:9px!important;z-index:900}
+.app .nearby .rs6-map-stage #rs-presence-btn{top:110px!important;left:11px!important;z-index:900;border-radius:9px!important}
+.app .nearby .rs6-map-stage .leaflet-top.leaflet-right{top:113px}
+.app .nearby .rs6-map-stage .locate{top:228px!important;right:11px!important;width:44px!important;height:44px!important;border-radius:11px!important}
+.app .nearby.nearby-full .ride-launch{flex:none;padding:8px 12px 10px;background:var(--a8-bg);border-top:1px solid #E0E6DB}
+.app .nearby.nearby-full .ride-launch button{background:#172923!important;color:#FFF!important;border-radius:11px!important;border:0!important;min-height:54px;font-weight:850;font-size:16px;box-shadow:none!important}
+.app .nearby.nearby-full .ride-launch button:before{display:none!important;content:none!important}
+/* FINANCE: standalone hero amount and integrated chart; goal and platform are editorial rows. */
+.app .finance-page .fin-page-head{margin:0 0 5px}
+.app .finance-page .fin-subnav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;background:none;border:0;border-bottom:1px solid #E0E7DD;border-radius:0;box-shadow:none;margin:0 0 12px;padding:0}
+.app .finance-page .fin-subnav .fin-subnav-btn{min-height:43px;border:0;background:none!important;border-radius:0;color:#839186;font-size:12px}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected{color:#1A3026;font-weight:850;background:none!important;box-shadow:none}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected:after{background:#1D3228;height:2px;left:28%;right:28%}
+.app .finance-page .rs8-finance-dashboard{gap:0}
+.app .finance-page .rs8-income-console{display:flex;flex-direction:column;gap:0;padding:9px 0 16px;background:none;border:0;box-shadow:none}
+.app .finance-page .rs8-console-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 16px}
+.app .finance-page .rs8-eyebrow{font-size:12px;color:#657C6C;font-weight:760}
+.app .finance-page .rs8-console-top .fin-period{display:flex;gap:3px;margin:0;padding:3px;border-radius:8px;background:#E7EDE5}
+.app .finance-page .rs8-console-top .fin-period-btn{min-height:36px;min-width:40px;padding:4px 9px;border:0;border-radius:6px;background:none;color:#6C8172;font-size:11px;font-weight:680}
+.app .finance-page .rs8-console-top .fin-period-btn.selected{background:#172923;border:0;color:#FFF;font-weight:840;box-shadow:none}
+.app .finance-page .rs8-console-value{display:flex;flex-direction:column;gap:5px;padding:0 0 18px;border-bottom:1px solid #D5E0D5}
+.app .finance-page .rs8-console-value span{font-size:12px;color:#718879}
+.app .finance-page .rs8-console-value strong{color:#172923;font-size:clamp(43px,12vw,63px);font-weight:865;letter-spacing:-.078em;line-height:1.12;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.app .finance-page .rs8-console-value small{font-size:10px;color:#8D9A8F}
+.app .finance-page .rs8-console-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;padding:15px 0;border-bottom:1px solid #D6E1D6}
+.app .finance-page .rs8-console-metrics>div{display:flex;flex-direction:column;gap:6px;padding:0 12px;border-right:1px solid #DFE6DB;min-width:0}
+.app .finance-page .rs8-console-metrics>div:first-child{padding-left:0}
+.app .finance-page .rs8-console-metrics>div:last-child{border:0;padding-right:0}
+.app .finance-page .rs8-console-metrics span{color:#7B8A80;font-size:11px}
+.app .finance-page .rs8-console-metrics strong{font-size:clamp(21px,5.7vw,28px);font-weight:835;letter-spacing:-.06em;color:#243A2C}
+.app .finance-page .rs8-trend-integrated{min-width:0;padding:17px 0 12px;background:none}
+.app .finance-page .rs8-trend-integrated header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 9px}
+.app .finance-page .rs8-trend-integrated header strong{font-size:15px;font-weight:815}
+.app .finance-page .rs8-trend-integrated header small{font-size:10px;color:#899A8B}
+.app .finance-page .rs8-trend-integrated .fin-chart{background:none;border:0;padding:0;margin:0;box-shadow:none}
+.app .finance-page .rs8-trend-integrated .fin-chart-point{background:none!important;border:0!important;outline:0!important;box-shadow:none!important}
+.app .finance-page .rs8-trend-integrated .fin-chart-point:focus-visible{outline:2px solid #14857E!important}
+.app .finance-page .rs8-trend-integrated .fin-chart-track{background:#E0E9DE;border:0;box-shadow:none!important;border-radius:5px 5px 2px 2px}
+.app .finance-page .rs8-trend-integrated .fin-chart-point.selected .fin-chart-track{background:#DBECD9!important;border:0!important;box-shadow:none!important}
+.app .finance-page .rs8-console-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border-top:1px solid #D5DFD5;padding:15px 0 0}
+.app .finance-page .rs8-console-actions button{min-height:48px;min-width:0;border-radius:9px;box-shadow:none!important;font-weight:790;font-size:12px}
+.app .finance-page .rs8-console-actions .fin-primary{background:#172923!important;border:1px solid #172923!important;color:#FFF!important}
+.app .finance-page .rs8-console-actions .fin-secondary{background:transparent!important;border:1px solid #D2DFD3!important;color:#234337!important}
+.app .finance-page .rs8-goal-progress,.app .finance-page .rs8-platform-ledger{padding:18px 0;background:none;border:0;border-top:1px solid #CCD8CC;border-radius:0;box-shadow:none;margin:0}
+.app .finance-page .rs8-section-caption{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.app .finance-page .rs8-section-caption h2{font-size:15px;font-weight:800}
+.app .finance-page .rs8-section-caption small{font-size:10px;color:#88998A}
+.app .finance-page .rs8-section-caption button{border:0;background:none;color:#487C62;font-size:11px}
+.app .finance-page .rs8-goal-numbers{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.app .finance-page .rs8-goal-numbers strong{font-size:clamp(24px,6.8vw,32px);font-weight:845;letter-spacing:-.062em}
+.app .finance-page .rs8-goal-numbers small{font-size:11px;color:#88998A}
+.app .finance-page .rs8-goal-progress .fin-goal-track{height:6px;margin:11px 0;background:#E1E8DE;border-radius:99px}
+.app .finance-page .rs8-goal-progress .fin-goal-track>div{background:#ED8656}
+.app .finance-page .rs8-goal-detail,.app .finance-page .rs8-efficiency{margin:0;background:none;border:0;border-top:1px solid #DEE7DB;border-radius:0;padding:0;box-shadow:none}
+.app .finance-page .rs8-efficiency summary,.app .finance-page .rs8-goal-detail summary{min-height:43px;padding:8px 0;font-size:12px;color:#547564}
+.app .finance-page .rs8-efficiency summary{display:flex;justify-content:space-between;gap:9px}
+.app .finance-page .rs8-efficiency summary span{font-size:10px;color:#91A195}
+.app .finance-page .rs8-platform-ledger .fin-bar-track{height:6px;background:#E1E8DF}
+.app .finance-page .rs8-analysis{gap:14px}
+.app .finance-page .rs8-analysis-lead,.app .finance-page .rs8-settlement-hero{padding:19px 17px;background:#172923;border:0;border-radius:14px;box-shadow:none;color:#FFF}
+.app .finance-page .rs8-analysis-lead .rs8-eyebrow{color:#BCD6C5;font-size:11px}
+.app .finance-page .rs8-analysis-main{display:block;margin:7px 0 19px;font-size:clamp(37px,10vw,52px);font-weight:850;letter-spacing:-.07em;line-height:1.13;color:#FFF}
+.app .finance-page .rs8-analysis-balance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:13px 0 0;border-top:1px solid rgba(255,255,255,.2)}
+.app .finance-page .rs8-analysis-balance>div,.app .finance-page .rs8-settlement-outstanding{display:flex;flex-direction:column;gap:5px}
+.app .finance-page .rs8-analysis-balance span,.app .finance-page .rs8-settlement-hero span{font-size:11px;color:#C1D4C7}
+.app .finance-page .rs8-analysis-balance strong{font-size:clamp(17px,4.5vw,23px);color:#FFF;font-weight:805}
+.app .finance-page .rs8-analysis-extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:4px 0 17px;border-bottom:1px solid #DEE6DA}
+.app .finance-page .rs8-analysis-extras>div{min-width:0;display:flex;flex-direction:column;gap:7px;padding:0 9px;border-right:1px solid #DDE6D9}
+.app .finance-page .rs8-analysis-extras>div:first-child{padding-left:0}
+.app .finance-page .rs8-analysis-extras>div:last-child{border:0}
+.app .finance-page .rs8-analysis-extras span{font-size:10px;color:#849488}
+.app .finance-page .rs8-analysis-extras strong{font-size:clamp(13px,3.7vw,18px);font-weight:800;overflow-wrap:anywhere}
+.app .finance-page .rs8-analysis-trend,.app .finance-page .rs8-analysis-spending{background:none;border:0;box-shadow:none;padding:8px 0}
+.app .finance-page .rs8-analysis-trend header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}
+.app .finance-page .rs8-analysis-trend .fin-chart{border:0;box-shadow:none;margin:0;padding:0}
+.app .finance-page .rs8-analysis-trend .fin-chart-point{border:0!important;box-shadow:none!important;background:none!important;outline:0!important}
+.app .finance-page .rs8-analysis-spending{border-top:1px solid #D8E4D6;padding-top:17px}
+.app .finance-page .rs8-analysis-spending h2{font-size:16px;margin-bottom:9px}
+.app .finance-page .rs8-analysis-spending .fin-cost-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;border-bottom:1px solid #E0E8DD}
+.app .finance-page .rs8-zero-costs summary{padding:10px 0;color:#839687;font-size:11px}
+.app .finance-page .rs8-zero-maintenance{border:0;border-top:1px solid #DFE6DB;background:none;margin:0;padding:0}
+.app .finance-page .rs8-zero-maintenance summary{font-size:12px;padding:12px 0;color:#61796A}
+.app .finance-page .rs8-zero-maintenance-link{width:100%;min-height:45px;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 1px;background:none;border:0;border-bottom:1px solid #DEE6DE;color:#425E4D}
+.app .finance-page .rs8-zero-maintenance-link strong{font-size:12px}
+.app .finance-page .rs8-zero-maintenance-link small{color:#8B9D90;font-size:10px}
+.app .finance-page .rs8-settlement-hero{display:flex;flex-direction:column;gap:10px}
+.app .finance-page .rs8-settlement-outstanding strong{font-size:clamp(33px,9vw,46px);font-weight:855;color:#FFF;letter-spacing:-.06em}
+.app .finance-page .rs8-settlement-confirmed{display:flex;justify-content:space-between;align-items:center;gap:9px;border-top:1px solid rgba(255,255,255,.2);padding-top:10px}
+.app .finance-page .rs8-settlement-confirmed strong{font-size:17px;color:#FFF}
+/* BIKE: a real showroom-style cockpit instead of rounded nested cards. */
+.app .bike-page .bike-heading{margin:0 0 12px}
+.app .bike-page .bike-heading h1{font-size:27px;font-weight:850}
+.app .bike-page .rs8-bike-hero.rs6-garage-stage{min-height:0;display:flex;flex-direction:column;gap:0;margin:0;padding:17px 15px 14px;background:#172923;border:0;border-radius:15px;box-shadow:none;color:#FFF;isolation:isolate;overflow:visible}
+.app .bike-page .rs8-bike-hero .rs8-bike-feature{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(103px,1fr);gap:3px;align-items:center;margin:0;padding:0;min-height:166px;background:none;border:0;box-shadow:none}
+.app .bike-page .rs8-bike-hero .bike-vehicle-data{grid-column:1;grid-row:1;min-width:0;color:#FFF}
+.app .bike-page .rs8-bike-kicker{display:block;font-size:10px;font-weight:770;color:#A7C9B6;margin:0 0 7px}
+.app .bike-page .rs8-bike-hero .bike-vehicle-data h2{font-size:clamp(14px,4vw,18px);font-weight:820;color:#FFF!important;line-height:1.35;margin:0 0 16px}
+.app .bike-page .rs8-odo-label{display:block;color:#A9C2B1;font-size:10px;margin-bottom:4px}
+.app .bike-page .rs8-bike-hero .bike-distance{display:flex;align-items:baseline;gap:5px;color:#FFF!important;font-size:clamp(26px,7.8vw,41px);font-weight:850;white-space:nowrap;letter-spacing:-.07em}
+.app .bike-page .rs8-bike-hero .bike-distance small{font-size:12px;color:#C0D2C5}
+.app .bike-page .rs8-odo-updated{display:block;font-size:10px;color:#98AE9D;line-height:1.45;margin-top:5px}
+.app .bike-page .rs8-bike-hero .bike-vehicle-art{grid-column:2;grid-row:1;width:127%;max-width:none;height:auto;max-height:187px;object-fit:contain;margin-left:-12%;filter:drop-shadow(0 10px 8px rgba(0,0,0,.28));transform:translateY(5px)}
+.app .bike-page .rs8-bike-feature-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid rgba(255,255,255,.17)}
+.app .bike-page .rs8-bike-feature-bottom>span{font-size:10px;color:#AFC8B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .bike-page .rs8-bike-settings{position:relative;flex:none}
+.app .bike-page .rs8-bike-settings summary{list-style:none;cursor:pointer;color:#FFF;font-size:11px;font-weight:765;padding:7px}
+.app .bike-page .rs8-bike-settings summary::-webkit-details-marker{display:none}
+.app .bike-page .rs8-bike-settings .bike-vehicle-tools{position:absolute;z-index:30;top:100%;right:0;min-width:230px;display:flex;flex-direction:column;gap:6px;padding:9px;background:#FFFEFB;border:1px solid #D6E3D6;border-radius:10px;box-shadow:0 13px 26px rgba(11,28,17,.3);margin:0}
+.app .bike-page .rs8-bike-settings .bike-outline-action{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;width:100%;background:#EFF4EC;border:0!important;border-radius:8px!important;color:#2E5840;font-size:12px}
+.app .bike-page .rs8-bike-hero .bike-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 0 0;margin:0;border-top:1px solid rgba(255,255,255,.17)}
+.app .bike-page .rs8-bike-hero .bike-actions button{min-height:49px;border-radius:10px;box-shadow:none!important;font-size:12px;font-weight:785}
+.app .bike-page .rs8-bike-hero .bike-actions button:first-child{background:#ED8656!important;border:1px solid #ED8656!important;color:#16251E!important}
+.app .bike-page .rs8-bike-hero .bike-actions button:last-child{background:none!important;border:1px solid rgba(255,255,255,.32)!important;color:#FFF!important}
+.app .bike-page .rs8-service-alerts{margin:13px 0 21px;padding:12px 13px;background:#FBE6DB;border:0;border-radius:10px;color:#633B2B}
+.app .bike-page .rs8-alerts-head{display:flex;justify-content:space-between;align-items:center;gap:9px;margin:0 0 9px}
+.app .bike-page .rs8-alerts-head strong{font-size:13px;font-weight:820}
+.app .bike-page .rs8-alerts-head span{font-size:10px;color:#A8664D}
+.app .bike-page .rs8-alerts-items{display:flex;gap:6px;flex-wrap:wrap}
+.app .bike-page .rs8-alert-chip{display:inline-flex;align-items:center;gap:7px;min-height:37px;padding:8px 10px;border:1px solid #EBCAB8;border-radius:7px;background:#FFF9F5;color:#884831;font-size:11px;font-weight:770}
+.app .bike-page .rs8-alert-chip span{font-size:9px;color:#B87358}
+.app .bike-page .rs6-service-board{margin:20px 0 5px}
+.app .bike-page .rs6-service-board .bike-section-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px}
+.app .bike-page .rs6-service-board .bike-section-head h2{font-size:18px;font-weight:810}
+.app .bike-page .rs6-service-board .bike-consumables{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;background:#FFFEFB;border:1px solid #DDE5D9;border-radius:11px;overflow:hidden}
+.app .bike-page .rs6-service-board .bike-tile{min-width:0;min-height:109px;display:grid;grid-template-columns:47px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;align-items:center;gap:3px 7px;padding:11px 8px;margin:0;background:transparent!important;border:0!important;border-right:1px solid #E1E8DE!important;border-bottom:1px solid #E1E8DE!important;border-radius:0!important;box-shadow:none!important;text-align:left}
+.app .bike-page .rs6-service-board .bike-tile:nth-child(2n){border-right:0!important}
+.app .bike-page .rs6-service-board .bike-tile:nth-last-child(-n+2){border-bottom:0!important}
+.app .bike-page .rs6-service-board .bike-tile-icon{grid-column:1;grid-row:1/3;width:47px;height:47px;margin:0;display:grid;place-items:center}
+.app .bike-page .rs6-service-board .bike-tile-icon :is(img,svg){max-width:100%;max-height:100%;object-fit:contain;image-rendering:auto}
+.app .bike-page .rs6-service-board .bike-tile-name{grid-column:2;grid-row:1;font-size:11px;font-weight:790;line-height:1.3;color:#173326}
+.app .bike-page .rs6-service-board .bike-tile-status{grid-column:2;grid-row:2;min-width:0;margin:0;padding:0;background:none!important;font-size:10px;font-weight:680;color:#819385;line-height:1.35;text-align:left;overflow-wrap:anywhere}
+.app .bike-page .rs6-service-board .bike-tile-status.bike-state-overdue{color:#C35540;font-weight:800}
+.app .bike-page .rs6-history-board{margin:20px 0 0;padding:0;border:0;border-top:2px solid #1D3528;background:none}
+.app .bike-page .rs6-history-board .bike-history-head{margin:0 0 4px;padding-top:13px}
+.app .bike-page .rs6-history-board .bike-history-row{min-height:60px;margin:0;padding:9px 1px;border:0;border-bottom:1px solid #E0E7DC;border-radius:0;background:none;box-shadow:none}
+/* TIMELINE: compact date rail + ride metrics and route map; history remains available */
+.app .rs33-timeline .rs33-week-head{background:none;border:0;margin:0;padding:0 0 7px}
+.app .rs33-timeline .rs6-timeline-controller{margin:0 0 10px;padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+.app .rs33-timeline .rs33-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;padding:0 0 9px;border:0;border-bottom:1px solid #DCE5D9;background:none;border-radius:0}
+.app .rs33-timeline .rs33-week button{min-height:61px;padding:4px 1px;background:none;border:0;border-radius:8px}
+.app .rs33-timeline .rs33-week button[aria-pressed=true]{background:#172923;color:#FFF}
+.app .rs33-timeline .rs-game-recap{margin:0 0 14px;padding:12px 0;border:0;border-bottom:1px solid #DCE5D9;border-radius:0;background:none;box-shadow:none}
+.app .rs33-timeline .rs-game-recap-flare{display:none!important}
+.app .rs33-timeline .rs-game-recap-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.app .rs33-timeline .rs-game-recap-stats>div{padding:3px 10px;border:0;border-right:1px solid #E1E7DC;background:none;border-radius:0}
+.app .rs33-timeline .rs-game-recap-stats>div:first-child{padding-left:0}
+.app .rs33-timeline .rs-game-recap-stats>div:last-child{border:0}
+.app .rs33-timeline .rs7-map-label{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 1px 9px;background:none}
+.app .rs33-timeline .rs7-map-label strong{font-size:16px;font-weight:800}
+.app .rs33-timeline .rs56-day-overview{margin:0 0 12px;background:none;border:0;box-shadow:none}
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full){border:1px solid #E0E6DC;border-radius:11px;background:#FFF;overflow:hidden;margin:0;box-shadow:none}
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full) .rs56-day-map{height:clamp(247px,67vw,320px);min-height:247px}
+.app .rs33-timeline .rs59-player .rs59-play{background:#172923;border:0;border-radius:9px;color:#FFF;min-height:44px}
+/* COMMUNITY: filters are collapsed; feed becomes the screen instead of a form. */
+.app .rc-community.rs-community-renewal .rs6-community-deck{margin:0 -16px 10px;padding:13px 16px 10px;background:none;border:0;border-bottom:1px solid #DBE4D9}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-head{margin:0 0 5px;align-items:center}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-head h1{font-size:26px;font-weight:855}
+.app .rc-community.rs-community-renewal .rs6-community-deck .rc-write{min-height:41px;background:#172923;border:0;border-radius:8px;color:#FFF;font-size:12px}
+.app .rc-community.rs-community-renewal .rs8-community-tools{background:none;border:0;margin:0;padding:0}
+.app .rc-community.rs-community-renewal .rs8-community-trigger{display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none;cursor:pointer;min-height:43px;color:#335E46;font-weight:770;font-size:12px}
+.app .rc-community.rs-community-renewal .rs8-community-trigger::-webkit-details-marker{display:none}
+.app .rc-community.rs-community-renewal .rs8-community-trigger small{font-size:10px;color:#89998A;font-weight:620}
+.app .rc-community.rs-community-renewal .rs8-community-tools .rc-controls{display:flex;flex-direction:column;gap:8px;margin:7px 0;background:none;padding:0}
+.app .rc-community.rs-community-renewal .rs8-community-tools .rc-search{min-height:43px;background:#FFF;border:1px solid #DDE5DB;border-radius:9px;box-shadow:none}
+.app .rc-community.rs-community-renewal .rs8-community-tools .rc-categories button{background:#FFF;border:1px solid #DDE6DA;border-radius:7px;font-size:11px;min-height:35px}
+.app .rc-community.rs-community-renewal .rs8-community-tools .rc-categories button[aria-pressed=true]{background:#172923;color:#FFF;border-color:#172923}
+.app .rc-community.rs-community-renewal .rs6-community-feed-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 1px 9px;border-bottom:2px solid #172923}
+.app .rc-community.rs-community-renewal .rs6-community-feed-head h2{font-size:17px;font-weight:825}
+.app .rc-community.rs-community-renewal .rc-feed-renewal.rc-card-list{display:flex;flex-direction:column;gap:0;background:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0;overflow:visible}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal.rc-card-list>.rc-card.rc-feed-row{display:block;min-height:0;background:transparent!important;border:0!important;border-bottom:1px solid #DCE4D8!important;border-radius:0!important;box-shadow:none!important;margin:0!important;padding:14px 1px 12px!important}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-main{margin:0!important;padding:0!important;min-height:0;background:none;border:0;box-shadow:none}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-bottom{margin:5px 0 0!important;padding:0!important;background:none;border:0!important}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid h2{font-size:15px;font-weight:810;color:#172923;line-height:1.4;margin:4px 0}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid img{width:69px;height:69px;border-radius:8px}
+@media(max-width:360px){
+ .app :is(.page,.trip-page){padding-inline:13px}
+ .app .nearby.nearby-full .rs6-map-stage>.rs8-map-overlay{left:8px;right:8px}
+ .app .nearby.nearby-full .rs8-map-searchline .rs33-region-toggle{max-width:115px;font-size:13px}
+ .app .finance-page .rs8-console-value strong{font-size:42px}
+ .app .bike-page .rs6-service-board .bike-tile{grid-template-columns:41px minmax(0,1fr);padding:9px 5px;gap:3px 5px}
+ .app .bike-page .rs6-service-board .bike-tile-icon{width:41px;height:41px}
+ .app .rc-community.rs-community-renewal .rs6-community-deck{margin-inline:-13px;padding-inline:13px}
+}
+@media(prefers-reduced-motion:reduce){.app :is(button,a,[role=button]){transition:none!important;animation:none!important}}
