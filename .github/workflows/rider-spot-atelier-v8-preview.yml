@@ -1,0 +1,84 @@
+name: Rider Spot Atelier v8 isolated preview acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-atelier-v8-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_ORIGIN: https://rider-spot-atelier-v8-preview.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Validate deployed v7 CSS, immutable hash, recovery guard and older client assets
+        run: |
+          set -euo pipefail
+          curl --fail --retry 2 --retry-delay 2 -sSL "$RIDER_ORIGIN/" >/tmp/rider-atelier-v8-preview.html
+          curl --fail --retry 2 --retry-delay 2 -sSL "$RIDER_ORIGIN/sw.js" >/tmp/rider-atelier-v8-preview-sw.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html=fs.readFileSync('/tmp/rider-atelier-v8-preview.html','utf8');
+          const sw=fs.readFileSync('/tmp/rider-atelier-v8-preview-sw.js','utf8');
+          const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(release.hash,'7ba6f9cb1359');
+          assert.ok(html.includes('rs-recovery-guard-v217'));
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/app.mjs'));
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/atelier-v8.css'));
+          assert.ok(html.includes('rev=20261121-v8'));
+          assert.ok(sw.includes('rider-spot-shell-'+release.hash));
+          const paths=release.files.filter(p=>p.startsWith('/assets/'));
+          assert.equal(paths.length,13);
+          for(const path of paths){
+            const r=await fetch(process.env.RIDER_ORIGIN+path,{signal:AbortSignal.timeout(45000)});
+            assert.equal(r.status,200,path+' unavailable');
+            assert.equal(r.headers.get('x-rs-release'),release.hash);
+            const bytes=await r.arrayBuffer();
+            assert.ok(bytes.byteLength>100,path+' truncated');
+            console.log('ATELIER_V8_ASSET_PASS',path,bytes.byteLength);
+          }
+          // Preserve old v4 and v5 app hashes across visual releases.
+          for(const hash of ['8eb44596629f','3305352a56bc','e30517cbf40f','73e1a8532289','7d1f0f0bb6bc','bbd2531a1e8d']){
+            const old=await fetch(process.env.RIDER_ORIGIN+'/assets/rider-spot-'+hash+'/app.mjs',{signal:AbortSignal.timeout(45000)});
+            assert.equal(old.status,200,'previous '+hash+' app JS must remain available');
+          }
+          const css=await fetch(process.env.RIDER_ORIGIN+'/rider-spot-visual-v2-20261121.css?rev=20261121-v8',{signal:AbortSignal.timeout(30000)});
+          assert.equal(css.status,200);
+          assert.equal(css.headers.get('x-rs-design'),'atelier-v8-20261121');
+          const style=await css.text();
+          assert.ok(style.includes('ATELIER v8')&&style.length>10000);
+          console.log('ATELIER_V8_PREVIEW_ASSETS_PASS',release.hash);
+          NODE
+      - run: npx playwright install chromium
+      - name: Test visual hierarchy, 5 tabs, 3 widths, no reload or JS errors
+        env:
+          RIDER_VISUAL_URL: https://rider-spot-atelier-v8-preview.jazzhjm.workers.dev
+        run: node tests/atelier-v8-browser.cjs
+      - name: Test synthetic finance/maintenance CRUD and Android back navigation
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot-atelier-v8-preview.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
+          RIDER_SCREENSHOTS: /tmp/rider-atelier-v8-preview-records
+        run: node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-atelier-v8-preview-screens
+          path: |
+            /tmp/rider-spot-atelier-v8
+            /tmp/rider-atelier-v8-preview-records
+          retention-days: 7
+          if-no-files-found: warn
+# QA correction: run DOM checks only inside Playwright page context
