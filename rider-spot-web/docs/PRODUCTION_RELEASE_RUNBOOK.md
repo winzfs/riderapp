@@ -308,3 +308,48 @@ Live production acceptance: https://github.com/winzfs/riderapp/actions/runs/4488
 Never delete old KV hashed scripts, older HTML/Service Worker cache keys, SQLite sessions or Supabase records as part of a visual rollback.
 GPS map camera, Android WebView/bridge, account OAuth, trip status, backend services and user data were not modified.
 Automated browser/native bridge testing does not replace real S24+ extended ride, screen lock and split-screen acceptance.
+
+
+## Urban Editorial v12 map · timeline · neighborhood release — 2026-11-22 KST
+
+Production Worker `rider-spot` is deployed at **100%** to version
+`590e611d-46b3-4f18-9eed-e0a4b4ed4a1f` (deployment
+`0c1071a9-c68e-47f9-826a-6270e99bb4a7`). Immutable app hash
+`57888bba6c49` is pinned to compiled frontend snapshot
+`f768d1bad5bab9a8efe75979cc886864063cc659`.
+
+- Map: in-map region/weather command row; separate single-choice map layers and explicit
+  location-sharing switch; existing Leaflet map camera, GPS and report bindings retained.
+- Timeline: daily recap before route; selected-date route heading with image export;
+  independently operable event/time toggles and overflow road matching; saved rides and
+  playback logic unchanged.
+- Neighborhood: content-first feed, area/date above each actual post, compact collapsed
+  search/filter, editorial separators, no synthetic post metadata.
+- Design: light surfaces, restrained blue primary, unified bottom nav and touch targets,
+  scoped responsive rules for 320–412px and reduced-motion support.
+- Backend and original Worker script were **not** modified. The production frontend
+  `ASSETS` service binding alone changed from `rider-spot-recap-v5-assets` to
+  `rider-spot-v12-preview-assets`. `LEGACY` remains `rider-spot-api-core-qa`,
+  `DESIGN` remains `rider-spot-atelier-v8`. Existing KV data, user records,
+  old hashed bundles, Android SQLite, OAuth, and Service Worker cache keys were not cleared.
+- Isolated pre-release acceptance (320/393/412px 5 tabs, no reload, no page exceptions,
+  authenticated local fixtures, historical asset compatibility):
+  https://github.com/winzfs/riderapp/actions/runs/44937369496
+- Public production HTTP + browser acceptance **PASSED**:
+  https://github.com/winzfs/riderapp/actions/runs/44937700730
+  (screenshots attached to that workflow run).
+- Unit tests: 203 PASS; finance, odometer, maintenance, route, WebView update safety
+  and image recap regression CI passed.
+
+**Immediate non-destructive rollback:** deploy the previously verified
+`rider-spot` version **`83a8d6f6-e299-4c89-adc9-33a89711129f`**
+with 100% traffic using Cloudflare Workers deployments API. Keep all asset workers,
+KV keys and device data unchanged. The previous pinned v5 frontend release
+`0edfbcdd3450` remains accessible to existing WebView sessions. New users may
+need to close/reopen the app to refresh their cached shell; do not force-delete
+Service Worker caches or trip records.
+
+**Remaining real-device acceptance:** a personal account OAuth login, long live
+GPS ride through background/screen lock, native-back navigation and Samsung split
+screen on a physical Galaxy S24+. Synthetic browser QA alone cannot certify
+those physical/session-dependent behaviors.
