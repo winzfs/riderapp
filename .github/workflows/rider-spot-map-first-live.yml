@@ -1,0 +1,72 @@
+name: Rider Spot MAP FIRST live production verification
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-map-first-live.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_LIVE_URL: https://rider-spot.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Assert immutable new release and non-destructive old assets
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const origin=process.env.RIDER_LIVE_URL;
+          const hash='c01b958b8226';
+          const oldHash='e57e73fe3534';
+          assert.equal(JSON.parse(readFileSync('prebuilt/release.json','utf8')).hash,hash,'Pinned repository release must not change');
+          const get=async path=>{
+            const r=await fetch(origin+path,{headers:{'cache-control':'no-cache'},redirect:'follow'});
+            assert.equal(r.status,200,path+' status '+r.status);
+            return r.text();
+          };
+          const html=await get('/');
+          assert.ok(html.includes('/assets/rider-spot-'+hash+'/app.mjs'),'Live app shell still old release');
+          assert.ok(html.includes('rs-recovery-guard-v217'),'Android recovery guard lost');
+          const [app,css,tools,reports,old,sw]=await Promise.all([
+            get('/assets/rider-spot-'+hash+'/app.mjs'),
+            get('/assets/rider-spot-'+hash+'/curated-v9.css'),
+            get('/assets/rider-spot-'+hash+'/workspace-tools.js'),
+            get('/assets/rider-spot-'+hash+'/map-reports.js'),
+            get('/assets/rider-spot-'+oldHash+'/curated-v9.css'),
+            get('/sw.js'),
+          ]);
+          for(const marker of ['rs-map-v2-header','rs-map-v2-status-row','rs-map-v2-actions','rs-map-v2-report','rs-map-v2-share-chip'])
+            assert.ok(app.includes(marker),'Missing new map structure '+marker);
+          assert.ok(css.includes('MAP FIRST v2'),'New layout CSS missing');
+          assert.ok(css.includes('Coordinate picking owns'),'Location picker protection missing');
+          assert.ok(css.includes('rs-map-v2-presence-sheet'),'Modal sheet CSS missing');
+          assert.ok(css.includes('never show a second floating map legend'),'Map legend suppression missing');
+          assert.ok(tools.includes('map-ui-polish')||tools.includes('rs-map-v2-presence-sheet'),'Presence adapter not shipped');
+          assert.ok(reports.includes('legend.hidden'),'Rider source attribution notice regression');
+          assert.ok(old.length>50000,'Previously served old stylesheet no longer accessible');
+          assert.ok(sw.includes(hash),'SW immutable hash mismatch');
+          console.log('MAP_FIRST_LIVE_HTTP_PASS',JSON.stringify({hash,oldHash,appBytes:app.length,cssBytes:css.length}));
+          NODE
+      - run: npm ci
+      - run: npx playwright install chromium
+      - name: Real live map UI and user interactions (6 viewports)
+        run: RIDER_MAP_URL="$RIDER_LIVE_URL" node tests/map-first-ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-map-first-live-screenshots
+          path: /tmp/riderspot-map-first-ui
+          retention-days: 14
+          if-no-files-found: warn
