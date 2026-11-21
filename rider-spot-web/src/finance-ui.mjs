@@ -571,7 +571,6 @@ export function createFinance(R, client) {
       const coverageLabel=complete?"운행 기록 기준":usable?"일부 운행만 기록됨":"기록 없음";
       return h("div",{className:"fin-stack rs6-finance-dashboard"},
         h("section",{className:"rs6-finance-stage"},
-          h("div",{className:"rs6-finance-stage-id"},h("span",null,"EARNINGS / 01"),h("strong",null,periodLabel)),
         h("div",{className:"fin-period"},
           scopeButton("today","오늘"),scopeButton("week","최근 7일"),scopeButton("month","월간")),
         scope==="month"&&h("div",{className:"fin-month-head"},

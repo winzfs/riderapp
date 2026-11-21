@@ -1297,7 +1297,6 @@ export function mountApplication({
       { className: "page rc-community rc-home rc-community-v32 rs-community-renewal" },
       datalist,
       H("section",{className:"rs6-community-deck"},
-        H("span",{className:"rs6-community-id"},"LOCAL / 04"),
       H(
         "div",
         { className: "rc-head" },
@@ -1510,7 +1509,7 @@ export function mountApplication({
           )
         : null,
       H("div",{className:"rs6-community-feed-head"},
-        H("h2",null,isNews?"라이더 뉴스":"동네 이야기"),
+        H("h2",null,isNews?"업계 새소식":"최근 글"),
         H("span",null,rows.length+"개 소식")),
       rows.length
         ? H(
@@ -2026,48 +2025,37 @@ export function mountApplication({
   function MapBar({ layer, choose, sharing, busy, toggle }) {
     return rs33J(
       "div",
-      { className: "rs33-map-bar" },
+      { className: "rs33-map-bar rs7-map-controls" },
       rs33J(
         "div",
         { className: "rs33-map-bar-top" },
         rs33J("h1", { className: "sr-only" }, "지도"),
         rs33J(RegionSelector),
-        rs33J(
-          "button",
-          {
-            type: "button",
-            className: "rs33-map-share" + (sharing ? " active" : ""),
-            disabled: busy,
-            onClick: toggle,
-          },
-          rs33J("span", { className: "rs-status-dot", "aria-hidden": true }),
-          busy ? "확인 중" : sharing ? "공유 중" : "공유 꺼짐",
-        ),
+        // The weather-bar extension only manages children of this React host.
+        rs33J("div", { className: "rs-weather-slot" }),
       ),
       rs33J(
         "div",
-        {
-          className: "rs33-map-filters",
-          role: "group",
-          "aria-label": "지도에 표시할 항목",
+        { className: "rs33-map-filters", role: "group", "aria-label": "지도 도구 및 표시 항목" },
+        rs33J("button", {
+          type: "button",
+          className: "rs33-map-share rs7-share-chip" + (sharing ? " active" : ""),
+          disabled: busy,
+          "aria-label": busy ? "위치 공유 확인 중" : sharing ? "위치 공유 중, 끄기" : "위치 공유 꺼짐, 켜기",
+          onClick: toggle,
         },
+          rs33J("span", { className: "rs-status-dot", "aria-hidden": true }),
+          busy ? "확인 중" : sharing ? "공유 중" : "공유 꺼짐",
+        ),
         ...rs33LayerItems.map(([id, label]) =>
           rs33J(
             "button",
-            {
-              type: "button",
-              key: id,
-              "aria-pressed": layer === id,
-              onClick: () => choose(id),
-            },
+            { type: "button", key: id, "aria-pressed": layer === id, onClick: () => choose(id) },
             rs33J(Icon, { name: id, size: 17 }),
             label,
           ),
         ),
       ),
-      // React owns the placeholder; the weather extension owns ONLY its children.
-      // Never append unmanaged nodes directly to React's map bar.
-      rs33J("div", { className: "rs-weather-slot" }),
     );
   }
   function rs33OpenMap(record, kind = "places") {

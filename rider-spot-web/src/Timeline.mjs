@@ -849,7 +849,6 @@ export function createTimeline(S, Zo, Income) {
         ),
       ),
       rs33J("section",{className:"rs6-timeline-controller"},
-      rs33J("div",{className:"rs6-timeline-date-title"},"DAILY ROUTES / 03"),
       rs33J(
         "div",
         { className: "rs33-week-head" },
@@ -923,12 +922,13 @@ export function createTimeline(S, Zo, Income) {
             }),
           )
         : null,
+      !allDays ? rs33J(DayRideCard, { history: ride.history, day, income:rs33J(Income,{key:day,day,user,login}) }) : null,
       !allDays && daily
         ? rs33J("section", {
             className: "rs56-day-overview rs-renewal-route", "aria-label": "하루 통합 운행 경로",
           },
-            rs33J("div",{className:"rs6-route-bar"},
-              rs33J("strong",null,"YOUR ROUTE"),
+            rs33J("div",{className:"rs7-map-label"},
+              rs33J("strong",null,"주행 경로"),
               rs33J("span",null,day.replace(/-/g,"."))),
             daily.route.points.length
               ? rs33J(
@@ -1043,7 +1043,6 @@ export function createTimeline(S, Zo, Income) {
           )
         : null,
 
-      !allDays ? rs33J(DayRideCard, { history: ride.history, day, income:rs33J(Income,{key:day,day,user,login}) }) : null,
       rs33J(
         "div",
         { className: "rs33-list-title" },
