@@ -43,7 +43,11 @@ jobs:
           const root='dist/assets/rider-spot-'+r.hash+'/';
           const js=fs.readFileSync(root+'app.mjs','utf8');
           const css=fs.readFileSync(root+'daily-timeline.css','utf8');
-          for(const key of ['타임라인','라이더스팟','주행 경로','rs-recap-timeline-action','rs-recap-sheet','rs-recap-launch']){
+          const source=fs.readFileSync('src/ride-recap.mjs','utf8');
+          for(const word of ['타임라인','라이더스팟','주행 경로']) {
+            assert.ok(source.includes(word),'Korean poster text missing: '+word);
+          }
+          for(const key of ['rs-recap-timeline-action','rs-recap-sheet','rs-recap-launch']) {
             assert.ok(js.includes(key)||css.includes(key),'Missing recap element '+key);
           }
           console.log('RECAP_BUNDLE_PASS',r.hash);
