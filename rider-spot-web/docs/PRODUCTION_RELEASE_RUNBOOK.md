@@ -8,7 +8,11 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active native-first **v4 React** front: `543b2213-2f6c-4f3b-9ae6-bd2a359675a9`
+- Active **Urban Editorial v5** front: `7db2636b-7944-4fe3-aecc-7ed72727e4a5` (100%)
+- Active v5 asset gateway: `rider-spot-urban-v5-assets`, version `d243ac1d-2c2c-42f8-a2b6-038636356906`
+- Active v5 CSS Worker: `rider-spot-urban-v5`, version `4ccb89fc-5d24-441b-8755-8dbc2e340856`
+- Immutable v5 bundle: `3305352a56bc`, pinned commit `761432d6af30232b06e983a84c535d33236d043c`
+- Previous v4 front for immediate rollback: `543b2213-2f6c-4f3b-9ae6-bd2a359675a9`
 - Active isolated v4 design Worker: `rider-spot-visual-v4`, version `449b51d4-2eac-4e92-bb4e-04d7d01ee9e3`
 - Active v4 hashed assets: `8eb44596629f`, pinned GitHub commit `b715913001e0b55f2d29cbc17acdb72d35a025aa`
 - Prior v3 front (first-line rollback): `6a484cb5-1a83-400e-ad3a-6e8c5abb874e`
@@ -19,10 +23,11 @@ deployment state with this record before any change.
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
 - Front code: `rider-spot-web/edge/static-edge.mjs` (4.7KB)
-- Asset service binding `ASSETS` → `rider-spot-renewal-assets` (KV `rs-asset-v4::` isolated keys; pinned `8eb44596629f`; old KV mapdata shared read-only)
+- Asset binding `ASSETS` → `rider-spot-urban-v5-assets` (new KV `rs-asset-v5::`, older `rs-asset-v4::` retained read-only)
+- Previous v4 gateway remains available: `rider-spot-renewal-assets`
 - Previous v3 asset gateway retained: `rider-spot-static-candidate-assets` (pinned `16c1eecf6bac`)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
-- Design `DESIGN` → `rider-spot-visual-v4` (isolated v4 visual CSS; no user-data or GPS bindings; loaded last)
+- Design `DESIGN` → `rider-spot-urban-v5` (isolated static CSS without data/GPS bindings; loaded last)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -194,3 +199,21 @@ rollback. Never deploy a 1%/99% mixed-hash front split.
 Native personal-account OAuth, several-hour real GPS tracking through lock
 screen, and split-screen device behavior still require real-device
 acceptance; browser fixtures cannot prove those conditions.
+
+## Urban Editorial v5 release — 2026-11-21
+
+Production `rider-spot` is deployed at 100% to `7db2636b-7944-4fe3-aecc-7ed72727e4a5`.
+Compiled release `3305352a56bc` is pinned to verified build commit `761432d6af30232b06e983a84c535d33236d043c`.
+This is a fully working hashed UI with bundled and isolated urban v5 CSS, not an image mockup.
+Design is deliberately subdued: a single charcoal header, warm white canvas, strong numbers, minimal borders, compact navigation, discreet lime accent and original bike pictograms.
+All route/GPS, Supabase, native bridge, record CRUD and WebView lifecycle code is preserved; previous v4 hashed app can still be served for running clients.
+
+- Style source: `src/urban-editorial-v5.css`
+- Cloudflare design worker source: `edge/urban-v5-worker.mjs`
+- KV gateway with old-client compatibility: `edge/kv-urban-v5-assets.mjs`
+- Release test: https://github.com/winzfs/riderapp/actions/runs/44863116908
+- Isolated preview: https://github.com/winzfs/riderapp/actions/runs/44863323412
+- Live verification: https://github.com/winzfs/riderapp/actions/runs/44863562742
+
+**Immediate rollback**: Set the previous `rider-spot` v4 deployment version `543b2213-2f6c-4f3b-9ae6-bd2a359675a9` to 100%. Never delete user data, KV keys, caches or Android SQLite to roll back visual changes.
+Real S24+ long-running GPS, split-screen and Android account flows remain separate on-device acceptance tasks.
