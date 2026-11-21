@@ -105,3 +105,5 @@ jobs:
             /tmp/rider-v6-build-evidence
           retention-days: 7
           if-no-files-found: warn
+
+# run 2: tests accept actual v6 two-column garage, not legacy 3-column tiles
