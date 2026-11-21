@@ -275,3 +275,8 @@
 .rs-recap-actions button:disabled{opacity:.48;cursor:default}
 @media(min-width:650px){.rs-recap-shade{align-items:center}.rs-recap-sheet{border-radius:26px;max-height:92dvh;padding:24px}.rs-recap-actions{bottom:-24px}}
 @media(max-width:350px){.rs-recap-sheet{padding-inline:14px}.rs-recap-choice{font-size:11px}}
+
+/* The export map is generated independently of the live GPS map. */
+.rs-recap-map-error{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:10px 0 15px;padding:11px 12px;border:1px solid #e1caca;border-radius:12px;background:#fcf3f1;color:#9b4747;font-size:12px;line-height:1.45}
+.rs-recap-map-error>span{flex:1;min-width:0}
+.rs-recap-map-retry{flex:none;border:0;border-radius:9px;padding:9px 11px;background:#e8d4d0;color:#783633;font-size:12px;font-weight:750;cursor:pointer}
