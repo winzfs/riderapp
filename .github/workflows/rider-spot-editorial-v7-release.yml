@@ -42,8 +42,8 @@ jobs:
           assert.match(style,/--ur-canvas:#F7F7F4/);
           assert.match(style,/\.finance-page \.fin-hero/);
           assert.match(style,/\.bike-page \.bike-vehicle/);
-          assert.match(html,new RegExp('/assets/rider-spot-'+r.hash+'/urban-editorial-v6\\.css'));
-          assert.match(sw,new RegExp('/assets/rider-spot-'+r.hash+'/urban-editorial-v6\\.css'));
+          assert.match(html,new RegExp('/assets/rider-spot-'+r.hash+'/editorial-v7\\.css'));
+          assert.match(sw,new RegExp('/assets/rider-spot-'+r.hash+'/editorial-v7\\.css'));
           // The original native recovery guard is injected by static-edge.mjs,
           // not stored in the prebuilt unguarded shell.
           assert.match(fs.readFileSync('edge/static-edge.mjs','utf8'),/rs-recovery-guard-v217/);
