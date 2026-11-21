@@ -2028,50 +2028,84 @@ export function mountApplication({
     // Facility links use the same toilet-only policy as the rendered map.
     return kind === "roads" ? "roads" : "shelters";
   }
-  function MapBar({ layer, choose, sharing, busy, toggle }) {
-    return rs33J("section", { className: "rs33-map-bar rs8-map-overlay rs12-map-overlay" },
-      rs33J("div", { className: "rs33-map-bar-top rs8-map-searchline rs11-map-commandbar rs12-map-commandbar" },
-        rs33J("h1", { className: "sr-only" }, "지도"),
+  // MAP FIRST v2: the command row and status controls belong to one React
+  // owner. External presence data remains exclusively owned by the legacy
+  // status adapter; the visible trigger delegates, never duplicates writes.
+  function MapBar({ layer, choose, sharing, busy, toggle, gpsStatus, gpsProblem, onLocate }) {
+    const gpsLabel = gpsStatus === "ready" ? "GPS 정상" :
+      gpsStatus === "error" ? (gpsProblem || "GPS 위치 확인 필요") : "GPS 확인 중";
+    return rs33J("section", { className:"rs33-map-bar rs8-map-overlay rs12-map-overlay rs-map-v2-header" },
+      rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline rs11-map-commandbar rs12-map-commandbar"},
+        rs33J("h1",{className:"sr-only"},"지도"),
         rs33J(RegionSelector),
-        rs33J("div", { className: "rs-weather-slot" }),
-        rs33J("details", { className:"rs-map-report", "aria-label":"지도 제보 메뉴" },
-          rs33J("summary", { "aria-label":"지도 제보하기" },
-            rs33J(Icon,{name:"report",size:19}), rs33J("span",null,"제보")),
-          rs33J("div",{className:"rs-map-report-panel"},
-            rs33J("strong",null,"지도 제보"),
-            rs33J("button",{type:"button",onClick:(event)=>{
-                event.currentTarget.closest("details").open=false;
-                window.__rsOpenTool?.("roads");
-              }},rs33J(Icon,{name:"roads",size:18}),rs33J("span",null,"도로 상황 제보")),
-            rs33J("button",{type:"button",onClick:(event)=>{
-                event.currentTarget.closest("details").open=false;
-                window.__rsOpenFacilityRegistration?.();
-              }},rs33J(Icon,{name:"places",size:18}),rs33J("span",null,"편의시설 등록")))),
-        rs33J("details", { className: "rs8-map-tools rs12-map-settings" },
-          rs33J("summary", { className: "rs8-map-tools-button rs12-map-tools-trigger", "aria-label": "지도 설정 열기" },
-            rs33J(Icon, { name: "layers", size: 19 })),
-          rs33J("div", { className: "rs8-map-tools-panel rs12-map-tools-panel" },
-            rs33J("div", { className: "rs12-panel-heading" },
-              rs33J("strong", null, "지도에 표시"),
-              rs33J("small", null, "한 번에 한 종류를 선택할 수 있어요")),
-            rs33J("div", { className: "rs33-map-filters rs12-layer-options", role: "group", "aria-label": "지도 표시 항목 선택" },
-              ...rs33LayerItems.map(([id, label]) =>
-                rs33J("button", { type: "button", key: id, "aria-pressed": layer === id,
-                  onClick: () => choose(id) },
-                  rs33J(Icon, { name: id, size: 20 }),
-                  rs33J("span", null, label),
-                  rs33J("span", { className: "rs12-layer-check", "aria-hidden": true }, layer === id ? "✓" : "")))),
-            rs33J("div", { className: "rs12-privacy-settings" },
-              rs33J("div", { className: "rs12-panel-heading" },
-                rs33J("strong", null, "내 위치 공유"),
-                rs33J("small", null, sharing ? "주변 라이더에게 내 위치가 표시돼요" : "현재 위치는 다른 라이더에게 보이지 않아요")),
-              rs33J("button", { type: "button",
-                className: "rs33-map-share rs7-share-chip rs12-share-control" + (sharing ? " active" : ""),
-                disabled: busy, role: "switch", "aria-checked": !!sharing,
-                "aria-label": busy ? "위치 공유 확인 중" : sharing ? "위치 공유 켜짐, 끄기" : "위치 공유 꺼짐, 켜기",
-                onClick: toggle },
-                rs33J("span", null, busy ? "확인 중…" : sharing ? "위치 공유 중" : "공유하지 않음"),
-                rs33J("span", { className: "rs12-switch-knob", "aria-hidden": true })))))));
+        rs33J("div",{className:"rs-weather-slot"}),
+        rs33J("details",{className:"rs8-map-tools rs12-map-settings rs-map-v2-settings"},
+          rs33J("summary",{className:"rs8-map-tools-button rs12-map-tools-trigger",
+            "aria-label":"지도 레이어 설정","title":"지도 레이어 설정"},
+            rs33J(Icon,{name:"layers",size:20})),
+          rs33J("div",{className:"rs8-map-tools-panel rs12-map-tools-panel"},
+            rs33J("div",{className:"rs12-panel-heading"},
+              rs33J("strong",null,"지도에 표시"),
+              rs33J("small",null,"표시할 지도 정보를 선택하세요")),
+            rs33J("div",{className:"rs33-map-filters rs12-layer-options",
+                role:"group","aria-label":"지도 표시 항목 선택"},
+              ...rs33LayerItems.map(([id,label])=>rs33J("button",{
+                type:"button",key:id,"aria-pressed":layer===id,
+                onClick:event=>{
+                  choose(id);
+                  event.currentTarget.closest("details").open=false;
+                }},
+                rs33J(Icon,{name:id,size:19}),
+                rs33J("span",null,label),
+                rs33J("span",{className:"rs12-layer-check","aria-hidden":true},
+                  layer===id?"✓":""))),
+            rs33J("p",{className:"rs-map-v2-settings-note"},
+              "주변 라이더는 위치 공유를 켠 경우에만 표시돼요.")))),
+      rs33J("div",{className:"rs-map-v2-status-row",role:"group",
+        "aria-label":"위치 공개 및 개인 상태"},
+        rs33J("button",{
+            type:"button",className:"rs-map-v2-share-chip"+(sharing?" is-sharing":""),
+            disabled:busy,role:"switch","aria-checked":!!sharing,
+            "aria-label":busy?"위치 공유 확인 중":sharing?"위치 공유 켜짐, 끄기":"위치 공유 꺼짐, 켜기",
+            onClick:toggle},
+          rs33J("span",{className:"rs-map-v2-share-indicator","aria-hidden":true}),
+          rs33J("span",{className:"rs-map-v2-share-text"},
+            rs33J("span",{className:"rs-map-v2-full-label"},"위치 "),
+            busy?"확인 중…":sharing?"공유 중":"공유 꺼짐")),
+        rs33J("button",{type:"button",className:"rs-map-v2-status-trigger",
+            "aria-haspopup":"dialog","aria-label":"지도에 표시할 내 상태 설정",
+            onClick:()=>document.getElementById("rs-presence-btn")?.click()},
+          rs33J(Icon,{name:"status-chat",size:17}),
+          rs33J("span",null,"내 상태"),
+          rs33J(Icon,{name:"chevron",size:13})),
+        rs33J("button",{type:"button",
+            className:"rs-map-v2-gps"+(gpsStatus==="ready"?" is-ready":gpsStatus==="error"?" is-error":""),
+            title:gpsLabel,"aria-label":gpsLabel+" · 위치 다시 확인",
+            onClick:onLocate},
+          rs33J(Icon,{name:"locate-fixed",size:18})))));
+  }
+  // A single action dock, not independent absolute-floating report and SOS FABs.
+  function MapActions() {
+    return rs33J("div",{className:"rs-map-v2-actions","aria-label":"지도 제보 및 도움 요청"},
+      rs33J("details",{className:"rs-map-report rs-map-v2-report"},
+        rs33J("summary",{"aria-label":"지도 제보 메뉴 열기"},
+          rs33J(Icon,{name:"report",size:19}),
+          rs33J("span",null,"제보")),
+        rs33J("div",{className:"rs-map-report-panel",role:"group","aria-label":"제보 유형"},
+          rs33J("strong",null,"제보하기"),
+          rs33J("button",{type:"button",onClick:event=>{
+              event.currentTarget.closest("details").open=false;
+              window.__rsOpenTool?.("roads");
+            }},rs33J(Icon,{name:"roads",size:18}),rs33J("span",null,"도로 상황 제보")),
+          rs33J("button",{type:"button",onClick:event=>{
+              event.currentTarget.closest("details").open=false;
+              window.__rsOpenFacilityRegistration?.();
+            }},rs33J(Icon,{name:"places",size:18}),rs33J("span",null,"편의시설 등록")))),
+      rs33J("button",{type:"button",id:"rs-sos-fab",className:"rs-map-v2-help",
+          onClick:()=>window.__rsOpenTool?.("sos"),
+          "aria-label":"주변 라이더에게 도움 요청 작성하기"},
+        rs33J(Icon,{name:"lifebuoy",size:19}),
+        rs33J("span",null,"도움 요청")));
   }
   function rs33OpenMap(record, kind = "places") {
     if (kind !== "roads" && record?.category !== "화장실") return;
@@ -2575,7 +2609,7 @@ export function mountApplication({
                       className: `nearby nearby-full`,
                       children: [
                         (0, J.jsxs)(`div`, {
-                          className: `map-wrap rs33-map-wrap rs6-map-stage`,
+                          className: `map-wrap rs33-map-wrap rs6-map-stage rs-map-v2`,
                           "data-rs33-layer": mapLayer,
                           children: [
                         (0, J.jsx)(MapBar, {
@@ -2584,7 +2618,11 @@ export function mountApplication({
                           sharing: p.sharing,
                           busy: p.busy,
                           toggle: h,
+                          gpsStatus: p.gpsStatus,
+                          gpsProblem: p.gpsProblem,
+                          onLocate: () => p.locate().catch(error => f(error.message)),
                         }),
+                        (0, J.jsx)(MapActions, {}),
                             (0, J.jsx)(Zo, {
                               position: p.position,
                               riders:
@@ -2592,41 +2630,6 @@ export function mountApplication({
                                   ? p.riders
                                   : rs33NoRiders,
                               focus: p.focus,
-                            }),
-                            (0, J.jsxs)(`button`, {
-                              type: `button`,
-                              className:
-                                p.gpsStatus === `ready`
-                                  ? p.position?.t &&
-                                    Date.now() - p.position.t > 6e4
-                                    ? `rs-gps-state rs-gps-stale`
-                                    : `rs-gps-state rs-gps-ok`
-                                  : p.gpsStatus === `error`
-                                    ? `rs-gps-state rs-gps-error`
-                                    : `rs-gps-state`,
-                              onClick: () =>
-                                p.locate().catch((err) => f(err.message)),
-                              title: p.gpsProblem || `내 GPS 위치 상태`,
-                              children: [
-                                (0, J.jsx)(`span`, {
-                                  className: `rs-gps-indicator`,
-                                }),
-                                (0, J.jsx)(`span`, {
-                                  children:
-                                    p.gpsStatus === `ready`
-                                      ? p.position?.t
-                                        ? Date.now() - p.position.t > 6e4
-                                          ? `GPS 지연 · 확인`
-                                          : `GPS · ${p.sharing ? `공유 중` : `비공개`}`
-                                        : p.sharing
-                                          ? `GPS · 공유 중`
-                                          : `GPS · 비공개`
-                                      : p.gpsStatus === `error`
-                                        ? p.gpsProblem ||
-                                          `GPS 오류 · 눌러서 다시 시도`
-                                        : `GPS 확인 중…`,
-                                }),
-                              ],
                             }),
                             (0, J.jsx)(`button`, {
                               className: `locate`,

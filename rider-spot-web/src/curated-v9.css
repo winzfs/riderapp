@@ -522,102 +522,359 @@ html,body,.app,.app .workspace>main{background:#F7F8F6!important;color:#213044!i
 @media(min-width:761px){.app .nearby.nearby-full{height:calc(100dvh - 64px)}}
 @media(prefers-reduced-motion:reduce){.app :is(button,summary,a),.app .rs12-share-control .rs12-switch-knob:after{transition:none!important;animation:none!important}}
 
-
-/* RIDER SPOT / 2026-11-22 / map and timeline 8-point interaction polish.
-   A single mobile spacing system; map attribution remains visible and linked. */
-.app .nearby .rs6-map-stage {--rs-map-inset:12px}
-.app .nearby .rs6-map-stage>.rs12-map-overlay {z-index:1030!important;overflow:visible!important}
-.app .nearby .rs12-map-commandbar {position:relative;min-width:0;overflow:visible!important;gap:7px!important}
-.app .nearby .rs12-map-commandbar .rs33-region-toggle {flex:0 1 auto!important;min-width:0!important;max-width:clamp(91px,30vw,125px)!important}
-.app .nearby .rs12-map-commandbar .rs-weather-slot {flex:1 1 0;min-width:0;overflow:visible!important}
-.app .nearby .rs12-map-commandbar .rs-weather-hud {display:flex!important;align-items:center!important;gap:5px!important;min-width:0!important;padding:4px 6px!important}
-.app .nearby .rs12-map-commandbar .rs-weather-icon {flex:none!important}
-.app .nearby .rs12-map-commandbar .rs-weather-temp {flex:none!important;font-size:14px!important}
-.app .nearby .rs12-map-commandbar .rs-weather-condition {flex:1 1 auto;min-width:0;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;line-height:1.2!important;font-size:11px!important;max-height:2.5em}
-.app .nearby .rs12-map-commandbar .rs-weather-notice {display:none!important}
-.app .nearby .rs12-map-commandbar .rs-weather-chevron {display:none!important}
-.app .nearby .rs12-map-commandbar .rs12-map-settings {z-index:1040}
-.app .nearby .rs12-map-commandbar .rs12-map-tools-panel {max-height:min(470px,calc(100dvh - 180px));overflow:auto;overscroll-behavior:contain;z-index:1060!important;padding:13px!important;border-radius:18px!important;box-shadow:0 17px 42px rgba(34,54,78,.17)!important}
-.app .nearby .rs12-map-tools-panel .rs12-panel-heading {margin-bottom:10px!important}
-.app .nearby .rs12-map-tools-panel .rs12-panel-heading small {font-size:11px;line-height:1.4}
-.app .nearby .rs12-map-tools-panel .rs12-layer-options {grid-template-columns:1fr!important;gap:2px!important}
-.app .nearby .rs12-map-tools-panel .rs12-layer-options button {min-height:46px!important;background:transparent!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;font-size:13px!important}
-.app .nearby .rs12-map-tools-panel .rs12-layer-options button[aria-pressed=true] {background:#ECF3FF!important;color:#2D5FAA!important}
-.app .nearby .rs12-map-tools-panel .rs12-privacy-settings {border-top:1px solid #E7ECF2;margin-top:10px!important;padding-top:12px!important}
-.app .nearby .rs-map-report {position:absolute;top:calc(100% + 9px);right:0;z-index:1025;pointer-events:auto}
-.app .nearby .rs-map-report>summary {list-style:none;display:flex;align-items:center;justify-content:center;gap:6px;min-width:78px;min-height:43px;padding:0 10px;color:#975816;background:#FFF5E3;border:1px solid #F0D9B8;border-radius:12px;font-size:12px;font-weight:800;box-shadow:0 3px 12px rgba(54,64,74,.08);cursor:pointer}
-.app .nearby .rs-map-report>summary::-webkit-details-marker {display:none}
-.app .nearby .rs-map-report[open]>summary {background:#FBE6BE}
-.app .nearby .rs-map-report-panel {position:absolute;right:0;top:calc(100% + 8px);width:min(250px,calc(100vw - 24px));padding:12px;border:1px solid #E6EAF0;background:#FFF;border-radius:16px;box-shadow:0 16px 42px rgba(32,49,71,.17);display:grid;gap:3px}
-.app .nearby .rs-map-report-panel>strong {font-size:13px;color:#253A4E;padding:3px 5px 8px}
-.app .nearby .rs-map-report-panel button {display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:47px;padding:9px 10px;border:0;border-radius:10px;background:transparent;color:#384A60;font-size:13px;font-weight:700}
-.app .nearby .rs-map-report-panel button:active {background:#FFF5E4;color:#925718}
-.app .nearby .rs6-map-stage .leaflet-top.leaflet-right {top:133px!important;right:12px!important}
-.app .nearby .rs6-map-stage .leaflet-control-zoom {margin:0!important;display:grid;gap:9px;border:0!important;background:transparent!important;box-shadow:none!important}
-.app .nearby .rs6-map-stage .leaflet-control-zoom a {width:46px!important;height:46px!important;line-height:46px!important;border-radius:12px!important;border:1px solid #E6ECF3!important;background:#FFF!important;color:#446FE6!important;box-shadow:0 3px 11px rgba(30,50,70,.08)!important}
-.app .nearby .rs6-map-stage .locate {top:253px!important;right:12px!important;width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;border:1px solid #E6ECF3!important;background:#FFF!important;color:#446FE6!important;border-radius:12px!important;box-shadow:0 3px 11px rgba(30,50,70,.08)!important;z-index:900}
-.app .nearby #rs-sos-fab {bottom:60px!important;right:12px!important;min-height:44px!important;padding:7px 11px!important;gap:6px!important;background:#FFF0F1!important;border:1px solid #F6DBDF!important;color:#AA4756!important;box-shadow:0 3px 10px rgba(75,48,52,.06)!important;border-radius:12px!important;z-index:900!important}
-.app .nearby #rs-sos-fab .rs-sos-button-mark {display:grid;place-items:center;color:#AA4756!important}
-.app .nearby #rs-sos-fab .rs-sos-button-title {font-size:12px!important;font-weight:750!important}
-.app .nearby .rs6-map-stage #rs-presence-btn {top:115px!important;left:12px!important;right:auto;min-height:40px!important;max-width:calc(100% - 115px)!important;background:#FFF!important;border:1px solid #E3EAF2!important;border-radius:11px!important;color:#425C77!important;box-shadow:0 3px 10px rgba(31,51,67,.07)!important;font-size:12px!important}
-.app .nearby #rs-presence-panel {position:absolute!important;z-index:1100!important;top:auto!important;left:12px!important;right:12px!important;bottom:38px!important;width:auto!important;max-height:min(450px,calc(100% - 160px))!important;overflow:auto!important;overscroll-behavior:contain!important;padding:14px!important;background:#FFF!important;color:#263A50!important;border:1px solid #E2E8F0!important;border-radius:20px!important;box-shadow:0 18px 46px rgba(30,50,73,.18)!important}
-.app .nearby #rs-presence-panel .rs-presence-heading {align-items:center!important;margin-bottom:9px!important;touch-action:pan-y}
-.app .nearby #rs-presence-panel .rs-presence-heading span {letter-spacing:.08em!important;font-size:10px!important;color:#8594A5!important}
-.app .nearby #rs-presence-panel .rs-presence-heading h2 {font-size:18px!important;color:#24384E!important}
-.app .nearby #rs-presence-panel .rs-presence-heading p {font-size:11px!important;color:#718195!important}
-.app .nearby #rs-presence-panel .rs-presence-close {min-width:44px!important;min-height:44px!important;font-size:23px!important}
-.app .nearby #rs-presence-panel .rs-presence-options {gap:1px!important}
-.app .nearby #rs-presence-panel .rs-presence-option {min-height:50px!important;padding:7px 8px!important;background:transparent!important;border:0!important;border-bottom:1px solid #EEF1F5!important;border-radius:0!important;gap:10px!important}
-.app .nearby #rs-presence-panel .rs-presence-option.selected {background:#EFF5FF!important;border-radius:10px!important;color:#315FA2!important}
-.app .nearby #rs-presence-panel .rs-presence-emoji {width:34px!important;height:34px!important;color:#6281A5!important;background:#F1F5FA!important;border-radius:10px!important;font-size:0!important}
-.app .nearby #rs-presence-panel .rs-presence-copy strong {color:#283D52!important;font-size:13px!important}
-.app .nearby #rs-presence-panel .rs-presence-copy small {color:#78899A!important;font-size:11px!important}
-.app .nearby #rs-presence-panel .rs-presence-option.selected .rs-presence-check {background:#446FE6!important;border-color:#446FE6!important}
-.app .nearby #rs-presence-panel .rs-presence-sharing-note {padding:9px 10px!important;margin-top:10px!important;border:0!important;border-radius:10px!important;font-size:11px!important;line-height:1.45!important}
-.app .nearby #rs-presence-panel .rs-presence-sharing-note.rs-presence-private {background:#F2F5F8!important;color:#5E7184!important}
-.app .nearby .map-wrap:has(#rs-presence-panel:not([hidden])) :is(#rs-sos-fab,.locate,.leaflet-control-zoom,.rs-map-report) {visibility:hidden!important;pointer-events:none!important}
-.app .nearby .leaflet-bottom.leaflet-right {bottom:0!important;right:4px!important;z-index:890}
-.app .nearby .leaflet-control-attribution {display:block!important;visibility:visible!important;opacity:.92;max-width:min(100%,calc(100vw - 18px))!important;margin:0!important;padding:1px 3px!important;background:rgba(255,255,255,.92)!important;font-size:9px!important;line-height:1.25!important;white-space:normal!important;border-radius:3px!important;box-shadow:none!important}
-.app .nearby .leaflet-control-attribution a {font-size:inherit!important;text-decoration:none}
-.app .nearby #rs-report-legend {z-index:900!important;bottom:35px!important;left:12px!important;right:auto!important;width:max-content;max-width:calc(100% - 24px)!important;min-height:36px!important;padding:6px 9px!important;font-size:11px!important;line-height:1.35!important;white-space:normal!important;overflow-wrap:break-word!important;box-shadow:0 3px 12px rgba(36,50,70,.08)!important;border:1px solid #E4E9EF!important;background:rgba(255,255,255,.96)!important;border-radius:10px!important}
-.app .nearby #rs-report-legend.rs-map-share-notice {max-width:min(245px,calc(100% - 24px))!important}
-.app .nearby #rs-report-legend button {min-height:36px!important;font-size:11px!important}
-.app .nearby.nearby-full .ride-launch {display:flex!important;align-items:stretch;gap:8px!important;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px))!important}
-.app .nearby.nearby-full .ride-launch>button:first-child {flex:1 1 auto;min-width:0!important}
-.app .nearby.nearby-full .ride-launch.active>button:first-child {background:#243B54!important;color:#FFF!important}
-.app .nearby.nearby-full .ride-launch .rs-map-finish-secondary {flex:0 0 auto;width:auto!important;min-width:99px!important;padding:0 12px!important;background:#F6EDEF!important;color:#9B4252!important;border:1px solid #EDD6DD!important;box-shadow:none!important}
-.app .rs33-trip-live .rs-ride-controls-top {display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)!important;gap:8px!important;margin:8px 0 10px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
-.app .rs33-trip-live .rs-ride-controls-top button {min-height:46px!important;font-size:13px!important;border-radius:12px!important}
-.app .rs33-trip-live .rs-ride-controls-top .rs-ride-finish {background:#253A54!important;color:#FFF!important;border-color:#253A54!important}
-.app .rs33-trip-live .rs-ride-controls-top .rs-ride-pause {background:#EDF3F9!important;color:#3D628B!important;border-color:#E0E8F1!important}
-.app .rs33-timeline .rs33-week-head {min-width:0;gap:5px!important;flex-wrap:nowrap}
-.app .rs33-timeline .rs33-week-head strong {min-width:0;flex:1 1 auto!important;font-size:14px!important;white-space:normal!important;line-height:1.4!important}
-.app .rs33-timeline .rs33-week-head button {flex:0 0 43px;min-width:43px!important;min-height:44px!important}
-.app .rs33-timeline .rs33-week {display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important}
-.app .rs33-timeline .rs33-week button {min-width:0!important;overflow:visible!important}
-.app .rs33-trip-detail .rs-timeline-heading-main {min-width:0;flex:1}
-.app .rs33-trip-detail .rs-timeline-heading-main h1 {overflow-wrap:anywhere}
+/* MAP FIRST v2 — 2026-11-22. One layout owner / four control zones.
+ * All map controls are placed relative to the stage, not to the document.
+ * Attribution is always visible and never displaced by a sharing notice. */
+.app .nearby.nearby-full .rs-map-v2 {
+  --map-inset:12px;--map-control:48px;--map-gap:8px;
+  --map-zoom-top:144px;--map-source-safe:35px;
+  --map-blue:#426FE8;--map-ink:#24354A;--map-muted:#748396;
+  --map-line:#E5EAF1;--map-shadow:0 3px 12px rgba(27,46,72,.085);
+  isolation:isolate;min-height:210px!important;background:#F0F3F4;
+}
+.app .nearby.nearby-full .rs-map-v2>.rs-map-v2-header {
+  position:absolute!important;inset:12px var(--map-inset) auto!important;
+  display:flex!important;flex-direction:column;gap:8px!important;
+  width:auto!important;max-width:none!important;padding:0!important;
+  overflow:visible!important;background:transparent!important;border:0!important;
+  box-shadow:none!important;z-index:1030!important;pointer-events:none;
+}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-commandbar {
+  display:grid!important;grid-template-columns:minmax(88px,1fr) minmax(0,1.45fr) 48px;
+  gap:8px!important;align-items:stretch!important;min-width:0;min-height:48px!important;
+  height:48px;padding:0!important;margin:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;pointer-events:auto;overflow:visible!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs33-region,
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs-weather-slot,
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs-map-v2-settings {
+  min-width:0!important;min-height:48px!important;max-height:48px;
+  background:rgba(255,255,255,.98)!important;
+  border:1px solid var(--map-line)!important;border-radius:13px!important;
+  box-shadow:var(--map-shadow)!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs33-region {
+  display:flex;align-items:center;justify-content:flex-start;
+  padding:0 10px!important;overflow:visible!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs33-region-toggle {
+  min-width:0!important;max-width:100%!important;width:100%;
+  min-height:44px!important;margin:0;padding:0!important;
+  font-size:13px!important;font-weight:750!important;line-height:1.25!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  color:var(--map-ink)!important;box-shadow:none!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs-weather-slot {
+  padding:0 9px!important;display:flex;align-items:center!important;overflow:hidden!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-hud {
+  width:100%!important;max-width:100%!important;height:46px!important;
+  min-height:46px!important;display:flex!important;gap:5px!important;
+  align-items:center!important;justify-content:center!important;
+  padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-icon {width:21px;min-width:21px;flex:none!important;color:#218D86!important}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-temp {font-size:16px!important;font-weight:760!important;flex:none!important}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-condition {font-size:11px!important;min-width:0!important;flex:0 1 auto!important;line-height:1.3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.app .nearby .rs-map-v2 .rs12-map-commandbar :is(.rs-weather-notice,.rs-weather-chevron) {display:none!important}
+.app .nearby .rs-map-v2 .rs12-map-commandbar>.rs-map-v2-settings {position:relative;z-index:1050!important;display:grid;place-items:center;overflow:visible!important}
+.app .nearby .rs-map-v2 .rs12-map-commandbar .rs12-map-tools-trigger {
+  width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;
+  display:grid!important;place-items:center!important;padding:0!important;
+  background:transparent!important;border:0!important;border-radius:12px!important;color:#416FAE!important;
+}
+.app .nearby .rs-map-v2 .rs-map-v2-settings[open] {background:#EDF3FF!important}
+.app .nearby .rs-map-v2 .rs12-map-tools-panel {
+  position:absolute!important;top:calc(100% + 9px)!important;right:0!important;left:auto!important;
+  width:min(298px,calc(100vw - 24px))!important;max-height:min(375px,calc(100dvh - 190px))!important;
+  overflow:auto!important;overscroll-behavior:contain;
+  padding:12px!important;background:white!important;border:1px solid var(--map-line)!important;
+  border-radius:16px!important;box-shadow:0 18px 38px rgba(25,45,73,.17)!important;z-index:1070!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-tools-panel .rs12-layer-options {display:grid!important;gap:2px!important;overflow:visible!important;padding:0!important}
+.app .nearby .rs-map-v2 .rs12-map-tools-panel .rs12-layer-options button {
+  min-height:48px!important;padding:10px 11px!important;border:0!important;
+  border-radius:10px!important;background:white!important;box-shadow:none!important;
+  font-size:13px!important;font-weight:650!important;color:#3D536D!important;
+}
+.app .nearby .rs-map-v2 .rs12-map-tools-panel .rs12-layer-options button[aria-pressed=true] {background:#EDF3FF!important;color:#315FC1!important}
+.app .nearby .rs-map-v2 .rs12-panel-heading {padding:2px 4px 9px!important;gap:3px!important}
+.app .nearby .rs-map-v2 .rs12-panel-heading strong {font-size:14px!important;font-weight:750!important;color:var(--map-ink)!important}
+.app .nearby .rs-map-v2 .rs12-panel-heading small {font-size:11px!important;color:var(--map-muted)!important}
+.app .nearby .rs-map-v2 .rs-map-v2-settings-note {font-size:11px;line-height:1.45;color:#758599;margin:10px 4px 2px;border-top:1px solid var(--map-line);padding-top:10px}
+/* The GPS receiver and location-sharing state are independent. */
+.app .nearby .rs-map-v2 .rs-map-v2-status-row {
+  display:flex;align-items:center;justify-content:flex-start;gap:7px;
+  width:max-content;max-width:100%;min-height:44px;pointer-events:auto;
+}
+.app .nearby .rs-map-v2 .rs-map-v2-status-row>button {
+  flex:none;display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:44px;min-width:0;padding:7px 11px;border-radius:12px;
+  border:1px solid var(--map-line);background:rgba(255,255,255,.97);
+  color:#43566C;font-size:12px;font-weight:680;line-height:1.25;letter-spacing:-.025em;
+  white-space:nowrap;box-shadow:var(--map-shadow);cursor:pointer;
+}
+.app .nearby .rs-map-v2 .rs-map-v2-share-chip {flex:0 1 auto!important;min-width:0!important}
+.app .nearby .rs-map-v2 .rs-map-v2-share-indicator {
+  display:block;flex:none;width:8px;height:8px;border-radius:50%;background:#B1BCC8;
+  box-shadow:0 0 0 3px #F0F3F6;
+}
+.app .nearby .rs-map-v2 .rs-map-v2-share-chip.is-sharing {color:#137963!important;border-color:#B4E8DA;background:#EAF9F4!important}
+.app .nearby .rs-map-v2 .rs-map-v2-share-chip.is-sharing .rs-map-v2-share-indicator {background:#18A88F;box-shadow:0 0 0 3px #D4F1E8}
+.app .nearby .rs-map-v2 .rs-map-v2-status-trigger {color:#526985!important}
+.app .nearby .rs-map-v2 .rs-map-v2-gps {width:44px;min-width:44px!important;padding:0!important;color:#6D8BA7!important}
+.app .nearby .rs-map-v2 .rs-map-v2-gps.is-ready {color:#1B968E!important}
+.app .nearby .rs-map-v2 .rs-map-v2-gps.is-error {color:#B2782E!important;background:#FFF7E9!important}
+.app .nearby .rs-map-v2 #rs-presence-btn.rs-map-v2-native-trigger {display:none!important}
+/* Explicit QA URL only. The simulator is preserved but not a public menu. */
+.app .nearby.nearby-full .rs-map-v2 #rs-demo-toggle {display:none!important}
+html.rs-map-qa-mode .app .nearby.nearby-full .rs-map-v2 #rs-demo-toggle {
+  display:flex!important;top:116px!important;left:var(--map-inset)!important;min-height:44px!important;
+  z-index:1020!important;font-size:11px!important;
+}
+/* Leaflet retains the real zoom/map camera handlers. Only its visual chrome changes. */
+.app .nearby.nearby-full .rs-map-v2 .leaflet-top.leaflet-right {
+  top:var(--map-zoom-top)!important;right:var(--map-inset)!important;left:auto!important;
+  pointer-events:none;
+}
+.app .nearby.nearby-full .rs-map-v2 .leaflet-control-zoom.leaflet-bar {
+  width:var(--map-control)!important;border:1px solid var(--map-line)!important;
+  border-radius:13px!important;background:white!important;overflow:hidden!important;
+  box-shadow:var(--map-shadow)!important;margin:0!important;pointer-events:auto!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .leaflet-control-zoom.leaflet-bar a {
+  box-sizing:border-box;width:46px!important;height:47px!important;min-height:47px!important;
+  line-height:47px!important;border:0!important;border-radius:0!important;
+  background:white!important;color:#416FB8!important;font-size:23px!important;
+  font-weight:450!important;box-shadow:none!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .leaflet-control-zoom.leaflet-bar a+a {border-top:1px solid var(--map-line)!important}
+.app .nearby.nearby-full .rs-map-v2 .locate {
+  position:absolute!important;top:calc(var(--map-zoom-top) + 111px)!important;
+  bottom:auto!important;right:var(--map-inset)!important;left:auto!important;
+  width:var(--map-control)!important;height:var(--map-control)!important;
+  min-width:var(--map-control)!important;min-height:var(--map-control)!important;
+  border:1px solid var(--map-line)!important;border-radius:13px!important;
+  color:#426FE8!important;background:white!important;
+  box-shadow:var(--map-shadow)!important;z-index:1010!important;
+}
+/* The report and help controls are siblings inside one shared action dock. */
+.app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions {
+  position:absolute;left:var(--map-inset);right:var(--map-inset);
+  bottom:calc(var(--map-source-safe) + 16px);z-index:1020;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  pointer-events:none;
+}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions :is(button,summary,details) {pointer-events:auto}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report {
+  position:relative!important;inset:auto!important;z-index:1040;
+  flex:0 0 auto!important;max-width:100%;
+}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report>summary {
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  list-style:none;min-height:48px!important;min-width:100px!important;padding:0 14px!important;
+  border-radius:12px!important;border:1px solid #F0D9B8!important;
+  background:#FFF4E4!important;color:#9A681E!important;
+  font-size:13px!important;font-weight:730!important;box-shadow:var(--map-shadow)!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report>summary::-webkit-details-marker {display:none}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report-panel {
+  position:absolute!important;bottom:calc(100% + 9px)!important;top:auto!important;
+  left:0!important;right:auto!important;width:min(245px,calc(100vw - 24px))!important;
+  display:grid;gap:3px;padding:12px!important;z-index:1070;
+  background:white!important;border:1px solid var(--map-line)!important;border-radius:16px!important;
+  box-shadow:0 16px 42px rgba(30,48,69,.18)!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report-panel>strong {font-weight:730!important;color:var(--map-ink)}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report-panel button {min-height:48px!important;display:flex!important;align-items:center;gap:10px;font-weight:650!important}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions #rs-sos-fab {
+  position:relative!important;inset:auto!important;display:flex!important;align-items:center;justify-content:center;
+  flex:0 0 auto!important;gap:7px!important;min-width:126px!important;
+  width:auto!important;height:48px!important;min-height:48px!important;
+  padding:0 14px!important;border-radius:12px!important;
+  color:#AE4E60!important;background:#FFF0F2!important;
+  border:1px solid #F0D9DE!important;box-shadow:var(--map-shadow)!important;
+  font-size:13px!important;font-weight:730!important;
+}
+/* Content counts are optional, not an overlay explaining how to share. */
+.app .nearby.nearby-full .rs-map-v2 #rs-report-legend {
+  position:absolute!important;bottom:calc(var(--map-source-safe) + 76px)!important;
+  top:auto!important;left:var(--map-inset)!important;right:auto!important;
+  width:max-content!important;max-width:calc(100% - 24px)!important;
+  min-height:29px!important;height:auto!important;margin:0!important;padding:5px 9px!important;
+  border:1px solid var(--map-line)!important;border-radius:9px!important;
+  background:rgba(255,255,255,.93)!important;box-shadow:none!important;
+  color:#596C81;font-size:11px!important;line-height:1.4!important;z-index:900!important;
+}
+.app .nearby.nearby-full .rs-map-v2 #rs-report-legend[hidden] {display:none!important}
+.app .nearby.nearby-full .rs-map-v2 #rs-report-legend .rs33-map-register {display:none!important}
+/* Compliance: do not hide, clip, or alter provider attribution links. */
+.app .nearby.nearby-full .rs-map-v2 .leaflet-bottom.leaflet-right {
+  bottom:0!important;right:5px!important;left:auto!important;z-index:895!important;
+  max-width:calc(100% - 10px)!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .leaflet-control-attribution {
+  display:block!important;visibility:visible!important;opacity:1!important;
+  max-width:calc(100vw - 18px)!important;white-space:normal!important;
+  overflow:visible!important;margin:0!important;padding:3px 4px!important;
+  background:rgba(255,255,255,.94)!important;border:0!important;border-radius:4px!important;
+  box-shadow:none!important;color:#526478!important;
+  text-align:right;font-size:9px!important;line-height:1.3!important;
+}
+.app .nearby.nearby-full .rs-map-v2 .leaflet-control-attribution a {
+  color:#426B9A!important;text-decoration:underline!important;font-size:inherit!important;
+}
+/* One fixed ride action group below the map. No map camera / ride state changes. */
+.app .nearby.nearby-full .ride-launch {
+  flex:none!important;display:flex!important;gap:8px!important;
+  padding:10px 12px calc(11px + env(safe-area-inset-bottom,0px))!important;
+  background:#F8FAFC!important;border-top:1px solid #E8EDF2!important;
+  box-shadow:none!important;align-items:stretch;
+}
+.app .nearby.nearby-full .ride-launch>button:first-child {
+  flex:1 1 auto;min-width:0!important;min-height:54px!important;width:auto!important;
+  border-radius:14px!important;background:#426FE8!important;
+  color:white!important;border:0!important;box-shadow:none!important;
+  font-size:15px!important;font-weight:750!important;
+}
+.app .nearby.nearby-full .ride-launch.active>button:first-child {background:#293D5B!important}
+.app .nearby.nearby-full .ride-launch .rs-map-finish-secondary {
+  flex:0 0 auto;width:auto!important;min-width:100px!important;
+  background:#FFF0F2!important;color:#9E3E53!important;border:1px solid #EEDBE1!important;
+  border-radius:14px!important;box-shadow:none!important;
+}
+/* Consistent navigation pictograms without changing nav routes or state. */
+.app .bottom-nav button svg {width:23px;height:23px;stroke-width:1.9px;stroke-linecap:round;stroke-linejoin:round}
+.app .bottom-nav button:focus-visible,
+.app .nearby.nearby-full .rs-map-v2 :is(button,summary):focus-visible {
+  outline:2px solid #426FE8!important;outline-offset:2px;
+}
+/* Native status view is visually replaced by a modal sheet in document.body.
+ * Its real buttons and persistence listeners remain intact. */
+.rs-map-v2-status-scrim {
+  position:fixed;inset:0;z-index:5998;
+  background:rgba(19,35,54,.33);backdrop-filter:blur(1.5px);
+  -webkit-backdrop-filter:blur(1.5px);
+}
+.rs-map-v2-status-scrim[hidden]{display:none!important}
+body.rs-map-v2-sheet-open{overflow:hidden!important}
+#rs-presence-panel.rs-map-v2-presence-sheet {
+  position:fixed!important;z-index:5999!important;
+  left:50%!important;right:auto!important;top:auto!important;bottom:0!important;
+  width:min(100%,560px)!important;max-width:none!important;
+  max-height:min(620px,calc(100dvh - 35px))!important;
+  overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;
+  transform:translateX(-50%);margin:0!important;
+  padding:0 16px calc(18px + env(safe-area-inset-bottom,0px))!important;
+  border:0!important;border-radius:24px 24px 0 0!important;
+  background:#FFFFFF!important;color:#24354A!important;
+  box-shadow:0 -18px 52px rgba(20,35,54,.18)!important;
+  scrollbar-width:thin;scrollbar-color:#D1DCE8 transparent;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet[hidden]{display:none!important}
+#rs-presence-panel.rs-map-v2-presence-sheet:not([hidden]){animation:rsMapV2Enter .23s cubic-bezier(.2,.75,.25,1) both}
+@keyframes rsMapV2Enter{from{opacity:.45;translate:0 30px}to{opacity:1;translate:0 0}}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-map-v2-grab {
+  display:flex;align-items:center;justify-content:center;
+  height:35px;min-height:35px;touch-action:pan-y;user-select:none;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-map-v2-grab:before {
+  content:"";display:block;width:36px;height:4px;border-radius:6px;background:#CED7E2;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-heading {
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:12px;margin:0 0 12px;padding:3px 0 2px;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-heading>div {flex:1;min-width:0}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-heading span {
+  display:block;font-size:10px;font-weight:680;letter-spacing:.06em;color:#8190A2;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-heading h2 {
+  margin:3px 0 3px;color:#24354A;font-size:21px;line-height:1.3;font-weight:770;letter-spacing:-.03em;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-heading p {
+  margin:0;color:#748396;font-size:12px;line-height:1.4;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-close {
+  display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;min-height:44px;
+  border:0;border-radius:12px;background:#F2F5F8;color:#50657B;font-size:24px;cursor:pointer;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-options {display:grid;gap:0}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-option {
+  display:flex;align-items:center;gap:11px;min-height:61px;width:100%;
+  margin:0;padding:8px 7px;border:0;border-bottom:1px solid #EEF1F5;
+  border-radius:0;background:white;color:#24354A;text-align:left;box-shadow:none;
+  cursor:pointer;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-option.selected {
+  background:#EDF3FF;border-radius:12px;border-bottom-color:transparent;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-option:disabled {opacity:.60;cursor:not-allowed}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-emoji {
+  flex:none;display:grid;place-items:center;width:36px;height:36px;
+  border-radius:11px;background:#F1F5FA;color:#6582A5;font-size:0;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-option.selected .rs-presence-emoji {
+  color:#426FE8;background:#E2EBFF;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-copy {flex:1;min-width:0;display:grid;gap:3px}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-copy strong {
+  font-weight:730;font-size:13px;color:#2C3D52;line-height:1.3;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-copy small {
+  font-weight:450;font-size:11px;color:#7A8999;line-height:1.4;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-check {
+  flex:none;display:grid;place-items:center;width:22px;height:22px;
+  border:0;border-radius:50%;color:transparent;font-size:13px;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-option.selected .rs-presence-check {
+  color:white;background:#426FE8;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-sharing-note {
+  margin-top:11px;padding:10px 12px;border:0;border-radius:10px;
+  background:#F2F5F9;color:#5E7084;font-size:11px;font-weight:550;line-height:1.5;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-sharing-note.rs-presence-visible {
+  background:#E9F8F3;color:#28755F;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-feedback {
+  color:#B24853;font-size:11px;line-height:1.5;margin:8px 0 0;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-feedback[hidden],
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-login[hidden] {display:none!important}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-login {
+  min-height:44px;width:100%;margin-top:10px;border:0;border-radius:12px;
+  color:white;background:#426FE8;font-size:13px;font-weight:730;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-hint {
+  font-size:10px;color:#8795A7;line-height:1.5;margin:11px 0 0;
+}
+/* Responsive: a short WebView/split screen keeps the map usable. */
 @media(max-width:360px){
- .app .nearby .rs12-map-commandbar {gap:4px!important;padding-left:7px!important;padding-right:6px!important}
- .app .nearby .rs12-map-commandbar .rs33-region-toggle {max-width:84px!important;font-size:11px!important}
- .app .nearby .rs12-map-commandbar .rs-weather-icon {display:none!important}
- .app .nearby .rs12-map-commandbar .rs-weather-temp {font-size:13px!important}
- .app .nearby .rs12-map-commandbar .rs-weather-condition {font-size:10px!important}
- .app .nearby .rs6-map-stage .leaflet-top.leaflet-right {top:142px!important}
- .app .nearby .rs6-map-stage .locate {top:262px!important}
- .app .nearby #rs-presence-panel {bottom:32px!important;max-height:calc(100% - 166px)!important}
- .app .rs33-timeline .rs33-week-head {gap:3px!important}
- .app .rs33-timeline .rs33-week-head button {flex-basis:42px;min-width:42px!important}
+ .app .nearby.nearby-full .rs-map-v2{--map-inset:10px;--map-zoom-top:141px}
+ .app .nearby .rs-map-v2 .rs12-map-commandbar{grid-template-columns:minmax(79px,.95fr) minmax(0,1.4fr) 46px;gap:6px!important}
+ .app .nearby .rs-map-v2 .rs12-map-commandbar>.rs33-region{padding:0 7px!important}
+ .app .nearby .rs-map-v2 .rs12-map-commandbar .rs33-region-toggle{font-size:12px!important}
+ .app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-slot{padding:0 6px!important}
+ .app .nearby .rs-map-v2 .rs12-map-commandbar .rs-weather-icon{display:none!important}
+ .app .nearby .rs-map-v2 .rs-map-v2-full-label{display:none}
+ .app .nearby .rs-map-v2 .rs-map-v2-status-row{gap:5px}
+ .app .nearby .rs-map-v2 .rs-map-v2-status-row>button{padding-inline:8px;font-size:11px}
+ .app .nearby .rs-map-v2 .rs-map-v2-gps{width:42px;min-width:42px!important;padding:0!important}
+ .app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions #rs-sos-fab{min-width:112px!important;padding:0 11px!important}
 }
 @media(max-height:560px){
- .app .nearby .rs6-map-stage .leaflet-top.leaflet-right {top:122px!important}
- .app .nearby .rs6-map-stage .locate {top:233px!important}
- .app .nearby #rs-presence-panel {max-height:calc(100% - 136px)!important;bottom:28px!important}
- .app .nearby #rs-sos-fab {bottom:44px!important}
+ .app .nearby.nearby-full .rs-map-v2{--map-zoom-top:142px;--map-source-safe:31px}
+ .app .nearby.nearby-full .rs-map-v2 .leaflet-control-zoom.leaflet-bar{display:none!important}
+ .app .nearby.nearby-full .rs-map-v2 .locate{top:var(--map-zoom-top)!important}
+ .app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions{bottom:calc(var(--map-source-safe) + 9px)}
+ .app .nearby.nearby-full .rs-map-v2 #rs-report-legend{display:none!important}
 }
-
-/* Production atelier CSS is injected last; keep UI controls independent. */
-.app .nearby.nearby-full .rs6-map-stage .locate{top:253px!important;right:12px!important;width:46px!important;height:46px!important;border-radius:12px!important}
-.app .nearby.nearby-full .ride-launch:not(.active)>button:first-child{background:#446FE6!important;border-radius:14px!important;color:#FFF!important}
-@media(max-width:360px){.app .nearby.nearby-full .rs6-map-stage .locate{top:262px!important}}
-@media(max-height:560px){.app .nearby.nearby-full .rs6-map-stage .locate{top:233px!important}}
+@media(prefers-reduced-motion:reduce){
+ #rs-presence-panel.rs-map-v2-presence-sheet:not([hidden]){animation:none!important}
+ .app .nearby.nearby-full .rs-map-v2 button{transition:none!important}
+}

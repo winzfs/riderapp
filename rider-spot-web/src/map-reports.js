@@ -359,24 +359,14 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     const legend = document.getElementById("rs-report-legend");
     if (legend) {
       const share = Boolean(window.__rsRideApi?.sharing);
-      legend.classList.toggle("rs-map-share-notice", filter === "riders" && !share);
-      legend.textContent =
-        filter === "riders"
-          ? share
-            ? "공유 중인 라이더 " + (window.__rsMapRiders?.length || 0) + "명"
-            : "위치 공유를 켜면 주변 라이더를 볼 수 있어요."
-          : filter === "roads"
-            ? "이 화면의 도로 제보 " + records.length + "건"
-            : "제보 " + records.length + "곳";
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = filter === "roads" ? "제보 올리기" : "시설 등록";
-      button.className = "rs33-map-register";
-      button.onclick = () => {
-        if (filter === "roads") window.__rsOpenTool?.("roads");
-        else window.__rsOpenFacilityRegistration?.();
-      };
-      if (filter !== "riders") legend.append(button);
+      // Top sharing chip covers the status: never overlap attribution.
+      // Other layers use this as a compact count, not a duplicate action.
+      legend.hidden = filter === "riders";
+      legend.replaceChildren();
+      if (!legend.hidden)
+        legend.textContent = filter === "roads"
+          ? "도로 제보 " + records.length + "건"
+          : "화장실 " + records.length + "곳";
     }
   }
   async function fetchType(type, bounds, sequence) {

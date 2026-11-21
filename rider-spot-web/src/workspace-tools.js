@@ -1125,7 +1125,9 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       if (root.parentNode !== document.body) document.body.append(root);
     }
     const map = document.querySelector(".map-wrap");
-    if (map && !map.querySelector("#rs-sos-fab")) {
+    // The React map-first dock owns the SOS button. The legacy fallback
+    // stays available for historical map layouts only.
+    if (map && !map.classList.contains("rs-map-v2") && !map.querySelector("#rs-sos-fab")) {
       const b = document.createElement("button");
       b.type = "button";
       b.id = "rs-sos-fab";
@@ -1479,6 +1481,8 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
           );
         if (S.data.sos.some((x) => x.user_id === user.id && activeSOS(x)))
           throw Error("진행 중인 SOS를 먼저 종료해 주세요.");
+        if (!confirm("입력한 도움 요청을 라이더 게시판에 등록할까요? 요청은 2시간 뒤 만료되며 긴급 구조 신고가 아닙니다."))
+          return;
         if (fd.get("show_on_map") === "on" && !window.__rsRideApi?.sharing) {
           if (
             confirm(
