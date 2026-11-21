@@ -56,7 +56,14 @@ jobs:
       - name: Browser verify 320, 393, 412px, five tabs and no reload
         run: RIDER_VISUAL_URL="$RIDER_V12_URL" node tests/urban-flow-v11-browser.cjs
       - name: Signed-in fixtures for ride, income, maintenance and native behavior
-        run: RIDER_TEST_ORIGIN="$RIDER_V12_URL" RIDER_SCREENSHOTS=/tmp/rider-v12-preview-evidence node tests/mobile-records-browser.cjs
+        run: |
+          npm run build
+          node scripts/local-preview.cjs >/tmp/rider-v12-fixtures.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8789/ >/dev/null; then break; fi
+            sleep 1
+          done
+          RIDER_TEST_ORIGIN=http://127.0.0.1:8789 RIDER_SCREENSHOTS=/tmp/rider-v12-preview-evidence node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
