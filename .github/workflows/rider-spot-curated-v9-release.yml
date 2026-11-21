@@ -76,6 +76,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
             sleep 1
           done
+          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/night-shift-v10-browser.cjs
           RIDER_TEST_ORIGIN=http://127.0.0.1:8840 RIDER_SCREENSHOTS=/tmp/rider-v8-build-evidence node tests/mobile-records-browser.cjs
           RIDER_TEST_URL=http://127.0.0.1:8840 RIDER_TEST_CASE=native RIDER_APK_BRIDGE=/tmp/rider-v8-native/app/src/main/assets/native-bridge.js node tests/browser.cjs
       - name: Freeze validated CSS, JSX and WebView-safe assets
