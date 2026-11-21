@@ -1,7 +1,7 @@
 name: Rider Spot NIGHT SHIFT v10 build and regression
 on:
   push:
-    branches: [feature/rider-spot-v10-redesign]
+    branches: [feature/rider-spot-v10-redesign, feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-curated-v9-release.yml'
       - 'rider-spot-web/src/curated-v9.css'
@@ -102,8 +102,8 @@ jobs:
           git add rider-spot-web/prebuilt
           if ! git diff --cached --quiet; then
             git commit -m 'build: freeze NIGHT SHIFT v10 UI assets [skip ci]'
-            git pull --rebase origin feature/rider-spot-v10-redesign
-            git push origin HEAD:feature/rider-spot-v10-redesign
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
