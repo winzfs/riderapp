@@ -114,3 +114,5 @@ jobs:
             /tmp/rider-v8-build-evidence
           retention-days: 7
           if-no-files-found: warn
+
+# v10 final build source includes interaction-finishing CSS and responsive QA.
