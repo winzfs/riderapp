@@ -569,7 +569,9 @@ export function createFinance(R, client) {
         [...earningDays].every(day=>recordedDays.has(day));
       const usable=!!duration&&!!distance;
       const coverageLabel=complete?"운행 기록 기준":usable?"일부 운행만 기록됨":"기록 없음";
-      return h("div",{className:"fin-stack"},
+      return h("div",{className:"fin-stack rs6-finance-dashboard"},
+        h("section",{className:"rs6-finance-stage"},
+          h("div",{className:"rs6-finance-stage-id"},h("span",null,"EARNINGS / 01"),h("strong",null,periodLabel)),
         h("div",{className:"fin-period"},
           scopeButton("today","오늘"),scopeButton("week","최근 7일"),scopeButton("month","월간")),
         scope==="month"&&h("div",{className:"fin-month-head"},
@@ -589,6 +591,8 @@ export function createFinance(R, client) {
         h("div",{className:"fin-quick"},
           button(h(R.Fragment,null,icon("earnings",19),"수익 입력"),()=>openEditor("income"),"fin-primary"),
           button(h(R.Fragment,null,icon("fuel",19),"지출 입력"),()=>openEditor("expense"),"fin-secondary")),
+        ),
+        h("div",{className:"rs6-finance-analysis-grid"},
         h("section",{className:"fin-card fin-chart-card fin-chart-spotlight"},
           h("header",null,h("h2",null,"최근 7일"),
             txt("small",null,"날짜별")),
@@ -605,6 +609,7 @@ export function createFinance(R, client) {
           h("details",{className:"fin-optional"},h("summary",null,"하루 목표"),
             h("div",{className:"fin-goal-daily"},txt("small",null,"잔여 "+remainingWorkDays+"일"),
               txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
+        ),
         h("section",{className:"fin-card fin-platform-card"+(!Object.keys(monthly.byPlatform).length?" fin-no-records":"")},
           h("header",null,h("h2",null,"플랫폼별"),
             txt("small",null,monthLabel+" 기준")),

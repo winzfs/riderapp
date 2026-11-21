@@ -1296,6 +1296,8 @@ export function mountApplication({
       "section",
       { className: "page rc-community rc-home rc-community-v32 rs-community-renewal" },
       datalist,
+      H("section",{className:"rs6-community-deck"},
+        H("span",{className:"rs6-community-id"},"LOCAL / 04"),
       H(
         "div",
         { className: "rc-head" },
@@ -1449,6 +1451,7 @@ export function mountApplication({
           ),
         ),
       ),
+      ),
       isNews
         ? H(
             "div",
@@ -1506,6 +1509,9 @@ export function mountApplication({
             ),
           )
         : null,
+      H("div",{className:"rs6-community-feed-head"},
+        H("h2",null,isNews?"라이더 뉴스":"동네 이야기"),
+        H("span",null,rows.length+"개 소식")),
       rows.length
         ? H(
             "div",
@@ -2565,6 +2571,10 @@ export function mountApplication({
                       key: `route-map`,
                       className: `nearby nearby-full`,
                       children: [
+                        (0, J.jsxs)(`div`, {
+                          className: `map-wrap rs33-map-wrap rs6-map-stage`,
+                          "data-rs33-layer": mapLayer,
+                          children: [
                         (0, J.jsx)(MapBar, {
                           layer: mapLayer,
                           choose: setMapLayer,
@@ -2572,10 +2582,6 @@ export function mountApplication({
                           busy: p.busy,
                           toggle: h,
                         }),
-                        (0, J.jsxs)(`div`, {
-                          className: `map-wrap rs33-map-wrap`,
-                          "data-rs33-layer": mapLayer,
-                          children: [
                             (0, J.jsx)(Zo, {
                               position: p.position,
                               riders:
