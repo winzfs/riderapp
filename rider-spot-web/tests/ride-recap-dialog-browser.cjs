@@ -52,7 +52,7 @@ const session={access_token:jwt,refresh_token:"qa",expires_at:Math.floor(Date.no
    const day=p.getByRole("button",{name:/2026-11-16 운행/}).first();
    await day.waitFor({timeout:15000});
    await day.click();
-   const launch=p.locator(".rs-recap-timeline-action .rs-recap-launch");
+   const launch=p.locator(".rs12-map-heading .rs12-recap-action");
    await launch.waitFor();
    await launch.click();
    const dialog=p.locator("dialog.rs-recap-dialog[open]");

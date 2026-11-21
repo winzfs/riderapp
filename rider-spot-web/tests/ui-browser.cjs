@@ -108,11 +108,11 @@ async function check(width,native){
    await p.locator('.rs-work-hub').waitFor();await shot('tools');
  } else {
    await nav.getByRole('button',{name:'수익',exact:true}).click();
-   await p.locator('.fin-hero').waitFor();
+   await p.locator('.finance-page .rs8-income-console').waitFor();
    assert.equal(await nav.locator('button').count(),5,'five navigation destinations');
    assert.equal(await p.locator('.fin-subnav button').count(),4,'overview records settlements analysis');
    await layout('finance');
-   await p.locator('.fin-quick').getByRole('button',{name:'수익 입력'}).click();
+   await p.locator('.rs11-finance-shortcuts').getByRole('button',{name:'수익 기록'}).click();
    await p.getByRole('dialog',{name:'수익 입력'}).waitFor();
    await p.getByRole('dialog',{name:'수익 입력'}).getByLabel('수익 금액').fill('85000');
    await p.getByRole('dialog',{name:'수익 입력'}).getByRole('button',{name:'닫기'}).click();
