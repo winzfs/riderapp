@@ -5,10 +5,12 @@ on:
     paths:
       - '.github/workflows/rider-spot-recap-acceptance.yml'
       - 'rider-spot-web/src/ride-recap.mjs'
+      - 'rider-spot-web/src/daily-timeline.css'
       - 'rider-spot-web/src/ride-recap-map.mjs'
       - 'rider-spot-web/src/Timeline.mjs'
       - 'rider-spot-web/src/finance-ui.mjs'
       - 'rider-spot-web/tests/ride-recap-browser.cjs'
+      - 'rider-spot-web/tests/ride-recap-dialog-browser.cjs'
       - 'rider-spot-web/tests/ride-recap-map.test.mjs'
       - 'rider-spot-web/tests/ride-recap.test.mjs'
   workflow_dispatch:
@@ -34,6 +36,14 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Export actual 1080px PNG in Chromium, no fake route or duplicate cost
         run: node tests/ride-recap-browser.cjs
+      - name: Verify top-layer dialog, always-visible actions and fixed options
+        run: |
+          node scripts/local-preview.cjs >/tmp/rider-recap-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8789/ >/dev/null && break
+            sleep 1
+          done
+          node tests/ride-recap-dialog-browser.cjs
       - name: Assert immutable output and native WebView safe startup
         run: |
           node --input-type=module <<'NODE'
