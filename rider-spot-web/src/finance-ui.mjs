@@ -587,7 +587,7 @@ export function createFinance(R, client) {
             h("div",null,txt("span",null,"비용 차감 후"),h("strong",null,totals.uncertain?"확인 필요":money(totals.net)))),
           totals.uncertain&&txt("p","fin-warning","예전 수익의 비용 분류가 불분명해 비용 차감액 확인이 필요해요."),
           h("section",{className:"rs8-trend-integrated"},
-            h("header",null,txt("strong",null,"7일 수익 흐름"),txt("small",null,"날짜별")),
+            h("div",{className:"rs9-chart-heading"},txt("strong",null,"최근 7일 수익"),txt("small",null,"날짜별 · 원")),
             chart()),
           h("div",{className:"rs8-console-actions"},
             button(h(R.Fragment,null,icon("earnings",18),"수익 입력"),()=>openEditor("income"),"fin-primary"),

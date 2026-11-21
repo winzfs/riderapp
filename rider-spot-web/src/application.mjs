@@ -1300,7 +1300,7 @@ export function mountApplication({
       H(
         "div",
         { className: "rc-head" },
-        H("h1", null, dong || district),
+        H("div",{className:"rs9-community-title"},H("small",null,"동네 소식"),H("h1",null,dong || district)),
         H(
           "button",
           { className: "primary rc-write", type: "button", onClick: write },
@@ -2037,7 +2037,7 @@ export function mountApplication({
         rs33J("summary",{className:"rs8-map-tools-button",
           "aria-label":"지도 레이어와 공유 설정 열기"},
           rs33J(Icon,{name:"layers",size:18}),
-          rs33J("span",null,"지도 도구")),
+          rs33J("span",{className:"sr-only"},"지도 도구")),
         rs33J("div",{className:"rs8-map-tools-panel"},
           rs33J("p",null,"표시할 정보"),
           rs33J("div",{className:"rs33-map-filters",role:"group","aria-label":"지도 도구 및 표시 항목"},
