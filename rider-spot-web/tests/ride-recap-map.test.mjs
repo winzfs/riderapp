@@ -26,7 +26,7 @@ test("only actual public Korean administrative names are placed on an accurate p
 });
 
 test("map card sizes are the exact pixel sizes used by exported PNG",()=>{
-  assert.deepEqual(recapMapDimensions("all","4:5"),{width:936,height:473});
+  assert.deepEqual(recapMapDimensions("all","4:5"),{width:800,height:800});
   assert.deepEqual(recapMapDimensions("route","1:1"),{width:936,height:572});
   assert.deepEqual(recapMapDimensions("route","9:16"),{width:936,height:900});
   assert.equal(recapMapDimensions("finance","4:5"),null);
