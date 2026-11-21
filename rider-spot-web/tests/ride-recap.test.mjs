@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout,recapMapDimensions,recapDistanceMeters} from "../src/ride-recap.mjs";
+import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout,recapMapDimensions,recapDistanceMeters,recapMapLabelVisible} from "../src/ride-recap.mjs";
 
 const point=(lat,lng,t,extra={})=>({lat,lng,t,...extra});
 const trip=(id,start,end,points,distance=0)=>({
@@ -209,4 +209,13 @@ test("zero-cost disclosure and unknown-cost disclosure remain distinct",()=>{
   labels.length=0;
   renderRecapCanvas(canvas,unknown);
   assert.ok(labels.includes("비용 확인 필요"),"Missing cost declaration cannot pretend zero");
+});
+
+
+test("Korean dong names cannot collide with endpoint labels or clip at map edge",()=>{
+  const routes=[[{x:110,y:625},{x:420,y:300},{x:805,y:510}]];
+  assert.equal(recapMapLabelVisible({x:105,y:640},routes,920,920),false);
+  assert.equal(recapMapLabelVisible({x:800,y:506},routes,920,920),false);
+  assert.equal(recapMapLabelVisible({x:49,y:400},routes,920,920),false);
+  assert.equal(recapMapLabelVisible({x:430,y:545},routes,920,920),true);
 });

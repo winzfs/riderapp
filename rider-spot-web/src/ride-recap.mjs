@@ -183,6 +183,16 @@ export function recapEndpointLayout(paths,w,h,geoSegments=[]) {
   return {first,last,start,end,joint:null,coincident,meters};
 }
 
+
+export function recapMapLabelVisible(place,positions,width,height) {
+  if(!place||!Number.isFinite(place.x)||!Number.isFinite(place.y)||
+    place.x<68||place.x>width-68||place.y<80||place.y>height-56)return false;
+  const routes=(positions||[]).filter(path=>Array.isArray(path)&&path.length);
+  const endpoints=routes.length?[routes[0][0],routes.at(-1).at(-1)]:[];
+  // Korean dong text stays away from real start/end pins and their chip labels.
+  return endpoints.every(pt=>Math.hypot(place.x-pt.x,place.y-pt.y)>=116);
+}
+
 function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
   rounded(ctx,x,y,w,h,13,p.tint);
   ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,13);ctx.clip();
@@ -191,6 +201,7 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
     ctx.drawImage(mapSnapshot.image,x,y,w,h);
     // Administrative labels are positioned using the same export-map viewport.
     for(const place of mapSnapshot.labels||[]){
+      if(!recapMapLabelVisible(place,mapSnapshot.positions,w,h))continue;
       const px=x+place.x,py=y+place.y;
       ctx.save();
       ctx.font="600 22px "+fontFamily;

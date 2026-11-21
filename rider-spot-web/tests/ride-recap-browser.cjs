@@ -34,9 +34,9 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
         id:"qa-ride",started_at:"2026-11-21T10:00:00Z",
         ended_at:"2026-11-21T15:15:00Z",distance_km:65.4,
         points:[{lat:35.169,lng:126.812,t:1795255200000},
-          {lat:35.176,lng:126.825,t:1795255500000},
-          {lat:35.19,lng:126.834,t:1795255800000},
-          {lat:35.171,lng:126.856,t:1795256100000}]
+          {lat:35.176,lng:126.825,t:1795255300000},
+          {lat:35.19,lng:126.834,t:1795255400000},
+          {lat:35.171,lng:126.856,t:1795255500000}]
       }];
       const finance={earnings:[{work_date:date,platform:"쿠팡이츠",gross_won:112500,deliveries:20,expenses_won:2000,expense_scope:"other_only"}],
         fuel:[{fueled_on:date,cost_won:6000}],maintenance:[],extras:[]};
@@ -67,7 +67,7 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
       const report=await page.evaluate(async scenario=>{
         const {buildRecapSnapshot,renderRecapCanvas}=await import("/src/ride-recap.mjs");
         const day="2026-11-21",t=Date.parse("2026-11-21T10:00:00Z");
-        const p=(lat,lng,n)=>({lat,lng,t:t+n*600000});
+        const p=(lat,lng,n)=>({lat,lng,t:t+n*100000});
         let points=[
           p(35.169,126.812,0),p(35.181,126.835,1),p(35.185,126.856,2)
         ];
@@ -113,13 +113,13 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
       const {renderRecapCanvas,buildRecapSnapshot}=await import("/src/ride-recap.mjs");
       const samples=[
         {lat:35.169,lng:126.812,t:1795255200000},
-        {lat:35.176,lng:126.825,t:1795255500000},
-        {lat:35.19,lng:126.834,t:1795255800000},
-        {lat:35.171,lng:126.856,t:1795256100000},
+        {lat:35.176,lng:126.825,t:1795255300000},
+        {lat:35.19,lng:126.834,t:1795255400000},
+        {lat:35.171,lng:126.856,t:1795255500000},
       ];
-      const snapshot=await loadRideRecapBasemap([samples],{width:920,height:920});
       const ride=buildRecapSnapshot([{id:"qa",started_at:"2026-11-21T10:00:00Z",
         ended_at:"2026-11-21T15:15:00Z",distance_km:65.4,points:samples}],"2026-11-21");
+      const snapshot=await loadRideRecapBasemap(ride.segments,{width:920,height:920});
       const canvas=document.querySelector("canvas");
       renderRecapCanvas(canvas,ride,{mode:"all",ratio:"4:5",mapSnapshot:snapshot});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
