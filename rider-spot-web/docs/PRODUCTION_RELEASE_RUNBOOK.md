@@ -8,10 +8,15 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active **Editorial v7 native UI** front: `74148419-d426-4187-a250-4313fcb61637` (100%)
-- Current immutable v7 compiled app: `bbd2531a1e8d`; pinned build commit `a4a2173abd52739ce9051e4c404e20c8fbb2c79a`
-- Active v7 asset Worker: `rider-spot-editorial-v7-assets` (version-scoped KV index + SW keys)
-- Active isolated v7 visual Worker: `rider-spot-editorial-v7` (`?rev=20261121-v7`)
+- Active **Atelier v8 — genuine React screen overhaul** front: `916aa709-12b2-40f3-bcbd-7f439ae9541c` (100%)
+- Active immutable v8 app: `7ba6f9cb1359`; pinned build commit `f7ae89197b740f47afb0d8f388fbd7e5607ae89e`
+- Active v8 asset Worker: `rider-spot-atelier-v8-assets` (versioned KV, old app hashes retained)
+- Active v8 visual Worker: `rider-spot-atelier-v8` (`?rev=20261121-v8`)
+- Immediate previous v7 rollback front: `74148419-d426-4187-a250-4313fcb61637`
+- Previous **Editorial v7** front: `74148419-d426-4187-a250-4313fcb61637`
+- Previous immutable v7 app: `bbd2531a1e8d`; pinned build commit `a4a2173abd52739ce9051e4c404e20c8fbb2c79a`
+- Previous v7 asset Worker: `rider-spot-editorial-v7-assets` (version-scoped KV index + SW keys)
+- Previous v7 visual Worker: `rider-spot-editorial-v7` (`?rev=20261121-v7`)
 - Previous v6b production front for immediate rollback: `84ccf064-b0b1-4a2c-ae76-1738216457d8`
 - Previous **Urban Editorial v6b** front: `84ccf064-b0b1-4a2c-ae76-1738216457d8`
 - Active immutable v6 JS + CSS: hash `e30517cbf40f`, pin commit `3a010f4866f18098b5ddf9a35eed06e7261067fd`
@@ -33,11 +38,11 @@ deployment state with this record before any change.
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
 - Front code: `rider-spot-web/edge/static-edge.mjs` (4.7KB)
-- Asset binding `ASSETS` → `rider-spot-editorial-v7-assets` (`rs-asset-v7::shell/<hash>/` for HTML/SW; old v4/v5/v6 hashes preserved read-only)
+- Asset binding `ASSETS` → `rider-spot-atelier-v8-assets` (`rs-asset-v8::shell/<hash>/` HTML/SW; v4-v7 hashed assets preserved read-only)
 - Previous v4 gateway remains available: `rider-spot-renewal-assets`
 - Previous v3 asset gateway retained: `rider-spot-static-candidate-assets` (pinned `16c1eecf6bac`)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
-- Design `DESIGN` → `rider-spot-editorial-v7` (isolated final static CSS, no data/GPS bindings)
+- Design `DESIGN` → `rider-spot-atelier-v8` (isolated CSS without data/GPS bindings)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -281,3 +286,25 @@ ride session or user record changes were made for this design release.
 KV caches, old compiled assets or user records; all old bindings are still
 available. Physical Galaxy S24+ long ride, screen-lock GPS and OAuth sessions
 require on-device acceptance; browser tests do not prove those cases.
+
+## Atelier v8 full React screen overhaul — 2026-11-21
+
+Production `rider-spot` front `916aa709-12b2-40f3-bcbd-7f439ae9541c` deployed at 100% traffic.
+Immutable compiled release `7ba6f9cb1359` is pinned to `f7ae89197b740f47afb0d8f388fbd7e5607ae89e`.
+This release changes React JSX layout rather than just adding a visual CSS skin.
+
+- Map: visible region/weather + closed-on-start, functional tool drawer with layer filters and sharing.
+- Finance: big-number earnings console integrates chart and income/expense action. Analysis uses large gross with secondary metrics; zero-money expenses and maintenance links collapse on demand; settlement highlights outstanding amount.
+- My Bike: contrasting illustrated motorcycle cockpit, due/overdue service alerts, retained v197 parts assets, inline settings drawer that does NOT cover primary buttons on 360px split screens.
+- Community: compact masthead, collapsed filters/search, chronological card-free feed.
+- Timeline: original location/route playback controls, trip summary above the map.
+
+Key source files: `src/finance-ui.mjs`, `src/mobile-records.mjs`, `src/application.mjs`, `src/atelier-v8.css`, `edge/atelier-v8-assets.mjs`, `edge/atelier-v8-worker.mjs`.
+Build and native/CRUD acceptance: https://github.com/winzfs/riderapp/actions/runs/44886663575
+Isolated preview acceptance: https://github.com/winzfs/riderapp/actions/runs/44886955595
+Live production acceptance: https://github.com/winzfs/riderapp/actions/runs/44887356350
+
+**Rollback**: set 100% production traffic back to `rider-spot` Worker version `74148419-d426-4187-a250-4313fcb61637`.
+Never delete old KV hashed scripts, older HTML/Service Worker cache keys, SQLite sessions or Supabase records as part of a visual rollback.
+GPS map camera, Android WebView/bridge, account OAuth, trip status, backend services and user data were not modified.
+Automated browser/native bridge testing does not replace real S24+ extended ride, screen lock and split-screen acceptance.
