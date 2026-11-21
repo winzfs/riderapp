@@ -776,7 +776,7 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
 }
 #rs-presence-panel.rs-map-v2-presence-sheet[hidden]{display:none!important}
 #rs-presence-panel.rs-map-v2-presence-sheet:not([hidden]){animation:rsMapV2Enter .23s cubic-bezier(.2,.75,.25,1) both}
-@keyframes rsMapV2Enter{from{opacity:.45;translate:0 30px}to{opacity:1;translate:0 0}}
+@keyframes rsMapV2Enter{from{translate:0 26px}to{translate:0 0}}
 #rs-presence-panel.rs-map-v2-presence-sheet .rs-map-v2-grab {
   display:flex;align-items:center;justify-content:center;
   height:35px;min-height:35px;touch-action:pan-y;user-select:none;
