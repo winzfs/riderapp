@@ -1,0 +1,29 @@
+name: Rider Spot recap native image save compatibility audit
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-recap-native-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-webview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect actual native source archive, without changing APK
+        run: |
+          mkdir -p /tmp/rider-recap-native
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-recap-native
+          echo NATIVE_FILES
+          find /tmp/rider-recap-native -type f \( -name '*MainActivity*' -o -name 'native-bridge.js' -o -name 'AndroidManifest.xml' \)
+          echo NATIVE_IMAGE_SUPPORT
+          grep -RniE 'setDownloadListener|DownloadListener|MediaStore.Images|__rsNativeSaveImage|recap-save' /tmp/rider-recap-native/app/src/main || true
+          echo NATIVE_ORIGIN_MESSAGE
+          grep -n -C 6 'case "state":\|case "oauth-open":\|switch (action)' /tmp/rider-recap-native/app/src/main/java/com/riderspot/android/MainActivity.java || true
+          echo NATIVE_BRIDGE_END
+          tail -24 /tmp/rider-recap-native/app/src/main/assets/native-bridge.js
+          echo NATIVE_PROJECT_FILES
+          ls -la /tmp/rider-recap-native | head -25
