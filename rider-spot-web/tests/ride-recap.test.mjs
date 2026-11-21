@@ -185,3 +185,28 @@ test("known-timestamp GPS teleport is split without modifying source samples",()
   assert.deepEqual(segments.map(x=>x.length),[2,2,1]);
   assert.equal(JSON.stringify(samples),original);
 });
+
+
+test("zero-cost disclosure and unknown-cost disclosure remain distinct",()=>{
+  const known={earnings:[{work_date:yesterday,platform:"쿠팡이츠",gross_won:128000,
+    gross_entered:true,expense_scope:"other_only",expenses_won:0}],
+    fuel:[],maintenance:[],extras:[]};
+  const explicit=buildRecapSnapshot([first],yesterday,known);
+  const unknown=buildRecapSnapshot([first],yesterday,{
+    ...known,earnings:[{...known.earnings[0],expense_scope:undefined,expenses_won:undefined}]
+  });
+  assert.equal(explicit.costKnown,true);
+  assert.equal(unknown.costKnown,false);
+  const labels=[];
+  const context=new Proxy({}, {get(target,key){
+    if(key==="fillText")return value=>labels.push(String(value));
+    if(["beginPath","roundRect","fill","stroke","moveTo","lineTo","arc","save","clip","restore"].includes(key))return ()=>{};
+    return target[key];
+  },set(target,key,value){target[key]=value;return true;}});
+  const canvas={getContext:()=>context};
+  renderRecapCanvas(canvas,explicit);
+  assert.ok(!labels.includes("순수익"),"Never repeat gross as net at zero expense");
+  labels.length=0;
+  renderRecapCanvas(canvas,unknown);
+  assert.ok(labels.includes("비용 확인 필요"),"Missing cost declaration cannot pretend zero");
+});

@@ -59,6 +59,54 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
     assert.deepEqual(errors,[]);
     const dir=process.env.RIDER_RECAP_SCREENSHOTS||"/tmp/rider-spot-recap";
     fs.mkdirSync(dir,{recursive:true});
+    // Ten independent PNGs, not mocked CSS captures. Each variant uses the
+    // production Canvas drawing function and a source-accurate GPS history.
+    const cases=["same-place","nearby","far-away","complex-route","no-deliveries",
+      "no-earnings","zero-cost","recorded-cost","private-income","no-gps"];
+    for(const scenario of cases){
+      const report=await page.evaluate(async scenario=>{
+        const {buildRecapSnapshot,renderRecapCanvas}=await import("/src/ride-recap.mjs");
+        const day="2026-11-21",t=Date.parse("2026-11-21T10:00:00Z");
+        const p=(lat,lng,n)=>({lat,lng,t:t+n*600000});
+        let points=[
+          p(35.169,126.812,0),p(35.181,126.835,1),p(35.185,126.856,2)
+        ];
+        if(scenario==="same-place")points.push(p(35.169,126.812,3));
+        if(scenario==="nearby")points.push(p(35.16914,126.81205,3));
+        if(scenario==="complex-route")points=Array.from({length:45},(_,i)=>({
+          lat:35.17+0.009*Math.sin(i*.33),lng:126.82+0.012*Math.cos(i*.30),
+          t:t+i*45000
+        }));
+        if(scenario==="no-gps")points=[];
+        const trip={id:"qa-"+scenario,started_at:"2026-11-21T10:00:00Z",
+          ended_at:"2026-11-21T11:00:00Z",distance_km:scenario==="no-gps"?0:16.3,points};
+        const money={work_date:day,platform:"쿠팡이츠",gross_entered:true,
+          gross_won:112500,deliveries:scenario==="no-deliveries"?undefined:18,
+          expense_scope:"other_only",expenses_won:scenario==="recorded-cost"?2500:0};
+        const finance=scenario==="no-earnings"?null:{
+          earnings:[money],fuel:scenario==="recorded-cost"?[{fueled_on:day,cost_won:3500}]:[],
+          maintenance:[],extras:[]};
+        const recap=buildRecapSnapshot([trip],day,finance);
+        const canvas=document.querySelector("#recap");
+        renderRecapCanvas(canvas,recap,{mode:"all",ratio:"4:5",theme:"light",
+          showRoute:true,showIncome:scenario!=="private-income"});
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+        return {width:canvas.width,height:canvas.height,bytes:blob?.size||0,
+          segments:recap.segments.length,deliveries:recap.deliveries,
+          gross:recap.gross,cost:recap.cost,costKnown:recap.costKnown};
+      },scenario);
+      assert.deepEqual([report.width,report.height],[1080,1350],scenario);
+      assert.ok(report.bytes>18000,"Small/empty PNG "+scenario+": "+JSON.stringify(report));
+      if(scenario==="no-earnings")assert.equal(report.gross,null);
+      if(scenario==="no-deliveries")assert.equal(report.deliveries,null);
+      if(scenario==="no-gps")assert.equal(report.segments,0);
+      if(scenario==="zero-cost")assert.equal(report.cost,0);
+      if(scenario==="recorded-cost")assert.equal(report.cost,6000);
+      const png=await page.locator("#recap").screenshot({path:path.join(dir,"scenario-"+scenario+".png")});
+      assert.equal(png.readUInt32BE(16),1080);
+      assert.equal(png.readUInt32BE(20),1350);
+      console.log("RECAP_SCENARIO_PNG_PASS",scenario,JSON.stringify(report));
+    }
     await page.locator("canvas").screenshot({path:path.join(dir,"privacy-preview.png")});
     const mapEvidence=await page.evaluate(async()=>{
       const {loadRideRecapBasemap}=await import("/src/ride-recap-map.mjs");
