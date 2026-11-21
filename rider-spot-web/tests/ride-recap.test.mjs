@@ -101,5 +101,5 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
   assert.ok(!textValues.includes("미입력"),"No missing delivery placeholder");
-  assert.equal(textValues.filter(x=>x==="라이더스팟").length,3,"Only top brand across 3 render modes");
+  assert.equal(textValues.filter(x=>x==="라이더스팟").length,5,"Only one top brand per rendered image, no footer");
 });
