@@ -176,7 +176,7 @@ function openSheet(g,trigger){
 function mount(map){
   if(!map||!window.maplibregl?.Marker)return ()=>{};
   let alive=true,revision=0,timer=0,pins=[],lastError="";
-  const stopPins=()=>{for(const item of pins)item.remove();pins=[]};
+  const stopPins=()=>{for(const item of pins)item.remove();pins=[];map.__rsPinOverlay?.clearGroup("shops")};
   async function update(){
     if(!alive)return;
     const current=++revision,zoom=map.getZoom();
@@ -211,10 +211,15 @@ function mount(map){
         selected.push(group);
         if(selected.length>=max)break;
       }
-      const replacement=selected.map(g=>makeChip(g,map,zoom>=16.7));
-      if(!alive||current!==revision){replacement.forEach(marker=>marker.remove());return}
-      stopPins();pins=replacement;lastError="";
-      window.__rsStoreOverlayStats={version:VERSION,groups:grouped.size,candidates:eligible.length,markers:pins.length,zoom};
+      const gpu=map.__rsPinOverlay;
+      const replacement=gpu?selected.map(g=>({id:g.key,lng:g.lon,lat:g.lat,kind:"shop",
+        name:zoom>=16.7?representative(g):"매장",count:g.names.size,
+        onClick:()=>openSheet(g,null)})):selected.map(g=>makeChip(g,map,zoom>=16.7));
+      if(!alive||current!==revision){if(!gpu)replacement.forEach(marker=>marker.remove());return}
+      stopPins();
+      if(gpu){gpu.setGroup("shops",replacement)}else{pins=replacement}
+      lastError="";
+      window.__rsStoreOverlayStats={version:VERSION,groups:grouped.size,candidates:eligible.length,markers:replacement.length,zoom,engine:gpu?"maplibre-layer":"dom"};
     }catch(error){
       if(!alive||current!==revision)return;
       if(String(error)!==lastError){lastError=String(error);console.warn("RiderSpot public shop locations:",error?.message||error)}
