@@ -9,12 +9,13 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
 (async()=>{
   const server=http.createServer((request,response)=>{
     const requested=new URL(request.url,"http://localhost").pathname;
-    const filename=path.resolve(root,"."+requested);
-    if(requested==="/"){response.writeHead(200,{"content-type":mime("index.html")});response.end("<!doctype html><html lang='ko'><head><meta charset='utf-8'></head><body><canvas id='recap'></canvas></body></html>");return;}
-    if(!filename.startsWith(root+path.sep)||!filename.endsWith(".mjs")){response.writeHead(404);response.end();return;}
+    const filename=requested==="/mapdata/admin.json"?
+      path.resolve(root,"data/korean-map/admin.json"):path.resolve(root,"."+requested);
+    if(requested==="/"){response.writeHead(200,{"content-type":mime("index.html")});response.end("<!doctype html><html lang='ko'><head><meta charset='utf-8'><link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css'></head><body><canvas id='recap'></canvas></body></html>");return;}
+    if(!filename.startsWith(root+path.sep)||(!filename.endsWith(".mjs")&&!filename.endsWith("admin.json"))){response.writeHead(404);response.end();return;}
     fs.readFile(filename,(error,data)=>{
       if(error){response.writeHead(404);response.end();return;}
-      response.writeHead(200,{"content-type":mime(filename),"cache-control":"no-store"});
+      response.writeHead(200,{"content-type":filename.endsWith(".json")?"application/json; charset=utf-8":mime(filename),"cache-control":"no-store"});
       response.end(data);
     });
   });
@@ -59,6 +60,30 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
     const dir=process.env.RIDER_RECAP_SCREENSHOTS||"/tmp/rider-spot-recap";
     fs.mkdirSync(dir,{recursive:true});
     await page.locator("canvas").screenshot({path:path.join(dir,"privacy-preview.png")});
+    const mapEvidence=await page.evaluate(async()=>{
+      const {loadRideRecapBasemap}=await import("/src/ride-recap-map.mjs");
+      const {renderRecapCanvas,buildRecapSnapshot}=await import("/src/ride-recap.mjs");
+      const samples=[
+        {lat:35.169,lng:126.812,t:1795255200000},
+        {lat:35.176,lng:126.825,t:1795255500000},
+        {lat:35.19,lng:126.834,t:1795255800000},
+        {lat:35.171,lng:126.856,t:1795256100000},
+      ];
+      const snapshot=await loadRideRecapBasemap([samples],{width:936,height:473});
+      const ride=buildRecapSnapshot([{id:"qa",started_at:"2026-11-21T10:00:00Z",
+        ended_at:"2026-11-21T15:15:00Z",distance_km:65.4,points:samples}],"2026-11-21");
+      const canvas=document.querySelector("canvas");
+      renderRecapCanvas(canvas,ride,{mode:"all",ratio:"4:5",mapSnapshot:snapshot});
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+      return {hasBasemap:snapshot?.hasBasemap,labels:snapshot?.labels?.map(x=>x.name)||[],
+        mapWidth:snapshot?.image?.naturalWidth,bytes:blob?.size};
+    });
+    assert.ok(mapEvidence.hasBasemap,"Real OpenFreeMap export required");
+    assert.ok(mapEvidence.mapWidth>500,"Basemap render too narrow");
+    assert.ok(mapEvidence.labels.some(name=>name.endsWith("동")),"Korean administrative dong labels missing");
+    assert.ok(mapEvidence.bytes>25000,"Real map PNG too small");
+    await page.locator("canvas").screenshot({path:path.join(dir,"real-korean-map-recap.png")});
+    console.log("RECAP_REAL_MAP_AND_DONG_PASS",JSON.stringify(mapEvidence));
     console.log("RECAP_BROWSER_PNG_PASS",JSON.stringify(evidence));
   }finally{
     await browser?.close();
