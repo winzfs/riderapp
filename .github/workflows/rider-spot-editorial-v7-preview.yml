@@ -33,7 +33,7 @@ jobs:
           const html=fs.readFileSync('/tmp/rider-editorial-v7-preview.html','utf8');
           const sw=fs.readFileSync('/tmp/rider-editorial-v7-preview-sw.js','utf8');
           const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
-          assert.equal(release.hash,'73e1a8532289');
+          assert.equal(release.hash,'7d1f0f0bb6bc');
           assert.ok(html.includes('rs-recovery-guard-v217'));
           assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/app.mjs'));
           assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/editorial-v7.css'));
@@ -50,7 +50,7 @@ jobs:
             console.log('EDITORIAL_V7_ASSET_PASS',path,bytes.byteLength);
           }
           // Preserve old v4 and v5 app hashes across visual releases.
-          for(const hash of ['8eb44596629f','3305352a56bc','e30517cbf40f']){
+          for(const hash of ['8eb44596629f','3305352a56bc','e30517cbf40f','73e1a8532289']){
             const old=await fetch(process.env.RIDER_ORIGIN+'/assets/rider-spot-'+hash+'/app.mjs',{signal:AbortSignal.timeout(45000)});
             assert.equal(old.status,200,'previous '+hash+' app JS must remain available');
           }
