@@ -91,4 +91,11 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   renderRecapCanvas(canvas,snapshot,{mode:"route",showRoute:false,theme:"mist"});
   renderRecapCanvas(canvas,snapshot,{mode:"finance",showIncome:false,theme:"night"});
   assert.ok(ops.some(([name])=>name==="fillText"));
+  // The 4:5 all-in-one image has a truly square 800×800 map, then a
+  // compact settlement panel; neither collides with the footer.
+  const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===140&&y===177&&w===800&&h===800);
+  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===997&&w===936&&h===224);
+  assert.ok(square,"Expected centered 1:1 map");
+  assert.ok(receipt,"Expected condensed settlement beneath map");
+  assert.ok(177+800<997 && 997+224<1350-112,"No footer / map overlap");
 });
