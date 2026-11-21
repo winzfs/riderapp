@@ -92,7 +92,7 @@ export async function fetchRecapFinance(client, userId, day) {
 }
 
 const palettes = {
-  light: {bg:"#F6F5F1", ink:"#243744", muted:"#71818B", panel:"#FFFFFF", grid:"#E5E9E9", accent:"#4169F5", tint:"#EDF0EC", lime:"#C6EA87"},
+  light: {bg:"#F7F8F6", ink:"#203844", muted:"#73848D", panel:"#FFFFFF", grid:"#D9E1E3", accent:"#4568F3", tint:"#EDF2F0", lime:"#C6EA87"},
   mist: {bg:"#E7EDEF", ink:"#203543", muted:"#627782", panel:"#F7FAF9", grid:"#D3DFE3", accent:"#3568ED", tint:"#DBE6E9", lime:"#C5E88B"},
   night: {bg:"#283944", ink:"#F2F5F4", muted:"#B5C4C9", panel:"#394C55", grid:"#51616A", accent:"#B5D2FE", tint:"#324650", lime:"#D1EC98"},
 };
@@ -123,8 +123,8 @@ function duration(millis) {
 function abbreviatedMoney(n) { return n === null ? "미입력" : "₩"+formats.format(Math.round(n)); }
 export function recapMapDimensions(mode,ratio) {
   if(mode==="finance")return null;
-  // 4:5 poster: a true square, 800 x 800 GPS map and a compact receipt below.
-  if(mode==="all"&&ratio==="4:5")return {width:920,height:920};
+  // 4:5 editorial poster: exact MapLibre + Canvas raster pixel geometry.
+  if(mode==="all"&&ratio==="4:5")return {width:936,height:744};
   const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
   return {width:936,height:Math.round(mode==="route"?Math.min(height*53/100,900):Math.min(height*35/100,720))};
 }
@@ -303,43 +303,43 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
 }
 // A single card, rendered into the actual export PNG (not a CSS preview).
 // The map and the bottom ledger share one clipped, elevated journal surface.
+// The PNG is the shareable artwork itself, never a fake card on a mockup.
 function premiumJournalSurface(ctx,p) {
-  rounded(ctx,0,0,1080,1350,0,"#DFE6E9");
-  ctx.save();
-  ctx.shadowColor="rgba(25,47,65,.18)";
-  ctx.shadowBlur=34;
-  ctx.shadowOffsetY=12;
-  rounded(ctx,24,22,1032,1306,35,"#FDFDFA");
-  ctx.restore();
-  ctx.save();
-  ctx.beginPath();ctx.roundRect(24,22,1032,1306,35);ctx.clip();
-  const paper=typeof ctx.createLinearGradient==="function"
-    ? ctx.createLinearGradient(24,22,1056,1328):null;
-  if(paper){paper.addColorStop(0,"#FFFFFF");paper.addColorStop(.72,"#FAFBFA");
-    paper.addColorStop(1,"#F5F8FA");}
-  rounded(ctx,24,22,1032,1306,0,paper||"#FBFCFA");
-  // The ledger is a continuation of the card, not another floating widget.
-  const ledger=typeof ctx.createLinearGradient==="function"
-    ? ctx.createLinearGradient(24,1090,1056,1328):null;
-  if(ledger){ledger.addColorStop(0,"#F5F8FB");ledger.addColorStop(1,"#EEF3F8");}
-  rounded(ctx,24,1099,1032,229,0,ledger||"#F2F6F9");
-  ctx.restore();
-  ctx.beginPath();ctx.roundRect(25,23,1030,1304,34);
-  ctx.strokeStyle="rgba(255,255,255,.84)";ctx.lineWidth=2;ctx.stroke();
-  ctx.beginPath();ctx.roundRect(28,26,1024,1298,32);
-  ctx.strokeStyle="rgba(73,99,115,.12)";ctx.lineWidth=1;ctx.stroke();
-  rounded(ctx,80,23,112,5,2.5,p.accent);
+  rounded(ctx,0,0,1080,1350,0,"#F7F8F6");
+  rounded(ctx,0,974,1080,376,0,"#F2F5F3");
+  line(ctx,72,974,1008,974,"#D7E0DF",1.5);
 }
 function premiumJournalBrand(ctx,p) {
-  // Tiny custom path mark, drawn as vectors to stay crisp on an exported PNG.
-  rounded(ctx,80,44,32,32,10,p.accent);
-  ctx.beginPath();ctx.moveTo(88,64);ctx.lineTo(96,54);ctx.lineTo(105,61);
-  ctx.strokeStyle="#FFFFFF";ctx.lineWidth=2.6;ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();
-  for(const [xx,yy] of [[88,64],[105,61]]){
-    ctx.beginPath();ctx.arc(xx,yy,2.4,0,Math.PI*2);ctx.fillStyle="#FFFFFF";ctx.fill();
+  rounded(ctx,72,42,31,31,8,p.accent);
+  ctx.beginPath();ctx.moveTo(80,63);ctx.lineTo(88,53);ctx.lineTo(96,59);
+  ctx.strokeStyle="#FFFFFF";ctx.lineWidth=2.6;ctx.lineCap="round";
+  ctx.lineJoin="round";ctx.stroke();
+  for(const [xx,yy] of [[80,63],[96,59]]) {
+    ctx.beginPath();ctx.arc(xx,yy,2.5,0,Math.PI*2);
+    ctx.fillStyle="#FFFFFF";ctx.fill();
   }
-  label(ctx,"라이더스팟",125,68,20,p.ink,750);
-  label(ctx,"RIDE JOURNAL",1000,67,17,p.muted,650,"right");
+  label(ctx,"라이더스팟",114,66,20,p.ink,770);
+  label(ctx,"RIDE JOURNAL",1008,65,16,p.muted,620,"right");
+}
+function recapCalendar(day) {
+  const match=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(day||"");
+  if(!match)return {title:String(day||"기록").replace(/-/g,"."),meta:"이동 기록"};
+  const [,year,month,date]=match;
+  const when=new Date(day+"T12:00:00+09:00");
+  const weekday=Number.isNaN(when.getTime())?"":("일월화수목금토"[when.getUTCDay()]+"요일");
+  return {title:Number(month)+"월 "+Number(date)+"일의 기록",
+    meta:year+(weekday?" · "+weekday:"")};
+}
+function fitRecapLabel(ctx,value,x,y,maxWidth,size,minSize,color,weight,align="left") {
+  const text=String(value);
+  if(typeof ctx.measureText==="function") {
+    while(size>minSize) {
+      ctx.font=weight+" "+size+"px "+fontFamily;
+      if(ctx.measureText(text).width<=maxWidth)break;
+      size-=2;
+    }
+  } else size=Math.min(size,Math.max(minSize,Math.floor(maxWidth/(Math.max(1,text.length)*.62))));
+  label(ctx,text,x,y,Math.max(minSize,size),color,weight,align);
 }
 function stat(ctx,title,value,x,y,w,p) {
   label(ctx,title,x,y,23,p.muted,600);
@@ -358,7 +358,9 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
   if(mode==="all"&&ratio==="4:5"){
     premiumJournalSurface(ctx,p);
     premiumJournalBrand(ctx,p);
-    label(ctx,recap.day.replace(/-/g,".")+" 타임라인",80,137,44,p.ink,770);
+    const calendar=recapCalendar(recap.day);
+    label(ctx,calendar.title,72,158,57,p.ink,790);
+    label(ctx,calendar.meta,1008,155,20,p.muted,580,"right");
   }else{
     rounded(ctx,72,66,12,12,3,p.accent);
     label(ctx,"라이더스팟",97,80,22,p.ink,780);
@@ -396,66 +398,56 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       }
     }
   } else if(mode==="all" && ratio==="4:5") {
-    const {width:side,height:mapHeight}=recapMapDimensions(mode,ratio);
-    const left=80,right=1000;
-    // An inset shadow and a precise boundary give the actual GPS map the
-    // treatment of a photographic print without obscuring any roads or labels.
-    ctx.save();
-    ctx.shadowColor="rgba(37,67,89,.15)";
-    ctx.shadowBlur=20;ctx.shadowOffsetY=8;
-    rounded(ctx,left-6,160,side+12,mapHeight+12,20,"#FFFFFF");
-    ctx.restore();
-    drawRoute(ctx,recap.segments,left,166,side,mapHeight,p,showRoute,mapSnapshot);
-    ctx.beginPath();ctx.roundRect(left-.5,165.5,side+1,mapHeight+1,14);
-    ctx.strokeStyle="rgba(66,98,114,.17)";ctx.lineWidth=1.5;ctx.stroke();
-
-    const hasIncome=showIncome&&recap.gross!==null;
+    const {width:mapWidth,height:mapHeight}=recapMapDimensions(mode,ratio);
+    const left=72,right=1008,top=202;
+    drawRoute(ctx,recap.segments,left,top,mapWidth,mapHeight,p,showRoute,mapSnapshot);
+    // One restrained boundary identifies the actual route map. No drop shadow.
+    ctx.beginPath();ctx.roundRect(left+.5,top+.5,mapWidth-1,mapHeight-1,13);
+    ctx.strokeStyle="rgba(32,56,68,.13)";ctx.lineWidth=1;ctx.stroke();
+    const hasIncome=showIncome&&Number.isFinite(recap.gross);
     const hasNet=hasIncome&&recap.financeLoaded&&recap.costKnown&&
-      !recap.uncertain&&recap.cost>0&&recap.net!==null;
-    line(ctx,left,1103,right,1103,"#DAE3E9",1.5);
-    rounded(ctx,left,1117,5,20,2.5,p.accent);
-    label(ctx,hasIncome?"하루 결산":"하루 운행",left+17,1134,19,p.ink,760);
-    if(recap.trips>0) {
-      rounded(ctx,857,1111,143,34,17,"#E4ECF5");
-      label(ctx,recap.trips+"회 운행",985,1135,17,"#4D6578",650,"right");
-    }
-
-    if(hasIncome){
-      label(ctx,"총수익",left,1171,17,p.muted,590);
-      const gross=abbreviatedMoney(recap.gross);
-      const fontSize=Math.min(58,Math.max(29,Math.floor((hasNet?550:840)/Math.max(1,gross.length*.61))));
-      label(ctx,gross,left,1226,fontSize,p.ink,790);
-      if(hasNet){
-        label(ctx,"순수익",right,1171,17,p.muted,560,"right");
-        label(ctx,abbreviatedMoney(recap.net),right,1218,34,p.ink,750,"right");
-        label(ctx,"비용 "+won(recap.cost),right,1242,16,p.muted,530,"right");
-      }else if(!recap.costKnown||recap.uncertain) {
-        label(ctx,"비용 확인 필요",right,1223,16,p.muted,520,"right");
+      !recap.uncertain&&recap.cost>0&&Number.isFinite(recap.net);
+    rounded(ctx,left,1006,32,4,2,p.accent);
+    label(ctx,hasIncome?"오늘의 결산":"운행 요약",left,1045,24,p.ink,760);
+    if(hasIncome&&recap.trips>0)
+      label(ctx,recap.trips+"회 운행",right,1043,20,p.muted,600,"right");
+    if(hasIncome) {
+      label(ctx,"총수익",left,1101,20,p.muted,600);
+      fitRecapLabel(ctx,abbreviatedMoney(recap.gross),left,1178,
+        hasNet?620:790,68,37,p.ink,790);
+      if(hasNet) {
+        label(ctx,"비용 차감 후",right,1102,18,p.muted,550,"right");
+        fitRecapLabel(ctx,abbreviatedMoney(recap.net),right,1150,290,33,21,p.ink,720,"right");
+        label(ctx,"기록 비용 "+won(recap.cost),right,1179,17,p.muted,510,"right");
+      } else if(!recap.costKnown||recap.uncertain) {
+        label(ctx,"비용 미확정",right,1171,17,p.muted,530,"right");
       }
-      line(ctx,left,1250,right,1250,"#D9E3EC",1.4);
+      line(ctx,left,1213,right,1213,p.grid,1.5);
       const stats=[
         ["운행거리",recap.trips?km(recap.distanceKm):"기록 없음"],
         ["운행시간",recap.trips?duration(recap.durationMs):"기록 없음"],
       ];
-      if(recap.deliveries!==null)stats.push(["배달 건수",recap.deliveries+"건"]);
-      const cell=920/stats.length;
+      if(recap.deliveries!==null&&recap.deliveries!==undefined)
+        stats.push(["배달 건수",recap.deliveries+"건"]);
+      const col=mapWidth/stats.length;
       stats.forEach(([name,value],i)=>{
-        const px=left+i*cell+(i?24:0);
-        if(i>0)line(ctx,left+i*cell,1265,left+i*cell,1309,"#DDE5ED",1.25);
-        label(ctx,name,px,1279,17,p.muted,585);
-        label(ctx,value,px,1309,Math.min(29,Math.max(21,290/value.length)),p.ink,745);
+        const x=left+i*col+(i?23:0);
+        if(i)line(ctx,left+i*col,1230,left+i*col,1310,p.grid,1.5);
+        label(ctx,name,x,1258,19,p.muted,570);
+        fitRecapLabel(ctx,value,x,1303,col-42,38,23,p.ink,750);
       });
-    }else{
-      // A private or unrecorded earning must never masquerade as ₩0.
-      label(ctx,"운행거리",left,1171,17,p.muted,570);
-      const primary=recap.trips?km(recap.distanceKm):"운행 기록 없음";
-      label(ctx,primary,left,1226,recap.trips?54:33,p.ink,780);
-      label(ctx,"운행시간",right,1171,17,p.muted,570,"right");
-      label(ctx,recap.trips?duration(recap.durationMs):"기록 없음",right,1222,32,p.ink,735,"right");
-      line(ctx,left,1250,right,1250,"#D9E3EC",1.4);
-      label(ctx,showIncome?"수익 기록 없음":"수익 비공개",left,1296,19,p.muted,585);
-      if(recap.deliveries!==null)
-        label(ctx,"배달 "+recap.deliveries+"건",right,1296,20,p.ink,675,"right");
+    } else {
+      // Without disclosed earnings, use the entire ledger for real ride data.
+      line(ctx,left,1070,right,1070,p.grid,1.5);
+      label(ctx,"총 운행거리",left,1120,20,p.muted,600);
+      fitRecapLabel(ctx,recap.trips?km(recap.distanceKm):"기록 없음",
+        left,1200,500,66,37,p.ink,780);
+      label(ctx,"운행시간",602,1120,20,p.muted,600);
+      fitRecapLabel(ctx,recap.trips?duration(recap.durationMs):"기록 없음",
+        602,1194,406,43,25,p.ink,740);
+      line(ctx,left,1233,right,1233,p.grid,1.5);
+      label(ctx,"기록된 운행",left,1289,20,p.muted,600);
+      label(ctx,recap.trips+"회"+(recap.isLive?" · 진행 중":""),right,1292,28,p.ink,730,"right");
     }
 
   } else {
@@ -502,7 +494,8 @@ export function createRideRecap(React,client) {
   const h=React.createElement;
   function RideRecap({day,history=[],user,financeData=null,onClose,notify}) {
     // An intentional single-layout export: fewer options, reliable previews.
-    const mode="all", ratio="4:5", theme="light", showRoute=true;
+    const mode="all", ratio="4:5", theme="light";
+    const [showRoute,setShowRoute]=React.useState(true);
     const [showIncome,setShowIncome]=React.useState(true);
     const [remote,setRemote]=React.useState(null);
     const [loadError,setLoadError]=React.useState("");
@@ -636,6 +629,12 @@ export function createRideRecap(React,client) {
             button(h,"다시 불러오기",()=>setMapRetry(value=>value+1),"rs-recap-map-retry")):null,
           loading?h("p",{className:"rs-recap-state",role:"status"},"결산 기록을 불러오는 중…"):
             loadError?h("p",{className:"rs-recap-state",role:"alert"},"결산 조회 실패 · "+loadError+" (수익 없이 저장 가능)"):null,
+          h("label",{className:"rs-recap-toggle rs-recap-route"},
+            h("span",null,
+              h("strong",null,"경로 공개"),
+              h("small",null,"공유용 이미지에 실제 이동 경로 표시")),
+            h("input",{type:"checkbox",checked:showRoute,onChange:e=>setShowRoute(e.target.checked),"aria-label":"경로 공개"}),
+            h("span",{className:"rs-recap-switch","aria-hidden":true})),
           h("label",{className:"rs-recap-toggle rs-recap-income"},
             h("span",null,
               h("strong",null,"수익 공개"),
