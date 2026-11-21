@@ -93,15 +93,20 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   assert.ok(ops.some(([name])=>name==="fillText"));
   // The 4:5 all-in-one image has a truly square 800×800 map, then a
   // compact settlement panel; neither collides with the footer.
-  const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===140&&y===177&&w===800&&h===800);
-  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===993&&w===936&&h===278);
+  const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===166&&w===920&&h===920);
+  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===1103&&w===920&&h===221);
   assert.ok(square,"Expected centered 1:1 map");
   assert.ok(receipt,"Expected condensed settlement beneath map");
-  assert.ok(177+800<993 && 993+278<1350,"No map or bottom edge overlap");
+  assert.ok(166+920<1103 && 1103+221<1350,"No map or bottom edge overlap");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
   assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
   assert.equal(textValues.filter(x=>x==="라이더스팟").length,5,"Only one top brand per rendered image, no footer");
+  // No double entry for the same revenue when cost is zero or missing.
+  assert.ok(textValues.includes("총수익"),"Main monetary label present");
+  assert.ok(textValues.includes("운행거리")&&textValues.includes("운행시간"),"Ride metrics visible");
+  assert.ok(!textValues.includes("주행 경로"),"Large floating map badge removed");
+  assert.ok(920===recapMapDimensions("all","4:5").width,"Map remains square");
 });
 
 test("round-trip rides never hide the start label under the finish",()=>{
