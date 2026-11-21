@@ -94,8 +94,12 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   // The 4:5 all-in-one image has a truly square 800×800 map, then a
   // compact settlement panel; neither collides with the footer.
   const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===140&&y===177&&w===800&&h===800);
-  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===997&&w===936&&h===224);
+  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===995&&w===936&&h===176);
   assert.ok(square,"Expected centered 1:1 map");
   assert.ok(receipt,"Expected condensed settlement beneath map");
-  assert.ok(177+800<997 && 997+224<1350-112,"No footer / map overlap");
+  assert.ok(177+800<995 && 995+176<1350,"No map or bottom edge overlap");
+  const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
+  assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
+  assert.ok(!textValues.includes("미입력"),"No missing delivery placeholder");
+  assert.equal(textValues.filter(x=>x==="라이더스팟").length,3,"Only top brand across 3 render modes");
 });
