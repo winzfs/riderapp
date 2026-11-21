@@ -566,7 +566,8 @@ async function nativeTest() {
   try {
     await page.waitForFunction(() => Boolean(window.__rsGPS42NativeRead));
     await page.locator(".ride-launch button").click();
-    await page.locator(".ride-launch.active button").click();
+    await page.getByRole("button", { name: "운행 종료", exact: true }).waitFor();
+    await tab(page, "타임라인").click();
     await page.waitForFunction(() => Boolean(__riderDevice.activeId));
     const id = await page.evaluate(() => __riderDevice.activeId);
     const source = sampleTrip(5000, { active: true, id });

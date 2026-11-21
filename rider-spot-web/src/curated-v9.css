@@ -615,3 +615,9 @@ html,body,.app,.app .workspace>main{background:#F7F8F6!important;color:#213044!i
  .app .nearby #rs-presence-panel {max-height:calc(100% - 136px)!important;bottom:28px!important}
  .app .nearby #rs-sos-fab {bottom:44px!important}
 }
+
+/* Production atelier CSS is injected last; keep UI controls independent. */
+.app .nearby.nearby-full .rs6-map-stage .locate{top:253px!important;right:12px!important;width:46px!important;height:46px!important;border-radius:12px!important}
+.app .nearby.nearby-full .ride-launch:not(.active)>button:first-child{background:#446FE6!important;border-radius:14px!important;color:#FFF!important}
+@media(max-width:360px){.app .nearby.nearby-full .rs6-map-stage .locate{top:262px!important}}
+@media(max-height:560px){.app .nearby.nearby-full .rs6-map-stage .locate{top:233px!important}}
