@@ -1,6 +1,36 @@
 // Read-only, independent MapLibre snapshot for ride recap exports.
 // The live Leaflet/MapLibre GPS camera is never accessed or moved.
 export const RECAP_BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
+
+// Only the temporary offscreen MapLibre instance is restyled, never the live map.
+// Missing layers are ignored because third-party style manifests can evolve.
+export function applyRecapEditorialStyle(map) {
+  const layers=map.getStyle()?.layers||[];
+  let changed=0;
+  for(const layer of layers){
+    const name=String(layer.id||"").toLowerCase();
+    const paint=(property,value)=>{try{map.setPaintProperty(layer.id,property,value);changed++;}catch{}};
+    if(layer.type==="background")paint("background-color","#F1F3EF");
+    if(layer.type==="fill"){
+      if(/water|river|lake/.test(name))paint("fill-color","#DBE6E9");
+      else if(/park|green|wood|grass|landcover|landuse/.test(name))paint("fill-color","#E8EDE6");
+      else if(/building/.test(name))paint("fill-color","#E9EDEA");
+    }
+    if(layer.type==="line"){
+      if(/road|street|highway|transportation/.test(name))paint("line-color",/casing|outline/.test(name)?"#D6DCD8":"#FFFFFF");
+      else if(/water|river/.test(name))paint("line-color","#C8DCE1");
+    }
+    if(layer.type==="symbol"){
+      if(/road|street|poi|place|highway|transportation|housenumber/.test(name)){
+        try{map.setLayoutProperty(layer.id,"visibility","none");changed++;}catch{}
+      }else{
+        paint("text-color","#78858A");
+        paint("text-halo-color","#F8FAF8");
+      }
+    }
+  }
+  return changed;
+}
 const GL_SCRIPT = "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js";
 let libPromise=null;
 let dongPromise=null;
@@ -118,7 +148,8 @@ export async function loadRideRecapBasemap(segments,{width=936,height=430,signal
       map.once("load",()=>{
         if(settled)return;
         try {
-          // Same OpenFreeMap Positron source as the user's regular map.
+          // Tone down the export-only tiles before snapshot; preserve main map style.
+          applyRecapEditorialStyle(map);
           map.fitBounds(bounds,{padding:{top:66,bottom:54,left:74,right:74},
             maxZoom:15.5,duration:0});
           map.once("idle",()=>done());

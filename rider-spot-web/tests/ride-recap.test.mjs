@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout,recapMapDimensions} from "../src/ride-recap.mjs";
+import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout,recapMapDimensions,recapDistanceMeters} from "../src/ride-recap.mjs";
 
 const point=(lat,lng,t,extra={})=>({lat,lng,t,...extra});
 const trip=(id,start,end,points,distance=0)=>({
@@ -110,14 +110,16 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
 });
 
 test("round-trip rides never hide the start label under the finish",()=>{
-  const a=recapEndpointLayout([[{x:415,y:540},{x:520,y:290},{x:419,y:542}]],800,800);
+  const a=recapEndpointLayout([[{x:415,y:540},{x:520,y:290},{x:419,y:542}]],800,800,
+    [[{lat:35.17000,lng:126.83000},{lat:35.174,lng:126.835},{lat:35.17001,lng:126.83001}]]);
   assert.ok(a.coincident);
   assert.deepEqual(a.first,{x:415,y:540});
   assert.deepEqual(a.last,{x:419,y:542});
   const overlap=(p,q)=>p.x<q.x+q.width+8&&p.x+p.width+8>q.x&&
     p.y<q.y+q.height+8&&p.y+p.height+8>q.y;
-  assert.ok(!overlap(a.start,a.end),"Start and end text chips must not overlap");
-  for(const chip of [a.start,a.end]){
+  assert.ok(a.joint,"A real same-place return has one adjacent joint label");
+  assert.equal(a.start,null);assert.equal(a.end,null);
+  for(const chip of [a.joint]){
     assert.ok(chip.x>=8&&chip.x+chip.width<=790);
     assert.ok(chip.y>=10&&chip.y+chip.height<=790);
   }
@@ -152,4 +154,34 @@ test("multiple daily segments use the earliest fix and latest fix, not segment j
   assert.deepEqual(v.first,{x:95,y:110});
   assert.deepEqual(v.last,{x:600,y:650});
   assert.equal(v.coincident,false);
+});
+
+
+test("GPS proximity is measured in meters, not projected screen distance",()=>{
+  const projected=[[{x:350,y:350},{x:352,y:351}]];
+  const a={lat:35.17,lng:126.83};
+  const near={lat:35.17004,lng:126.83003};
+  const apart={lat:35.1702,lng:126.83};
+  assert.ok(recapDistanceMeters(a,near)<9);
+  assert.ok(recapDistanceMeters(a,apart)>10);
+  assert.equal(recapEndpointLayout(projected,800,800,[[a,near]]).coincident,true);
+  const separate=recapEndpointLayout(projected,800,800,[[a,apart]]);
+  assert.equal(separate.coincident,false);
+  assert.ok(separate.start&&separate.end,"10–30 meter points retain distinct labels");
+  assert.equal(recapEndpointLayout(projected,800,800).coincident,false,"Pixels alone cannot merge fixes");
+});
+
+test("known-timestamp GPS teleport is split without modifying source samples",()=>{
+  const initial=Date.parse("2026-11-21T04:00:00Z");
+  const samples=[
+    point(35.17,126.83,initial),
+    point(35.1701,126.8301,initial+10000),
+    point(35.65,127.35,initial+20000),
+    point(35.6501,127.3501,initial+30000),
+    point(35.651,127.351,initial+180000),
+  ];
+  const original=JSON.stringify(samples);
+  const segments=recapRouteSegments([{points:samples}]);
+  assert.deepEqual(segments.map(x=>x.length),[2,2,1]);
+  assert.equal(JSON.stringify(samples),original);
 });

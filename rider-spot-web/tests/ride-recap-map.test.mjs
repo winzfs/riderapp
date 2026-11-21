@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { recapMapBounds, recapDongLabels } from "../src/ride-recap-map.mjs";
+import { recapMapBounds, recapDongLabels, applyRecapEditorialStyle } from "../src/ride-recap-map.mjs";
 import { recapMapDimensions } from "../src/ride-recap.mjs";
 
 test("recap map bounds come only from real GPS coordinates; never synthesize a location",()=>{
@@ -30,4 +30,25 @@ test("map card sizes are the exact pixel sizes used by exported PNG",()=>{
   assert.deepEqual(recapMapDimensions("route","1:1"),{width:936,height:572});
   assert.deepEqual(recapMapDimensions("route","9:16"),{width:936,height:900});
   assert.equal(recapMapDimensions("finance","4:5"),null);
+});
+
+
+test("export map restyling is isolated and hides road/POI English labels",()=>{
+  const painted=[],hidden=[];
+  const map={
+    getStyle:()=>({layers:[
+      {id:"background",type:"background"},
+      {id:"water",type:"fill"},
+      {id:"building",type:"fill"},
+      {id:"road-label",type:"symbol"},
+      {id:"poi-label",type:"symbol"},
+      {id:"road-primary",type:"line"}
+    ]}),
+    setPaintProperty:(...args)=>painted.push(args),
+    setLayoutProperty:(...args)=>hidden.push(args)
+  };
+  assert.ok(applyRecapEditorialStyle(map)>4);
+  assert.ok(painted.some(x=>x[0]==="water"&&x[2]==="#DBE6E9"));
+  assert.ok(hidden.some(x=>x[0]==="road-label"&&x[2]==="none"));
+  assert.ok(hidden.some(x=>x[0]==="poi-label"&&x[2]==="none"));
 });
