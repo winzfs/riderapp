@@ -300,6 +300,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await dialog.getByRole("button",{name:"계기판 저장"}).click();
     await page.getByText("25,700 km",{exact:true}).first().waitFor();
     assert.equal(vehicle.odometer_recorded_on,"2026-11-17");
+    if(await page.locator(".rs8-bike-settings").count() &&
+        !(await page.locator(".rs8-bike-settings").evaluate(el=>el.open)))
+      await page.locator(".rs8-bike-settings summary").click();
     await page.getByRole("button",{name:"모델 선택",exact:true}).click();
     const picker=page.getByRole("dialog",{name:"바이크 모델 선택"});
     await picker.getByRole("button",{name:"목록에 없는 차량 직접 입력"}).click();
@@ -485,6 +488,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     // writing fictitious maintenance or overriding the current odometer.
     await nav("내 바이크");
     const countBefore=records.length,odometerBefore=vehicle.odometer_km;
+    if(await page.locator(".rs8-bike-settings").count() &&
+        !(await page.locator(".rs8-bike-settings").evaluate(el=>el.open)))
+      await page.locator(".rs8-bike-settings summary").click();
     await page.getByRole("button",{name:"모델 선택",exact:true}).click();
     const chooseModel=page.getByRole("dialog",{name:"바이크 모델 선택"});
     await chooseModel.getByLabel("모델 검색").fill("PCX125");
@@ -507,6 +513,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await modelOilCycle.waitFor({state:"hidden"});
     assert.equal(modelSettings.find(x=>x.model_key==="honda-pcx125"&&x.item_key==="엔진오일").interval_km,2600);
     await modelOil.getByRole("button",{name:"닫기"}).click();
+    if(await page.locator(".rs8-bike-settings").count() &&
+        !(await page.locator(".rs8-bike-settings").evaluate(el=>el.open)))
+      await page.locator(".rs8-bike-settings summary").click();
     await page.getByRole("button",{name:"모델 선택",exact:true}).click();
     await chooseModel.getByLabel("모델 검색").fill("NMAX125");
     await chooseModel.getByRole("button",{name:"야마하 NMAX125 선택"}).click();
