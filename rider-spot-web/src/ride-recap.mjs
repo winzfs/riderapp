@@ -135,28 +135,37 @@ export function recapEndpointLayout(paths,w,h,geoSegments=[]) {
   const real=(geoSegments||[]).filter(seg=>Array.isArray(seg)&&seg.length);
   const meters=real.length?recapDistanceMeters(real[0][0],real.at(-1).at(-1)):null;
   const coincident=meters!==null&&meters<=9;
-  const margin=12, badgeH=27;
+  const margin=18, badgeH=35;
   const clamp=(v,a,b)=>Math.max(a,Math.min(v,b));
   const candidates=(pt,width)=>[
-    {x:pt.x+18,y:pt.y-36},
-    {x:pt.x-width-18,y:pt.y-36},
-    {x:pt.x+18,y:pt.y+14},
-    {x:pt.x-width-18,y:pt.y+14},
-    {x:pt.x-width/2,y:pt.y-47},
-    {x:pt.x-width/2,y:pt.y+22},
-    {x:pt.x+18,y:pt.y+53},
-    {x:pt.x-width-18,y:pt.y+53},
-    {x:pt.x+18,y:pt.y-78},
-    {x:pt.x-width-18,y:pt.y-78}
+    {x:pt.x+23,y:pt.y-47},
+    {x:pt.x-width-23,y:pt.y-47},
+    {x:pt.x+23,y:pt.y+18},
+    {x:pt.x-width-23,y:pt.y+18},
+    {x:pt.x-width/2,y:pt.y-61},
+    {x:pt.x-width/2,y:pt.y+26},
+    {x:pt.x+23,y:pt.y+66},
+    {x:pt.x-width-23,y:pt.y+66},
+    {x:pt.x+23,y:pt.y-91},
+    {x:pt.x-width-23,y:pt.y-91}
   ].map(v=>({x:clamp(v.x,margin,w-margin-width),
     y:clamp(v.y,margin,h-margin-badgeH),width,height:badgeH}));
   const intersect=(a,b,pad=6)=>a.x<b.x+b.width+pad&&
     a.x+a.width+pad>b.x&&a.y<b.y+b.height+pad&&a.y+a.height+pad>b.y;
-  const pointBox=pt=>({x:pt.x-14,y:pt.y-14,width:28,height:28});
+  const pointBox=pt=>({x:pt.x-19,y:pt.y-19,width:38,height:38});
+  // Favour quieter patches of the actual track when placing endpoint captions.
+  // Only label rectangles move; the projected GPS coordinates never do.
+  const routePoints=visible.flatMap(path=>{
+    const step=Math.max(1,Math.ceil(path.length/180));
+    return path.filter((_,index)=>index%step===0);
+  });
   const score=(b,pt,other)=>{
     const nearOther=other&&intersect(b,pointBox(other),8)?10000:0;
     const nearPin=intersect(b,pointBox(pt),1)?1000:0;
-    return nearOther+nearPin+Math.hypot(b.x+b.width/2-pt.x,b.y+b.height/2-pt.y);
+    const routeHits=routePoints.reduce((sum,p)=>sum+
+      (p.x>b.x-5&&p.x<b.x+b.width+5&&p.y>b.y-5&&p.y<b.y+b.height+5?1:0),0);
+    return nearOther+nearPin+Math.min(1500,routeHits*100)+
+      Math.hypot(b.x+b.width/2-pt.x,b.y+b.height/2-pt.y);
   };
   const pick=(pt,width,other,avoid=null)=>{
     const ranked=candidates(pt,width).map(b=>({b,s:score(b,pt,other)+(avoid&&intersect(b,avoid,8)?100000:0)}));
@@ -164,14 +173,14 @@ export function recapEndpointLayout(paths,w,h,geoSegments=[]) {
     return ranked[0].b;
   };
   if(coincident){
-    const joint=pick(first,116,null);
+    const joint=pick(first,144,null);
     return {first,last,start:null,end:null,joint,coincident,meters};
   }
-  const start=pick(first,66,last);
-  let end=pick(last,66,first,start);
+  const start=pick(first,88,last);
+  let end=pick(last,88,first,start);
   if(intersect(start,end,8)){
     // Keep coordinates fixed. Only the lightweight text label can move.
-    const alternatives=candidates(last,66).filter(b=>!intersect(b,start,8));
+    const alternatives=candidates(last,88).filter(b=>!intersect(b,start,8));
     if(alternatives.length)end=alternatives.sort((a,b)=>score(a,last,first)-score(b,last,first))[0];
     if(intersect(start,end,8)) {
       // Extreme corners can collapse every nearby candidate to the same box.
@@ -250,28 +259,35 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
     const endpoints=recapEndpointLayout(paths,w,h,segments);
     if(endpoints){
       const {first,last,start,end,coincident}=endpoints;
-      const pin=(pt,color,endPin=false)=>{
+      const pin=(pt,color,endPin=false,outerRing=false)=>{
         const cx=x+pt.x,cy=y+pt.y;
-        ctx.beginPath();ctx.arc(cx,cy,11,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,7.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-        if(endPin)rounded(ctx,cx-2.5,cy-2.5,5,5,1,"#fff");
-        else {ctx.beginPath();ctx.arc(cx,cy,2.4,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();}
+        ctx.beginPath();ctx.arc(cx,cy,outerRing?24:15,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,outerRing?20:11,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        if(endPin)rounded(ctx,cx-3,cy-3,6,6,1,"#fff");
+        else {ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();}
       };
       const badge=(rect,text,color)=>{
         const bx=x+rect.x,by=y+rect.y;
-        rounded(ctx,bx,by,rect.width,rect.height,7,"rgba(255,255,255,.96)");
-        ctx.beginPath();ctx.arc(bx+10,by+13.5,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-        label(ctx,text,bx+19,by+19.5,text.includes("·")?15:16,p.ink,660);
+        rounded(ctx,bx,by,rect.width,rect.height,8,"rgba(255,255,255,.97)");
+        ctx.beginPath();ctx.arc(bx+15,by+17.5,4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        label(ctx,text,bx+27,by+25,text.includes("·")?19:20,p.ink,650);
       };
       if(coincident){
-        // The split ring stays on the original first fix; no fabricated middle GPS fix.
+        // Only physically coincident GPS fixes share a pin. This is a split
+        // circular sign, not a fabricated new location or a map legend.
         const cx=x+first.x,cy=y+first.y;
-        ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,9,Math.PI/2,Math.PI*3/2);ctx.fillStyle=p.accent;ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,9,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,19,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,15,Math.PI/2,Math.PI*3/2);ctx.fillStyle=p.accent;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,15,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
         badge(endpoints.joint,"출발·종료",p.accent);
       }else{
-        pin(first,p.accent);pin(last,p.ink,true);
+        // At wide map zoom two genuinely different GPS fixes may project to
+        // almost the same pixel. Keep both pins at their real coordinates:
+        // a wider blue start ring makes the lower marker discernible.
+        const projectedAdjacent=Math.hypot(first.x-last.x,first.y-last.y)<34;
+        pin(first,p.accent,false,projectedAdjacent);
+        pin(last,p.ink,true);
         badge(start,"출발",p.accent);
         badge(end,"종료",p.ink);
       }
@@ -340,56 +356,53 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       }
     }
   } else if(mode==="all" && ratio==="4:5") {
-    // A genuinely square 920×920 map with a single aligned 920px ledger.
-    // 1080×1350: 80px side margins, a 17px map/ledger gap, 27px bottom.
+    // One continuous editorial grid. No floating white financial widget:
+    // the map and report share the same 80px left/right guide and paper.
     const {width:side,height:mapHeight}=recapMapDimensions(mode,ratio);
-    const mapLeft=80,mapTop=166;
-    drawRoute(ctx,recap.segments,mapLeft,mapTop,side,mapHeight,p,showRoute,mapSnapshot);
-    const cardX=80,cardY=1103,cardW=920,cardH=221;
-    rounded(ctx,cardX,cardY,cardW,cardH,13,p.panel);
-    const left=108,right=972;
+    const left=80,right=1000;
+    drawRoute(ctx,recap.segments,left,166,side,mapHeight,p,showRoute,mapSnapshot);
     const hasIncome=showIncome&&recap.gross!==null;
     const hasNet=hasIncome&&recap.financeLoaded&&recap.costKnown&&
       !recap.uncertain&&recap.cost>0&&recap.net!==null;
-    label(ctx,hasIncome?"오늘의 결산":"오늘의 운행",left,cardY+32,20,p.ink,700);
-    if(recap.trips>0)label(ctx,recap.trips+"회 운행",right,cardY+32,17,p.muted,530,"right");
+    line(ctx,left,1104,right,1104,p.grid,2);
+    label(ctx,hasIncome?"하루 결산":"하루 운행",left,1142,19,p.ink,720);
+    if(recap.trips>0)label(ctx,recap.trips+"회 운행",right,1142,17,p.muted,540,"right");
+
     if(hasIncome){
-      label(ctx,"총수익",left,cardY+62,17,p.muted,570);
+      label(ctx,"총수익",left,1177,17,p.muted,560);
       const gross=abbreviatedMoney(recap.gross);
-      const maxSize=hasNet?45:50;
-      const maxWidth=hasNet?535:845;
-      const fontSize=Math.min(maxSize,Math.max(30,Math.floor(maxWidth/Math.max(1,gross.length*.62))));
-      label(ctx,gross,left,cardY+116,fontSize,p.ink,770);
+      const fontSize=Math.min(54,Math.max(29,Math.floor((hasNet?550:840)/Math.max(1,gross.length*.61))));
+      label(ctx,gross,left,1232,fontSize,p.ink,770);
       if(hasNet){
-        label(ctx,"순수익",right,cardY+63,17,p.muted,550,"right");
-        label(ctx,abbreviatedMoney(recap.net),right,cardY+104,30,p.ink,710,"right");
-        label(ctx,"비용 "+won(recap.cost),right,cardY+125,14,p.muted,530,"right");
+        label(ctx,"순수익",right,1177,17,p.muted,560,"right");
+        label(ctx,abbreviatedMoney(recap.net),right,1221,32,p.ink,715,"right");
+        label(ctx,"비용 "+won(recap.cost),right,1244,15,p.muted,530,"right");
       } else if(!recap.costKnown||recap.uncertain) {
-        label(ctx,"비용 확인 필요",right,cardY+122,15,p.muted,500,"right");
+        label(ctx,"비용 확인 필요",right,1244,16,p.muted,520,"right");
       }
-      line(ctx,left,cardY+135,right,cardY+135,p.grid,1.25);
+      line(ctx,left,1254,right,1254,p.grid,1.5);
       const stats=[
         ["운행거리",recap.trips?km(recap.distanceKm):"기록 없음"],
-        ["운행시간",recap.trips?duration(recap.durationMs):"기록 없음"]
+        ["운행시간",recap.trips?duration(recap.durationMs):"기록 없음"],
       ];
       if(recap.deliveries!==null)stats.push(["배달 건수",recap.deliveries+"건"]);
-      const cell=864/stats.length;
+      const cell=920/stats.length;
       stats.forEach(([name,value],i)=>{
         const px=left+i*cell;
-        label(ctx,name,px,cardY+164,17,p.muted,570);
-        label(ctx,value,px,cardY+200,Math.min(27,Math.max(21,280/value.length)),p.ink,725);
+        label(ctx,name,px,1284,17,p.muted,570);
+        label(ctx,value,px,1320,Math.min(27,Math.max(21,280/value.length)),p.ink,730);
       });
     }else{
-      // Without recorded/public earnings, riding is the hero. No fake ₩0 and
-      // no duplicated distance/time in a second statistics row.
-      label(ctx,"운행거리",left,cardY+65,17,p.muted,550);
-      const primary=recap.trips?km(recap.distanceKm):"운행 기록 없음";
-      label(ctx,primary,left,cardY+119,recap.trips?49:31,p.ink,755);
-      label(ctx,"운행시간",right,cardY+65,17,p.muted,550,"right");
-      label(ctx,recap.trips?duration(recap.durationMs):"기록 없음",right,cardY+114,29,p.ink,700,"right");
-      line(ctx,left,cardY+144,right,cardY+144,p.grid,1.25);
-      label(ctx,showIncome?"수익 기록 없음":"수익 비공개",left,cardY+189,18,p.muted,550);
-      if(recap.deliveries!==null)label(ctx,"배달 "+recap.deliveries+"건",right,cardY+189,20,p.ink,660,"right");
+      // Missing or private earnings elevate the actual ride data; no fictitious
+      // zero won amount, second mileage display or decorative empty panel.
+      label(ctx,"운행거리",left,1177,17,p.muted,560);
+      const main=recap.trips?km(recap.distanceKm):"운행 기록 없음";
+      label(ctx,main,left,1232,recap.trips?51:32,p.ink,770);
+      label(ctx,"운행시간",right,1177,17,p.muted,560,"right");
+      label(ctx,recap.trips?duration(recap.durationMs):"기록 없음",right,1228,32,p.ink,720,"right");
+      line(ctx,left,1254,right,1254,p.grid,1.5);
+      label(ctx,showIncome?"수익 기록 없음":"수익 비공개",left,1297,18,p.muted,550);
+      if(recap.deliveries!==null)label(ctx,"배달 "+recap.deliveries+"건",right,1297,20,p.ink,660,"right");
     }
 
   } else {
@@ -564,7 +577,6 @@ export function createRideRecap(React,client) {
         h("div",{className:"rs-recap-content"},
           h("div",{className:"rs-recap-preview"},
             h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
-          h("div",{className:"rs-recap-preview-meta"},h("span",null,"미리보기 · 저장할 이미지와 동일")),
           mapLoading?h("p",{className:"rs-recap-state",role:"status"},"주행 지도와 동 이름을 불러오는 중…"):null,
           mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
             h("span",null,mapState.error||"지도를 불러오지 못했어요."),
@@ -579,8 +591,8 @@ export function createRideRecap(React,client) {
             h("span",{className:"rs-recap-switch","aria-hidden":true})),
           message&&h("p",{className:"rs-recap-state",role:"status"},message)),
         h("footer",{className:"rs-recap-actions"},
-          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed||renderError||renderError}),
-          button(h,saving?"저장하는 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
+          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed||renderError}),
+          button(h,saving?"저장하는 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed||renderError}))));
 
   }
   return RideRecap;

@@ -94,10 +94,12 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   // The 4:5 all-in-one image has a truly square 920×920 map, then a
   // compact settlement panel; neither touches the edge.
   const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===166&&w===920&&h===920);
-  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===1103&&w===920&&h===221);
+  const ledgerRule=ops.find(([op,x1,y1,x2,y2])=>op==="moveTo"&&x1===80&&y1===1104);
+  const detachedCard=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===1103&&w===920&&h===221);
   assert.ok(square,"Expected centered 1:1 map");
-  assert.ok(receipt,"Expected condensed settlement beneath map");
-  assert.ok(166+920<1103 && 1103+221<1350,"No map or bottom edge overlap");
+  assert.ok(ledgerRule,"Expected a unified editorial report grid, not a second floating widget");
+  assert.equal(detachedCard,undefined,"Floating finance card must be removed");
+  assert.ok(166+920<1104 && 1320<1350,"No map or bottom edge overlap");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
   assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
@@ -218,4 +220,24 @@ test("Korean dong names cannot collide with endpoint labels or clip at map edge"
   assert.equal(recapMapLabelVisible({x:800,y:506},routes,920,920),false);
   assert.equal(recapMapLabelVisible({x:49,y:400},routes,920,920),false);
   assert.equal(recapMapLabelVisible({x:430,y:545},routes,920,920),true);
+});
+
+test("actual distinct endpoints retain both visual markers at low map zoom",()=>{
+  const ops=[];
+  const context=new Proxy({}, {get(target,key){
+    if(["beginPath","roundRect","fill","stroke","moveTo","lineTo","fillText","arc","save","clip","restore"].includes(key))
+      return (...args)=>ops.push([key,...args]);
+    return target[key];
+  },set(target,key,value){target[key]=value;return true;}});
+  const canvas={getContext:()=>context};
+  const firstFix={lat:35.169,lng:126.812};
+  const lastFix={lat:35.16918,lng:126.812};
+  const recap={day:"2026-11-21",segments:[[firstFix,lastFix]],trips:1,
+    distanceKm:0.02,durationMs:1000,gross:null,deliveries:null};
+  renderRecapCanvas(canvas,recap);
+  const text=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
+  assert.ok(text.includes("출발")&&text.includes("종료"));
+  assert.ok(!text.includes("출발·종료"),"10–30m endpoints must remain distinct");
+  const pinRings=ops.filter(x=>x[0]==="arc"&&x[3]>=15);
+  assert.ok(pinRings.length>=2,"Both endpoints must keep visible rings");
 });
