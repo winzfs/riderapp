@@ -1,0 +1,175 @@
+
+/* RiderSpot v23 • storefront index: readable labels without map clutter. */
+.app .map.rs-maplibre-native .rs-store-pin{
+  pointer-events:auto!important;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.app .map.rs-maplibre-native .rs-store-chip{
+  appearance:none!important;-webkit-appearance:none!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:5px!important;min-width:0!important;max-width:202px!important;
+  height:34px!important;min-height:34px!important;
+  margin:0!important;padding:0 8px 0 5px!important;
+  background:rgba(255,255,255,.97)!important;color:#274b55!important;
+  border:1px solid rgba(173,191,204,.85)!important;
+  border-radius:12px!important;box-shadow:0 2px 9px rgba(30,57,77,.13)!important;
+  font-size:11px!important;font-weight:760!important;line-height:1!important;
+  letter-spacing:-.03em!important;white-space:nowrap!important;cursor:pointer!important;
+  touch-action:manipulation!important;outline-offset:2px!important;
+}
+.app .map.rs-maplibre-native .rs-store-chip:active{
+  background:#eaf3fb!important;transform:translateY(1px)
+}
+.app .map.rs-maplibre-native .rs-store-chip:focus-visible{
+  outline:2px solid #4770df!important;
+}
+.app .map.rs-maplibre-native .rs-store-chip-mark{
+  display:flex;align-items:center;justify-content:center;
+  width:23px;height:23px;flex:none;border-radius:8px;
+  background:#eaf2f4;color:#2a7080;font-size:17px;font-weight:700;
+}
+.app .map.rs-maplibre-native .rs-store-chip-title{
+  display:inline-block;min-width:0;max-width:108px;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;color:#2a4f59;
+}
+.app .map.rs-maplibre-native .rs-store-chip-count{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  height:21px;min-width:30px;padding:0 6px;border-radius:7px;
+  background:#dde8ff;color:#3665c4;
+  font-size:10px;font-weight:820;font-variant-numeric:tabular-nums;
+}
+/* Native sheet uses the same design language as the other RiderSpot bottom sheets. */
+.rs-store-overlay{
+  position:fixed;inset:0;z-index:6200;
+  display:flex;justify-content:center;align-items:flex-end;
+  background:rgba(22,39,54,.35);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  overscroll-behavior:contain;
+  animation:rsStoreFade .17s ease both;
+}
+.rs-store-sheet{
+  --rs-store-ink:#24374c;--rs-store-sub:#718092;
+  display:flex;flex-direction:column;width:min(100%,560px);
+  min-width:0;max-height:min(82dvh,790px);
+  border:1px solid #eef1f4;border-bottom:0;border-radius:25px 25px 0 0;
+  box-shadow:0 -17px 52px rgba(18,38,57,.19);
+  color:var(--rs-store-ink);background:#fff;
+  overflow:hidden;box-sizing:border-box;
+  padding:0 0 env(safe-area-inset-bottom,0px);
+  animation:rsStoreUp .23s cubic-bezier(.18,.75,.25,1) both;
+}
+.rs-store-grab{
+  flex:none;height:26px;min-height:26px;
+  display:flex;align-items:center;justify-content:center;
+  touch-action:pan-y;
+}
+.rs-store-grab span{width:34px;height:4px;border-radius:20px;background:#d3dce7}
+.rs-store-head{
+  display:flex;gap:12px;justify-content:space-between;align-items:flex-start;
+  flex:none;padding:3px 21px 13px;
+}
+.rs-store-heading{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rs-store-kicker{
+  display:block;color:#5471ab;font-size:9px;font-weight:850;
+  letter-spacing:.115em;
+}
+.rs-store-heading h2{
+  margin:0;font-size:22px;font-weight:820;letter-spacing:-.052em;
+  line-height:1.25;color:#24374c;
+}
+.rs-store-heading p{
+  margin:0;color:var(--rs-store-sub);font-size:12px;line-height:1.55;
+}
+.rs-store-close{
+  display:grid;place-items:center;flex:none;
+  width:39px;height:39px;margin:0;padding:0;
+  border:0;border-radius:12px;background:#f2f5f9;color:#55687c;
+  font-size:25px;font-weight:380;line-height:1;cursor:pointer;
+}
+.rs-store-close:focus-visible{outline:2px solid #4770df;outline-offset:2px}
+.rs-store-summary{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  flex:none;margin:0 20px 14px;padding:12px 14px;
+  background:#f4f7fb;border:1px solid #e9eff7;border-radius:14px;
+}
+.rs-store-number{display:flex;align-items:baseline;gap:7px;white-space:nowrap}
+.rs-store-number strong{
+  font-size:25px;font-weight:850;line-height:1;color:#416cd3;
+  letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+}
+.rs-store-number span{font-size:12px;font-weight:690;color:#5b6c7f}
+.rs-store-coordinate{font-size:10px;color:#8794a5;white-space:nowrap}
+.rs-store-search{
+  display:flex;align-items:center;gap:8px;height:43px;min-height:43px;
+  margin:0 20px 15px;padding:0 12px;border:1px solid #e1e7ee;border-radius:12px;
+  background:#f8fafc;flex:none;
+}
+.rs-store-search>span{
+  font-size:24px;line-height:1;color:#8495a9;
+  font-weight:350;
+}
+.rs-store-search input{
+  display:block;flex:1;min-width:0;width:100%;height:40px;margin:0;padding:0;
+  background:transparent;border:0;outline:0;color:#273d50;
+  font-size:13px;font-weight:550;font-family:inherit;
+}
+.rs-store-search input::placeholder{color:#96a3b2}
+.rs-store-search:focus-within{
+  background:white;border-color:#9bb3eb;box-shadow:0 0 0 2px rgba(71,112,223,.1);
+}
+.rs-store-listheading{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:0 22px 10px;flex:none;border-bottom:1px solid #edf0f4;
+}
+.rs-store-listheading strong{
+  font-size:13px;font-weight:800;color:#293f53;
+}
+.rs-store-results{color:#8896a6;font-size:11px}
+.rs-store-list{
+  min-height:75px;max-height:100%;overflow-y:auto;overflow-x:hidden;
+  flex:1;overscroll-behavior:contain;padding:0 20px;
+  scrollbar-width:thin;scrollbar-color:#dae2eb transparent;
+}
+.rs-store-item{
+  display:flex;align-items:center;gap:11px;min-height:50px;
+  padding:10px 3px;border-bottom:1px solid #f0f2f5;
+  box-sizing:border-box;
+}
+.rs-store-index{
+  align-self:center;width:22px;flex:none;text-align:left;
+  color:#9ba7b4;font-size:10px;font-weight:750;
+  font-variant-numeric:tabular-nums;
+}
+.rs-store-name{
+  flex:1;min-width:0;overflow-wrap:anywhere;
+  color:#33485a;font-size:13px;font-weight:670;line-height:1.45;
+  letter-spacing:-.018em;
+}
+.rs-store-dupes{
+  flex:none;white-space:nowrap;border-radius:7px;
+  background:#f0f4f8;color:#8795a4;font-size:10px;
+  padding:5px 7px;font-weight:630;
+}
+.rs-store-empty{
+  text-align:center;padding:30px 0 38px;color:#8997a6;font-size:13px;
+}
+.rs-store-foot{
+  flex:none;border-top:1px solid #edf0f4;
+  padding:11px 21px calc(13px + env(safe-area-inset-bottom,0px));
+  background:#fff;
+}
+.rs-store-foot p{
+  margin:0;color:#8390a0;font-size:10px;line-height:1.65;
+}
+@keyframes rsStoreFade{from{opacity:0}to{opacity:1}}
+@keyframes rsStoreUp{from{transform:translateY(22px)}to{transform:translateY(0)}}
+@media(max-width:359px){
+ .rs-store-head{padding-inline:16px}
+ .rs-store-summary{margin-inline:16px;padding-inline:11px}
+ .rs-store-coordinate{font-size:9px}
+ .rs-store-search{margin-inline:16px}
+ .rs-store-sheet{max-height:88dvh}
+}
+@media(prefers-reduced-motion:reduce){
+ .rs-store-overlay,.rs-store-sheet{animation:none}
+}
