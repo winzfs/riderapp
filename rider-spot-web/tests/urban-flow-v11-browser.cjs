@@ -47,6 +47,15 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
       await nav.nth(i).click();
       await page.waitForTimeout(240);
       const v=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
+      if(v.scroll>width+2||v.body>width+2){
+        const offenders=await page.evaluate(()=>[...document.querySelectorAll("body *")].map(el=>{
+          const box=el.getBoundingClientRect(),style=getComputedStyle(el);
+          return {tag:el.tagName,cls:typeof el.className==="string"?el.className.slice(0,105):"",
+            right:Math.round(box.right*10)/10,left:Math.round(box.left*10)/10,
+            scroll:el.scrollWidth,client:el.clientWidth,overflow:style.overflowX};
+        }).filter(x=>x.right>innerWidth+2||x.scroll>x.client+3).slice(0,50));
+        console.log("V12_MOBILE_OVERFLOW",width,JSON.stringify(offenders));
+      }
       assert.ok(v.scroll<=width+2&&v.body<=width+2,"horizontal overflow "+JSON.stringify(v));
       if(i===0){
         const overlay=page.locator(".rs6-map-stage>.rs8-map-overlay");
