@@ -883,3 +883,9 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
 .app .nearby.nearby-full .rs-map-v2.rs-map-picking :is(
   .rs-map-v2-actions,.rs-map-v2-header,.leaflet-control-zoom,.locate,#rs-report-legend
 ){visibility:hidden!important;pointer-events:none!important}
+
+/* The rider layer never shows a bottom status notice. The status chips own that information even before report fetch completes. */
+.app .nearby.nearby-full .rs-map-v2[data-rs33-layer="riders"] #rs-report-legend{display:none!important;pointer-events:none!important}
+
+/* MAP FIRST: report counts live in the selected layer menu; never show a second floating map legend. */
+.app .nearby.nearby-full .rs-map-v2 #rs-report-legend{display:none!important;pointer-events:none!important}
