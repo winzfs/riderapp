@@ -473,7 +473,7 @@ html,body,.app,.app .workspace>main{background:#F7F8F6!important;color:#213044!i
 .app .rs33-trip-live .rs-ride-finish{background:#213044!important;color:#FFF!important;border:0!important}
 .app .rs33-trip-live .rs33-course-shell:not(.rs33-course-full) .rs33-course-map{min-height:255px!important;height:clamp(255px,73vw,340px)!important}
 .app .rc-community.rs-community-renewal{padding-top:10px!important}
-.app .rc-community.rs-community-renewal .rs6-community-deck{margin:0 calc(-1 * var(--rs-space)) 9px!important;padding:10px var(--rs-space) 11px!important;border-bottom:1px solid #E3E8E8!important;background:#F7F8F6!important}
+.app .rc-community.rs-community-renewal .rs6-community-deck{margin:0 calc(-1 * clamp(16px,4.4vw,22px)) 9px!important;padding:10px clamp(16px,4.4vw,22px) 11px!important;border-bottom:1px solid #E3E8E8!important;background:#F7F8F6!important}
 .app .rc-community.rs-community-renewal .rc-head{margin:0 0 10px!important;align-items:center!important;gap:8px}
 .app .rc-community.rs-community-renewal .rs12-community-masthead{min-width:0;display:flex;flex-direction:column;gap:3px}
 .app .rc-community.rs-community-renewal .rs12-community-masthead h1{font-size:clamp(22px,6vw,26px)!important;line-height:1.16!important;margin:0!important;font-weight:820!important;color:#213044!important}
@@ -508,6 +508,7 @@ html,body,.app,.app .workspace>main{background:#F7F8F6!important;color:#213044!i
  .app .nearby.nearby-full .rs12-map-commandbar{padding-left:8px!important;gap:4px!important}
  .app .nearby .rs12-map-commandbar .rs33-region-toggle{max-width:98px!important;font-size:12px!important}
  .app .nearby .rs12-map-commandbar .rs-weather-hud{padding:3px!important}
+ .app .rc-community.rs-community-renewal .rs6-community-deck{margin-inline:-13px!important;padding-inline:13px!important}
  .app .rc-community.rs-community-renewal .rc-card-grid img{width:77px!important;height:77px!important}
  .app .rs12-route-tools{padding-inline:5px!important}
  .app .rs12-route-filters button{min-width:44px!important;padding-inline:6px!important}
