@@ -251,14 +251,14 @@ dialog.rs-recap-dialog:not([open]){display:none}
 dialog.rs-recap-dialog::backdrop{background:rgba(25,41,56,.48);backdrop-filter:none;-webkit-backdrop-filter:none}
 .rs-recap-sheet,.rs-recap-sheet *{box-sizing:border-box}
 .rs-recap-sheet{display:flex;flex-direction:column;max-height:min(90dvh,830px);overflow:hidden}
-.rs-recap-head{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:19px 20px 13px;background:#f7f8f6}
+.rs-recap-head{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 15px;background:#f7f8f6}
 .rs-recap-title small{display:block;color:#84909a;font-weight:670;font-size:11px;letter-spacing:.012em;margin:0 0 3px}
 .rs-recap-head h2{margin:0;font-size:20px;line-height:1.35;font-weight:810;letter-spacing:-.055em;color:#253b4c}
 .rs-recap-close{border:0;background:#e9eeef;color:#465b65;border-radius:12px;width:36px;height:36px;font-size:25px;line-height:1;display:grid;place-items:center;flex:none;cursor:pointer}
 .rs-recap-content{min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 18px 12px;scrollbar-width:thin}
-.rs-recap-preview{height:min(41dvh,355px);min-height:180px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:#e4ebeb;padding:12px;overflow:hidden}
-.rs-recap-preview canvas{display:block;width:auto;height:100%;max-width:100%;object-fit:contain;border-radius:7px;box-shadow:0 7px 24px rgba(29,48,62,.14)}
-.rs-recap-preview-note{font-size:11px;color:#75838c;margin:10px 2px 15px;line-height:1.4;text-align:center}
+.rs-recap-preview{height:min(48dvh,430px);min-height:180px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:#edf0ef;padding:14px;overflow:hidden}
+.rs-recap-preview canvas{display:block;width:auto;height:100%;max-width:100%;object-fit:contain;border-radius:6px;box-shadow:0 10px 28px rgba(29,48,62,.13)}
+.rs-recap-preview-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#788892;margin:11px 2px 15px;line-height:1.4}.rs-recap-format{font-weight:720;color:#537190;background:#e7eef5;border-radius:7px;padding:5px 8px;white-space:nowrap}
 .rs-recap-state{font-size:12px;color:#49627c;background:#e6edef;border-radius:10px;padding:10px 12px;line-height:1.5;margin:9px 0}
 .rs-recap-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:57px;margin:0;padding:8px 4px;border-top:1px solid #e0e6e6;cursor:pointer}
 .rs-recap-toggle>span:first-child{display:grid;gap:4px}
@@ -273,12 +273,12 @@ dialog.rs-recap-dialog::backdrop{background:rgba(25,41,56,.48);backdrop-filter:n
 .rs-recap-actions{display:grid;flex:none;grid-template-columns:1fr 1.55fr;gap:9px;padding:12px 18px calc(14px + env(safe-area-inset-bottom,0px));margin:0;background:#f7f8f6;border-top:1px solid #e6ebeb;box-shadow:0 -5px 17px rgba(35,48,57,.035)}
 .rs-recap-actions button{border:0;border-radius:14px;min-height:50px;font:760 14px/1.3 Pretendard,"Noto Sans KR",system-ui,sans-serif;letter-spacing:-.025em;cursor:pointer}
 .rs-recap-share{background:#e5eded;color:#3f5360}
-.rs-recap-download{background:#426def;color:#fff;box-shadow:0 4px 12px rgba(66,109,239,.13)}
+.rs-recap-download{background:#3769e9;color:#fff;box-shadow:0 4px 12px rgba(55,105,233,.16)}
 .rs-recap-actions button:active:not(:disabled){transform:scale(.99)}
 .rs-recap-actions button:disabled{opacity:.46;cursor:default;box-shadow:none}
 .rs-recap-map-error{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:10px 0 14px;padding:11px 12px;border:1px solid #e1caca;border-radius:12px;background:#fcf3f1;color:#9b4747;font-size:12px;line-height:1.45}
 .rs-recap-map-error>span{flex:1;min-width:0}
 .rs-recap-map-retry{flex:none;border:0;border-radius:9px;padding:9px 11px;background:#e8d4d0;color:#783633;font-size:12px;font-weight:750;cursor:pointer}
 @media(min-width:650px){dialog.rs-recap-dialog{inset:0;margin:auto;border-radius:24px;max-height:90dvh}.rs-recap-sheet{max-height:90dvh}}
-@media(max-height:620px){.rs-recap-preview{height:min(33dvh,240px);min-height:125px}.rs-recap-head{padding-top:11px;padding-bottom:9px}.rs-recap-preview-note{margin-bottom:7px}.rs-recap-toggle{min-height:46px}.rs-recap-actions{padding-top:9px;padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))}}
+@media(max-height:620px){.rs-recap-preview{height:min(32dvh,240px);min-height:125px}.rs-recap-head{padding-top:11px;padding-bottom:9px}.rs-recap-preview-note{margin-bottom:7px}.rs-recap-toggle{min-height:46px}.rs-recap-actions{padding-top:9px;padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))}}
 @media(max-width:350px){.rs-recap-head{padding-inline:15px}.rs-recap-content{padding-inline:12px}.rs-recap-actions{padding-inline:12px}}
