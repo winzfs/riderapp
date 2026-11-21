@@ -119,7 +119,7 @@ export function recapEndpointLayout(paths,w,h) {
     width:badgeW,height:badgeH
   });
   let start=badge(first,-82,-37),end=badge(last,14,11);
-  const overlap=(a,b)=>a.x<b.x+b.width+6&&b.x<a.x+a.width+6&&a.y<b.y+b.height+6&&b.y<a.y+a.height+6;
+  const overlap=(a,b)=>a.x<b.x+b.width+8&&b.x<a.x+a.width+8&&a.y<b.y+b.height+8&&b.y<a.y+a.height+8;
   if(overlap(start,end)){
     end=badge(last,16,40);
     if(overlap(start,end))start=badge(first,-82,-65);
