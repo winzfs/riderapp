@@ -29,7 +29,7 @@ const session={access_token:jwt,refresh_token:"qa",expires_at:Math.floor(Date.no
      }
    },{trip,session,userId});
    await ctx.route("**/*",async route=>{
-     const u=new URL(route.request().url);
+     let u;try{u=new URL(route.request().url);}catch{return route.continue();}
      if(u.hostname.endsWith(".supabase.co")){
        if(u.pathname==="/auth/v1/user")return route.fulfill({json:user});
        if(u.pathname==="/auth/v1/token")return route.fulfill({json:session});
