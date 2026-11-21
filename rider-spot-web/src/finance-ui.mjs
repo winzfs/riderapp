@@ -555,65 +555,63 @@ export function createFinance(R, client) {
           :txt("p","fin-empty","이번 달 플랫폼 수익 기록이 없어요."));
     }
     function overview() {
-      const periodLabel=scope==="today"?"오늘 수익":
-        scope==="week"?"7일 수익":"월 수익";
+      const periodLabel=scope==="today"?"오늘 수익":scope==="week"?"최근 7일 수익":"이번 달 수익";
       const monthLabel=monthFrom.slice(0,7).replace("-","년 ")+"월";
       const snapDays=scope==="today"?[today]:scope==="week"?graph.map(x=>x.day):
         Array.from({length:31},(_,i)=>plusDays(monthFrom,i)).filter(x=>x<=monthTo);
       const rides=snapDays.map(day=>dailyRideSnapshot(window.__rsRideApi?.history,day));
-      const duration=rides.reduce((n,x)=>n+num(x.durationMs),0),distance=rides.reduce((n,x)=>n+num(x.distanceKm),0);
-      const recordedDays=new Set(rides.filter(x=>x.trips>0&&x.durationMs>0&&x.distanceKm>0)
-        .map(x=>x.day));
+      const duration=rides.reduce((n,x)=>n+num(x.durationMs),0);
+      const distance=rides.reduce((n,x)=>n+num(x.distanceKm),0);
+      const recordedDays=new Set(rides.filter(x=>x.trips>0&&x.durationMs>0&&x.distanceKm>0).map(x=>x.day));
       const earningDays=new Set(totals.earnings.map(x=>x.work_date));
       const complete=!!duration&&!!distance&&earningDays.size>0&&
         [...earningDays].every(day=>recordedDays.has(day));
       const usable=!!duration&&!!distance;
       const coverageLabel=complete?"운행 기록 기준":usable?"일부 운행만 기록됨":"기록 없음";
-      return h("div",{className:"fin-stack rs6-finance-dashboard"},
-        h("section",{className:"rs6-finance-stage"},
-        h("div",{className:"fin-period"},
-          scopeButton("today","오늘"),scopeButton("week","최근 7일"),scopeButton("month","월간")),
-        scope==="month"&&h("div",{className:"fin-month-head"},
-          button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
-          txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
-          button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
-        h("section",{className:"fin-hero fin-hero-renewal"},
-          h("div",{className:"fin-hero-main"},
-          h("div",{className:"fin-hero-top"},txt("span",null,periodLabel)),
-          h("strong",{className:"fin-hero-amount"},money(totals.gross)),
-          txt("small","fin-hero-range",from===to?from:from+" ~ "+to)),
-          h("div",{className:"fin-hero-divider"}),
-          h("div",{className:"fin-hero-bottom"},
-            h("span",null,"업무 비용",h("strong",null,money(totals.cost))),
-            h("span",null,"비용 차감액",h("strong",null,totals.uncertain?"확인 필요":money(totals.net))))),
-        totals.uncertain&&txt("p","fin-warning","예전 수익의 비용 분류가 불분명해 비용 차감액 확인이 필요해요."),
-        h("div",{className:"fin-quick"},
-          button(h(R.Fragment,null,icon("earnings",19),"수익 입력"),()=>openEditor("income"),"fin-primary"),
-          button(h(R.Fragment,null,icon("fuel",19),"지출 입력"),()=>openEditor("expense"),"fin-secondary")),
-        ),
-        h("div",{className:"rs6-finance-analysis-grid"},
-        h("section",{className:"fin-card fin-chart-card fin-chart-spotlight"},
-          h("header",null,h("h2",null,"최근 7일"),
-            txt("small",null,"날짜별")),
-          chart()),
-        h("section",{className:"fin-card fin-goal"},
-          h("header",null,h("h2",null,"월 목표"),
-            button(h(R.Fragment,null,icon("settings",15),"목표 수정"),()=>openEditor("goal",goal),"fin-textbtn")),
-          h("div",{className:"fin-goal-amount"},txt("strong",null,goalUncertain?"확인 필요":money(goalValue)),
-            txt("small",null,"/ "+money(goalTarget)+" · "+(goal.goal_basis==="net"?"비용 차감액":"총수익"))),
+      return h("div",{className:"fin-stack rs8-finance-dashboard"},
+        h("section",{className:"rs8-income-console"},
+          h("div",{className:"rs8-console-top"},
+            txt("span","rs8-eyebrow","라이더 수익 현황"),
+            h("div",{className:"fin-period"},
+              scopeButton("today","오늘"),scopeButton("week","7일"),scopeButton("month","월간"))),
+          scope==="month"&&h("div",{className:"fin-month-head"},
+            button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
+            txt("strong",null,monthLabel),
+            button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
+          h("div",{className:"rs8-console-value"},
+            txt("span",null,periodLabel),
+            h("strong",null,money(totals.gross)),
+            txt("small",null,from===to?from:from+" ~ "+to)),
+          h("div",{className:"rs8-console-metrics"},
+            h("div",null,txt("span",null,"업무 비용"),h("strong",null,money(totals.cost))),
+            h("div",null,txt("span",null,"비용 차감 후"),h("strong",null,totals.uncertain?"확인 필요":money(totals.net)))),
+          totals.uncertain&&txt("p","fin-warning","예전 수익의 비용 분류가 불분명해 비용 차감액 확인이 필요해요."),
+          h("section",{className:"rs8-trend-integrated"},
+            h("header",null,txt("strong",null,"7일 수익 흐름"),txt("small",null,"날짜별")),
+            chart()),
+          h("div",{className:"rs8-console-actions"},
+            button(h(R.Fragment,null,icon("earnings",18),"수익 기록"),()=>openEditor("income"),"fin-primary"),
+            button(h(R.Fragment,null,icon("fuel",18),"지출 기록"),()=>openEditor("expense"),"fin-secondary"))),
+        h("section",{className:"rs8-goal-progress"},
+          h("div",{className:"rs8-section-caption"},
+            h("h2",null,"월 목표"),
+            button(h(R.Fragment,null,icon("settings",15),"설정"),()=>openEditor("goal",goal),"fin-textbtn")),
+          h("div",{className:"rs8-goal-numbers"},
+            h("strong",null,goalUncertain?"확인 필요":money(goalValue)),
+            txt("small",null,"/ "+money(goalTarget))),
           h("div",{className:"fin-goal-track"},h("div",{style:{width:(achieved??0)+"%"}})),
           h("div",{className:"fin-goal-numbers"},
             txt("span",null,achieved==null?"분류 확인 필요":achieved+"% 달성"),
-            txt("span",null,goalUncertain?"확인 필요":"남은 목표 "+money(Math.max(0,goalTarget-goalValue)))),
-          h("details",{className:"fin-optional"},h("summary",null,"하루 목표"),
-            h("div",{className:"fin-goal-daily"},txt("small",null,"잔여 "+remainingWorkDays+"일"),
+            txt("span",null,goalUncertain?"확인 필요":"남은 "+money(Math.max(0,goalTarget-goalValue)))),
+          h("details",{className:"rs8-goal-detail"},
+            h("summary",null,"하루 목표 계산"),
+            h("div",{className:"fin-goal-daily"},txt("small",null,"남은 "+remainingWorkDays+"일"),
               txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
-        ),
-        h("section",{className:"fin-card fin-platform-card"+(!Object.keys(monthly.byPlatform).length?" fin-no-records":"")},
-          h("header",null,h("h2",null,"플랫폼별"),
-            txt("small",null,monthLabel+" 기준")),
+        h("section",{className:"rs8-platform-ledger"},
+          h("div",{className:"rs8-section-caption"},h("h2",null,"플랫폼별 수익"),
+            txt("small",null,monthLabel)),
           platformBreakdown()),
-        h("details",{className:"fin-insights"},
+        h("details",{className:"rs8-efficiency"},
           h("summary",null,"운행 효율",h("span",null,coverageLabel)),
           h("div",{className:"fin-stat-grid"},
             moneyStat("운행 시간",duration?Math.round(duration/360000)/10+"시간":"기록 없음"),
@@ -622,7 +620,7 @@ export function createFinance(R, client) {
             moneyStat("km당 수익",complete?money(totals.gross/distance):"계산 불가"),
             moneyStat("시간당 비용 차감액",complete&&!totals.uncertain?money(totals.net/(duration/3600000)):"계산 불가"),
             moneyStat("km당 비용 차감액",complete&&!totals.uncertain?money(totals.net/distance):"계산 불가")),
-          !complete&&txt("p","fin-efficiency-note","수익이 있는 모든 업무일의 운행 시간과 거리가 기록되어야 효율을 계산해요.")));
+          !complete&&txt("p","fin-efficiency-note","수익이 있는 업무일의 운행 시간과 거리가 기록되어야 효율을 계산해요.")));
     }
     function records() {
       const rows=financeLedger(data||emptyData,monthFrom,monthTo);
@@ -770,19 +768,29 @@ export function createFinance(R, client) {
       const prev=financeTotals(data||emptyData,prevFrom,prevTo);
       const delta=prev.gross?Math.round((monthly.gross-prev.gross)/prev.gross*100):null;
       const activeDays=new Set(monthly.earnings.map(x=>x.work_date)).size;
-      return h("div",{className:"fin-stack"},
+      const costs=[
+        ["주유",monthly.fuelCost],["정비",monthly.maintenanceCost],
+        ["수익 입력 기타 비용",monthly.earningCosts],["기타 업무 비용",monthly.extraCost],
+        ["개인 지출 (업무비 제외)",monthly.personalCost]
+      ];
+      const nonZeroCosts=costs.filter(([,value])=>value>0);
+      const zeroCosts=costs.filter(([,value])=>!value);
+      return h("div",{className:"fin-stack rs8-analysis"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
           button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
-        h("div",{className:"fin-stat-grid"},
-          moneyStat("기록된 수입",money(monthly.gross)),
-          moneyStat("업무 비용",money(monthly.cost)),
-          moneyStat("비용 차감액",monthly.uncertain?"확인 필요":money(monthly.net)),
-          moneyStat("근무일 평균",activeDays?money(monthly.gross/activeDays):"기록 없음"),
-          moneyStat("전월 대비",delta==null?"비교 기준 없음":(delta>0?"+":"")+delta+"%"),
-          moneyStat("기록된 배달 건수",monthly.deliveries+"건")),
-        h("section",{className:"fin-card"},
+        h("section",{className:"rs8-analysis-lead"},
+          txt("span","rs8-eyebrow","기록된 월 수익"),
+          h("strong",{className:"rs8-analysis-main"},money(monthly.gross)),
+          h("div",{className:"rs8-analysis-balance"},
+            h("div",null,txt("span",null,"업무 비용"),h("strong",null,money(monthly.cost))),
+            h("div",null,txt("span",null,"비용 차감 후"),h("strong",null,monthly.uncertain?"확인 필요":money(monthly.net))))),
+        h("div",{className:"rs8-analysis-extras"},
+          h("div",null,txt("span",null,"근무일 평균"),h("strong",null,activeDays?money(monthly.gross/activeDays):"기록 없음")),
+          h("div",null,txt("span",null,"전월 대비"),h("strong",null,delta==null?"비교 기준 없음":(delta>0?"+":"")+delta+"%")),
+          h("div",null,txt("span",null,"배달 건수"),h("strong",null,monthly.deliveries+"건"))),
+        h("section",{className:"rs8-analysis-trend"},
           h("header",null,h("h2",null,"수익 추이"),
             h("div",{className:"fin-inline-tabs fin-graph-tabs"},
               [["weekly","주별"],["monthly","월별"]].map(([id,label])=>
@@ -801,13 +809,19 @@ export function createFinance(R, client) {
             txt("span",null,"수익 "+money(selected.gross)),
             txt("span",null,"업무 비용 "+money(selected.cost)),
             txt("span",null,selected.uncertain?"차감액 확인 필요":"비용 차감액 "+money(selected.net)))),
-        h("section",{className:"fin-card"},h("header",null,h("h2",null,"지출 구성")),
-          [["주유",monthly.fuelCost],["정비",monthly.maintenanceCost],
-            ["수익 입력 기타 비용",monthly.earningCosts],["기타 업무 비용",monthly.extraCost],["개인 지출 (업무비 제외)",monthly.personalCost]]
-            .map(([name,value])=>h("div",{className:"fin-cost-row",key:name},
-              txt("span",null,name),txt("strong",null,money(value))))),
+        h("section",{className:"rs8-analysis-spending"},
+          h("h2",null,"지출 현황"),
+          nonZeroCosts.length?
+            nonZeroCosts.map(([name,value])=>h("div",{className:"fin-cost-row",key:name},
+              txt("span",null,name),h("strong",null,money(value)))):
+            txt("p","fin-empty","기록된 지출이 없어요."),
+          !!zeroCosts.length&&h("details",{className:"rs8-zero-costs"},
+            h("summary",null,"지출 없는 항목 "+zeroCosts.length+"개"),
+            zeroCosts.map(([name,value])=>h("div",{className:"fin-cost-row",key:name},
+              txt("span",null,name),h("strong",null,money(value)))))),
         monthly.uncertain&&txt("p","fin-warning","예전 기록의 기타 비용 분류가 불분명해 주유·정비비와 중복될 수 있어요."),
         txt("p","fin-muted","개인 지출·미기록 비용·세금은 별도"));
+
     }
     return h("section",{className:"finance-page page narrow"},
       h("div",{className:"fin-page-head"},h("h1",null,"수익")),
