@@ -102,60 +102,61 @@ function abbreviatedMoney(n) { return n === null ? "미입력" : "₩"+formats.f
 export function recapMapDimensions(mode,ratio) {
   if(mode==="finance")return null;
   // 4:5 poster: a true square, 800 x 800 GPS map and a compact receipt below.
-  if(mode==="all"&&ratio==="4:5")return {width:800,height:800};
+  if(mode==="all"&&ratio==="4:5")return {width:920,height:920};
   const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
   return {width:936,height:Math.round(mode==="route"?Math.min(height*53/100,900):Math.min(height*35/100,720))};
 }
 export function recapEndpointLayout(paths,w,h) {
-  const valid=(paths||[]).filter(p=>Array.isArray(p)&&p.length);
-  if(!valid.length)return null;
-  const first=valid[0][0],last=valid[valid.length-1].at(-1);
-  const distance=Math.hypot(first.x-last.x,first.y-last.y);
-  const coincident=distance<55;
+  const pathsWithPoints=(paths||[]).filter(path=>Array.isArray(path)&&path.length);
+  if(!pathsWithPoints.length)return null;
+  const first=pathsWithPoints[0][0],last=pathsWithPoints.at(-1).at(-1);
+  const coincident=Math.hypot(first.x-last.x,first.y-last.y)<58;
+  const badgeW=68,badgeH=28,gutter=10;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const badgeW=78,badgeH=32,margin=10;
-  // The starting label sits northwest, the finishing label southeast.
-  // Never draw long connector lines across the GPS route.
-  const chip=(p,dx,dy)=>({x:clamp(p.x+dx,margin,w-badgeW-margin),
-    y:clamp(p.y+dy,margin,h-badgeH-margin),width:badgeW,height:badgeH});
-  let start=chip(first,-96,-53),end=chip(last,18,18);
-  const collide=(a,b)=>a.x<b.x+b.width+8&&a.x+a.width+8>b.x&&a.y<b.y+b.height+8&&a.y+a.height+8>b.y;
-  if(collide(start,end)){
-    end=chip(last,18,42);
-    if(collide(start,end)){
-      start=chip(first,-96,-87);
-      end=chip(last,18,18);
-    }
-    if(collide(start,end)){
-      start={...start,x:margin,y:clamp(first.y-53,margin,h-badgeH-margin)};
-      end={...end,x:w-badgeW-margin,y:clamp(last.y+18,margin,h-badgeH-margin)};
+  const badge=(pt,dx,dy)=>({
+    x:clamp(pt.x+dx,gutter,w-badgeW-gutter),
+    y:clamp(pt.y+dy,gutter,h-badgeH-gutter),
+    width:badgeW,height:badgeH
+  });
+  let start=badge(first,-82,-37),end=badge(last,14,11);
+  const overlap=(a,b)=>a.x<b.x+b.width+6&&b.x<a.x+a.width+6&&a.y<b.y+b.height+6&&b.y<a.y+a.height+6;
+  if(overlap(start,end)){
+    end=badge(last,16,40);
+    if(overlap(start,end))start=badge(first,-82,-65);
+    if(overlap(start,end)){
+      start={...start,x:gutter};
+      end={...end,x:w-badgeW-gutter};
     }
   }
   return {first,last,start,end,coincident};
 }
 function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
-  rounded(ctx,x,y,w,h,30,p.tint);
-  ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,30);ctx.clip();
-  const actualMap=showRoute && mapSnapshot?.hasBasemap && mapSnapshot?.image;
-  if(actualMap) {
+  rounded(ctx,x,y,w,h,19,p.tint);
+  ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,19);ctx.clip();
+  const actualMap=showRoute&&mapSnapshot?.hasBasemap&&mapSnapshot?.image;
+  if(actualMap){
     ctx.drawImage(mapSnapshot.image,x,y,w,h);
+    // Administrative labels are positioned using the same export-map viewport.
     for(const place of mapSnapshot.labels||[]){
       const px=x+place.x,py=y+place.y;
-      ctx.font="600 23px "+fontFamily;
+      ctx.save();
+      ctx.font="600 22px "+fontFamily;
       ctx.textAlign="center";ctx.textBaseline="middle";
       ctx.lineWidth=5;ctx.lineJoin="round";
       ctx.strokeStyle="rgba(255,255,255,.92)";
       ctx.strokeText(place.name,px,py);
-      ctx.fillStyle="#596D75";ctx.fillText(place.name,px,py);
+      ctx.fillStyle="#536973";
+      ctx.fillText(place.name,px,py);
+      ctx.restore();
     }
   }
   const points=showRoute?segments.flat():[];
-  if(!points.length) {
-    label(ctx,showRoute?"기록된 GPS 경로가 없어요":"경로 비공개",x+w/2,y+h/2+8,31,p.muted,600,"center");
-  } else {
+  if(!points.length){
+    label(ctx,showRoute?"기록된 GPS 경로가 없어요":"경로 비공개",x+w/2,y+h/2,28,p.muted,610,"center");
+  }else{
     const positions=actualMap?mapSnapshot.positions:null;
     let project;
-    if(!positions) {
+    if(!positions){
       const midLat=points.reduce((sum,pt)=>sum+pt.lat,0)/points.length;
       const cos=Math.max(.1,Math.cos(midLat*Math.PI/180));
       let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
@@ -164,65 +165,64 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
         if(px<minX)minX=px;if(px>maxX)maxX=px;
         if(py<minY)minY=py;if(py>maxY)maxY=py;
       }
-      const rangeX=Math.max(maxX-minX,.00015),rangeY=Math.max(maxY-minY,.00015);
-      const scale=Math.min((w-150)/rangeX,(h-150)/rangeY);
-      project=pt=>({
-        x:w/2+(pt.lng*cos-(minX+maxX)/2)*scale,
-        y:h/2-(pt.lat-(minY+maxY)/2)*scale
-      });
+      const spanX=Math.max(maxX-minX,.00015),spanY=Math.max(maxY-minY,.00015);
+      const scale=Math.min((w-120)/spanX,(h-120)/spanY);
+      project=pt=>({x:w/2+(pt.lng*cos-(minX+maxX)/2)*scale,y:h/2-(pt.lat-(minY+maxY)/2)*scale});
     }
     const paths=positions||segments.map(segment=>segment.map(project));
+    // A restrained two-pass vector stroke: readable over the muted street
+    // basemap without the 8px+ blue spaghetti of the old export.
     for(const path of paths){
       if(!path.length)continue;
-      const stride=Math.max(1,Math.ceil(path.length/1200));
-      const sampled=path.filter((_,index)=>index%stride===0);
-      if(sampled[sampled.length-1]!==path[path.length-1])sampled.push(path[path.length-1]);
+      const stride=Math.max(1,Math.ceil(path.length/1400));
+      const sampled=path.filter((_,i)=>i%stride===0);
+      if(sampled.at(-1)!==path.at(-1))sampled.push(path.at(-1));
       ctx.beginPath();
-      sampled.forEach((pt,i)=>i===0?ctx.moveTo(x+pt.x,y+pt.y):ctx.lineTo(x+pt.x,y+pt.y));
-      ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=p.accent;ctx.stroke();
+      sampled.forEach((pt,i)=>i?ctx.lineTo(x+pt.x,y+pt.y):ctx.moveTo(x+pt.x,y+pt.y));
+      ctx.lineCap="round";ctx.lineJoin="round";
+      ctx.strokeStyle="rgba(255,255,255,.72)";ctx.lineWidth=9;ctx.stroke();
+      ctx.strokeStyle=p.accent;ctx.lineWidth=5.25;ctx.stroke();
     }
     const endpoints=recapEndpointLayout(paths,w,h);
     if(endpoints){
       const {first,last,start,end,coincident}=endpoints;
-      // One compact two-tone pin when an entire ride finishes near its start.
-      // Positions always refer to genuine GPS fixes.
-      if(coincident){
-        const cx=x+(first.x+last.x)/2,cy=y+(first.y+last.y)/2;
-        ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);
-        ctx.fillStyle=p.panel;ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,8,Math.PI/2,3*Math.PI/2);
-        ctx.fillStyle=p.accent;ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,8,-Math.PI/2,Math.PI/2);
-        ctx.fillStyle=p.ink;ctx.fill();
-      }
-      const pins=coincident?[]:[[first,p.accent,"start"],[last,p.ink,"end"]];
-      for(const [pt,color,type] of pins){
+      const pin=(pt,color,endPin=false)=>{
         const cx=x+pt.x,cy=y+pt.y;
-        ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
-        ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-        if(type==="end"){
-          rounded(ctx,cx-3,cy-3,6,6,1,p.panel);
-        } else {
-          ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);
-          ctx.fillStyle=p.panel;ctx.fill();
-        }
+        ctx.beginPath();ctx.arc(cx,cy,11,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,7.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        if(endPin)rounded(ctx,cx-2.5,cy-2.5,5,5,1,"#fff");
+        else {ctx.beginPath();ctx.arc(cx,cy,2.4,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();}
+      };
+      const badge=(rect,text,color)=>{
+        const bx=x+rect.x,by=y+rect.y;
+        rounded(ctx,bx,by,rect.width,rect.height,9,"rgba(255,255,255,.94)");
+        ctx.beginPath();ctx.arc(bx+12,by+14,3.2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        label(ctx,text,bx+23,by+20,17,p.ink,700);
+      };
+      if(coincident){
+        // Preserve the true GPS endpoints: a split blue/slate ring shows
+        // a near-roundtrip without two floating labels obscuring each other.
+        const cx=x+(first.x+last.x)/2,cy=y+(first.y+last.y)/2;
+        ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,9,Math.PI/2,Math.PI*3/2);ctx.fillStyle=p.accent;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,9,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
+      }else{
+        pin(first,p.accent);pin(last,p.ink,true);
+        badge(start,"출발",p.accent);
+        badge(end,"종료",p.ink);
       }
-      for(const [chip,color,word] of [[start,p.accent,"출발"],[end,p.ink,"종료"]]){
-        const bx=x+chip.x,by=y+chip.y;
-        rounded(ctx,bx,by,chip.width,chip.height,11,"rgba(255,255,255,.96)");
-        ctx.beginPath();ctx.arc(bx+14,by+16,4.5,0,Math.PI*2);
-        ctx.fillStyle=color;ctx.fill();
-        label(ctx,word,bx+26,by+22,19,p.ink,740);
-      }
+      // Slim editorial legend replaces the prominent "주행 경로" badge.
+      rounded(ctx,x+18,y+18,coincident?223:186,34,11,"rgba(255,255,255,.92)");
+      ctx.beginPath();ctx.arc(x+34,y+35,4.5,0,Math.PI*2);ctx.fillStyle=p.accent;ctx.fill();
+      label(ctx,"출발",x+45,y+42,17,p.ink,660);
+      ctx.beginPath();ctx.arc(x+109,y+35,4.5,0,Math.PI*2);ctx.fillStyle=p.ink;ctx.fill();
+      label(ctx,coincident?"종료 · 인접":"종료",x+120,y+42,17,p.ink,660);
     }
   }
-  rounded(ctx,x+22,y+20,157,46,12,actualMap?"rgba(255,255,255,.89)":p.panel);
-  label(ctx,"주행 경로",x+39,y+51,24,p.ink,750);
   if(actualMap){
-    // Tile and source attribution is required on exported/printed imagery.
-    // Avoid the intrusive full-width white bar, but retain a readable credit.
-    rounded(ctx,x+w-295,y+h-30,281,22,5,"rgba(255,255,255,.86)");
-    label(ctx,"© OpenMapTiles · © OpenStreetMap",x+w-21,y+h-14,13,"#5A6B74",500,"right");
+    // Map source credits must remain legible on exported imagery.
+    rounded(ctx,x+w-293,y+h-27,279,20,5,"rgba(255,255,255,.86)");
+    label(ctx,"© OpenMapTiles · © OpenStreetMap",x+w-21,y+h-12,13,"#566B73",500,"right");
   }
   ctx.restore();
 }
@@ -240,13 +240,16 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
   if(!ctx)throw Error("이미지 렌더링을 사용할 수 없어요.");
   const p=palettes[theme]||palettes.light;
   rounded(ctx,0,0,W,H,0,p.bg);
-  rounded(ctx,72,66,12,12,3,p.accent);
-  label(ctx,"라이더스팟",97,80,22,p.ink,780);
   if(mode==="all"&&ratio==="4:5"){
-    label(ctx,"하루의 운행 기록",1008,80,19,p.muted,590,"right");
+    rounded(ctx,80,53,10,10,3,p.accent);
+    label(ctx,"라이더스팟",102,67,20,p.ink,780);
+    label(ctx,"하루의 운행 기록",1000,67,17,p.muted,550,"right");
+    label(ctx,recap.day.replace(/-/g,".")+" 타임라인",80,137,45,p.ink,800);
+  }else{
+    rounded(ctx,72,66,12,12,3,p.accent);
+    label(ctx,"라이더스팟",97,80,22,p.ink,780);
+    label(ctx,recap.day.replace(/-/g,".")+(mode==="finance"?" 결산":" 타임라인"),72,151,48,p.ink,800);
   }
-  const title=recap.day.replace(/-/g,".")+(mode==="finance"?" 결산":" 타임라인");
-  label(ctx,title,72,151,48,p.ink,800);
   const income=showIncome?abbreviatedMoney(recap.gross):"비공개";
   if(mode==="finance") {
     label(ctx,"하루 수익",72,246,27,p.muted,700);
@@ -279,40 +282,41 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
       }
     }
   } else if(mode==="all" && ratio==="4:5") {
-    // 1080×1350 poster: a 1:1 geographic map above a dense but legible receipt.
-    // No map stretching; the temporary MapLibre viewport is exactly 800×800.
-    const mapSize=recapMapDimensions(mode,ratio);
-    const mapLeft=Math.round((W-mapSize.width)/2),mapTop=177;
-    drawRoute(ctx,recap.segments,mapLeft,mapTop,mapSize.width,mapSize.height,p,showRoute,mapSnapshot);
-    const top=993;
-    const showCost=showIncome&&recap.financeLoaded&&recap.cost>0;
-    // The receipt fills the poster's lower space instead of floating above
-    // an empty 180px strip. All figures are from saved trip/finance records.
-    rounded(ctx,72,top,936,278,26,p.panel);
-    rounded(ctx,104,top+22,5,19,2,p.accent);
-    label(ctx,"오늘의 운행",119,top+39,21,p.muted,710);
-    label(ctx,recap.trips?recap.trips+"회 기록":"기록 없음",973,top+39,20,p.muted,590,"right");
-    label(ctx,"총수익",105,top+81,21,p.muted,630);
-    label(ctx,income,105,top+144,58,p.ink,800);
-    label(ctx,"순수익",971,top+81,20,p.muted,630,"right");
-    label(ctx,showIncome?(recap.uncertain?"확인 필요":abbreviatedMoney(recap.net)):"비공개",
-      971,top+138,36,p.ink,760,"right");
-    line(ctx,104,top+168,975,top+168,p.grid,1.5);
-    const metrics=[
-      ["운행거리",recap.trips?km(recap.distanceKm):"기록 없음"],
-      ["운행시간",duration(recap.durationMs)],
-      recap.deliveries!==null?["배달",recap.deliveries+"건"]:["운행 기록",recap.trips+"회"],
-    ];
-    metrics.forEach(([name,value],i)=>{
-      const xx=105+i*292;
-      label(ctx,name,xx,top+200,19,p.muted,620);
-      label(ctx,value,xx,top+242,30,p.ink,760);
-    });
-    if(showCost) {
-      // A quiet cost caption occupies the receipt's last corner only when
-      // the cost is greater than zero.
-      label(ctx,"비용 "+won(recap.cost),971,top+265,16,p.muted,550,"right");
+    // A genuinely square 920×920 map with a single aligned 920px ledger.
+    // 1080×1350: 80px side margins, a 17px map/ledger gap, 27px bottom.
+    const {width:side,height:mapHeight}=recapMapDimensions(mode,ratio);
+    const mapLeft=80,mapTop=166;
+    drawRoute(ctx,recap.segments,mapLeft,mapTop,side,mapHeight,p,showRoute,mapSnapshot);
+    const cardX=80,cardY=1103,cardW=920,cardH=221;
+    rounded(ctx,cardX,cardY,cardW,cardH,19,p.panel);
+    const left=108,right=972;
+    label(ctx,"오늘의 운행",left,cardY+29,21,p.ink,730);
+    if(recap.trips>0)label(ctx,recap.trips+"회 운행",right,cardY+29,18,p.muted,575,"right");
+    const showGross=showIncome&&recap.gross!==null;
+    const incomeText=showIncome?(showGross?abbreviatedMoney(recap.gross):"수익 기록 없음"):"수익 비공개";
+    const showNet=showGross&&recap.financeLoaded&&!recap.uncertain&&recap.cost>0&&recap.net!==null;
+    label(ctx,showGross?"총수익":"수익",left,cardY+59,18,p.muted,590);
+    label(ctx,incomeText,left,cardY+114,showGross?51:31,p.ink,800);
+    // No repeated gross/net amount when expenses are zero.
+    if(showNet){
+      label(ctx,"순수익",right,cardY+64,18,p.muted,575,"right");
+      label(ctx,abbreviatedMoney(recap.net),right,cardY+111,32,p.ink,740,"right");
+      label(ctx,"비용 "+won(recap.cost),right,cardY+136,15,p.muted,550,"right");
+    }else if(showGross&&recap.uncertain){
+      label(ctx,"비용 확인 필요",right,cardY+101,17,p.muted,550,"right");
     }
+    line(ctx,left,cardY+132,right,cardY+132,p.grid,1.5);
+    const stats=[
+      ["운행거리",recap.trips?km(recap.distanceKm):"기록 없음"],
+      ["운행시간",recap.trips?duration(recap.durationMs):"기록 없음"]
+    ];
+    if(recap.deliveries!==null)stats.push(["배달",recap.deliveries+"건"]);
+    const cell=864/stats.length;
+    stats.forEach(([name,value],i)=>{
+      const sx=left+i*cell;
+      label(ctx,name,sx,cardY+159,18,p.muted,600);
+      label(ctx,value,sx,cardY+198,29,p.ink,760);
+    });
   } else {
     const mapTop=207;
     const mapHeight=recapMapDimensions(mode,ratio).height;
