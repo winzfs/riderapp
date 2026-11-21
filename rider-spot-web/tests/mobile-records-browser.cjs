@@ -179,21 +179,17 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       "every tab must use the same premium teal, orange and ink tokens");
     if(smokeOnly){
       await nav("수익");
-      await page.locator(".fin-hero-amount").waitFor();
-      const cardStyle=await page.locator(".fin-card>header").first().evaluate(el=>{
-        const c=getComputedStyle(el),rect=el.getBoundingClientRect();
-        return {height:rect.height,background:c.backgroundColor,color:c.color,padding:c.paddingLeft};
-      });
-      assert.ok(cardStyle.height<=44,"no 78px legacy title bar "+JSON.stringify(cardStyle));
-      assert.ok(cardStyle.background==="rgba(0, 0, 0, 0)"||cardStyle.background==="transparent",
-        "finance cards must not inherit black header background: "+JSON.stringify(cardStyle));
-      const panels=await page.evaluate(()=>({
-        goal:document.querySelector(".fin-goal")?.getBoundingClientRect().height,
-        platform:document.querySelector(".fin-platform-card")?.getBoundingClientRect().height,
-        chart:document.querySelector(".fin-chart-card")?.getBoundingClientRect().height
+      await page.locator(".rs8-console-value strong").waitFor();
+      const editorial=await page.evaluate(()=>({
+        console:document.querySelector(".rs8-income-console")?.getBoundingClientRect().height,
+        integratedChart:document.querySelector(".rs8-income-console .rs8-trend-integrated")?.getBoundingClientRect().height,
+        goal:document.querySelector(".rs8-goal-progress")?.getBoundingClientRect().height,
+        platform:document.querySelector(".rs8-platform-ledger")?.getBoundingClientRect().height
       }));
-      assert.ok(panels.goal<240&&panels.platform<220&&panels.chart<275,
-        "dashboard cards must adapt to contents: "+JSON.stringify(panels));
+      assert.ok(editorial.console>150&&editorial.integratedChart>60,
+        "v8 chart and large income number must occupy one continuous console: "+JSON.stringify(editorial));
+      assert.ok(editorial.goal>40&&editorial.platform>30,
+        "monthly goal and platform flow must remain visible after v8 restructure: "+JSON.stringify(editorial));
       await shot("finance-responsive");
       const measures=await page.evaluate(()=>({
         vw:innerWidth,scroll:document.documentElement.scrollWidth,
@@ -530,13 +526,13 @@ async function run(browser,width,height,{smokeOnly=false}={}){
 
     // Finance regression: two-field default, thousand separators and per-user draft recovery.
     await nav("수익");
-    await page.locator(".finance-page .fin-hero-amount").waitFor();
-    assert.equal(await page.locator(".fin-platform-card>header small").innerText(),
+    await page.locator(".finance-page .rs8-console-value strong").waitFor();
+    assert.equal(await page.locator(".rs8-platform-ledger .rs8-section-caption small").innerText(),
       "2026년 11월 기준","platform totals need an explicit monthly range");
 
-    await page.locator(".fin-platform-card").getByText("쿠팡이츠",{exact:true})
+    await page.locator(".rs8-platform-ledger").getByText("쿠팡이츠",{exact:true})
       .waitFor({timeout:12000});
-    assert.ok(await page.locator(".fin-platform-card").innerText().then(v=>v.includes("120,000원")),
+    assert.ok(await page.locator(".rs8-platform-ledger").innerText().then(v=>v.includes("120,000원")),
       "month-wide platform totals must use saved income even while today is zero");
     await page.getByRole("button",{name:"수익 입력",exact:true}).click();
     const financeDialog=page.getByRole("dialog",{name:"수익 입력"});
@@ -634,6 +630,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(chartSelectionStyle.borderTopWidth,"0px","selected finance graph must not show a border");
     await shot("finance-analysis");
     await page.getByRole("button",{name:"내역",exact:true}).click();
+    if(await page.locator(".rs8-zero-maintenance").count())
+      await page.locator(".rs8-zero-maintenance summary").click();
     await page.getByRole("button",{name:/엔진오일.*기록 보기/}).first().click();
     await page.getByRole("dialog",{name:"엔진오일 관리"}).waitFor();
     await shot("finance-maintenance-link");
