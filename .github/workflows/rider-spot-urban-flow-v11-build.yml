@@ -1,7 +1,7 @@
 name: Rider Spot URBAN FLOW v11 structural build and regression
 on:
   push:
-    branches: [feature/rider-spot-v11-full-rearchitecture]
+    branches: [feature/rider-spot-v11-full-rearchitecture, feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-urban-flow-v11-build.yml'
       - 'rider-spot-web/src/mobile-records.mjs'
