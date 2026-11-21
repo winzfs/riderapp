@@ -173,6 +173,12 @@ export function recapEndpointLayout(paths,w,h,geoSegments=[]) {
     // Keep coordinates fixed. Only the lightweight text label can move.
     const alternatives=candidates(last,66).filter(b=>!intersect(b,start,8));
     if(alternatives.length)end=alternatives.sort((a,b)=>score(a,last,first)-score(b,last,first))[0];
+    if(intersect(start,end,8)) {
+      // Extreme corners can collapse every nearby candidate to the same box.
+      // Stack labels with a guaranteed 9px gap; never shift their GPS pins.
+      const above=start.y-badgeH-9,below=start.y+badgeH+9;
+      end={...end,x:start.x,y:above>=margin?above:below};
+    }
   }
   return {first,last,start,end,joint:null,coincident,meters};
 }
