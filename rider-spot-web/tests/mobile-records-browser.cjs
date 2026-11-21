@@ -258,9 +258,20 @@ async function run(browser,width,height,{smokeOnly=false}={}){
         first:el.slice(0,3).map(x=>Math.round(x.y)),second:el.slice(3,6).map(x=>Math.round(x.y)),
         width:el.map(x=>x.width),outer:node.getBoundingClientRect().width};
     });
-    assert.equal(layout.cols,3,"exactly three columns on mobile");
-    assert.ok(layout.first.every(y=>y===layout.first[0]),"first three cards share first row");
-    assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
+    const isEditorialService=await page.locator(".rs6-service-board").count()>0;
+    assert.equal(layout.cols,isEditorialService?2:3,
+      "service tiles follow the actual v6 2-column or earlier 3-column screen structure");
+    if(isEditorialService){
+      const rows=await cards.evaluateAll(items=>items.map(x=>Math.round(x.getBoundingClientRect().y)));
+      assert.ok(rows[0]===rows[1]&&rows[2]===rows[3]&&rows[4]===rows[5],
+        "two horizontal service instruments per row");
+      assert.ok(rows[2]>rows[0]&&rows[4]>rows[2],"three service rows in vertical order");
+      assert.equal(await page.locator(".rs6-garage-stage .bike-actions").count(),1,
+        "maintenance/fuel entry is integrated with the vehicle stage");
+    }else{
+      assert.ok(layout.first.every(y=>y===layout.first[0]),"first three cards share first row");
+      assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
+    }
     assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
     assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='neo-flat-original-v197']").count()>=6,
