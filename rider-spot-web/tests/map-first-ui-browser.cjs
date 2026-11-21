@@ -49,6 +49,9 @@ function intersect(a,b){
        viewport:{width:innerWidth,documentWidth:document.documentElement.scrollWidth},
        top:rect(".rs-map-v2 .rs12-map-commandbar"),
        status:rect(".rs-map-v2-status-row"),
+       shareChip:rect(".rs-map-v2-share-chip"),
+       statusChip:rect(".rs-map-v2-status-trigger"),
+       gpsChip:rect(".rs-map-v2-gps"),
        zoom:rect(".rs-map-v2 .leaflet-control-zoom"),
        locate:rect(".rs-map-v2 .locate"),
        report:rect(".rs-map-v2-report>summary"),
@@ -64,11 +67,16 @@ function intersect(a,b){
      assert.ok(r.l>=-2&&r.r<=width+2,"offscreen "+name+" "+JSON.stringify(r));
    }
    for(const [a,b] of [["top","status"],["top","zoom"],["status","zoom"],
+     ["shareChip","statusChip"],["shareChip","gpsChip"],["statusChip","gpsChip"],
      ["zoom","locate"],["report","help"],["report","attribution"],
      ["help","attribution"],["report","locate"],["help","locate"]]){
      if(geometry[a]&&geometry[b])
        assert.ok(!intersect(geometry[a],geometry[b]),a+"/"+b+" overlap "+JSON.stringify(geometry));
    }
+   assert.ok(geometry.shareChip && geometry.statusChip && geometry.gpsChip,
+     "sharing, personal state and GPS must all be visible");
+   assert.ok(geometry.status.l<=geometry.shareChip.l+1&&geometry.status.r>=geometry.gpsChip.r-1,
+     "status row must contain all three chips (no clipped sharing label)");
    assert.ok(geometry.report.h>=44&&geometry.help.h>=44,"minimum action targets");
    const sources=page.locator(".rs-map-v2 .leaflet-control-attribution");
    await sources.waitFor({state:"visible",timeout:12000});
