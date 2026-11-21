@@ -702,7 +702,7 @@ export function createRecords(R, client) {
             h("span",{className:"rs8-odo-label"},"현재 계기판"),
             h("strong",{className:"bike-distance"},
               reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
-                h("span",null,number(reading[0])),h("small",null,"km"))),
+                h("span",null,number(reading[0]))," ",h("small",null,"km"))),
             h("small",{className:"rs8-odo-updated"},reading?.[1]||"입력일 미기록",
               !manual&&reading?" · 정비·주유 기록 기준":"")),
           bikeArtSource(model)
