@@ -528,7 +528,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await nav("수익");
     await page.locator(".finance-page .rs8-console-value strong").waitFor();
     assert.equal(await page.locator(".rs8-platform-ledger .rs8-section-caption small").innerText(),
-      "2026년 11월 기준","platform totals need an explicit monthly range");
+      "2026년 11월","platform totals need an explicit monthly range");
 
     await page.locator(".rs8-platform-ledger").getByText("쿠팡이츠",{exact:true})
       .waitFor({timeout:12000});
