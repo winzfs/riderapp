@@ -69,15 +69,27 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
         await drawer.locator("summary").click();
         assert.equal(await drawer.evaluate(el=>el.open),true);
         assert.equal(await drawer.locator(".rs12-layer-options button").count(),3,"existing 3 exclusive map layers retained");
-         const privacy=drawer.locator(".rs12-share-control[role=switch]");
-         assert.equal(await privacy.count(),1,"privacy is separate from layer controls");
-         assert.equal(await privacy.getAttribute("aria-checked"),"false","location remains private in the anonymous fixture");
+        const privacy=overlay.locator(".rs-map-v2-share-chip[role=switch]");
+        assert.equal(await privacy.count(),1,"sharing belongs to the map status row, not layer settings");
+        assert.equal(await privacy.getAttribute("aria-checked"),"false","anonymous rider stays private");
+        assert.equal(await drawer.locator(".rs12-share-control").count(),0,"no duplicate sharing toggle");
+        assert.equal(await page.locator(".rs-map-v2-actions #rs-sos-fab").count(),1,"single help action");
+        assert.equal(await page.locator(".rs-map-v2-report > summary").count(),1,"report dock in map");
+        assert.equal(await page.locator(".rs-map-v2 #rs-demo-toggle:visible").count(),0,"QA riders hidden in production");
         const bounds=await drawer.locator(".rs33-map-filters").evaluate(el=>({
           parent:el.getBoundingClientRect().toJSON(),
           children:[...el.querySelectorAll("button")].map(x=>x.getBoundingClientRect().toJSON())
         }));
         assert.ok(bounds.children.every(x=>x.left>=bounds.parent.left-1&&x.right<=bounds.parent.right+1),"no clipped map tools");
         await drawer.locator("summary").click();
+        await page.locator(".rs-map-v2-status-trigger").click();
+        const presence=page.locator("#rs-presence-panel.rs-map-v2-presence-sheet:not([hidden])");
+        await presence.waitFor({timeout:10000});
+        assert.equal(await presence.locator("[data-rs-presence-code]").count(),5);
+        assert.equal(await presence.evaluate(el=>getComputedStyle(el).position),"fixed","status is a true modal sheet");
+        assert.equal(await page.locator(".rs-map-v2-status-scrim:not([hidden])").count(),1);
+        await presence.locator(".rs-presence-close").click();
+        await presence.waitFor({state:"hidden"});
       }
       if(i===1){
         await page.locator(".rs6-timeline-controller").waitFor({timeout:10000});

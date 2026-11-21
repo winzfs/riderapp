@@ -345,9 +345,10 @@ async function facilitySheetTest() {
       saved = route.request().postDataJSON();
       await route.fulfill({ status: 201 });
     });
-    const register = page.locator("#rs-report-legend .rs33-map-register");
+    const reportMenu = page.locator(".rs-map-v2-report");
     const sheet = page.getByRole("dialog", { name: "편의시설 등록" });
-    await register.click();
+    await reportMenu.locator("summary").click();
+    await reportMenu.getByRole("button", { name: "편의시설 등록" }).click();
     await sheet.waitFor();
     assert.equal(await page.evaluate(() => window.__rsNavigation.tab), "nearby");
     await sheet.getByLabel("장소 이름").fill("테스트 화장실");
