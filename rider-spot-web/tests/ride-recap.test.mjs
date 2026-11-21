@@ -91,28 +91,24 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   renderRecapCanvas(canvas,snapshot,{mode:"route",showRoute:false,theme:"mist"});
   renderRecapCanvas(canvas,snapshot,{mode:"finance",showIncome:false,theme:"night"});
   assert.ok(ops.some(([name])=>name==="fillText"));
-  // The 4:5 all-in-one image has a truly square 920×920 map, then a
-  // compact settlement panel; neither touches the edge.
-  const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===166&&w===920&&h===920);
-  const ledgerRule=ops.find(([op,x1,y1,x2,y2])=>op==="moveTo"&&x1===80&&y1===1103);
-  const detachedCard=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===1103&&w===920&&h===221);
-  assert.ok(square,"Expected centered 1:1 map");
-  assert.ok(ledgerRule,"Expected a unified editorial report grid, not a second floating widget");
-  const card=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===24&&y===22&&w===1032&&h===1306);
-  assert.ok(card,"The exported bitmap must have one elevated premium card frame");
-  const mapMat=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===74&&y===160&&w===932&&h===932);
-  assert.ok(mapMat,"The square GPS map must have a dedicated subtle inset print frame");
-  assert.equal(detachedCard,undefined,"Floating finance card must be removed");
-  assert.ok(166+920<1103 && 1309<1328,"No map, metrics or premium card edge overlap");
+  // New V5 export is the artwork itself, not a square map inside a mockup.
+  const rectangular=ops.find(([op,x,y,w,h])=>op==="roundRect"&&
+    x===72&&y===202&&w===936&&h===744);
+  assert.ok(rectangular,"The GPS canvas must fill the wide 936×744 hero");
+  assert.ok(!ops.some(([op,x,y,w,h])=>op==="roundRect"&&
+    x===24&&y===22&&w===1032&&h===1306),"No faux outer card");
+  assert.ok(!ops.some(([op,x,y,w,h])=>op==="roundRect"&&
+    x===74&&y===160&&w===932&&h===932),"No inset print frame");
+  const yRule=ops.find(([op,x,y])=>op==="moveTo"&&x===72&&y===974);
+  assert.ok(yRule,"Export uses a real map/ledger divider");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
-  assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
-  assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
-  assert.equal(textValues.filter(x=>x==="라이더스팟").length,5,"Only one top brand per rendered image, no footer");
-  // No double entry for the same revenue when cost is zero or missing.
-  assert.ok(textValues.includes("총수익"),"Main monetary label present");
-  assert.ok(textValues.includes("운행거리")&&textValues.includes("운행시간"),"Ride metrics visible");
-  assert.ok(!textValues.includes("주행 경로"),"Large floating map badge removed");
-  assert.ok(920===recapMapDimensions("all","4:5").width,"Map remains square");
+  assert.ok(textValues.includes("출발")&&textValues.includes("종료"));
+  assert.ok(textValues.includes("11월 21일의 기록"),"Date is the editorial headline");
+  assert.ok(textValues.includes("총 운행거리"),"Income-free design prioritizes GPS distance");
+  assert.ok(textValues.includes("운행시간"));
+  assert.ok(!textValues.includes("수익 기록 없음")&&!textValues.includes("수익 비공개"));
+  assert.ok(!textValues.includes("주행 경로"));
+  assert.deepEqual(recapMapDimensions("all","4:5"),{width:936,height:744});
 });
 
 test("round-trip rides never hide the start label under the finish",()=>{
@@ -246,21 +242,35 @@ test("actual distinct endpoints retain both visual markers at low map zoom",()=>
   assert.ok(pinRings.length>=2,"Both endpoints must keep visible rings");
 });
 
-test("premium card stays integrated in the actual 4:5 PNG and avoids unnecessary widgets",()=>{
+test("V5 export has no fake card frame, preserves truthful costs and fits a large settlement",()=>{
   const ops=[],context=new Proxy({}, {get(target,key){
+    if(key==="measureText")return text=>({width:String(text).length*30});
     if(["beginPath","roundRect","fill","stroke","moveTo","lineTo","fillText","arc","save","clip","restore"].includes(key))
       return (...args)=>ops.push([key,...args]);
     return target[key];
   },set(target,key,v){target[key]=v;return true;}});
   const canvas={getContext:()=>context};
-  renderRecapCanvas(canvas,{day:"2026-11-21",segments:[],trips:2,
+  const ride={day:"2026-11-21",segments:[],trips:2,
     distanceKm:99.1,durationMs:14100000,gross:79409,net:null,costKnown:false,
-    cost:0,financeLoaded:true,deliveries:null}, {mode:"all",ratio:"4:5"});
+    cost:0,financeLoaded:true,deliveries:null};
+  renderRecapCanvas(canvas,ride,{mode:"all",ratio:"4:5"});
   const marks=ops.filter(x=>x[0]==="roundRect");
-  assert.ok(marks.some(x=>x[1]===24&&x[2]===1099&&x[3]===1032),"Integrated ledger section missing");
-  assert.ok(marks.some(x=>x[1]===80&&x[2]===23&&x[3]===112),"Card edge accent missing");
-  assert.equal(marks.some(x=>x[1]===80&&x[2]===1103&&x[3]===920&&x[4]===221),false);
+  assert.ok(marks.some(x=>x[1]===0&&x[2]===974&&x[3]===1080),
+    "Flat lower editorial stage missing");
+  assert.equal(marks.some(x=>x[1]===24&&x[2]===22&&x[3]===1032),false);
+  assert.equal(marks.some(x=>x[1]===80&&x[2]===160&&x[3]===920),false);
   const labels=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(labels.includes("₩79,409")&&labels.includes("99.1 km")&&labels.includes("3시간 55분"));
+  assert.ok(labels.includes("비용 미확정"),"Unknown expenses are not zero");
   assert.equal(labels.includes("₩0"),false);
+  ops.length=0;
+  renderRecapCanvas(canvas,{...ride,gross:1234567890,deliveries:52},{mode:"all",ratio:"4:5"});
+  assert.ok(ops.some(x=>x[0]==="fillText"&&x[1]==="₩1,234,567,890"));
+  assert.ok(ops.some(x=>x[0]==="fillText"&&x[1]==="52건"));
+  ops.length=0;
+  renderRecapCanvas(canvas,ride,{mode:"all",showIncome:false,showRoute:false});
+  const privateLabels=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
+  assert.ok(privateLabels.includes("총 운행거리"));
+  assert.ok(!privateLabels.some(v=>v.includes("₩")||v.includes("수익 기록 없음")||v.includes("수익 비공개")));
+  assert.ok(privateLabels.includes("경로 비공개"));
 });
