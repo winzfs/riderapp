@@ -59,10 +59,11 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
     assert.deepEqual(errors,[]);
     const dir=process.env.RIDER_RECAP_SCREENSHOTS||"/tmp/rider-spot-recap";
     fs.mkdirSync(dir,{recursive:true});
-    // Ten independent PNGs, not mocked CSS captures. Each variant uses the
-    // production Canvas drawing function and a source-accurate GPS history.
+    // Real toBlob() output from the production renderer, including missing, sparse,
+    // discontinuous, hidden and high-value records; never just a CSS screenshot.
     const cases=["same-place","nearby","far-away","complex-route","no-deliveries",
-      "no-earnings","zero-cost","recorded-cost","private-income","no-gps"];
+      "no-earnings","zero-cost","recorded-cost","private-income","no-gps",
+      "gps-sparse","discontinuous","large-income","cost-unknown","private-route"];
     for(const scenario of cases){
       const report=await page.evaluate(async scenario=>{
         const {buildRecapSnapshot,renderRecapCanvas}=await import("/src/ride-recap.mjs");
@@ -78,22 +79,33 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
           t:t+i*45000
         }));
         if(scenario==="no-gps")points=[];
+        if(scenario==="gps-sparse")points=[points[0]];
+        if(scenario==="discontinuous")points=[
+          points[0],points[1],{...points[2],break:true},
+          p(35.1855,126.8565,3)];
+
         const trip={id:"qa-"+scenario,started_at:"2026-11-21T10:00:00Z",
           ended_at:"2026-11-21T11:00:00Z",distance_km:scenario==="no-gps"?0:16.3,points};
         const money={work_date:day,platform:"쿠팡이츠",gross_entered:true,
-          gross_won:112500,deliveries:scenario==="no-deliveries"?undefined:18,
-          expense_scope:"other_only",expenses_won:scenario==="recorded-cost"?2500:0};
+          gross_won:scenario==="large-income"?1234567890:112500,
+          deliveries:scenario==="no-deliveries"?undefined:18,
+          expense_scope:scenario==="cost-unknown"?undefined:"other_only",
+          expenses_won:scenario==="cost-unknown"?undefined:scenario==="recorded-cost"?2500:0};
         const finance=scenario==="no-earnings"?null:{
           earnings:[money],fuel:scenario==="recorded-cost"?[{fueled_on:day,cost_won:3500}]:[],
           maintenance:[],extras:[]};
         const recap=buildRecapSnapshot([trip],day,finance);
         const canvas=document.querySelector("#recap");
         renderRecapCanvas(canvas,recap,{mode:"all",ratio:"4:5",theme:"light",
-          showRoute:true,showIncome:scenario!=="private-income"});
+          showRoute:scenario!=="private-route",showIncome:scenario!=="private-income"});
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+        const png=await new Promise((resolve,reject)=>{
+          const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);
+          reader.onerror=()=>reject(Error("PNG decode failed"));reader.readAsDataURL(blob);
+        });
         return {width:canvas.width,height:canvas.height,bytes:blob?.size||0,
           segments:recap.segments.length,deliveries:recap.deliveries,
-          gross:recap.gross,cost:recap.cost,costKnown:recap.costKnown};
+          gross:recap.gross,cost:recap.cost,costKnown:recap.costKnown,png};
       },scenario);
       assert.deepEqual([report.width,report.height],[1080,1350],scenario);
       assert.ok(report.bytes>18000,"Small/empty PNG "+scenario+": "+JSON.stringify(report));
@@ -102,9 +114,15 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
       if(scenario==="no-gps")assert.equal(report.segments,0);
       if(scenario==="zero-cost")assert.equal(report.cost,0);
       if(scenario==="recorded-cost")assert.equal(report.cost,6000);
-      const png=await page.locator("#recap").screenshot({path:path.join(dir,"scenario-"+scenario+".png")});
+      if(scenario==="discontinuous")assert.ok(report.segments>=2);
+      if(scenario==="gps-sparse")assert.equal(report.segments,1);
+      if(scenario==="large-income")assert.equal(report.gross,1234567890);
+      if(scenario==="cost-unknown")assert.equal(report.costKnown,false);
+      const png=Buffer.from(report.png,"base64");
       assert.equal(png.readUInt32BE(16),1080);
       assert.equal(png.readUInt32BE(20),1350);
+      fs.writeFileSync(path.join(dir,"scenario-"+scenario+".png"),png);
+      delete report.png;
       console.log("RECAP_SCENARIO_PNG_PASS",scenario,JSON.stringify(report));
     }
     await page.locator("canvas").screenshot({path:path.join(dir,"privacy-preview.png")});
@@ -119,18 +137,23 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
       ];
       const ride=buildRecapSnapshot([{id:"qa",started_at:"2026-11-21T10:00:00Z",
         ended_at:"2026-11-21T15:15:00Z",distance_km:65.4,points:samples}],"2026-11-21");
-      const snapshot=await loadRideRecapBasemap(ride.segments,{width:920,height:920});
+      const snapshot=await loadRideRecapBasemap(ride.segments,{width:936,height:744});
       const canvas=document.querySelector("canvas");
       renderRecapCanvas(canvas,ride,{mode:"all",ratio:"4:5",mapSnapshot:snapshot});
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+      const encoded=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);
+        reader.onerror=()=>reject(Error("Basemap PNG read failed"));reader.readAsDataURL(blob);
+      });
       return {hasBasemap:snapshot?.hasBasemap,labels:snapshot?.labels?.map(x=>x.name)||[],
-        mapWidth:snapshot?.image?.naturalWidth,bytes:blob?.size};
+        mapWidth:snapshot?.image?.naturalWidth,bytes:blob?.size,png:encoded};
     });
     assert.ok(mapEvidence.hasBasemap,"Real OpenFreeMap export required");
     assert.ok(mapEvidence.mapWidth>500,"Basemap render too narrow");
     assert.ok(mapEvidence.labels.some(name=>name.endsWith("동")),"Korean administrative dong labels missing");
     assert.ok(mapEvidence.bytes>25000,"Real map PNG too small");
-    await page.locator("canvas").screenshot({path:path.join(dir,"real-korean-map-recap.png")});
+    fs.writeFileSync(path.join(dir,"real-korean-map-recap.png"),Buffer.from(mapEvidence.png,"base64"));
+    delete mapEvidence.png;
     console.log("RECAP_REAL_MAP_AND_DONG_PASS",JSON.stringify(mapEvidence));
     console.log("RECAP_BROWSER_PNG_PASS",JSON.stringify(evidence));
   }finally{
