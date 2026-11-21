@@ -467,33 +467,23 @@ export function createTimeline(S, Zo, Income, client) {
         });
         setFocused(null);
       };
-      return rs33J(
-        "div",
-        { className: "rs59-course-tools", role: "group", "aria-label": "경로 표시 설정" },
-        rs33J("button", {
-          type: "button", className: "rs59-event-toggle",
-          "aria-pressed": showEvents,
-          "aria-label": showEvents ? "이벤트 끄기" : "이벤트 켜기",
-          onClick: toggleEvents,
-        }, "이벤트"),
-        rs33J("button", {
-          type: "button", className: "rs45-stamp-toggle",
-          "aria-pressed": showStamps,
-          "aria-label": showStamps ? "시간 끄기" : "시간 켜기",
-          onClick: toggleStamps,
-        }, "시간"),
-        rs33J("button", {
-          type: "button", className: "rs33-expand",
-          "aria-label": expanded ? "닫기" : "크게 보기",
-          "aria-expanded": expanded,
-          onClick: () => setExpanded((value) => !value),
-        }, expanded ? "닫기" : "전체 화면"),
-        !isDaily ? rs33J("button", {
-          type: "button", className: "rs38-road-toggle",
-          "aria-pressed": !!activeRoad,
-          disabled: roadBusy || !raw, onClick: rs38MatchRoads,
-        }, roadBusy ? "보정 중…" : activeRoad ? "원본 경로" : "도로 보정") : null,
-      );
+      return rs33J("div", { className: "rs59-course-tools rs12-route-tools", role: "group", "aria-label": "경로 표시 설정" },
+        rs33J("div", { className: "rs12-route-filters", role: "group", "aria-label": "지도 정보 표시" },
+          rs33J("button", { type: "button", className: "rs59-event-toggle",
+            "aria-pressed": showEvents, "aria-label": showEvents ? "이벤트 표시 끄기" : "이벤트 표시 켜기", onClick: toggleEvents }, "이벤트"),
+          rs33J("button", { type: "button", className: "rs45-stamp-toggle",
+            "aria-pressed": showStamps, "aria-label": showStamps ? "시간 표시 끄기" : "시간 표시 켜기", onClick: toggleStamps }, "시간")),
+        rs33J("div", { className: "rs12-route-actions" },
+          rs33J("button", { type: "button", className: "rs33-expand rs12-expand",
+            "aria-label": expanded ? "전체 화면 닫기" : "지도 전체 화면", "aria-expanded": expanded,
+            onClick: () => setExpanded(value => !value) },
+            expanded ? "닫기" : "⤢ 크게"),
+          !isDaily ? rs33J("details", { className: "rs12-route-more" },
+            rs33J("summary", { "aria-label": "경로 추가 옵션" }, "•••"),
+            rs33J("div", { className: "rs12-route-more-menu" },
+              rs33J("button", { type: "button", className: "rs38-road-toggle",
+                "aria-pressed": !!activeRoad, disabled: roadBusy || !raw, onClick: rs38MatchRoads },
+                roadBusy ? "보정 중…" : activeRoad ? "원본 경로로 보기" : "도로 보정"))) : null));
     }
     if (current) {
       const path = rs33J(Zo, {
@@ -839,7 +829,7 @@ export function createTimeline(S, Zo, Income, client) {
       rs33J(
         "div",
         { className: "rs33-title" },
-        rs33J("div",{className:"rs11-journey-heading"},rs33J("span",{className:"rs11-eyebrow"},"RIDE JOURNAL"),rs33J("h1",null,"라이드 로그")),
+        rs33J("div",{className:"rs11-journey-heading"},rs33J("h1",null,"타임라인"),rs33J("small",{className:"rs12-journal-subtitle"},"날짜별 주행 기록")),
         rs33J(
           "button",
           {
@@ -913,12 +903,6 @@ export function createTimeline(S, Zo, Income, client) {
         }),
       ),
       ),
-      !allDays && daily ? rs33J("div",{className:"rs-recap-timeline-action"},
-        rs33J("button",{type:"button",className:"rs-recap-launch",onClick:()=>setRecapDay(day),
-          "aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
-          rs33J("svg",{viewBox:"0 0 24 24","aria-hidden":true},
-            rs33J("path",{d:"M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"})),
-          rs33J("span",null,"이미지 저장"))) : null,
       allDays
         ? rs33J("div", { className: "rs33-trip-summary" },
             rs33J(Metrics, {
@@ -931,13 +915,19 @@ export function createTimeline(S, Zo, Income, client) {
             }),
           )
         : null,
+      !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
+        rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
       !allDays && daily
         ? rs33J("section", {
             className: "rs56-day-overview rs-renewal-route rs11-route-first", "aria-label": "하루 통합 운행 경로",
           },
-            rs33J("div",{className:"rs7-map-label"},
-              rs33J("strong",null,"오늘의 이동"),
-              rs33J("span",null,day.replace(/-/g,"."))),
+            rs33J("div",{className:"rs7-map-label rs12-map-heading"},
+              rs33J("div",{className:"rs12-map-heading-copy"},
+                rs33J("strong",null,Number(day.slice(5,7))+"월 "+Number(day.slice(8,10))+"일의 이동"),
+                rs33J("span",null,daily.trips.length+"개 운행 구간")),
+              rs33J("button",{type:"button",className:"rs-recap-launch rs12-recap-action",
+                onClick:()=>setRecapDay(day),"aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
+                "↥ 이미지 저장")),
             daily.route.points.length
               ? rs33J(
                   "div",
@@ -1050,8 +1040,6 @@ export function createTimeline(S, Zo, Income, client) {
                 ),
           )
         : null,
-      !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
-        rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
 
       recapDay ? rs33J(RideRecap,{day:recapDay,history:ride.history,user,notify,
         onClose:()=>setRecapDay(null)}) : null,

@@ -1129,7 +1129,10 @@ export function mountApplication({
             type: "button",
             onClick: () => setSelected(post),
           },
-          H("span", { className: "rc-tag" }, categoryLabel(post.category)),
+          H("div", { className: "rs12-feed-topline" },
+            H("span", { className: "rc-tag" }, categoryLabel(post.category)),
+            H("span", { className: "rs12-feed-area" }, post.area_dong || post.area_district || (post.category === "업계 소식" ? "전체 지역" : "")),
+            H("time", { dateTime: post.created_at || undefined }, date(post.created_at))),
           H(
             "div",
             { className: "rc-card-grid" },
@@ -1150,11 +1153,7 @@ export function mountApplication({
             "small",
             { className: "rc-row-meta" },
             [
-              post.area_dong ||
-                post.area_district ||
-                (post.category === "업계 소식" ? "전체 지역" : "지역 미등록"),
               post.nickname || "라이더",
-              date(post.created_at),
               "댓글 " + count(post, "comments"),
               post.road_report_id && !post.road_reports ? "제보 종료" : null,
             ]
@@ -1300,7 +1299,9 @@ export function mountApplication({
       H(
         "div",
         { className: "rc-head" },
-        H("div",{className:"rs9-community-title rs11-community-masthead"},H("small",null,"NEIGHBORHOOD"),H("h1",null,dong || district)),
+        H("div",{className:"rs9-community-title rs11-community-masthead rs12-community-masthead"},
+          H("h1",null,dong || district),
+          H("p",null,"우리 동네 라이더 이야기")),
         H(
           "button",
           { className: "primary rc-write", type: "button", onClick: write },
@@ -1309,7 +1310,7 @@ export function mountApplication({
       ),
       H("details",{className:"rs8-community-tools"},
         H("summary",{className:"rs8-community-trigger"},
-          H("span",null,"게시글 찾기 · 분류"),
+          H("span",null,"검색 · 필터"),
           H("small",null,categoryLabel(cat)+" · "+(sort==="latest"?"최신순":sort==="popular"?"인기순":"댓글순"))),
       H(
         "div",
@@ -1513,9 +1514,9 @@ export function mountApplication({
             ),
           )
         : null,
-      H("div",{className:"rs6-community-feed-head"},
-        H("h2",null,isNews?"업계 새소식":"최근 글"),
-        H("span",null,rows.length+"개 소식")),
+      H("div",{className:"rs6-community-feed-head rs12-feed-count"},
+        H("span",null,isNews?"새소식":cat==="전체"?"동네 피드":categoryLabel(cat)),
+        H("small",null,rows.length+"개 글")),
       rows.length
         ? H(
             "div",
@@ -2028,30 +2029,36 @@ export function mountApplication({
     return kind === "roads" ? "roads" : "shelters";
   }
   function MapBar({ layer, choose, sharing, busy, toggle }) {
-    return rs33J("section",{className:"rs33-map-bar rs8-map-overlay"},
-      rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline rs11-map-commandbar"},
-        rs33J("h1",{className:"sr-only"},"지도"),
+    return rs33J("section", { className: "rs33-map-bar rs8-map-overlay rs12-map-overlay" },
+      rs33J("div", { className: "rs33-map-bar-top rs8-map-searchline rs11-map-commandbar rs12-map-commandbar" },
+        rs33J("h1", { className: "sr-only" }, "지도"),
         rs33J(RegionSelector),
         rs33J("div", { className: "rs-weather-slot" }),
-      rs33J("details",{className:"rs8-map-tools"},
-        rs33J("summary",{className:"rs8-map-tools-button",
-          "aria-label":"지도 레이어와 공유 설정 열기"},
-          rs33J(Icon,{name:"layers",size:18}),
-          rs33J("span",{className:"sr-only"},"지도 도구")),
-        rs33J("div",{className:"rs8-map-tools-panel"},
-          rs33J("p",null,"지도 표시 · 위치 공유"),
-          rs33J("div",{className:"rs33-map-filters",role:"group","aria-label":"지도 도구 및 표시 항목"},
-            ...rs33LayerItems.map(([id,label])=>
-              rs33J("button",{type:"button",key:id,"aria-pressed":layer===id,
-                onClick:()=>choose(id)},
-                rs33J(Icon,{name:id,size:17}),label)),
-            rs33J("button",{type:"button",
-              className:"rs33-map-share rs7-share-chip"+(sharing?" active":""),
-              disabled:busy,
-              "aria-label":busy?"위치 공유 확인 중":sharing?"위치 공유 중, 끄기":"위치 공유 꺼짐, 켜기",
-              onClick:toggle},
-              rs33J("span",{className:"rs-status-dot","aria-hidden":true}),
-              busy?"확인 중":sharing?"공유 중":"공유 꺼짐"))))));
+        rs33J("details", { className: "rs8-map-tools rs12-map-settings" },
+          rs33J("summary", { className: "rs8-map-tools-button rs12-map-tools-trigger", "aria-label": "지도 설정 열기" },
+            rs33J(Icon, { name: "layers", size: 19 })),
+          rs33J("div", { className: "rs8-map-tools-panel rs12-map-tools-panel" },
+            rs33J("div", { className: "rs12-panel-heading" },
+              rs33J("strong", null, "지도에 표시"),
+              rs33J("small", null, "한 번에 한 종류를 선택할 수 있어요")),
+            rs33J("div", { className: "rs33-map-filters rs12-layer-options", role: "group", "aria-label": "지도 표시 항목 선택" },
+              ...rs33LayerItems.map(([id, label]) =>
+                rs33J("button", { type: "button", key: id, "aria-pressed": layer === id,
+                  onClick: () => choose(id) },
+                  rs33J(Icon, { name: id, size: 20 }),
+                  rs33J("span", null, label),
+                  rs33J("span", { className: "rs12-layer-check", "aria-hidden": true }, layer === id ? "✓" : "")))),
+            rs33J("div", { className: "rs12-privacy-settings" },
+              rs33J("div", { className: "rs12-panel-heading" },
+                rs33J("strong", null, "내 위치 공유"),
+                rs33J("small", null, sharing ? "주변 라이더에게 내 위치가 표시돼요" : "현재 위치는 다른 라이더에게 보이지 않아요")),
+              rs33J("button", { type: "button",
+                className: "rs33-map-share rs7-share-chip rs12-share-control" + (sharing ? " active" : ""),
+                disabled: busy, role: "switch", "aria-checked": !!sharing,
+                "aria-label": busy ? "위치 공유 확인 중" : sharing ? "위치 공유 켜짐, 끄기" : "위치 공유 꺼짐, 켜기",
+                onClick: toggle },
+                rs33J("span", null, busy ? "확인 중…" : sharing ? "위치 공유 중" : "공유하지 않음"),
+                rs33J("span", { className: "rs12-switch-knob", "aria-hidden": true }))))))));
   }
   function rs33OpenMap(record, kind = "places") {
     if (kind !== "roads" && record?.category !== "화장실") return;
