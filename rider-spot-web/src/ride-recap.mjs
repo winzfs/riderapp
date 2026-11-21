@@ -263,10 +263,8 @@ const button = (h,label,onClick,cls,props={})=>h("button",{type:"button",classNa
 export function createRideRecap(React,client) {
   const h=React.createElement;
   function RideRecap({day,history=[],user,financeData=null,onClose,notify}) {
-    const [mode,setMode]=React.useState("all");
-    const [ratio,setRatio]=React.useState("4:5");
-    const [theme,setTheme]=React.useState("light");
-    const [showRoute,setShowRoute]=React.useState(true);
+    // An intentional single-layout export: fewer options, reliable previews.
+    const mode="all", ratio="4:5", theme="light", showRoute=true;
     const [showIncome,setShowIncome]=React.useState(true);
     const [remote,setRemote]=React.useState(null);
     const [loadError,setLoadError]=React.useState("");
@@ -275,7 +273,16 @@ export function createRideRecap(React,client) {
     const [mapRetry,setMapRetry]=React.useState(0);
     const [message,setMessage]=React.useState("");
     const preview=React.useRef(null);
+    const dialogRef=React.useRef(null);
     const closeRef=React.useRef(onClose);closeRef.current=onClose;
+    React.useLayoutEffect(()=>{
+      const dialog=dialogRef.current;
+      if(!dialog)return;
+      // Native dialog top layer escapes transformed map/card ancestors,
+      // unlike position:fixed inside the timeline page.
+      if(!dialog.open)dialog.showModal();
+      return()=>{if(dialog.open)dialog.close();};
+    },[]);
     React.useEffect(()=>{
       const unregister=window.__rsNavigation?.registerLayer("ride-recap",()=>{closeRef.current();return true;});
       return ()=>unregister?.();
@@ -369,37 +376,38 @@ export function createRideRecap(React,client) {
         if(error?.name!=="AbortError")setMessage(error?.message||"이미지를 저장할 수 없어요.");
       }finally{setSaving(false);}
     };
-    const group=(title,current,options,change)=>h("div",{className:"rs-recap-control"},
-      h("span",{className:"rs-recap-label"},title),
-      h("div",{className:"rs-recap-segments"},options.map(([value,label])=>button(h,label,()=>change(value),
-        "rs-recap-choice"+(current===value?" selected":""),{key:value,"aria-pressed":current===value}))));
-    const toggle=(title,subtitle,value,onChange)=>h("label",{className:"rs-recap-toggle"},
-      h("span",null,h("strong",null,title),h("small",null,subtitle)),
-      h("input",{type:"checkbox",checked:value,onChange:e=>onChange(e.target.checked),"aria-label":title}),
-      h("span",{className:"rs-recap-switch","aria-hidden":true}));
-    return h("div",{className:"rs-recap-shade",role:"presentation"},
-      h("section",{className:"rs-recap-sheet",role:"dialog","aria-modal":true,"aria-label":"라이딩 이미지 만들기"},
+    return h("dialog",{
+        ref:dialogRef,className:"rs-recap-dialog",role:"dialog",
+        "aria-modal":true,"aria-label":"라이딩 이미지 저장",
+        onCancel:event=>{event.preventDefault();closeRef.current();}
+      },
+      h("div",{className:"rs-recap-sheet"},
         h("header",{className:"rs-recap-head"},
-          h("div",null,h("small",null,"라이더스팟"),h("h2",null,"라이딩 이미지 만들기")),
+          h("div",{className:"rs-recap-title"},
+            h("small",null,day.replace(/-/g,".")+" · 오늘의 기록"),
+            h("h2",null,"라이딩 이미지 저장")),
           button(h,"×",onClose,"rs-recap-close",{"aria-label":"닫기"})),
-        h("div",{className:"rs-recap-preview"},
-          h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
-        h("p",{className:"rs-recap-preview-note"},day.replace(/-/g,".")+"  ·  "+dimensions(ratio)+" PNG  ·  실제 지도와 동 이름 표시"),
-        mapLoading?h("p",{className:"rs-recap-state",role:"status"},"실제 지도와 동 이름을 불러오는 중…"):null,
-        mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
-          h("span",null,mapState.error||"지도를 불러오지 못했어요."),
-          button(h,"다시 불러오기",()=>setMapRetry(value=>value+1),"rs-recap-map-retry")):null,
-        loading?h("p",{className:"rs-recap-state",role:"status"},"결산 기록을 불러오는 중…"):
-          loadError?h("p",{className:"rs-recap-state",role:"alert"},"결산 조회 실패 · "+loadError+" (수익 없이 저장 가능)"):null,
-        group("이미지 구성",mode,[["all","올인원"],["route","타임라인"],["finance","결산 카드"]],setMode),
-        group("이미지 비율",ratio,[["4:5","피드 4:5"],["9:16","스토리 9:16"],["1:1","정사각형"]],setRatio),
-        group("컬러 테마",theme,[["light","오프화이트"],["mist","미스트"],["night","슬레이트"]],setTheme),
-        toggle("경로 표시","실제 GPS 궤적만 표시합니다",showRoute,setShowRoute),
-        toggle("수익 공개","공유 전 금액 노출 여부를 확인하세요",showIncome,setShowIncome),
-        message&&h("p",{className:"rs-recap-state",role:"status"},message),
+        h("div",{className:"rs-recap-content"},
+          h("div",{className:"rs-recap-preview"},
+            h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
+          h("p",{className:"rs-recap-preview-note"},"실제 지도 · 동 이름 · 수익 · 1080 × 1350"),
+          mapLoading?h("p",{className:"rs-recap-state",role:"status"},"주행 지도와 동 이름을 불러오는 중…"):null,
+          mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
+            h("span",null,mapState.error||"지도를 불러오지 못했어요."),
+            button(h,"다시 불러오기",()=>setMapRetry(value=>value+1),"rs-recap-map-retry")):null,
+          loading?h("p",{className:"rs-recap-state",role:"status"},"결산 기록을 불러오는 중…"):
+            loadError?h("p",{className:"rs-recap-state",role:"alert"},"결산 조회 실패 · "+loadError+" (수익 없이 저장 가능)"):null,
+          h("label",{className:"rs-recap-toggle rs-recap-income"},
+            h("span",null,
+              h("strong",null,"수익 공개"),
+              h("small",null,"공유용 이미지에 수익 금액 표시")),
+            h("input",{type:"checkbox",checked:showIncome,onChange:e=>setShowIncome(e.target.checked),"aria-label":"수익 공개"}),
+            h("span",{className:"rs-recap-switch","aria-hidden":true})),
+          message&&h("p",{className:"rs-recap-state",role:"status"},message)),
         h("footer",{className:"rs-recap-actions"},
-          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed}),
-          button(h,saving?"이미지 준비 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
+          button(h,"공유",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed}),
+          button(h,saving?"이미지 저장 중…":"이미지 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
+
   }
   return RideRecap;
 }
