@@ -1,0 +1,158 @@
+name: Rider Spot recap v4 PNG and isolated production candidate QA
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-recap-v4-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Install dependencies
+        id: deps
+        continue-on-error: true
+        run: npm ci
+      - name: Run ride, GPS, finance, map, reload and endpoint regression suite
+        id: unit
+        continue-on-error: true
+        run: npm test
+      - name: Build native-compatible immutable PWA release
+        id: build
+        continue-on-error: true
+        run: npm run build
+      - name: Compare staged and source bundle byte-for-byte
+        id: staged
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const built=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const staged=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(built.hash,'5f6c1d27b651','unexpected source build');
+          assert.equal(staged.hash,built.hash,'staged files are stale');
+          const dir='dist/assets/rider-spot-'+built.hash+'/';
+          for(const name of ['app.mjs','daily-timeline.css','native-gps.js','design-system.css','curated-v9.css'])
+            assert.deepEqual(fs.readFileSync(dir+name),fs.readFileSync('prebuilt/'+name),name+' byte mismatch');
+          const src=fs.readFileSync('src/ride-recap.mjs','utf8');
+          assert.ok(src.includes('routeHits'));
+          assert.ok(!src.includes('cardY=1103'),'floating recap receipt is still here');
+          assert.ok(fs.readFileSync('edge/static-edge.mjs','utf8').includes('rs-recovery-guard-v217'));
+          console.log('RECAP_V4_STAGED_BYTES_PASS',built.hash);
+          NODE
+      - name: Install Chromium
+        id: chromium
+        continue-on-error: true
+        run: npx playwright install --with-deps chromium
+      - name: Actual PNG exports (10 scenarios, real Korean basemap)
+        id: png
+        continue-on-error: true
+        run: node tests/ride-recap-browser.cjs
+      - name: Verify new isolated preview, old bundles and PWA
+        id: http
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const base='https://rider-spot-recap-v4-preview.jazzhjm.workers.dev';
+          const hash='5f6c1d27b651';
+          const get=async p=>{
+            let last;
+            for(let i=0;i<5;i++){
+              try {
+                const r=await fetch(base+p,{headers:{'user-agent':'RiderSpot-RecapV4-Acceptance','cache-control':'no-cache'},signal:AbortSignal.timeout(40000)});
+                assert.equal(r.status,200,p+' HTTP '+r.status);
+                return await r.text();
+              }catch(e){last=e;await new Promise(resolve=>setTimeout(resolve,1700));}
+            }
+            throw last;
+          };
+          const html=await get('/');
+          assert.ok(html.includes('rider-spot-'+hash+'/app.mjs'),'preview still serves previous app');
+          assert.ok(html.includes('rs-recovery-guard-v217'),'native WebView guard missing');
+          assert.equal(await get('/sw.js'),fs.readFileSync('prebuilt/sw.js','utf8'));
+          for(const name of ['app.mjs','daily-timeline.css','native-gps.js','design-system.css','curated-v9.css']){
+            const remote=await get('/assets/rider-spot-'+hash+'/'+name);
+            assert.equal(remote,fs.readFileSync('prebuilt/'+name,'utf8'),'New immutable asset mismatch: '+name);
+          }
+          for(const old of ['228abe877a8d','9263bc477e45','d7fd89a7c39a']){
+            const js=await get('/assets/rider-spot-'+old+'/app.mjs');
+            assert.ok(js.length>100000,'Older WebView asset unavailable: '+old);
+          }
+          const map=JSON.parse(await get('/mapdata/manifest.json'));
+          assert.ok(map.counts,'Korean map manifest missing');
+          console.log('RECAP_V4_PREVIEW_HTTP_PASS',hash,'old3','mapdata');
+          NODE
+      - name: Two mobile viewport dialogs, share and save controls
+        id: dialog
+        continue-on-error: true
+        env:
+          RIDER_UI_URL: https://rider-spot-recap-v4-preview.jazzhjm.workers.dev/
+        run: node tests/ride-recap-dialog-browser.cjs
+      - name: Capture visual screenshots and verification state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rider-spot-recap-v4-visual-evidence
+          path: /tmp/rider-spot-recap
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Commit reviewable QA outcome to working branch
+        if: always()
+        working-directory: .
+        env:
+          QA_DEPS: ${{ steps.deps.outcome }}
+          QA_UNIT: ${{ steps.unit.outcome }}
+          QA_BUILD: ${{ steps.build.outcome }}
+          QA_STAGED: ${{ steps.staged.outcome }}
+          QA_CHROMIUM: ${{ steps.chromium.outcome }}
+          QA_PNG: ${{ steps.png.outcome }}
+          QA_HTTP: ${{ steps.http.outcome }}
+          QA_DIALOG: ${{ steps.dialog.outcome }}
+        run: |
+          set -eu
+          mkdir -p rider-spot-web/docs
+          {
+            echo '# Recap v4 preview release acceptance'
+            echo ''
+            echo '- Candidate: 5f6c1d27b651'
+            echo '- Workflow: https://github.com/winzfs/riderapp/actions/runs/${{ github.run_id }}'
+            echo '- Checked commit: ${{ github.sha }}'
+            echo '- Dependencies: '$QA_DEPS
+            echo '- Unit tests: '$QA_UNIT
+            echo '- Build: '$QA_BUILD
+            echo '- Byte-exact staged bundle: '$QA_STAGED
+            echo '- Chromium installation: '$QA_CHROMIUM
+            echo '- PNG export and basemap: '$QA_PNG
+            echo '- Isolated preview HTTP, PWA, legacy assets: '$QA_HTTP
+            echo '- Mobile export dialog (360px and 393px): '$QA_DIALOG
+          } > rider-spot-web/docs/recap-v4-qa-status.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rider-spot-web/docs/recap-v4-qa-status.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'test(recap): record v4 PNG, PWA and mobile QA outcomes [skip ci]'
+          git fetch origin feature/rider-spot-native-apk
+          git rebase origin/feature/rider-spot-native-apk
+          git push origin HEAD:feature/rider-spot-native-apk
+      - name: Prevent release if any validation failed
+        if: always()
+        env:
+          RESULTS: ${{ steps.deps.outcome }} ${{ steps.unit.outcome }} ${{ steps.build.outcome }} ${{ steps.staged.outcome }} ${{ steps.chromium.outcome }} ${{ steps.png.outcome }} ${{ steps.http.outcome }} ${{ steps.dialog.outcome }}
+        run: |
+          echo "$RESULTS"
+          test "$RESULTS" = "success success success success success success success success"
