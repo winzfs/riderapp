@@ -1,0 +1,109 @@
+name: Rider Spot Atelier v8 structural UI build
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-atelier-v8-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-atelier-v8-release
+  cancel-in-progress: false
+jobs:
+  verify-and-freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Assert actual v8 React DOM, immutable CSS and functional controls
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const r=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base='dist/assets/rider-spot-'+r.hash+'/';
+          const html=fs.readFileSync('dist/index.html','utf8');
+          const sw=fs.readFileSync('dist/sw.js','utf8');
+          const style=fs.readFileSync(base+'atelier-v8.css','utf8');
+          const app=fs.readFileSync(base+'app.mjs','utf8');
+          assert.match(style,/ATELIER v8/);
+          assert.match(style,/rs8-bike-hero/);
+          assert.match(style,/rs8-income-console/);
+          assert.match(html,new RegExp('/assets/rider-spot-'+r.hash+'/atelier-v8\\.css'));
+          assert.match(sw,new RegExp('/assets/rider-spot-'+r.hash+'/atelier-v8\\.css'));
+          assert.match(fs.readFileSync('edge/static-edge.mjs','utf8'),/rs-recovery-guard-v217/);
+          for(const marker of [
+            'rs8-map-overlay','rs8-map-tools','rs8-community-tools',
+            'rs8-income-console','rs8-console-value','rs8-trend-integrated',
+            'rs8-analysis-lead','rs8-settlement-hero','rs8-zero-maintenance',
+            'rs8-bike-hero','rs8-bike-settings','rs8-service-alerts',
+            'rs6-service-board','rs6-history-board','rs6-timeline-controller',
+            'rs7-map-label','rs6-community-feed-head'
+          ])assert.ok(app.includes(marker),'Missing actual v8 React element '+marker);
+          for(const removed of ['EARNINGS / 01','GARAGE / 02','DAILY ROUTES / 03','LOCAL / 04','YOUR ROUTE']){
+            assert.ok(!app.includes(removed),'Unwanted decoration still present: '+removed);
+          }
+          console.log('ATELIER_V8_BUILD_PASS',r.hash,style.length,app.length);
+          NODE
+      - name: Check ride, map camera, tab resume and Android WebView recovery safety
+        run: |
+          mkdir -p /tmp/rider-v8-native
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rider-v8-native
+          RIDER_ANDROID_SOURCE=/tmp/rider-v8-native node scripts/check-update-safety.mjs
+      - run: npx playwright install chromium
+      - name: Synthetic finance, bike CRUD, and native bridge
+        run: |
+          python3 -m http.server 8840 --directory dist >/tmp/rider-v8-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
+            sleep 1
+          done
+          RIDER_TEST_ORIGIN=http://127.0.0.1:8840 RIDER_SCREENSHOTS=/tmp/rider-v8-build-evidence node tests/mobile-records-browser.cjs
+          RIDER_TEST_URL=http://127.0.0.1:8840 RIDER_TEST_CASE=native RIDER_APK_BRIDGE=/tmp/rider-v8-native/app/src/main/assets/native-bridge.js node tests/browser.cjs
+      - name: Freeze validated CSS, JSX and WebView-safe assets
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const r=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const dir='dist/assets/rider-spot-'+r.hash;
+          const names=['app.mjs','route-worker.mjs','native-gps.js','map-reports.js',
+            'design-system.css','workspace-tools.js','tab-resume.js','daily-timeline.css',
+            'weather-bar.js','weather-bar.css','premium-shell.css','renewal-layout.css','atelier-v8.css'];
+          for(const name of names)fs.copyFileSync(path.join(dir,name),path.join('prebuilt',name));
+          for(const name of ['index.html','sw.js','release.json'])
+            fs.copyFileSync(path.join('dist',name),path.join('prebuilt',name));
+          console.log('ATELIER_V8_FROZEN',r.hash,names.length+3);
+          NODE
+      - name: Commit frozen release assets
+        working-directory: .
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rider-spot-web/prebuilt
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: freeze tested atelier v8 real-screen UI assets [skip ci]'
+            git pull --rebase origin feature/rider-spot-native-apk
+            git push origin HEAD:feature/rider-spot-native-apk
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-atelier-v8-build-evidence
+          path: |
+            rider-spot-web/dist/release.json
+            /tmp/rider-v8-build-evidence
+          retention-days: 7
+          if-no-files-found: warn
