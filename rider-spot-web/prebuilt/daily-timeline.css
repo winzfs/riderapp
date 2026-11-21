@@ -233,3 +233,45 @@
 @media(max-height:520px) and (orientation:landscape) {
   .app .rs33-trip-detail .trip-map.rs33-course-map{height:clamp(230px,56dvh,330px);min-height:230px}
 }
+
+
+/* Rider Spot · RIDE RECAP — isolated bottom sheet + export editor */
+.rs-recap-launch{appearance:none;border:1px solid #cbd8dd;background:#eef2f1;color:#2d4652;font:700 12px/1.2 system-ui,sans-serif;white-space:nowrap;letter-spacing:-.02em;min-height:37px;border-radius:12px;padding:9px 13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;transition:background .18s,transform .18s}
+.rs-recap-launch:active{transform:scale(.97)}
+.rs-recap-launch svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rs-recap-timeline-action{display:flex;justify-content:flex-end;align-items:center;padding:8px 4px 12px}
+.fin-page-head .rs-recap-launch{margin-left:auto}
+.rs-recap-shade{position:fixed;inset:0;z-index:2147483000;background:rgba(22,36,46,.52);backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:flex-end;overscroll-behavior:contain}
+.rs-recap-sheet,.rs-recap-sheet *{box-sizing:border-box}
+.rs-recap-sheet{position:relative;background:#f5f7f5;color:#233542;width:min(100%,580px);max-height:min(96dvh,940px);overflow-y:auto;overscroll-behavior:contain;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px));border-radius:28px 28px 0 0;box-shadow:0 -14px 60px rgba(17,30,40,.18);font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif}
+.rs-recap-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 16px}
+.rs-recap-head small{display:block;color:#71848d;font-weight:750;font-size:10px;letter-spacing:.15em;margin:3px 0 6px}
+.rs-recap-head h2{margin:0;font-size:21px;line-height:1.3;font-weight:800;letter-spacing:-.045em;color:#243744}
+.rs-recap-close{border:0;background:#e7edef;color:#314752;border-radius:50%;width:36px;height:36px;font-size:25px;line-height:1;display:grid;place-items:center;flex:none}
+.rs-recap-preview{min-height:175px;height:min(43dvh,390px);display:flex;align-items:center;justify-content:center;border-radius:20px;background:#e6ebeb;padding:12px;overflow:hidden}
+.rs-recap-preview canvas{display:block;width:auto;height:100%;max-width:100%;object-fit:contain;border-radius:5px;box-shadow:0 9px 30px rgba(28,45,56,.16)}
+.rs-recap-preview-note{font-size:11px;color:#697b81;margin:10px 2px 20px;line-height:1.55}
+.rs-recap-control{margin:0 0 16px}
+.rs-recap-label{display:block;color:#435764;font-size:12px;font-weight:750;letter-spacing:-.02em;margin:0 0 8px}
+.rs-recap-segments{display:grid;grid-auto-columns:1fr;grid-auto-flow:column;gap:5px;background:#e6ecec;padding:4px;border-radius:13px}
+.rs-recap-choice{min-width:0;border:0;border-radius:10px;padding:10px 5px;background:transparent;color:#657881;font:650 12px/1.25 Pretendard,"Noto Sans KR",system-ui,sans-serif;letter-spacing:-.035em;cursor:pointer;white-space:nowrap}
+.rs-recap-choice.selected{background:#fff;color:#263e4a;box-shadow:0 2px 7px rgba(40,61,75,.11)}
+.rs-recap-choice:focus-visible,.rs-recap-launch:focus-visible,.rs-recap-close:focus-visible,.rs-recap-actions button:focus-visible{outline:2px solid #436df4;outline-offset:2px}
+.rs-recap-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0;padding:12px 2px;border-top:1px solid #e3e8e8;cursor:pointer}
+.rs-recap-toggle>span:first-child{display:grid;gap:4px}
+.rs-recap-toggle strong{font-size:13px;color:#304652;font-weight:750}
+.rs-recap-toggle small{font-size:11px;color:#75878e;line-height:1.35}
+.rs-recap-toggle input{position:absolute;width:1px;height:1px;opacity:0}
+.rs-recap-switch{width:39px;height:24px;border-radius:24px;background:#bccbd0;flex:none;position:relative;transition:background .18s}
+.rs-recap-switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #31475333;transition:transform .18s}
+.rs-recap-toggle input:checked+.rs-recap-switch{background:#426cf2}
+.rs-recap-toggle input:checked+.rs-recap-switch::after{transform:translateX(15px)}
+.rs-recap-toggle input:focus-visible+.rs-recap-switch{outline:2px solid #416cf2;outline-offset:3px}
+.rs-recap-state{font-size:12px;color:#49627c;background:#e6edef;border-radius:10px;padding:10px 12px;line-height:1.5;margin:12px 0}
+.rs-recap-actions{position:sticky;bottom:-24px;display:grid;grid-template-columns:1fr 1.35fr;gap:8px;background:linear-gradient(180deg,rgba(245,247,245,0),#f5f7f5 12%);padding:15px 0 4px;margin-top:8px}
+.rs-recap-actions button{border:0;border-radius:13px;min-height:48px;font:750 14px/1.3 Pretendard,"Noto Sans KR",system-ui,sans-serif;cursor:pointer}
+.rs-recap-share{background:#e3eaea;color:#304854}
+.rs-recap-download{background:#416cf2;color:white}
+.rs-recap-actions button:disabled{opacity:.48;cursor:default}
+@media(min-width:650px){.rs-recap-shade{align-items:center}.rs-recap-sheet{border-radius:26px;max-height:92dvh;padding:24px}.rs-recap-actions{bottom:-24px}}
+@media(max-width:350px){.rs-recap-sheet{padding-inline:14px}.rs-recap-choice{font-size:11px}}
