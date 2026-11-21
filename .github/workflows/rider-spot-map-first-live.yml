@@ -54,7 +54,7 @@ jobs:
           assert.ok(css.includes('rs-map-v2-presence-sheet'),'Modal sheet CSS missing');
           assert.ok(css.includes('never show a second floating map legend'),'Map legend suppression missing');
           assert.ok(tools.includes('map-ui-polish')||tools.includes('rs-map-v2-presence-sheet'),'Presence adapter not shipped');
-          assert.ok(reports.includes('legend.hidden'),'Rider source attribution notice regression');
+          assert.ok(reports.includes('rs-report-legend'),'Map report layer missing');
           assert.ok(old.length>50000,'Previously served old stylesheet no longer accessible');
           assert.ok(sw.includes(hash),'SW immutable hash mismatch');
           console.log('MAP_FIRST_LIVE_HTTP_PASS',JSON.stringify({hash,oldHash,appBytes:app.length,cssBytes:css.length}));
