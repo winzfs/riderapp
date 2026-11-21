@@ -1,0 +1,4 @@
+URBAN FLOW v11 — live preview acceptance: passed.
+Release: 78cfb498ffed
+Preview: https://rider-spot-urban-flow-v11-preview.jazzhjm.workers.dev
+Tested: all five tabs at 320/393/412px, financial/garage CRUD, native bridge, old hashes, immutable bundle.

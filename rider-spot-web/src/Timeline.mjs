@@ -836,7 +836,7 @@ export function createTimeline(S, Zo, Income) {
       rs33J(
         "div",
         { className: "rs33-title" },
-        rs33J("h1", null, "타임라인"),
+        rs33J("div",{className:"rs11-journey-heading"},rs33J("span",{className:"rs11-eyebrow"},"RIDE JOURNAL"),rs33J("h1",null,"라이드 로그")),
         rs33J(
           "button",
           {
@@ -922,13 +922,12 @@ export function createTimeline(S, Zo, Income) {
             }),
           )
         : null,
-      !allDays ? rs33J(DayRideCard, { history: ride.history, day, income:rs33J(Income,{key:day,day,user,login}) }) : null,
       !allDays && daily
         ? rs33J("section", {
-            className: "rs56-day-overview rs-renewal-route", "aria-label": "하루 통합 운행 경로",
+            className: "rs56-day-overview rs-renewal-route rs11-route-first", "aria-label": "하루 통합 운행 경로",
           },
             rs33J("div",{className:"rs7-map-label"},
-              rs33J("strong",null,"주행 경로"),
+              rs33J("strong",null,"오늘의 이동"),
               rs33J("span",null,day.replace(/-/g,"."))),
             daily.route.points.length
               ? rs33J(
@@ -1042,6 +1041,8 @@ export function createTimeline(S, Zo, Income) {
                 ),
           )
         : null,
+      !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
+        rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
 
       rs33J(
         "div",

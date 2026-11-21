@@ -1,7 +1,7 @@
 name: Rider Spot NIGHT SHIFT v10 build and regression
 on:
   push:
-    branches: [feature/rider-spot-v10-redesign, feature/rider-spot-native-apk]
+    branches: [feature/rider-spot-v10-redesign]
     paths:
       - '.github/workflows/rider-spot-curated-v9-release.yml'
       - 'rider-spot-web/src/curated-v9.css'

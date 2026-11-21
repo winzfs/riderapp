@@ -691,13 +691,13 @@ export function createRecords(R, client) {
     }).filter(x=>x.state==="overdue"||x.state==="soon");
     return h("section",{className:"bike-page page narrow"},
       h("div",{className:"bike-heading"},
-        h("h1",null,"내 바이크"),
+        h("div",{className:"rs11-garage-heading"},h("span",{className:"rs11-eyebrow"},"내 모빌리티"),h("h1",null,"마이 차고")),
         btn(h(R.Fragment,null,h(Icon,{name:"settings",size:17}),"프로필·설정"),profile,
           {className:"bike-quiet-action","aria-label":"프로필·설정"})),
       h("section",{className:"rs6-garage-stage rs8-bike-hero"},
         h("div",{className:"bike-vehicle rs8-bike-feature"},
           h("div",{className:"bike-vehicle-data"},
-            h("span",{className:"rs8-bike-kicker"},"내 차고"),
+            h("span",{className:"rs8-bike-kicker"},"MY RIDE"),
             h("h2",null,vehicle?.vehicle_name||"내 오토바이"),
             h("span",{className:"rs8-odo-label"},"현재 계기판"),
             h("strong",{className:"bike-distance"},
@@ -727,7 +727,7 @@ export function createRecords(R, client) {
             ()=>{window.__rsFinanceAction="fuel";window.__rsGoToTab?.("earnings");}))),
       !!urgentParts.length&&h("aside",{className:"rs8-service-alerts",role:"status"},
         h("div",{className:"rs8-alerts-head"},
-          h("strong",null,"점검 필요"),
+          h("strong",null,"정비 알림"),
           h("span",null,urgentParts.length+"개 소모품")),
         h("div",{className:"rs8-alerts-items"},
           urgentParts.map(({item,state})=>
@@ -737,30 +737,36 @@ export function createRecords(R, client) {
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("section",{className:"rs6-service-board"},
       h("div",{className:"bike-section-head"},
-        h("h2",null,"소모품"),h("small",{className:"rs6-service-count"},choices.length+"개 관리 중")),
+        h("div",null,h("span",{className:"rs11-eyebrow"},"SERVICE TRACKER"),h("h2",null,"소모품 상태")),h("small",{className:"rs6-service-count"},choices.length+"개 부품")),
       h("details",{className:"bike-safety-detail"},
         h("summary",null,"교체 기준 안내"),
         h("p",{className:"bike-safety-message"},
           model ? "추천 주기는 참고값입니다. 실제 마모 상태와 제조사 설명서를 확인하세요." :
             "일반 125cc 참고 주기입니다. 모델 및 실제 부품 상태를 확인하세요.")),
-      h("div",{className:"bike-consumables","aria-label":"소모품 현황"},
+      h("div",{className:"bike-consumables rs11-service-list","aria-label":"소모품 현황"},
         choices.map(item=>{
           const row=serviceBaseline(rows,item), cycle=effectiveCycle(item);
           const due=serviceDue(row,cycle,reading?.[0]);
           const status=due.remaining!=null ?
             (due.state==="overdue"?number(-due.remaining)+" km 초과":number(due.remaining)+" km 남음") :
             row?"거리 미입력":"기록 없음";
+          const tone=due.state==="overdue"?"overdue":due.state==="soon"?"soon":"normal";
           return btn(h(R.Fragment,null,
             h("span",{className:"bike-tile-icon"},h(PartIcon,{name:item,size:46})),
-            h("span",{className:"bike-tile-name"},item),
-            h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
+            h("span",{className:"rs11-part-copy"},
+              h("strong",{className:"bike-tile-name"},item),
+              h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
+            h("span",{className:"rs11-part-chevron","aria-hidden":true},"›")),
           ()=>user?setDetailItem(item):login(),
-          {key:item,className:"bike-consumable bike-tile","aria-label":item+" 관리"}); 
+          {key:item,className:"bike-consumable bike-tile rs11-part-row rs11-"+tone,"aria-label":item+" 관리"}); 
+        }).sort((a,b)=>{
+          const priority=el=>el.props.className.includes("rs11-overdue")?0:el.props.className.includes("rs11-soon")?1:2;
+          return priority(a)-priority(b);
         })),
       ),
       h("section",{className:"rs6-history-board"},
       h("div",{className:"bike-heading bike-history-head"},
-        h("h2",null,h(Icon,{name:"history",size:19}),"정비 이력"),
+        h("h2",null,h(Icon,{name:"history",size:19}),"정비 타임라인"),
         h("small",null,rows.length+"건 · 최신순")),
       rows.length ? (showAllHistory?rows:rows.slice(0,3)).map((row,i)=>h(R.Fragment,{key:row.id},
         (!i||rows[i-1].serviced_on?.slice(0,7)!==row.serviced_on?.slice(0,7)) &&
