@@ -107,3 +107,5 @@ jobs:
             /tmp/rider-v8-build-evidence
           retention-days: 7
           if-no-files-found: warn
+
+# rerun: weather HUD remains explicitly React-owned after map drawer redesign
