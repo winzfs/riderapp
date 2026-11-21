@@ -106,6 +106,41 @@ export function recapMapDimensions(mode,ratio) {
   const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
   return {width:936,height:Math.round(mode==="route"?Math.min(height*53/100,900):Math.min(height*35/100,720))};
 }
+export function recapEndpointLayout(paths,w,h) {
+  const valid=(paths||[]).filter(p=>Array.isArray(p)&&p.length);
+  if(!valid.length)return null;
+  const first=valid[0][0],last=valid[valid.length-1].at(-1);
+  const distance=Math.hypot(first.x-last.x,first.y-last.y);
+  const coincident=distance<55;
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const badgeW=74,badgeH=37;
+  const position=(pt,side)=>{
+    // Use opposite sides if the ride starts and ends close together.
+    let px=side==="start" ? pt.x-badgeW-20 : pt.x+20;
+    let py=side==="start" ? pt.y-59 : pt.y+19;
+    if(!coincident) {
+      px=pt.x+16;
+      py=pt.y-48;
+    }
+    return {x:clamp(px,8,w-badgeW-8),y:clamp(py,76,h-badgeH-8),
+      width:badgeW,height:badgeH};
+  };
+  let start=position(first,"start"),end=position(last,"end");
+  const collide=(a,b)=>a.x<b.x+b.width+8&&a.x+a.width+8>b.x&&a.y<b.y+b.height+8&&a.y+a.height+8>b.y;
+  if(collide(start,end)) {
+    // The second label must never cover the start label, even when the
+    // day's entire track returns to its initial GPS location.
+    end={...end,y:clamp(start.y+badgeH+13,76,h-badgeH-8)};
+    if(collide(start,end)) {
+      start={...start,y:clamp(end.y-badgeH-13,76,h-badgeH-8)};
+    }
+    if(collide(start,end)) {
+      start={...start,x:8};
+      end={...end,x:w-badgeW-8};
+    }
+  }
+  return {first,last,start,end,coincident};
+}
 function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
   rounded(ctx,x,y,w,h,30,p.tint);
   ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,30);ctx.clip();
@@ -154,18 +189,36 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
       sampled.forEach((pt,i)=>i===0?ctx.moveTo(x+pt.x,y+pt.y):ctx.lineTo(x+pt.x,y+pt.y));
       ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=p.accent;ctx.stroke();
     }
-    const visible=paths.flat(),first=visible[0],last=visible[visible.length-1];
-    // Distinguish first recorded fix from last recorded fix. These are ride
-    // tracking endpoints, not pickup/dropoff locations.
-    for(const [pt,color,letter] of [[first,p.accent,"출발"],[last,p.ink,"종료"]]){
-      const cx=x+pt.x,cy=y+pt.y;
-      ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
-      ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-      const chipW=letter==="출발"?68:68;
-      const chipX=Math.max(x+8,Math.min(x+w-chipW-8,cx+15));
-      const chipY=Math.max(y+73,Math.min(y+h-42,cy-17));
-      rounded(ctx,chipX,chipY,chipW,35,10,p.panel);
-      label(ctx,letter,chipX+chipW/2,chipY+25,20,p.ink,770,"center");
+    const endpoints=recapEndpointLayout(paths,w,h);
+    if(endpoints){
+      const {first,last,start,end,coincident}=endpoints;
+      // Both the true GPS coordinates and their callouts are drawn independently.
+      // Avoid flattening long routes just because the start and end overlap.
+      if(coincident) {
+        // Two color semicircles identify a shared start/finish GPS location.
+        const anchor={x:x+first.x,y:y+first.y};
+        ctx.beginPath();ctx.arc(anchor.x,anchor.y,12,Math.PI/2,3*Math.PI/2);ctx.fillStyle=p.accent;ctx.fill();
+        ctx.beginPath();ctx.arc(anchor.x,anchor.y,12,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
+        ctx.beginPath();ctx.arc(anchor.x,anchor.y,13,0,Math.PI*2);ctx.strokeStyle=p.panel;ctx.lineWidth=3;ctx.stroke();
+      }
+      for(const [point,chip,color,word] of [[first,start,p.accent,"출발"],[last,end,p.ink,"종료"]]){
+        const cx=x+point.x,cy=y+point.y;
+        const bx=x+chip.x,by=y+chip.y;
+        // Leader line makes the exact GPS position unambiguous even if
+        // the label has moved to avoid collisions or map edges.
+        const nearestX=Math.max(bx,Math.min(bx+chip.width,cx));
+        const nearestY=Math.max(by,Math.min(by+chip.height,cy));
+        line(ctx,cx,cy,nearestX,nearestY,color,3);
+        rounded(ctx,bx,by,chip.width,chip.height,11,p.panel);
+        ctx.save();ctx.beginPath();ctx.roundRect(bx+1,by+1,chip.width-2,chip.height-2,10);ctx.clip();
+        rounded(ctx,bx+2,by+6,4,chip.height-12,2,color);
+        ctx.restore();
+        label(ctx,word,bx+chip.width/2+2,by+26,21,p.ink,780,"center");
+        if(!coincident){
+          ctx.beginPath();ctx.arc(cx,cy,11,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
+          ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        }
+      }
     }
   }
   rounded(ctx,x+22,y+20,157,46,12,actualMap?"rgba(255,255,255,.89)":p.panel);
