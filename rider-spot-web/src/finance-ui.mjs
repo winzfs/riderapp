@@ -632,6 +632,11 @@ export function createFinance(R, client) {
         (detailFilter==="all"||x.name===detailFilter)&&
         (!query||[x.name,x.day,x.row.note,x.row.memo,x.row.workshop]
           .some(v=>String(v||"").toLocaleLowerCase("ko").includes(query))));
+      // Keep every original record; show zero-cost maintenance entries on demand
+      // in the default all-entries view so they don't obscure actual cash flow.
+      const collapseZeroService=filter==="all"&&detailFilter==="all"&&!query;
+      const zeroService=collapseZeroService?visible.filter(x=>x.type==="maintenance"&&!x.amount):[];
+      const ledgerRows=collapseZeroService?visible.filter(x=>x.type!=="maintenance"||!!x.amount):visible;
       return h("div",{className:"fin-stack"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
@@ -655,8 +660,8 @@ export function createFinance(R, client) {
               options.map(name=>h("option",{key:name,value:name},name)))))),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"날짜별 내역"),txt("small",null,visible.length+"건")),
-          visible.length?visible.map((x,i)=>h(R.Fragment,{key:x.type+x.row.id},
-            (!i||visible[i-1].day!==x.day)&&txt("h3","fin-record-date",x.day),
+          ledgerRows.length?ledgerRows.map((x,i)=>h(R.Fragment,{key:x.type+x.row.id},
+            (!i||ledgerRows[i-1].day!==x.day)&&txt("h3","fin-record-date",x.day),
             h("div",{className:"fin-record"},
               h("span",{className:"fin-record-icon "+(x.type==="income"?"gain":"spend")},
                 icon(x.type==="income"?"earnings":x.type==="fuel"?"fuel":"settings",19)),
@@ -670,7 +675,14 @@ export function createFinance(R, client) {
                 h("div",{className:"fin-record-actions"},
                   button("수정",()=>x.type==="maintenance"?openMaintenance(x.row,"edit"):openEditor(x.type,x.row),"fin-textbtn"),
                   x.type!=="maintenance"&&button("삭제",()=>remove(x.type,x.row),"fin-textbtn fin-danger",{disabled:busy}))))))
-          :txt("p","fin-empty","이 기간에 기록이 없어요.")),
+          :txt("p","fin-empty",zeroService.length?"금액이 입력된 내역이 없어요.":"이 기간에 기록이 없어요.")),
+        !!zeroService.length&&h("details",{className:"rs8-zero-maintenance"},
+          h("summary",null,"금액 없는 정비 연동 기록 "+zeroService.length+"건"),
+          h("div",{className:"rs8-zero-maintenance-list"},
+            zeroService.map(x=>button(
+              h(R.Fragment,null,txt("strong",null,x.name),txt("small",null,x.day+" · 비용 미입력")),
+              ()=>openMaintenance(x.row),"rs8-zero-maintenance-link",{key:x.row.id,
+                "aria-label":x.name+" 정비 기록 보기"})))),
         h("details",{className:"fin-recurring",key:"recurring-expenses"},
           h("summary",null,h("strong",null,"반복 지출"),h("span",null,
             (data?.recurring||[]).filter(x=>x.active!==false).length+"건 설정 · 예정 비용은 미반영")),
@@ -706,9 +718,14 @@ export function createFinance(R, client) {
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
           button(icon("right",20),()=>setAnchor(monthDelta(anchor,1)),"fin-iconbtn",{"aria-label":"다음 달"})),
-        h("div",{className:"fin-stat-grid"},
-          moneyStat("아직 입금 미확인",money(monthly.unpaid)),
-          moneyStat("해당 월 수익 중 입금 확인",money(monthly.paid),"paid")),
+        h("section",{className:"rs8-settlement-hero"},
+          h("div",{className:"rs8-settlement-outstanding"},
+            txt("span",null,"입금 확인 필요"),
+            h("strong",null,money(monthly.unpaid))),
+          h("div",{className:"rs8-settlement-confirmed"},
+            txt("span",null,"입금 확인 완료"),
+            h("strong",null,money(monthly.paid)))),
+
         txt("p","fin-muted","업무일 기준 · 입금일은 별도 기록"),
         monthly.payoutDifference!==0&&txt("p","fin-warning",
           "확인된 입금액과 해당 수익 기록 차액: "+money(monthly.payoutDifference)),
