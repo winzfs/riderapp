@@ -113,3 +113,4 @@ jobs:
 # rerun: fixed extra closing in motorcycle hero JSX, preserved maintenance records
 # rerun: balanced React garage hero and service sections; source grammar verified
 # run: odometer value and km unit separated with accessible whitespace
+# rerun: model selection opens under the new vehicle settings disclosure
