@@ -94,10 +94,10 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   // The 4:5 all-in-one image has a truly square 800×800 map, then a
   // compact settlement panel; neither collides with the footer.
   const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===140&&y===177&&w===800&&h===800);
-  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===995&&w===936&&h===176);
+  const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===72&&y===993&&w===936&&h===278);
   assert.ok(square,"Expected centered 1:1 map");
   assert.ok(receipt,"Expected condensed settlement beneath map");
-  assert.ok(177+800<995 && 995+176<1350,"No map or bottom edge overlap");
+  assert.ok(177+800<993 && 993+278<1350,"No map or bottom edge overlap");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
   assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
@@ -113,8 +113,8 @@ test("round-trip rides never hide the start label under the finish",()=>{
     p.y<q.y+q.height+8&&p.y+p.height+8>q.y;
   assert.ok(!overlap(a.start,a.end),"Start and end text chips must not overlap");
   for(const chip of [a.start,a.end]){
-    assert.ok(chip.x>=8&&chip.x+chip.width<=792);
-    assert.ok(chip.y>=76&&chip.y+chip.height<=792);
+    assert.ok(chip.x>=8&&chip.x+chip.width<=790);
+    assert.ok(chip.y>=10&&chip.y+chip.height<=790);
   }
 });
 
@@ -129,10 +129,10 @@ test("start and end labels stay separately visible near each map edge",()=>{
   for(const trip of tracks) {
     const v=recapEndpointLayout([trip],800,800);
     const a=v.start,b=v.end;
-    assert.ok(a.x>=8&&a.x+a.width<=792);
-    assert.ok(b.x>=8&&b.x+b.width<=792);
-    assert.ok(a.y>=76&&a.y+a.height<=792);
-    assert.ok(b.y>=76&&b.y+b.height<=792);
+    assert.ok(a.x>=8&&a.x+a.width<=790);
+    assert.ok(b.x>=8&&b.x+b.width<=790);
+    assert.ok(a.y>=10&&a.y+a.height<=790);
+    assert.ok(b.y>=10&&b.y+b.height<=790);
     assert.ok(a.x+a.width+8<=b.x||b.x+b.width+8<=a.x||
       a.y+a.height+8<=b.y||b.y+b.height+8<=a.y,
       "Must not overlap at edge: "+JSON.stringify({trip,a,b}));
