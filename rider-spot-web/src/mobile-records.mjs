@@ -719,7 +719,7 @@ export function createRecords(R, client) {
                 {className:"bike-outline-action","aria-label":"계기판 입력",disabled:!!user&&!data}),
               btn(h(R.Fragment,null,h(Icon,{name:"edit",size:18}),"모델 선택"),
                 ()=>user?setModelPicker(true):login(),
-                {className:"bike-outline-action","aria-label":"모델 선택",disabled:!!user&&!data}))))),
+                {className:"bike-outline-action","aria-label":"모델 선택",disabled:!!user&&!data})))),
         h("div",{className:"bike-actions rs8-quickservice"},
           btn(h(R.Fragment,null,h(Icon,{name:"shops",size:19}),"정비 기록"),
             ()=>edit({}),{className:"record-primary",disabled:!!user&&!data,"aria-label":"＋ 정비 기록"}),
