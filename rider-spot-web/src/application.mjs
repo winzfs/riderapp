@@ -2058,7 +2058,7 @@ export function mountApplication({
                 rs33J(Icon,{name:id,size:19}),
                 rs33J("span",null,label),
                 rs33J("span",{className:"rs12-layer-check","aria-hidden":true},
-                  layer===id?"✓":""))),
+                  layer===id?"✓":"")))),
             rs33J("p",{className:"rs-map-v2-settings-note"},
               "주변 라이더는 위치 공유를 켠 경우에만 표시돼요.")))),
       rs33J("div",{className:"rs-map-v2-status-row",role:"group",
