@@ -44,7 +44,9 @@ jobs:
           assert.match(style,/\.bike-page \.bike-vehicle/);
           assert.match(html,new RegExp('/assets/rider-spot-'+r.hash+'/urban-editorial-v5\\.css'));
           assert.match(sw,new RegExp('/assets/rider-spot-'+r.hash+'/urban-editorial-v5\\.css'));
-          assert.match(html,/rs-recovery-guard-v217/);
+          // The original native recovery guard is injected by static-edge.mjs,
+          // not stored in the prebuilt unguarded shell.
+          assert.match(fs.readFileSync('edge/static-edge.mjs','utf8'),/rs-recovery-guard-v217/);
           for(const marker of ['fin-chart-spotlight','bike-vehicle-tools','rs-community-renewal','rs-renewal-route']){
             assert.ok(app.includes(marker),'Missing retained React UI component '+marker);
           }
