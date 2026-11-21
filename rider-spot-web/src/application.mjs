@@ -2032,7 +2032,7 @@ export function mountApplication({
       rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline"},
         rs33J("h1",{className:"sr-only"},"지도"),
         rs33J(RegionSelector),
-        rs33J("div",{className:"rs-weather-slot"})),
+        rs33J("div", { className: "rs-weather-slot" })),
       rs33J("details",{className:"rs8-map-tools"},
         rs33J("summary",{className:"rs8-map-tools-button",
           "aria-label":"지도 레이어와 공유 설정 열기"},
