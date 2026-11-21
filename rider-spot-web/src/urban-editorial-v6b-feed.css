@@ -1,0 +1,35 @@
+/* v6b specificity correction: the previous .rc-home.rc-community-v32
+   card selector was outranking generic v6 feed declarations.
+   The feed is intentionally an unboxed editorial list, not rounded cards. */
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal.rc-card-list>.rc-card.rc-feed-row {
+ display:block;min-height:0;
+ background:transparent!important;border:0!important;
+ border-bottom:1px solid #DCE5DC!important;
+ border-radius:0!important;box-shadow:none!important;
+ margin:0!important;padding:14px 1px 12px!important;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal.rc-card-list>.rc-card.rc-feed-row:last-child {
+ border-bottom:1px solid #DCE5DC!important;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-main {
+ display:flex;flex-direction:column;gap:5px;
+ min-height:0;padding:0!important;margin:0!important;
+ background:transparent;border:0;box-shadow:none;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-bottom {
+ margin:5px 0 0!important;padding:0!important;
+ background:transparent;border:0!important;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid {
+ gap:11px;align-items:center;min-width:0;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid h2 {
+ margin:3px 0 4px;color:#1B3227;font-size:15px;
+ font-weight:790;line-height:1.45;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid p {
+ margin:0;line-height:1.45;color:#6D8273;font-size:12px;
+}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal .rc-card-grid img {
+ width:69px;height:69px;border-radius:9px;
+}
