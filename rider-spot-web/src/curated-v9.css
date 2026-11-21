@@ -878,3 +878,8 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
  #rs-presence-panel.rs-map-v2-presence-sheet:not([hidden]){animation:none!important}
  .app .nearby.nearby-full .rs-map-v2 button{transition:none!important}
 }
+
+/* Coordinate picking owns the map's touch layer until Save or Cancel. */
+.app .nearby.nearby-full .rs-map-v2.rs-map-picking :is(
+  .rs-map-v2-actions,.rs-map-v2-header,.leaflet-control-zoom,.locate,#rs-report-legend
+){visibility:hidden!important;pointer-events:none!important}

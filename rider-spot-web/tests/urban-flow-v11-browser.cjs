@@ -82,14 +82,19 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
         }));
         assert.ok(bounds.children.every(x=>x.left>=bounds.parent.left-1&&x.right<=bounds.parent.right+1),"no clipped map tools");
         await drawer.locator("summary").click();
-        await page.locator(".rs-map-v2-status-trigger").click();
-        const presence=page.locator("#rs-presence-panel.rs-map-v2-presence-sheet:not([hidden])");
-        await presence.waitFor({timeout:10000});
-        assert.equal(await presence.locator("[data-rs-presence-code]").count(),5);
-        assert.equal(await presence.evaluate(el=>getComputedStyle(el).position),"fixed","status is a true modal sheet");
-        assert.equal(await page.locator(".rs-map-v2-status-scrim:not([hidden])").count(),1);
-        await presence.locator(".rs-presence-close").click();
-        await presence.waitFor({state:"hidden"});
+        // The purely static server intentionally lacks the unchanged legacy
+        // presence script. The integrated proxy QA always requires the modal.
+        assert.equal(await page.locator(".rs-map-v2-status-trigger").count(),1);
+        if(await page.locator("#rs-presence-panel.rs-map-v2-presence-sheet").count()){
+          await page.locator(".rs-map-v2-status-trigger").click();
+          const presence=page.locator("#rs-presence-panel.rs-map-v2-presence-sheet:not([hidden])");
+          await presence.waitFor({timeout:10000});
+          assert.equal(await presence.locator("[data-rs-presence-code]").count(),5);
+          assert.equal(await presence.evaluate(el=>getComputedStyle(el).position),"fixed","status is a true modal sheet");
+          assert.equal(await page.locator(".rs-map-v2-status-scrim:not([hidden])").count(),1);
+          await presence.locator(".rs-presence-close").click();
+          await presence.waitFor({state:"hidden"});
+        }
       }
       if(i===1){
         await page.locator(".rs6-timeline-controller").waitFor({timeout:10000});

@@ -1,0 +1,54 @@
+name: Rider Spot MAP FIRST mobile layout and interaction acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - 'rider-spot-web/src/application.mjs'
+      - 'rider-spot-web/src/curated-v9.css'
+      - 'rider-spot-web/src/map-ui-polish.mjs'
+      - 'rider-spot-web/src/map-reports.js'
+      - 'rider-spot-web/src/workspace-tools.js'
+      - 'rider-spot-web/tests/map-first-ui-browser.cjs'
+      - '.github/workflows/rider-spot-map-first-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-map-first-acceptance
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install chromium
+      - name: Start isolated build preview with unchanged legacy scripts
+        run: |
+          node scripts/local-preview.cjs >/tmp/map-first-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8789/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8789/ | grep -q 'rider-spot-'
+      - name: Map control geometry, real status sheet, legacy workflows (6 viewports)
+        run: RIDER_MAP_URL=http://127.0.0.1:8789 node tests/map-first-ui-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-map-first-screenshots
+          path: |
+            /tmp/riderspot-map-first-ui
+            /tmp/map-first-preview.log
+          retention-days: 14
+          if-no-files-found: warn
