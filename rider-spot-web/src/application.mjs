@@ -1300,7 +1300,7 @@ export function mountApplication({
       H(
         "div",
         { className: "rc-head" },
-        H("div",{className:"rs9-community-title"},H("small",null,"동네 소식"),H("h1",null,dong || district)),
+        H("div",{className:"rs9-community-title rs11-community-masthead"},H("small",null,"NEIGHBORHOOD"),H("h1",null,dong || district)),
         H(
           "button",
           { className: "primary rc-write", type: "button", onClick: write },
@@ -1309,7 +1309,7 @@ export function mountApplication({
       ),
       H("details",{className:"rs8-community-tools"},
         H("summary",{className:"rs8-community-trigger"},
-          H("span",null,"검색 · 필터"),
+          H("span",null,"게시글 찾기 · 분류"),
           H("small",null,categoryLabel(cat)+" · "+(sort==="latest"?"최신순":sort==="popular"?"인기순":"댓글순"))),
       H(
         "div",
@@ -2029,17 +2029,17 @@ export function mountApplication({
   }
   function MapBar({ layer, choose, sharing, busy, toggle }) {
     return rs33J("section",{className:"rs33-map-bar rs8-map-overlay"},
-      rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline"},
+      rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline rs11-map-commandbar"},
         rs33J("h1",{className:"sr-only"},"지도"),
         rs33J(RegionSelector),
-        rs33J("div", { className: "rs-weather-slot" })),
+        rs33J("div", { className: "rs-weather-slot" }),
       rs33J("details",{className:"rs8-map-tools"},
         rs33J("summary",{className:"rs8-map-tools-button",
           "aria-label":"지도 레이어와 공유 설정 열기"},
           rs33J(Icon,{name:"layers",size:18}),
           rs33J("span",{className:"sr-only"},"지도 도구")),
         rs33J("div",{className:"rs8-map-tools-panel"},
-          rs33J("p",null,"표시할 정보"),
+          rs33J("p",null,"지도 표시 · 위치 공유"),
           rs33J("div",{className:"rs33-map-filters",role:"group","aria-label":"지도 도구 및 표시 항목"},
             ...rs33LayerItems.map(([id,label])=>
               rs33J("button",{type:"button",key:id,"aria-pressed":layer===id,
@@ -2051,7 +2051,7 @@ export function mountApplication({
               "aria-label":busy?"위치 공유 확인 중":sharing?"위치 공유 중, 끄기":"위치 공유 꺼짐, 켜기",
               onClick:toggle},
               rs33J("span",{className:"rs-status-dot","aria-hidden":true}),
-              busy?"확인 중":sharing?"공유 중":"공유 꺼짐")))));
+              busy?"확인 중":sharing?"공유 중":"공유 꺼짐"))))));
   }
   function rs33OpenMap(record, kind = "places") {
     if (kind !== "roads" && record?.category !== "화장실") return;
