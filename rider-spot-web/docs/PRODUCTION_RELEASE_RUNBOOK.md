@@ -8,7 +8,12 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active **Urban Editorial v6b (actual React re-layout)** front: `84ccf064-b0b1-4a2c-ae76-1738216457d8` (100%)
+- Active **Editorial v7 native UI** front: `74148419-d426-4187-a250-4313fcb61637` (100%)
+- Current immutable v7 compiled app: `bbd2531a1e8d`; pinned build commit `a4a2173abd52739ce9051e4c404e20c8fbb2c79a`
+- Active v7 asset Worker: `rider-spot-editorial-v7-assets` (version-scoped KV index + SW keys)
+- Active isolated v7 visual Worker: `rider-spot-editorial-v7` (`?rev=20261121-v7`)
+- Previous v6b production front for immediate rollback: `84ccf064-b0b1-4a2c-ae76-1738216457d8`
+- Previous **Urban Editorial v6b** front: `84ccf064-b0b1-4a2c-ae76-1738216457d8`
 - Active immutable v6 JS + CSS: hash `e30517cbf40f`, pin commit `3a010f4866f18098b5ddf9a35eed06e7261067fd`
 - Active v6 asset Worker: `rider-spot-urban-v6-assets` version `a7f092b5-6911-44bb-8387-370f7208d786`
 - Active v6b final presentation Worker: `rider-spot-urban-v6b` version `193f440d-4f50-45a3-a837-e99f0575d9f0`
@@ -28,11 +33,11 @@ deployment state with this record before any change.
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
 - Front code: `rider-spot-web/edge/static-edge.mjs` (4.7KB)
-- Asset binding `ASSETS` → `rider-spot-urban-v6-assets` (new `rs-asset-v6::` keys; `v5` and `v4` retained read-only)
+- Asset binding `ASSETS` → `rider-spot-editorial-v7-assets` (`rs-asset-v7::shell/<hash>/` for HTML/SW; old v4/v5/v6 hashes preserved read-only)
 - Previous v4 gateway remains available: `rider-spot-renewal-assets`
 - Previous v3 asset gateway retained: `rider-spot-static-candidate-assets` (pinned `16c1eecf6bac`)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
-- Design `DESIGN` → `rider-spot-urban-v6b` (isolated static CSS without data/GPS bindings; loaded last)
+- Design `DESIGN` → `rider-spot-editorial-v7` (isolated final static CSS, no data/GPS bindings)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -243,3 +248,36 @@ v6b changes only the final isolated CSS Worker and its cache-busting link `?rev=
 - V6b live UI/records validation: https://github.com/winzfs/riderapp/actions/runs/44866209459
 
 **Rollback**: Deploy prior `rider-spot` `738013f7-0ade-4da7-bd9e-8f77d9d8da6e` at 100% to roll back the v6b feed CSS only. Deploy `7db2636b-7944-4fe3-aecc-7ed72727e4a5` at 100% to roll back all v6 React layout changes to v5. Never delete KV version keys, service worker caches, Supabase or Android SQLite for a design rollback. Real Galaxy S24+ long-session ride, native OAuth and split-screen still require physical testing.
+
+
+## Native Editorial v7 deployment — 2026-11-21
+
+Cloudflare production `rider-spot` was promoted to version
+`74148419-d426-4187-a250-4313fcb61637` at 100% traffic after isolated
+preview UI, 320/393/412px layouts, no reload/JS errors, synthetic finance and
+maintenance CRUD, and Android WebView bridge regression acceptance all passed.
+The latest pinned compiled frontend bundle is `bbd2531a1e8d` from
+`a4a2173abd52739ce9051e4c404e20c8fbb2c79a`.
+
+The change removes artificial English numbered decoration, fake lime brand
+markers and nav-strip flourishes, removes duplicated bike model selector,
+regroups region/weather into one map-control row and all filters/share into
+an equal-width row, moves daily timeline recap before the route map and
+shortens its map header. Finance and Community share compact typography and
+flat separators; original bike artwork is unchanged.
+
+Critical WebView release safety: the new KV asset gateway indexes immutable
+`index.html` and `sw.js` by the release hash. Earlier v7, v6, v5 and v4
+hashed scripts remain fetchable to avoid breaking existing clients on an
+in-flight session. No GPS, map camera, SQLite, Supabase, account, OAuth,
+ride session or user record changes were made for this design release.
+
+- Verified build: https://github.com/winzfs/riderapp/actions/runs/44878268519
+- Final preview acceptance: https://github.com/winzfs/riderapp/actions/runs/44878582702
+- Production acceptance: https://github.com/winzfs/riderapp/actions/runs/44878851050
+
+**Immediate rollback**: Set production `rider-spot` to previous
+`84ccf064-b0b1-4a2c-ae76-1738216457d8` at **100%**. Do not delete
+KV caches, old compiled assets or user records; all old bindings are still
+available. Physical Galaxy S24+ long ride, screen-lock GPS and OAuth sessions
+require on-device acceptance; browser tests do not prove those cases.
