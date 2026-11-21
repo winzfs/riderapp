@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           SDK_ROOT=$(printenv ANDROID_HOME || printenv ANDROID_SDK_ROOT || echo /usr/local/lib/android/sdk)
           SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
-          yes | "$SDKMANAGER" --licenses >/dev/null || test "$?" -eq 0
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '8.13'}
