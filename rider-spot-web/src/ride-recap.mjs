@@ -271,6 +271,8 @@ export function createRideRecap(React,client) {
     const [remote,setRemote]=React.useState(null);
     const [loadError,setLoadError]=React.useState("");
     const [saving,setSaving]=React.useState(false);
+    const [mapState,setMapState]=React.useState({key:null,status:"idle",snapshot:null,error:null});
+    const [mapRetry,setMapRetry]=React.useState(0);
     const [message,setMessage]=React.useState("");
     const preview=React.useRef(null);
     const closeRef=React.useRef(onClose);closeRef.current=onClose;
@@ -291,19 +293,44 @@ export function createRideRecap(React,client) {
       remote?.userId===user?.id && remote?.day===day ? remote.data : null;
     const loading=!!user?.id && !financeData && !finance && !loadError;
     const recap=React.useMemo(()=>buildRecapSnapshot(history,day,finance),[history,day,finance]);
+    const mapSize=recapMapDimensions(mode,ratio);
+    const hasTrack=recap.segments.some(segment=>segment.length);
+    const activeKey=showRoute&&mapSize&&hasTrack
+      ? day+"|"+mode+"|"+ratio+"|"+recap.segments.reduce((sum,part)=>sum+part.length,0)+"|"+mapRetry
+      : null;
+    React.useEffect(()=>{
+      if(!activeKey){setMapState({key:null,status:"idle",snapshot:null,error:null});return;}
+      let active=true;
+      const controller=new AbortController();
+      setMapState({key:activeKey,status:"loading",snapshot:null,error:null});
+      loadRideRecapBasemap(recap.segments,{...mapSize,signal:controller.signal})
+        .then(snapshot=>{
+          if(active)setMapState({key:activeKey,status:"ready",snapshot,error:null});
+        })
+        .catch(error=>{
+          if(active && error?.name!=="AbortError")
+            setMapState({key:activeKey,status:"error",snapshot:null,
+              error:error?.message||"지도를 불러오지 못했어요."});
+        });
+      return()=>{active=false;controller.abort();};
+    },[activeKey]);
+    const mapLoading=!!activeKey && (mapState.key!==activeKey||mapState.status==="loading");
+    const mapFailed=!!activeKey && mapState.key===activeKey&&mapState.status==="error";
+    const mapSnapshot=activeKey&&mapState.key===activeKey&&mapState.status==="ready"
+      ?mapState.snapshot:null;
     React.useEffect(()=>{
       if(!preview.current)return;
-      try{renderRecapCanvas(preview.current,recap,{mode,ratio,theme,showRoute,showIncome});setMessage("");}
+      try{renderRecapCanvas(preview.current,recap,{mode,ratio,theme,showRoute,showIncome,mapSnapshot});setMessage("");}
       catch(error){setMessage("이미지 미리보기를 만들지 못했어요.");}
-    },[recap,mode,ratio,theme,showRoute,showIncome]);
+    },[recap,mode,ratio,theme,showRoute,showIncome,mapSnapshot]);
     const toPng=()=>new Promise((resolve,reject)=>{
       const canvas=document.createElement("canvas");
-      renderRecapCanvas(canvas,recap,{mode,ratio,theme,showRoute,showIncome});
+      renderRecapCanvas(canvas,recap,{mode,ratio,theme,showRoute,showIncome,mapSnapshot});
       canvas.toBlob(blob=>blob?resolve(blob):reject(Error("PNG 이미지 생성에 실패했어요.")),"image/png");
     });
     const fileName="riderspot-"+day+"-"+mode+".png";
     const save=async(share=false)=>{
-      if(saving || loading)return;
+      if(saving || loading || mapLoading || mapFailed)return;
       setSaving(true);setMessage("");
       try{
         const blob=await toPng();
@@ -357,7 +384,11 @@ export function createRideRecap(React,client) {
           button(h,"×",onClose,"rs-recap-close",{"aria-label":"닫기"})),
         h("div",{className:"rs-recap-preview"},
           h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
-        h("p",{className:"rs-recap-preview-note"},day.replace(/-/g,".")+"  ·  "+dimensions(ratio)+" PNG  ·  GPS 원본 좌표는 이미지에 문자로 표시하지 않아요."),
+        h("p",{className:"rs-recap-preview-note"},day.replace(/-/g,".")+"  ·  "+dimensions(ratio)+" PNG  ·  실제 지도와 동 이름 표시"),
+        mapLoading?h("p",{className:"rs-recap-state",role:"status"},"실제 지도와 동 이름을 불러오는 중…"):null,
+        mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
+          h("span",null,mapState.error||"지도를 불러오지 못했어요."),
+          button(h,"다시 불러오기",()=>setMapRetry(value=>value+1),"rs-recap-map-retry")):null,
         loading?h("p",{className:"rs-recap-state",role:"status"},"결산 기록을 불러오는 중…"):
           loadError?h("p",{className:"rs-recap-state",role:"alert"},"결산 조회 실패 · "+loadError+" (수익 없이 저장 가능)"):null,
         group("이미지 구성",mode,[["all","올인원"],["route","타임라인"],["finance","결산 카드"]],setMode),
@@ -367,8 +398,8 @@ export function createRideRecap(React,client) {
         toggle("수익 공개","공유 전 금액 노출 여부를 확인하세요",showIncome,setShowIncome),
         message&&h("p",{className:"rs-recap-state",role:"status"},message),
         h("footer",{className:"rs-recap-actions"},
-          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading}),
-          button(h,saving?"이미지 준비 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading}))));
+          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed}),
+          button(h,saving?"이미지 준비 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
   }
   return RideRecap;
 }
