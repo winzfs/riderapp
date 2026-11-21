@@ -763,7 +763,6 @@ export function createRecords(R, client) {
           const priority=el=>el.props.className.includes("rs11-overdue")?0:el.props.className.includes("rs11-soon")?1:2;
           return priority(a)-priority(b);
         })),
-      ),
       h("section",{className:"rs6-history-board"},
       h("div",{className:"bike-heading bike-history-head"},
         h("h2",null,h(Icon,{name:"history",size:19}),"정비 타임라인"),
