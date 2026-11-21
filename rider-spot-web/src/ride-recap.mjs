@@ -322,7 +322,7 @@ function premiumJournalBrand(ctx,p) {
   label(ctx,"RIDE JOURNAL",1008,65,16,p.muted,620,"right");
 }
 function recapCalendar(day) {
-  const match=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(day||"");
+  const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(day||"");
   if(!match)return {title:String(day||"기록").replace(/-/g,"."),meta:"이동 기록"};
   const [,year,month,date]=match;
   const when=new Date(day+"T12:00:00+09:00");
