@@ -373,7 +373,8 @@ async function facilitySheetTest() {
     assert.equal(saved?.category, "화장실");
     assert.equal(saved?.lat, 35.16);
     assert.equal(saved?.lng, 126.83);
-    await register.click();
+    await reportMenu.locator("summary").click();
+    await reportMenu.getByRole("button", { name: "편의시설 등록" }).click();
     await sheet.waitFor();
     assert.equal(await sheet.getByLabel("장소 이름").inputValue(), "");
     await page.evaluate(() => window.__rsHandleBack());
