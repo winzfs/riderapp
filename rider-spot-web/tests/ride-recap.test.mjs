@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout} from "../src/ride-recap.mjs";
+import {recapRouteSegments,buildRecapSnapshot,fetchRecapFinance,renderRecapCanvas,recapEndpointLayout,recapMapDimensions} from "../src/ride-recap.mjs";
 
 const point=(lat,lng,t,extra={})=>({lat,lng,t,...extra});
 const trip=(id,start,end,points,distance=0)=>({
@@ -91,8 +91,8 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   renderRecapCanvas(canvas,snapshot,{mode:"route",showRoute:false,theme:"mist"});
   renderRecapCanvas(canvas,snapshot,{mode:"finance",showIncome:false,theme:"night"});
   assert.ok(ops.some(([name])=>name==="fillText"));
-  // The 4:5 all-in-one image has a truly square 800×800 map, then a
-  // compact settlement panel; neither collides with the footer.
+  // The 4:5 all-in-one image has a truly square 920×920 map, then a
+  // compact settlement panel; neither touches the edge.
   const square=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===166&&w===920&&h===920);
   const receipt=ops.find(([op,x,y,w,h])=>op==="roundRect"&&x===80&&y===1103&&w===920&&h===221);
   assert.ok(square,"Expected centered 1:1 map");
