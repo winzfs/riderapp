@@ -210,7 +210,7 @@ test("zero-cost disclosure and unknown-cost disclosure remain distinct",()=>{
   assert.ok(!labels.includes("순수익"),"Never repeat gross as net at zero expense");
   labels.length=0;
   renderRecapCanvas(canvas,unknown);
-  assert.ok(labels.includes("비용 확인 필요"),"Missing cost declaration cannot pretend zero");
+  assert.ok(labels.includes("비용 미확정"),"Missing cost declaration cannot pretend zero");
 });
 
 
