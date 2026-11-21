@@ -32,7 +32,8 @@ function intersect(a,b){
    assert.equal(await page.locator(".rs-map-v2-actions #rs-sos-fab").count(),1);
    assert.equal(await page.locator(".rs-map-v2-report").count(),1);
    assert.equal(await page.locator(".rs-map-v2-share-chip[role=switch]").count(),1);
-   assert.equal(await page.locator(".rs-map-v2 .rs-map-v2-gps").count(),1);
+   assert.equal(await page.locator(".rs-map-v2 .rs-map-v2-gps").count(),0,
+     "duplicate GPS locate button must not exist");
    assert.equal(await page.locator(".rs-map-v2 #rs-demo-toggle:visible").count(),0);
    assert.equal(await page.locator(".rs-map-v2 #rs-report-legend:visible").count(),0,
      "rider help notice cannot overlap legal attribution");
@@ -51,7 +52,9 @@ function intersect(a,b){
        status:rect(".rs-map-v2-status-row"),
        shareChip:rect(".rs-map-v2-share-chip"),
        statusChip:rect(".rs-map-v2-status-trigger"),
-       gpsChip:rect(".rs-map-v2-gps"),
+       region:rect(".rs-map-v2 .rs33-region"),
+       weather:rect(".rs-map-v2 .rs-weather-slot"),
+       settingsButton:rect(".rs-map-v2 .rs12-map-tools-trigger"),
        zoom:rect(".rs-map-v2 .leaflet-control-zoom"),
        locate:rect(".rs-map-v2 .locate"),
        report:rect(".rs-map-v2-report>summary"),
@@ -67,16 +70,20 @@ function intersect(a,b){
      assert.ok(r.l>=-2&&r.r<=width+2,"offscreen "+name+" "+JSON.stringify(r));
    }
    for(const [a,b] of [["top","status"],["top","zoom"],["status","zoom"],
-     ["shareChip","statusChip"],["shareChip","gpsChip"],["statusChip","gpsChip"],
+     ["shareChip","statusChip"],
      ["zoom","locate"],["report","help"],["report","attribution"],
      ["help","attribution"],["report","locate"],["help","locate"]]){
      if(geometry[a]&&geometry[b])
        assert.ok(!intersect(geometry[a],geometry[b]),a+"/"+b+" overlap "+JSON.stringify(geometry));
    }
-   assert.ok(geometry.shareChip && geometry.statusChip && geometry.gpsChip,
-     "sharing, personal state and GPS must all be visible");
-   assert.ok(geometry.status.l<=geometry.shareChip.l+1&&geometry.status.r>=geometry.gpsChip.r-1,
-     "status row must contain all three chips (no clipped sharing label)");
+   assert.ok(geometry.shareChip && geometry.statusChip && geometry.locate,
+     "sharing, personal status and the sole locate control must be visible");
+   assert.ok(geometry.status.l<=geometry.shareChip.l+1&&geometry.status.r>=geometry.statusChip.r-1,
+     "status row must contain exactly two complete chips");
+   assert.ok(geometry.top.w>width-28 && geometry.top.h<=54,
+     "map command bar must be a compact full-width unified surface");
+   assert.ok(geometry.region && geometry.weather && geometry.settingsButton,
+     "region, weather and layer icon must belong to one command surface");
    assert.ok(geometry.report.h>=44&&geometry.help.h>=44,"minimum action targets");
    const sources=page.locator(".rs-map-v2 .leaflet-control-attribution");
    await sources.waitFor({state:"visible",timeout:12000});

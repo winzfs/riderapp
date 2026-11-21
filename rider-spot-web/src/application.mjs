@@ -2031,9 +2031,7 @@ export function mountApplication({
   // MAP FIRST v2: the command row and status controls belong to one React
   // owner. External presence data remains exclusively owned by the legacy
   // status adapter; the visible trigger delegates, never duplicates writes.
-  function MapBar({ layer, choose, sharing, busy, toggle, gpsStatus, gpsProblem, onLocate }) {
-    const gpsLabel = gpsStatus === "ready" ? "GPS 정상" :
-      gpsStatus === "error" ? (gpsProblem || "GPS 위치 확인 필요") : "GPS 확인 중";
+  function MapBar({ layer, choose, sharing, busy, toggle }) {
     return rs33J("section", { className:"rs33-map-bar rs8-map-overlay rs12-map-overlay rs-map-v2-header" },
       rs33J("div",{className:"rs33-map-bar-top rs8-map-searchline rs11-map-commandbar rs12-map-commandbar"},
         rs33J("h1",{className:"sr-only"},"지도"),
@@ -2077,12 +2075,7 @@ export function mountApplication({
             onClick:()=>document.getElementById("rs-presence-btn")?.click()},
           rs33J(Icon,{name:"status-chat",size:17}),
           rs33J("span",null,"내 상태"),
-          rs33J(Icon,{name:"chevron",size:13})),
-        rs33J("button",{type:"button",
-            className:"rs-map-v2-gps"+(gpsStatus==="ready"?" is-ready":gpsStatus==="error"?" is-error":""),
-            title:gpsLabel,"aria-label":gpsLabel+" · 위치 다시 확인",
-            onClick:onLocate},
-          rs33J(Icon,{name:"locate-fixed",size:18}))));
+          rs33J(Icon,{name:"chevron",size:13}))));
   }
   // A single action dock, not independent absolute-floating report and SOS FABs.
   function MapActions() {
@@ -2618,9 +2611,6 @@ export function mountApplication({
                           sharing: p.sharing,
                           busy: p.busy,
                           toggle: h,
-                          gpsStatus: p.gpsStatus,
-                          gpsProblem: p.gpsProblem,
-                          onLocate: () => p.locate().catch(error => f(error.message)),
                         }),
                         (0, J.jsx)(MapActions, {}),
                             (0, J.jsx)(Zo, {
