@@ -72,3 +72,13 @@ Accessible high-contrast focus styles on keyboard; never render a thick permanen
 5. Screenshot diff against current production plus manual full-screen & split-screen audit. A release fails when the same page structure merely has different colors/radii.
 6. Verify all previous immutable bundle URLs 200 in isolated preview.
 7. Promote only after passing preview and record explicit deployed version and rollback version.
+
+
+## v10 production release — 2026-11-21
+- New release hash: `66179994a862` (frozen at commit `5396983c08640b47c82593faeb52eadc1d4b270c`)
+- Isolated live acceptance: GitHub Actions run `44901697305`, SUCCESS (5-tab visual, 320/393/412px, income/expense/settlement/maintenance synthetic CRUD, native bridge, old hashes).
+- Production: `rider-spot`, Worker version `a6a19bef-3939-4e30-bf2c-b65aafac2962`, deployment `fb148bea-866b-4c98-8d20-6c306fdc419f`, 100%.
+- Production verification: the service serves the v10 immutable JS/CSS and native recovery guard, with five navigation tabs mounted in headless mobile browser.
+- Previous known-good rollback: v8 Worker version `916aa709-12b2-40f3-bcbd-7f439ae9541c`, deployment `f56dc99e-6705-4695-828b-774836557061`. To roll back, deploy that version at 100% using the Workers deployment history. Do not delete or migrate user data.
+- Asset Worker: `rider-spot-night-shift-v10-assets`, which retains older immutable releases. Gateway source saved in `edge/night-shift-v10-gateway.mjs` and asset code in `edge/night-shift-v10-assets.mjs`.
+- Native APK assembly on a separate repository workflow did not pass because of an Android SDK setup error; this release changes the web code delivered to existing WebView clients, not the native APK binary. On-device long ride and physical split-screen validation remain recommended follow-up checks.
