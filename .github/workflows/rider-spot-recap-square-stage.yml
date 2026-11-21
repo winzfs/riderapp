@@ -4,6 +4,8 @@ on:
     branches: [feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-recap-square-stage.yml'
+      - 'rider-spot-web/src/ride-recap.mjs'
+      - 'rider-spot-web/tests/ride-recap.test.mjs'
   workflow_dispatch:
 permissions:
   contents: write
