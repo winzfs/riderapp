@@ -139,13 +139,14 @@ body,.app,.app .workspace>main{background:var(--a8-bg);color:var(--a8-fg)}
 .app .bike-page .rs8-bike-hero .bike-distance small{font-size:12px;color:#C0D2C5}
 .app .bike-page .rs8-odo-updated{display:block;font-size:10px;color:#98AE9D;line-height:1.45;margin-top:5px}
 .app .bike-page .rs8-bike-hero .bike-vehicle-art{grid-column:2;grid-row:1;width:127%;max-width:none;height:auto;max-height:187px;object-fit:contain;margin-left:-12%;filter:drop-shadow(0 10px 8px rgba(0,0,0,.28));transform:translateY(5px)}
-.app .bike-page .rs8-bike-feature-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid rgba(255,255,255,.17)}
+.app .bike-page .rs8-bike-feature-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 0;border-top:1px solid rgba(255,255,255,.17)}
 .app .bike-page .rs8-bike-feature-bottom>span{font-size:10px;color:#AFC8B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app .bike-page .rs8-bike-settings{position:relative;flex:none}
+.app .bike-page .rs8-bike-settings{position:relative;flex:none;min-width:0}
+.app .bike-page .rs8-bike-settings[open]{order:3;flex-basis:100%;width:100%;margin:0;padding-top:6px;border-top:1px solid rgba(255,255,255,.14)}
 .app .bike-page .rs8-bike-settings summary{list-style:none;cursor:pointer;color:#FFF;font-size:11px;font-weight:765;padding:7px}
 .app .bike-page .rs8-bike-settings summary::-webkit-details-marker{display:none}
-.app .bike-page .rs8-bike-settings .bike-vehicle-tools{position:absolute;z-index:30;top:100%;right:0;min-width:230px;display:flex;flex-direction:column;gap:6px;padding:9px;background:#FFFEFB;border:1px solid #D6E3D6;border-radius:10px;box-shadow:0 13px 26px rgba(11,28,17,.3);margin:0}
-.app .bike-page .rs8-bike-settings .bike-outline-action{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;width:100%;background:#EFF4EC;border:0!important;border-radius:8px!important;color:#2E5840;font-size:12px}
+.app .bike-page .rs8-bike-settings .bike-vehicle-tools{position:static!important;z-index:auto;top:auto;right:auto;min-width:0;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;margin:0}
+.app .bike-page .rs8-bike-settings .bike-outline-action{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:0;width:100%;background:#EFF4EC;border:0!important;border-radius:8px!important;color:#2E5840;font-size:11px}
 .app .bike-page .rs8-bike-hero .bike-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 0 0;margin:0;border-top:1px solid rgba(255,255,255,.17)}
 .app .bike-page .rs8-bike-hero .bike-actions button{min-height:49px;border-radius:10px;box-shadow:none!important;font-size:12px;font-weight:785}
 .app .bike-page .rs8-bike-hero .bike-actions button:first-child{background:#ED8656!important;border:1px solid #ED8656!important;color:#16251E!important}
