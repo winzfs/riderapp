@@ -41,7 +41,7 @@ jobs:
           const root='dist/assets/rider-spot-'+r.hash+'/';
           const js=fs.readFileSync(root+'app.mjs','utf8');
           const css=fs.readFileSync(root+'daily-timeline.css','utf8');
-          for(const key of ['TODAY IN MOTION','라이딩 이미지 만들기','라이딩 이미지 저장','결산 이미지','rs-recap-launch']){
+          for(const key of ['TODAY IN MOTION','DAILY SETTLEMENT','rs-recap-timeline-action','rs-recap-sheet','rs-recap-launch']){
             assert.ok(js.includes(key)||css.includes(key),'Missing recap element '+key);
           }
           console.log('RECAP_BUNDLE_PASS',r.hash);
@@ -66,13 +66,13 @@ jobs:
           origin='https://rider-spot-recap-preview.jazzhjm.workers.dev'
           for i in range(4):
             try:
-              with urllib.request.urlopen(origin+'/',timeout=25) as r:
+              with urllib.request.urlopen(urllib.request.Request(origin+'/',headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36','Accept':'text/html,*/*'}),timeout=25) as r:
                 html=r.read().decode()
                 assert r.status==200
               assert '11cf61e8a1ba/app.mjs' in html,'Preview not on new recap release'
               assert 'rs-recovery-guard-v217' in html,'Native recovery guard missing'
               for path in ['/sw.js','/assets/rider-spot-11cf61e8a1ba/app.mjs','/assets/rider-spot-11cf61e8a1ba/daily-timeline.css','/assets/rider-spot-78cfb498ffed/app.mjs']:
-                with urllib.request.urlopen(origin+path,timeout=40) as r:
+                with urllib.request.urlopen(urllib.request.Request(origin+path,headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36','Accept':'*/*'}),timeout=40) as r:
                   assert r.status==200,(path,r.status)
                   assert len(r.read())>300,path
               print('RECAP_PREVIEW_HTTP_PASS',len(html))
