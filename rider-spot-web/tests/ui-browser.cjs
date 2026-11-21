@@ -194,11 +194,13 @@ async function check(width,native){
  await p.locator('.rc-comment-form textarea').fill('전송하지 않는 QA 댓글');
  assert.equal(await p.locator('.rc-comment-form textarea').inputValue(),'전송하지 않는 QA 댓글');
  await p.getByRole('button',{name:'‹ 커뮤니티'}).click();
- const categories=p.locator('.rc-categories');
+ const filter=p.locator('.rs8-community-tools');
+ if(!(await filter.evaluate(el=>el.open)))await filter.locator('summary').click();
+ const categories=filter.locator('.rc-categories');
  const initialScroll=await categories.evaluate(el=>el.scrollLeft);
- await p.getByRole('button',{name:'다음 카테고리 보기'}).click();
- await p.waitForTimeout(400);
- assert.ok(await categories.evaluate(el=>el.scrollLeft)>initialScroll,'category next control must scroll the full labels into view');
+ await categories.evaluate(el=>el.scrollBy({left:180,behavior:'instant'}));
+ await p.waitForTimeout(200);
+ assert.ok(await categories.evaluate(el=>el.scrollLeft)>initialScroll,'category filters must scroll horizontally without an extra overlay button');
  await p.getByRole('button',{name:'질문·노하우',exact:true}).click();assert.equal(await p.locator('.rc-feed-row').count(),1);await p.getByLabel('게시글 검색',{exact:true}).fill('존재하지않는검색어');await p.getByRole('heading',{name:'검색 결과가 없어요'}).waitFor();await shot('empty');await p.getByRole('button',{name:'검색어 지우기'}).click();await p.locator('.rc-card-main').first().click();await p.locator('.rc-detail').waitFor();await layout('post-detail');await p.getByRole('button',{name:'‹ 커뮤니티'}).click();await p.getByRole('button',{name:'＋ 글쓰기'}).click();await p.locator('.rc-editor').waitFor();await p.locator('input[name="title"]').fill('등록하지 않는 테스트 초안');await p.setViewportSize({width,height:500});await shot('keyboard-resize');assert.ok(await p.locator('input[name="title"]').isVisible());await p.setViewportSize({width,height:844});
  }
  if(baseline) await nav.getByRole('button',{name:'내 정보',exact:true}).click(); else {await nav.getByRole('button',{name:'내 바이크',exact:true}).click();await p.getByRole('button',{name:'프로필·설정',exact:true}).click();}await p.locator('.profile').waitFor();if(baseline)await shot('profile');else {await layout('profile');
