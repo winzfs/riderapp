@@ -1,0 +1,63 @@
+name: Rider Spot v12 production release acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-v12-production.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-v12-production-acceptance
+  cancel-in-progress: true
+jobs:
+  live-mobile-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_LIVE_URL: https://rider-spot.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Check production version, native recovery, legacy asset continuity
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          const host=process.env.RIDER_LIVE_URL,hash="57888bba6c49";
+          const get=async (path,type)=>{
+            const r=await fetch(host+path,{headers:{"cache-control":"no-cache"}});
+            assert.equal(r.status,200,path+" returned "+r.status);
+            if(type)assert.ok(r.headers.get("content-type")?.includes(type),path+" content type");
+            return r.text();
+          };
+          const html=await get("/","text/html");
+          assert.ok(html.includes("/assets/rider-spot-"+hash+"/app.mjs"),"Production release mismatch");
+          assert.ok(html.includes("rs-recovery-guard-v217"),"Native fallback guard missing");
+          const app=await get("/assets/rider-spot-"+hash+"/app.mjs","javascript");
+          assert.ok(app.includes("rs12-map-settings")&&app.includes("rs12-community-masthead"),"v12 DOM missing");
+          const css=await get("/assets/rider-spot-"+hash+"/curated-v9.css","css");
+          assert.ok(css.includes("URBAN EDITORIAL V12")&&css.includes("rs12-route-tools"),"v12 stylesheet missing");
+          const sw=await get("/sw.js","javascript");
+          assert.ok(sw.includes(hash),"Service Worker version mismatch");
+          const old=await get("/assets/rider-spot-0edfbcdd3450/curated-v9.css","css");
+          assert.ok(old.length>10000,"Existing app clients cannot load their pinned CSS");
+          console.log("RIDER_V12_PRODUCTION_HTTP_PASS",JSON.stringify({hash,html:html.length,app:app.length,css:css.length,old:old.length}));
+          NODE
+      - run: npx playwright install chromium
+      - name: Production five-tab mobile QA (320, 393, 412, no reload)
+        run: RIDER_VISUAL_URL="$RIDER_LIVE_URL" node tests/urban-flow-v11-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-v12-live-mobile-screenshots
+          path: /tmp/rider-spot-urban-flow-v11/
+          retention-days: 14
+          if-no-files-found: warn
