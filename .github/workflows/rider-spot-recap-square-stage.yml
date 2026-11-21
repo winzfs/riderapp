@@ -40,7 +40,7 @@ jobs:
           assert.ok(js.includes('rs-recap-preview'));
           assert.ok(css.includes('dialog.rs-recap-dialog::backdrop'));
           assert.ok(!js.includes('group("이미지 비율"'));
-          assert.ok(fs.readFileSync('src/ride-recap.mjs','utf8').includes('width:800,height:800'));
+          assert.ok(fs.readFileSync('src/ride-recap.mjs','utf8').includes('width:920,height:920'));
           assert.ok(fs.readFileSync('edge/static-edge.mjs','utf8').includes('rs-recovery-guard-v217'));
           assert.ok(m.files.includes('/assets/rider-spot-'+m.hash+'/daily-timeline.css'));
           console.log('SQUARE_RECAP_STAGE_VALIDATED',m.hash);
