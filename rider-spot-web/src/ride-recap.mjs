@@ -102,7 +102,7 @@ function abbreviatedMoney(n) { return n === null ? "미입력" : "₩"+formats.f
 export function recapMapDimensions(mode,ratio) {
   if(mode==="finance")return null;
   const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
-  return {width:936,height:Math.round(mode==="route"?Math.min(height*.53,900):Math.min(height*.35,720))};
+  return {width:936,height:Math.round(mode==="route"?Math.min(height*53/100,900):Math.min(height*35/100,720))};
 }
 function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
   rounded(ctx,x,y,w,h,30,p.tint);
@@ -221,7 +221,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
     }
   } else {
     const mapTop=207;
-    const mapHeight=mode==="route"?Math.min(H*.53,900):Math.min(H*.35,720);
+    const mapHeight=recapMapDimensions(mode,ratio).height;
     drawRoute(ctx,recap.segments,72,mapTop,936,mapHeight,p,showRoute,mapSnapshot);
     const panelTop=mapTop+mapHeight+28;
     const panelHeight=H-panelTop-147;
