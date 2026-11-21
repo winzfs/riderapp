@@ -82,3 +82,4 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 # QA correction: run DOM checks only inside Playwright page context
+# rerun: confirm async recurring expense save before inspecting mocked ledger state
