@@ -481,13 +481,13 @@ export function createRideRecap(React,client) {
       h("div",{className:"rs-recap-sheet"},
         h("header",{className:"rs-recap-head"},
           h("div",{className:"rs-recap-title"},
-            h("small",null,day.replace(/-/g,".")+" · 오늘의 기록"),
-            h("h2",null,"라이딩 이미지 저장")),
+            h("small",null,day.replace(/-/g,".")+" · 라이딩 리포트"),
+            h("h2",null,"이미지 저장")),
           button(h,"×",onClose,"rs-recap-close",{"aria-label":"닫기"})),
         h("div",{className:"rs-recap-content"},
           h("div",{className:"rs-recap-preview"},
             h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
-          h("p",{className:"rs-recap-preview-note"},"실제 지도 · 동 이름 · 수익 · 1080 × 1350"),
+          h("div",{className:"rs-recap-preview-meta"},h("span",null,"오늘의 운행 기록"),h("span",{className:"rs-recap-format"},"4:5 · 고화질 PNG")),
           mapLoading?h("p",{className:"rs-recap-state",role:"status"},"주행 지도와 동 이름을 불러오는 중…"):null,
           mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
             h("span",null,mapState.error||"지도를 불러오지 못했어요."),
@@ -502,8 +502,8 @@ export function createRideRecap(React,client) {
             h("span",{className:"rs-recap-switch","aria-hidden":true})),
           message&&h("p",{className:"rs-recap-state",role:"status"},message)),
         h("footer",{className:"rs-recap-actions"},
-          button(h,"공유",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed}),
-          button(h,saving?"이미지 저장 중…":"이미지 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
+          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed}),
+          button(h,saving?"저장하는 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed}))));
 
   }
   return RideRecap;
