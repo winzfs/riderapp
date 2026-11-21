@@ -143,7 +143,11 @@ export function recapEndpointLayout(paths,w,h,geoSegments=[]) {
     {x:pt.x+18,y:pt.y+14},
     {x:pt.x-width-18,y:pt.y+14},
     {x:pt.x-width/2,y:pt.y-47},
-    {x:pt.x-width/2,y:pt.y+22}
+    {x:pt.x-width/2,y:pt.y+22},
+    {x:pt.x+18,y:pt.y+53},
+    {x:pt.x-width-18,y:pt.y+53},
+    {x:pt.x+18,y:pt.y-78},
+    {x:pt.x-width-18,y:pt.y-78}
   ].map(v=>({x:clamp(v.x,margin,w-margin-width),
     y:clamp(v.y,margin,h-margin-badgeH),width,height:badgeH}));
   const intersect=(a,b,pad=6)=>a.x<b.x+b.width+pad&&
