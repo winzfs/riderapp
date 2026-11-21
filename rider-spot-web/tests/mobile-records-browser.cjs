@@ -236,11 +236,11 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     const bikeDistance=page.locator(".bike-page:visible .bike-distance");
     try {
       await bikeDistance.waitFor({state:"visible"});
-      await page.waitForFunction(()=>/24,500\\s*km/.test(
+      await page.waitForFunction(()=>/24,500\s*km/.test(
         [...document.querySelectorAll(".bike-page .bike-distance")]
           .find(x=>x.getBoundingClientRect().width>0)?.textContent||""
       ),null,{timeout:15000});
-      assert.match(await bikeDistance.innerText(),/24,500\\s*km/);
+      assert.match(await bikeDistance.innerText(),/24,500\s*km/);
     }
     catch(error){console.error("BIKE_ROUTE_DIAGNOSTIC",await page.evaluate(()=>({tab:window.__rsNavigation?.tab,active:window.__rsActiveTab,visible:[...document.querySelectorAll(".bike-distance")].map(e=>({text:e.textContent,visibility:getComputedStyle(e).visibility,display:getComputedStyle(e).display,rect:e.getBoundingClientRect().toJSON(),parent:e.closest(".bike-page")?.outerHTML.slice(0,130)}))})));throw error;}
     await shot("bike");
