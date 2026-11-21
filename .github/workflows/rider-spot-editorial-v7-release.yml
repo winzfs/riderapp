@@ -108,4 +108,4 @@ jobs:
             /tmp/rider-v7-build-evidence
           retention-days: 7
           if-no-files-found: warn
-
+# final design gate: share control compact at 393px and empty-day timeline test guarded
