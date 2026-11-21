@@ -88,3 +88,23 @@ UX behavior:
 QA: Cloudflare Workers compilation passed for the complete React bundle and all new/previous native map scripts. Public dataset tiles and multi-business coordinate groups were sampled; production assets and Worker binding validated. An isolated mocked runtime test Worker was created, but its HTTP invocation was blocked by platform request restrictions, so full browser / Android touch smoke QA remains unverified. The previous v22 asset Worker `rider-spot-map-v22-assets` can be rebound as a rollback without touching authentication, trips, or location persistence.
 
 Maintenance: This is a running immutable-asset hotfix plus standalone source files on a feature branch. A future normal build requires adding script inclusion, CSS and native mount hook to the repository's build process before merging. A build from the older pinned commit may omit this feature.
+
+## v24 — MapLibre GPU-synchronized pin rendering (2026-11-22)
+
+Production deployment `b81d9260-4903-425a-bfdb-bada1cdb809b`, asset Worker `rider-spot-map-v24-assets`, immutable hash `e8c9b67d214f`, KV prefix `rs-map-v14-gpu-pins::`. Cloudflare Workers deployments confirmed 100%.
+
+**Observed symptom:** During drag/pan and pinch zoom, HTML `maplibregl.Marker` overlays (rider, GPS, toilets, road reports, shops) visually trailed the MapLibre vector map.
+
+**Fix:** The three source files are in this feature branch:
+- `src/gpu-pins.js`: MapLibre GeoJSON source `rs-native-gpu-pins`, two symbol layers for bottom-/center-anchored pins, canvas-built 2x-resolution icon atlas, feature hit-testing, grouping, rAF-batched updates, image cache cleanup, and style reload restoration.
+- `src/native-maplibre.js`: wraps ordinary non-draggable POI and report markers with GPU-backed marker compatibility methods. All original popup/tooltip listener callbacks remain callable. Riders, own GPS/nav icon, route start/end, timeline playback and stamp points use the shared GPU renderer. Temporary draggable location-picking pin retains native HTML marker functionality to preserve drag/drag-end.
+- `src/store-clusters.js`: stores are now feature group `shops` in the GPU layer; on-click still opens the full searchable registered-store bottom sheet. It retains legacy HTML rendering only if GPU is unavailable.
+- CSS/Korean place names and all Cloudflare API, user accounts, timeline data and GPS routing are unchanged.
+
+Runtime HTML loads `gpu-pins.js` before `store-clusters.js` and `native-maplibre.js`; `sw.js` precaches the new hashed GPU bundle. The native map creates `window.__rsCreateGpuPinLayer(gl)` once and tears it down when the map unmounts.
+
+**Tests:** Complete JavaScript Worker module compilation passed. Actual GPU implementation tested with a fake MapLibre GL object for GeoJSON features, icon registration, click hit-testing, repeat pan without marker repositioning, 137 pin updates, old image cache eviction, style reloading and cleanup. Native report marker compatibility tested using the actual GPU + adapter script for click-to-popup and removal. Production deployment is 100%. End-to-end real Android pinch/drag performance and native store sheet interaction were not independently tested, and should be verified on device.
+
+**Rollback:** Rebind production `rider-spot` Worker service binding `ASSETS` to `rider-spot-map-v23-assets` while preserving `DESIGN`, `LEGACY`, and the recovery guard.
+
+**Future build requirement:** Source scripts are saved on `fix/maplibre-native-camera-20261122`, but the older legacy build entrypoint still requires integration of the MapLibre-native React factory, new script order and SW precache before merging. A traditional build from prior pinned sources will not automatically include the GPU pin engine. Do not present this as a fully reconciled normal source build.
