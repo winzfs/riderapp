@@ -81,3 +81,4 @@ jobs:
             /tmp/rider-editorial-v7-preview-records
           retention-days: 7
           if-no-files-found: warn
+# QA correction: run DOM checks only inside Playwright page context

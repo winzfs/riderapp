@@ -72,7 +72,7 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
           return {recap:recap&&map?recap.compareDocumentPosition(map):null,label:document.querySelector(".rs33-timeline .rs7-map-label")?.innerText};
         });
         if(order.recap!=null)assert.ok(order.recap&4,"Daily recap must precede the route map");
-        assert.ok(!document.querySelector(".rs6-timeline-date-title"),"decorative English timeline counter removed");
+        assert.equal(await page.locator(".rs6-timeline-date-title").count(),0,"decorative English timeline counter removed");
       }
       if(i===2){
         await page.locator(".rs6-community-deck").waitFor({timeout:10000});
