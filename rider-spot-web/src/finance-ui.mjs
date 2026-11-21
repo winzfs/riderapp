@@ -1,4 +1,5 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
+import {createRideRecap} from "./ride-recap.mjs";
 import {saveIncomeDay,saveIncomeRecord,financeWriteError} from "./finance-storage.mjs";
 import {icons} from "./ui.mjs";
 import {won,num,koreanWorkDay,koreanCalendarDay,plusDays,financeTotals,financeDays,financeMonthPeriod,financeLedger,validWon,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "./finance-model.mjs";
@@ -16,6 +17,7 @@ const monthDelta = (day,offset) => {
 };
 export function createFinance(R, client) {
   const h=R.createElement;
+  const RideRecap=createRideRecap(R,client);
   const txt=(tag,cls,...children)=>h(tag,{className:cls},...children);
   const icon=(name,size=20)=>h("svg",{viewBox:"0 0 24 24",width:size,height:size,
     fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",
@@ -203,6 +205,7 @@ export function createFinance(R, client) {
 
   function Finance({user,login,onBike}) {
     const [section,setSection]=R.useState("overview");
+    const [recapDay,setRecapDay]=R.useState(null);
     const [scope,setScope]=R.useState("today");
     const [anchor,setAnchor]=R.useState(koreanWorkDay);
     const [cachedFinance,setData]=R.useState(null);
@@ -844,7 +847,9 @@ export function createFinance(R, client) {
 
     }
     return h("section",{className:"finance-page page narrow"},
-      h("div",{className:"fin-page-head"},h("h1",null,"수익")),
+      h("div",{className:"fin-page-head"},h("h1",null,"수익"),
+        user&&button(h(R.Fragment,null,icon("analysis",16),"결산 이미지"),
+          ()=>setRecapDay(today),"rs-recap-launch",{"aria-label":"오늘의 결산 카드 이미지 만들기"})),
       sectionNav,
       !user?h("section",{className:"fin-card"},h("h2",null,"내 수익을 안전하게 보관해요."),
         txt("p","fin-muted","로그인하면 수익·지출·정산 기록을 모든 기기에서 확인할 수 있어요."),
@@ -859,6 +864,7 @@ export function createFinance(R, client) {
         section==="overview"?overview():section==="records"?records():
         section==="settlements"?settlements():analysis()),
       editor&&user&&h(FinanceSheet,{editor,close:()=>setEditor(null),save,busy,error:sheetError,userId:user.id}),
+      recapDay&&h(RideRecap,{day:recapDay,history:window.__rsRideApi?.history||[],user,financeData:data,onClose:()=>setRecapDay(null)}),
       confirmation&&h(ConfirmModal,{message:confirmation,
         cancel:()=>settleConfirm(false),accept:()=>settleConfirm(true),
         danger:/삭제|취소/.test(confirmation),
