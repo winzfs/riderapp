@@ -69,7 +69,7 @@ const mime=filename=>filename.endsWith(".mjs")?"application/javascript; charset=
         {lat:35.19,lng:126.834,t:1795255800000},
         {lat:35.171,lng:126.856,t:1795256100000},
       ];
-      const snapshot=await loadRideRecapBasemap([samples],{width:936,height:473});
+      const snapshot=await loadRideRecapBasemap([samples],{width:800,height:800});
       const ride=buildRecapSnapshot([{id:"qa",started_at:"2026-11-21T10:00:00Z",
         ended_at:"2026-11-21T15:15:00Z",distance_km:65.4,points:samples}],"2026-11-21");
       const canvas=document.querySelector("canvas");
