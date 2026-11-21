@@ -1,0 +1,132 @@
+name: Rider Spot V5 production deployment acceptance
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths: ['.github/workflows/rider-spot-recap-v5-production-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_RECAP_SCREENSHOTS: /tmp/rider-spot-recap-v5-production
+      RIDER_UI_URL: https://rider-spot.jazzhjm.workers.dev/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Install and run all regression tests
+        run: npm ci && npm test
+      - name: Build and verify source-to-staged immutable assets
+        run: |
+          npm run build
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const current=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const staged=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          assert.equal(current.hash,'0edfbcdd3450','Unexpected source build hash');
+          assert.equal(staged.hash,current.hash,'Staged V5 assets differ from source');
+          for(const file of ['app.mjs','daily-timeline.css','design-system.css','native-gps.js','weather-bar.js','curated-v9.css']){
+            const actual=fs.readFileSync('dist/assets/rider-spot-'+staged.hash+'/'+file);
+            assert.deepEqual(fs.readFileSync('prebuilt/'+file),actual,file);
+          }
+          const html=fs.readFileSync('prebuilt/index.html','utf8');
+          assert.ok(html.includes('rider-spot-'+current.hash+'/app.mjs'));
+          console.log('V5_SOURCE_STAGED_BYTES_PASS',current.hash);
+          NODE
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Actual 15 V5 PNG variants and real Korean basemap
+        run: node tests/ride-recap-browser.cjs
+      - name: Verify production HTTP, PWA, legacy WebView paths and immutable bytes
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const origin='https://rider-spot.jazzhjm.workers.dev';
+          const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          const get=async path=>{
+            let error;
+            for(let attempt=0;attempt<4;attempt++){
+              try{
+                const response=await fetch(origin+path,{
+                  headers:{'user-agent':'RiderSpot-V5-Preview-Release-QA','cache-control':'no-cache'},
+                  signal:AbortSignal.timeout(30000)
+                });
+                assert.equal(response.status,200,path+' HTTP '+response.status);
+                return await response.text();
+              }catch(e){error=e;await new Promise(resolve=>setTimeout(resolve,1500));}
+            }
+            throw error;
+          };
+          const page=await get('/');
+          assert.ok(page.includes('/assets/rider-spot-'+release.hash+'/app.mjs'));
+          assert.ok(page.includes('rs-recovery-guard-v217'),'WebView guard missing');
+          assert.equal(await get('/sw.js'),fs.readFileSync('prebuilt/sw.js','utf8'));
+          for(const f of ['app.mjs','daily-timeline.css','native-gps.js','design-system.css','curated-v9.css']){
+            const remote=await get('/assets/rider-spot-'+release.hash+'/'+f);
+            assert.equal(remote,fs.readFileSync('prebuilt/'+f,'utf8'),'Staged V5 mismatch: '+f);
+          }
+          for(const previous of ['482cd5cdda30','5f6c1d27b651','228abe877a8d']){
+            const js=await get('/assets/rider-spot-'+previous+'/app.mjs');
+            assert.ok(js.length>100000,'Legacy WebView JS lost '+previous);
+          }
+          const manifest=JSON.parse(await get('/mapdata/manifest.json'));
+          assert.ok(manifest.counts,'Korean map manifests unavailable');
+          console.log('V5_PRODUCTION_HTTP_PWA_LEGACY_PASS',release.hash);
+          NODE
+      - name: Mobile 360 and 393px dialog, PNG save and sharing actions
+        run: node tests/ride-recap-dialog-browser.cjs
+      - name: Production navigation stability and no unexpected refresh
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+            try{
+              for(const width of [360,393]){
+                const ctx=await browser.newContext({viewport:{width,height:844},
+                  isMobile:true,hasTouch:true,serviceWorkers:'block',timezoneId:'Asia/Seoul'});
+                await ctx.addInitScript(()=>{
+                  const key='__rs_v5_preview_boot_count';
+                  sessionStorage.setItem(key,String(Number(sessionStorage.getItem(key)||0)+1));
+                });
+                const page=await ctx.newPage(),errors=[];
+                page.on('pageerror',e=>errors.push(e.message));
+                await page.goto(process.env.RIDER_UI_URL,{waitUntil:'domcontentloaded',timeout:40000});
+                const nav=page.locator('.bottom-nav button');
+                await nav.first().waitFor({timeout:30000});
+                for(const i of [1,2,3,4,0]){
+                  if(i<(await nav.count()))await nav.nth(i).click();
+                  await page.waitForTimeout(160);
+                }
+                const state=await page.evaluate(()=>({
+                  boots:Number(sessionStorage.getItem('__rs_v5_preview_boot_count')),
+                  overflow:document.documentElement.scrollWidth>innerWidth+2
+                }));
+                assert.equal(state.boots,1,'Unexpected refresh on '+width);
+                assert.equal(state.overflow,false,'Horizontal overflow on '+width);
+                assert.deepEqual(errors,[],'Browser errors on '+width);
+                console.log('V5_NO_REFRESH_PASS',width);
+                await ctx.close();
+              }
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-recap-v5-production-evidence
+          path: /tmp/rider-spot-recap-v5-production/
+          retention-days: 14
+          if-no-files-found: warn
