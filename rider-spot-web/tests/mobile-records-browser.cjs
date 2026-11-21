@@ -289,6 +289,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(rendered.position,"0% 0%","first icon occupies first sprite cell");
     assert.ok(rendered.width>=40,"maintenance symbol is large enough to read");
     const dialog=page.getByRole("dialog");
+    if(await page.locator(".rs8-bike-settings").count() &&
+        !(await page.locator(".rs8-bike-settings").evaluate(el=>el.open)))
+      await page.locator(".rs8-bike-settings summary").click();
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("25700");
     await dialog.getByRole("button",{name:"계기판 저장"}).click();
@@ -404,6 +407,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await rear.getByText("80,000 km",{exact:true}).waitFor();console.log("PASS 40000km interval + 40000km replacement",width);
     await shot("bike-detail-updated");
     await rear.getByRole("button",{name:"닫기"}).click();
+    if(await page.locator(".rs8-bike-settings").count() &&
+        !(await page.locator(".rs8-bike-settings").evaluate(el=>el.open)))
+      await page.locator(".rs8-bike-settings summary").click();
     await page.getByRole("button",{name:"계기판 입력",exact:true}).click();
     await dialog.getByLabel("현재 계기판 (km)").fill("60300");
     await dialog.getByRole("button",{name:"계기판 저장"}).click();
