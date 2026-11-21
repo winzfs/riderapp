@@ -1,0 +1,4 @@
+NIGHT SHIFT v10 — live preview acceptance: passed.
+Release: 66179994a862
+Preview: https://rider-spot-night-shift-v10-preview.jazzhjm.workers.dev
+Tested: all five tabs at 320/393/412px, financial/garage CRUD, native bridge, old hashes, immutable bundle.

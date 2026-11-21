@@ -1,14 +1,17 @@
-name: Rider Spot Curated v9 structural UI build
+name: Rider Spot NIGHT SHIFT v10 build and regression
 on:
   push:
-    branches: [feature/rider-spot-native-apk]
+    branches: [feature/rider-spot-v10-redesign, feature/rider-spot-native-apk]
     paths:
       - '.github/workflows/rider-spot-curated-v9-release.yml'
+      - 'rider-spot-web/src/curated-v9.css'
+      - 'rider-spot-web/src/application.mjs'
+      - 'rider-spot-web/src/finance-ui.mjs'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: rider-spot-curated-v9-release
+  group: rider-spot-night-shift-v10-release
   cancel-in-progress: false
 jobs:
   verify-and-freeze:
@@ -38,7 +41,7 @@ jobs:
           const sw=fs.readFileSync('dist/sw.js','utf8');
           const style=fs.readFileSync(base+'curated-v9.css','utf8');
           const app=fs.readFileSync(base+'app.mjs','utf8');
-          assert.match(style,/ATELIER v9/);
+          assert.match(style,/NIGHT SHIFT v10/);
           assert.match(style,/rs8-bike-hero/);
           assert.match(style,/rs9-chart-heading/);
           assert.ok(!style.includes("#172923;border:0;border-radius:15px;box-shadow:none;color:#FFF;isolation:isolate"),"old black hero forbidden");
@@ -73,6 +76,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
             sleep 1
           done
+          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/night-shift-v10-browser.cjs
           RIDER_TEST_ORIGIN=http://127.0.0.1:8840 RIDER_SCREENSHOTS=/tmp/rider-v8-build-evidence node tests/mobile-records-browser.cjs
           RIDER_TEST_URL=http://127.0.0.1:8840 RIDER_TEST_CASE=native RIDER_APK_BRIDGE=/tmp/rider-v8-native/app/src/main/assets/native-bridge.js node tests/browser.cjs
       - name: Freeze validated CSS, JSX and WebView-safe assets
@@ -97,16 +101,18 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add rider-spot-web/prebuilt
           if ! git diff --cached --quiet; then
-            git commit -m 'build: freeze tested atelier v8 coherent UI assets [skip ci]'
-            git pull --rebase origin feature/rider-spot-native-apk
-            git push origin HEAD:feature/rider-spot-native-apk
+            git commit -m 'build: freeze NIGHT SHIFT v10 UI assets [skip ci]'
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rider-spot-curated-v9-build-evidence
+          name: rider-spot-night-shift-v10-build-evidence
           path: |
             rider-spot-web/dist/release.json
             /tmp/rider-v8-build-evidence
           retention-days: 7
           if-no-files-found: warn
+
+# v10 final build source includes interaction-finishing CSS and responsive QA.
