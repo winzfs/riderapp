@@ -101,6 +101,8 @@ function duration(millis) {
 function abbreviatedMoney(n) { return n === null ? "미입력" : "₩"+formats.format(Math.round(n)); }
 export function recapMapDimensions(mode,ratio) {
   if(mode==="finance")return null;
+  // 4:5 poster: a true square, 800 x 800 GPS map and a compact receipt below.
+  if(mode==="all"&&ratio==="4:5")return {width:800,height:800};
   const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
   return {width:936,height:Math.round(mode==="route"?Math.min(height*53/100,900):Math.min(height*35/100,720))};
 }
@@ -219,6 +221,35 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
         cursor+=part+5;
       }
     }
+  } else if(mode==="all" && ratio==="4:5") {
+    // 1080×1350 poster: a 1:1 geographic map above a dense but legible receipt.
+    // No map stretching; the temporary MapLibre viewport is exactly 800×800.
+    const mapSize=recapMapDimensions(mode,ratio);
+    const mapLeft=Math.round((W-mapSize.width)/2),mapTop=177;
+    drawRoute(ctx,recap.segments,mapLeft,mapTop,mapSize.width,mapSize.height,p,showRoute,mapSnapshot);
+    const top=997;
+    rounded(ctx,72,top,936,224,28,p.panel);
+    // First row: gross amount emphasized, net amount clearly differentiated.
+    label(ctx,"하루 수익",105,top+33,22,p.muted,650);
+    label(ctx,income,105,top+83,45,p.ink,800);
+    label(ctx,"순수익",967,top+33,20,p.muted,650,"right");
+    label(ctx,showIncome?(recap.uncertain?"확인 필요":abbreviatedMoney(recap.net)):"비공개",
+      967,top+81,31,p.ink,760,"right");
+    line(ctx,105,top+102,975,top+102,p.grid,2);
+    // Second row: ride metrics. Missing deliveries are not replaced with zero.
+    const metrics=[
+      ["거리",recap.trips?km(recap.distanceKm):"기록 없음",105],
+      ["시간",duration(recap.durationMs),409],
+      ["배달",recap.deliveries===null?"미입력":recap.deliveries+"건",757],
+    ];
+    metrics.forEach(([name,value,x])=>{
+      label(ctx,name,x,top+130,20,p.muted,650);
+      label(ctx,value,x,top+165,28,p.ink,760);
+    });
+    line(ctx,105,top+179,975,top+179,p.grid,2);
+    label(ctx,"업무 비용",105,top+206,20,p.muted,650);
+    label(ctx,!showIncome?"비공개":recap.financeLoaded?won(recap.cost):"미입력",
+      975,top+206,25,p.ink,710,"right");
   } else {
     const mapTop=207;
     const mapHeight=recapMapDimensions(mode,ratio).height;
