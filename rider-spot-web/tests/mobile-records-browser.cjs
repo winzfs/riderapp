@@ -334,6 +334,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.deepEqual(cycleWrites.map(c=>c.item_key),["엔진오일"],
       "only the selected part interval was updated");
     await oilDetail.getByRole("button",{name:"닫기"}).click();
+    await oilDetail.waitFor({state:"hidden",timeout:10000});
     await page.locator(".bike-consumable").filter({hasText:"엔진오일"})
       .getByText("2,800 km 남음",{exact:true}).waitFor();
     await page.getByRole("button",{name:"앞 타이어 관리",exact:true}).click();
@@ -347,6 +348,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(cycles.find(c=>c.item_key==="앞 타이어")?.interval_days,90,"save only front tire interval");
     assert.equal(cycles.find(c=>c.item_key==="엔진오일")?.interval_km,4000,"other parts unaffected");
     await tireDetail.getByRole("button",{name:"닫기"}).click();
+    await tireDetail.waitFor({state:"hidden",timeout:10000});
     await shot("bike-updated");
     await page.getByRole("button",{name:"＋ 정비 기록",exact:true}).click();
     assert.equal(await dialog.locator('input[name="custom"]').count(),0,"no always-visible extra-part text field");
