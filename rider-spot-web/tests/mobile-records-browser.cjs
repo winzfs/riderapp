@@ -582,9 +582,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(extraExpenses.length,0,"a scheduled expense must not appear as a real expense");
     const recurringRow=page.locator(".fin-recurring-row").filter({hasText:"65,000원"}).first();
     await recurringRow.getByRole("button",{name:"지출 등록"}).click();
+    await recurringRow.getByText("실제 지출 등록 완료").waitFor({timeout:15000});
     assert.equal(extraExpenses.length,1,"only a confirmed planned expense is booked");
     assert.equal(extraExpenses[0].recurrence_id,recurringRules[0].id);
-    await recurringRow.getByText("실제 지출 등록 완료").waitFor();
     assert.equal(await recurringRow.getByRole("button",{name:"지출 등록"}).count(),0,
       "the same recurring expense cannot be recorded twice through UI");
     await shot("finance-recurring");
