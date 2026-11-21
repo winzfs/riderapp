@@ -2082,7 +2082,7 @@ export function mountApplication({
             className:"rs-map-v2-gps"+(gpsStatus==="ready"?" is-ready":gpsStatus==="error"?" is-error":""),
             title:gpsLabel,"aria-label":gpsLabel+" · 위치 다시 확인",
             onClick:onLocate},
-          rs33J(Icon,{name:"locate-fixed",size:18})))));
+          rs33J(Icon,{name:"locate-fixed",size:18}))));
   }
   // A single action dock, not independent absolute-floating report and SOS FABs.
   function MapActions() {
