@@ -51,3 +51,15 @@ The combined immutable asset `native-korean-labels.js` installs these layers on 
 Verified KV mapdata: `rs-asset-v1::/mapdata/admin.json` has 196 rows, `government.json` has 241, and `manifest.json` lists 39 tiles. Compilation and mocked layer-creation tests passed (nine restored layers, zoom thresholds, public GeoJSON, label dedup, and cleanup). Production deployed 100%. **Actual Android display / zoom testing was not performed** and must be checked on the device.
 
 Rollback only the label change by restoring the production Worker's `ASSETS` service binding to `rider-spot-map-v19-assets`, retaining `DESIGN`, `LEGACY`, and the recovery guard. For future official builds, incorporate the native MapLibre factory and Korean label installer into the build source, avoiding overwriting the hotfix with the older Leaflet code.
+
+## v22 Zoom / Locate control collision fix (2026-11-22)
+
+Production release: `9d7a2e6b4c10`; asset worker `rider-spot-map-v22-assets`; KV prefix `rs-map-v12-zoomrail::`. Earlier v21 tried placing MapLibre `NavigationControl` with CSS while the native React `.locate` button remained positioned against the **outer** `.map-wrap` container. The controls used different coordinate frames and could overlap (zoom-out button was obscured by locate).
+
+Changes in v22:
+- In the main map only, do not register `ML().NavigationControl`. The timeline's native MapLibre controls remain intact.
+- Add React-owned `.rs-map-v2-zoom-stack` alongside the existing `.locate` sibling in the outer `.map-wrap`. Buttons call the existing `window.__rsMap.zoomIn()` and `zoomOut()`, retain ARIA labels, and do not modify GPS or camera persistence.
+- CSS places both controls relative to **the same** `.map-wrap` origin, with a fixed 88px zoom stack and 12px vertical gap before locate. Hide the custom zoom stack while picking report coordinates or in very short viewports.
+- Earlier label layers and map data remain unchanged.
+
+Verified full bundled JS parses successfully, handlers and native-map branch are present, all versioned static assets are in KV, and production Worker deployment is 100%. **No actual Galaxy screenshot / touch test was available, so the on-device layout remains to be checked.** Future builds should merge the app JSX, native map control conditional and CSS into source; a normal build from the older repository commit can otherwise undo the fix.
