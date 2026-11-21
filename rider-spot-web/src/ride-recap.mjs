@@ -330,7 +330,7 @@ export function createRideRecap(React,client) {
         message&&h("p",{className:"rs-recap-state",role:"status"},message),
         h("footer",{className:"rs-recap-actions"},
           button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading}),
-          button(h,saving?"이미지 준비 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading})))));
+          button(h,saving?"이미지 준비 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading}))));
   }
   return RideRecap;
 }
