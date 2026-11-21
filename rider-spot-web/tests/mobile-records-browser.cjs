@@ -175,19 +175,19 @@ async function run(browser,width,height,{smokeOnly=false}={}){
         orange:root.getPropertyValue("--signal-orange").trim(),
         ink:root.getPropertyValue("--signal-ink").trim()};
     });
-    assert.deepEqual(palette,{teal:"#25C8BA",orange:"#FF8B43",ink:"#173D3C"},
-      "every tab must use the same premium teal, orange and ink tokens");
+    assert.deepEqual(palette,{teal:"#25C8BA",orange:"#FF8B43",ink:"#22334A"},
+      "legacy signal tokens remain intact while the new v11 surfaces use urban-blue tokens");
     if(smokeOnly){
       await nav("수익");
       await page.locator(".rs8-console-value strong").waitFor();
       const editorial=await page.evaluate(()=>({
         console:document.querySelector(".rs8-income-console")?.getBoundingClientRect().height,
-        integratedChart:document.querySelector(".rs8-income-console .rs8-trend-integrated")?.getBoundingClientRect().height,
+        integratedChart:document.querySelector(".rs11-income-chart")?.getBoundingClientRect().height,
         goal:document.querySelector(".rs8-goal-progress")?.getBoundingClientRect().height,
         platform:document.querySelector(".rs8-platform-ledger")?.getBoundingClientRect().height
       }));
       assert.ok(editorial.console>150&&editorial.integratedChart>60,
-        "v8 chart and large income number must occupy one continuous console: "+JSON.stringify(editorial));
+        "v11 must show separate balance and chart modules: "+JSON.stringify(editorial));
       assert.ok(editorial.goal>40&&editorial.platform>30,
         "monthly goal and platform flow must remain visible after v8 restructure: "+JSON.stringify(editorial));
       await shot("finance-responsive");
@@ -198,7 +198,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       }));
       assert.ok(measures.scroll<=measures.vw+1,"no page width overflow "+JSON.stringify(measures));
       assert.ok(measures.buttons.every(w=>w>=35),"finance subnavigation fits "+JSON.stringify(measures));
-      await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+      await page.getByRole("button",{name:"수익 기록",exact:true}).click();
       const dialog=page.getByRole("dialog",{name:"수익 입력"});
       await dialog.waitFor();
       const bounds=await dialog.locator(".fin-sheet footer button").boundingBox();
@@ -256,26 +256,17 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(await cards.first().locator(".bike-tile-status").count(),1,"each card has exactly one status label");
     assert.equal(await cards.count(),6,"six standard parts form the first 3-by-2 grid");
     const layout=await grid.evaluate(node=>{
-      const el=[...node.querySelectorAll(".bike-consumable")].map(x=>x.getBoundingClientRect());
-      return {cols:getComputedStyle(node).gridTemplateColumns.split(" ").length,
-        first:el.slice(0,3).map(x=>Math.round(x.y)),second:el.slice(3,6).map(x=>Math.round(x.y)),
-        width:el.map(x=>x.width),outer:node.getBoundingClientRect().width};
+      const rect=node.getBoundingClientRect();
+      const children=[...node.querySelectorAll(".bike-consumable")].map(x=>x.getBoundingClientRect());
+      return {display:getComputedStyle(node).display,
+        rows:children.map(x=>Math.round(x.y)),
+        widths:children.map(x=>x.width),outer:rect.width};
     });
-    const isEditorialService=await page.locator(".rs6-service-board").count()>0;
-    assert.equal(layout.cols,isEditorialService?2:3,
-      "service tiles follow the actual v6 2-column or earlier 3-column screen structure");
-    if(isEditorialService){
-      const rows=await cards.evaluateAll(items=>items.map(x=>Math.round(x.getBoundingClientRect().y)));
-      assert.ok(rows[0]===rows[1]&&rows[2]===rows[3]&&rows[4]===rows[5],
-        "two horizontal service instruments per row");
-      assert.ok(rows[2]>rows[0]&&rows[4]>rows[2],"three service rows in vertical order");
-      assert.equal(await page.locator(".rs6-garage-stage .bike-actions").count(),1,
-        "maintenance/fuel entry is integrated with the vehicle stage");
-    }else{
-      assert.ok(layout.first.every(y=>y===layout.first[0]),"first three cards share first row");
-      assert.ok(layout.second.every(y=>y===layout.second[0])&&layout.second[0]>layout.first[0],"next three cards share second row");
-    }
-    assert.ok(layout.width.every(w=>w>72&&w<layout.outer/2),"cards fit without horizontal overflow");
+    assert.equal(layout.display,"flex","v11 maintenance is a vertical list, not a 3×2 grid");
+    assert.ok(layout.rows.every((y,i)=>!i||y>layout.rows[i-1]),"maintenance rows are stacked in one column");
+    assert.ok(layout.widths.every(w=>w>layout.outer-6),"each maintenance row uses the full content width");
+    assert.equal(await page.locator(".rs6-garage-stage .bike-actions").count(),1,
+      "maintenance and fuel entries remain accessible in the vehicle stage");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
     assert.ok(await page.locator(".bike-tile-icon .bike-part-svg[data-graphic-version='neo-flat-original-v197']").count()>=6,
       "the FIRST original Neo-Flat part graphics are installed");
@@ -543,7 +534,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       .waitFor({timeout:12000});
     assert.ok(await page.locator(".rs8-platform-ledger").innerText().then(v=>v.includes("120,000원")),
       "month-wide platform totals must use saved income even while today is zero");
-    await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+    await page.getByRole("button",{name:"수익 기록",exact:true}).click();
     const financeDialog=page.getByRole("dialog",{name:"수익 입력"});
     await financeDialog.waitFor();
     assert.equal(await financeDialog.locator('.fin-platform-choice input[type="radio"]').count(),3);
@@ -557,7 +548,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await discard.waitFor();
     await discard.getByRole("button",{name:"버리고 닫기"}).click();
     await financeDialog.waitFor({state:"hidden"});
-    await page.getByRole("button",{name:"수익 입력",exact:true}).click();
+    await page.getByRole("button",{name:"수익 기록",exact:true}).click();
     await financeDialog.waitFor();
     assert.equal(await financeDialog.locator('input[name="gross_won"]').inputValue(),"85,000",
       "finance entry recovers unfinished draft");
