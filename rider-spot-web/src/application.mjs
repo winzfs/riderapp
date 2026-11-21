@@ -2051,7 +2051,7 @@ export function mountApplication({
               "aria-label":busy?"위치 공유 확인 중":sharing?"위치 공유 중, 끄기":"위치 공유 꺼짐, 켜기",
               onClick:toggle},
               rs33J("span",{className:"rs-status-dot","aria-hidden":true}),
-              busy?"확인 중":sharing?"공유 중":"공유 꺼짐"))))));
+              busy?"확인 중":sharing?"공유 중":"공유 꺼짐")))));
   }
   function rs33OpenMap(record, kind = "places") {
     if (kind !== "roads" && record?.category !== "화장실") return;
