@@ -109,3 +109,4 @@ jobs:
           if-no-files-found: warn
 
 # rerun: weather HUD remains explicitly React-owned after map drawer redesign
+# rerun v8 after fixing MapBar nesting and preserving weather slot
