@@ -85,9 +85,9 @@ jobs:
               with urllib.request.urlopen(urllib.request.Request(origin+'/',headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36','Accept':'text/html,*/*'}),timeout=25) as r:
                 html=r.read().decode()
                 assert r.status==200
-              assert '9263bc477e45/app.mjs' in html,'Preview not on new recap release'
+              assert '228abe877a8d/app.mjs' in html,'Preview not on new recap release'
               assert 'rs-recovery-guard-v217' in html,'Native recovery guard missing'
-              for path in ['/sw.js','/assets/rider-spot-9263bc477e45/app.mjs','/assets/rider-spot-9263bc477e45/daily-timeline.css','/assets/rider-spot-d7fd89a7c39a/app.mjs','/assets/rider-spot-eeb5884533e7/app.mjs','/assets/rider-spot-e5be5b619da5/app.mjs','/assets/rider-spot-f0b85792704b/app.mjs','/assets/rider-spot-afe0e2f75761/app.mjs','/assets/rider-spot-7b68a77eb20f/app.mjs','/assets/rider-spot-11cf61e8a1ba/app.mjs','/assets/rider-spot-78cfb498ffed/app.mjs']:
+              for path in ['/sw.js','/assets/rider-spot-228abe877a8d/app.mjs','/assets/rider-spot-228abe877a8d/daily-timeline.css','/assets/rider-spot-9263bc477e45/app.mjs','/assets/rider-spot-d7fd89a7c39a/app.mjs','/assets/rider-spot-eeb5884533e7/app.mjs','/assets/rider-spot-e5be5b619da5/app.mjs','/assets/rider-spot-f0b85792704b/app.mjs','/assets/rider-spot-afe0e2f75761/app.mjs','/assets/rider-spot-7b68a77eb20f/app.mjs','/assets/rider-spot-11cf61e8a1ba/app.mjs','/assets/rider-spot-78cfb498ffed/app.mjs']:
                 with urllib.request.urlopen(urllib.request.Request(origin+path,headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36','Accept':'*/*'}),timeout=40) as r:
                   assert r.status==200,(path,r.status)
                   assert len(r.read())>300,path
