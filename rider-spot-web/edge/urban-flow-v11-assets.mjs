@@ -3,8 +3,8 @@
  * No GPS or trip mutation. Preserve previous asset generations so an Android
  * WebView mid-session cannot lose its already fetched hashed assets.
  */
-export const RELEASE_HASH="d42cbe2bbf4d";
-export const PINNED_COMMIT="c6f5355ce76ade3796df5d78b42322928a53da4c";
+export const RELEASE_HASH="78cfb498ffed";
+export const PINNED_COMMIT="1c4aca3dd488f8b5a97c6329f99c66e417ac7e3f";
 const ROOT="https://raw.githubusercontent.com/winzfs/riderapp/";
 const ROOT_DIR="/rider-spot-web/prebuilt/";
 const RAW=ROOT+PINNED_COMMIT+ROOT_DIR;
@@ -16,6 +16,7 @@ const STATIC=["app.mjs","route-worker.mjs","native-gps.js","map-reports.js",
  "weather-bar.js","weather-bar.css","premium-shell.css","renewal-layout.css"];
 const ASSETS=new Set([...STATIC,"curated-v9.css"]);
 const PREVIOUS=[
+ {hash:"d42cbe2bbf4d",commit:"c6f5355ce76ade3796df5d78b42322928a53da4c",key:"rs-asset-v11::",css:"curated-v9.css"},
  {hash:"66179994a862",commit:"5396983c08640b47c82593faeb52eadc1d4b270c",key:"rs-asset-v10::",css:"curated-v9.css"},
  {hash:"83bc9b4b6cf8",commit:"5ba17964ff068961badc3b738372c85547e55560",key:"rs-asset-v10::",css:"curated-v9.css"},
  {hash:"a42623dd9d1b",commit:"e643eadf39e0c3c8d6aae88a9d29816516140661",key:"rs-asset-v9::",css:"curated-v9.css"},
