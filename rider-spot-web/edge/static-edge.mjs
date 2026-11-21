@@ -12,7 +12,7 @@ const GUARD = /<script\s+id=["']rs-recovery-guard-v217["'][^>]*>[\s\S]*?<\/scrip
 // That callback must take priority over the public SPA shell.
 const ANDROID_OAUTH_COOKIE = /(?:^|;\s*)rs_android_oauth=[0-9a-f]{32}(?=;|$)/i;
 const VISUAL_PATH = "/rider-spot-visual-v2-20261121.css";
-const VISUAL_LINK = '<link rel="stylesheet" href="'+VISUAL_PATH+'?rev=20261121-v5">';
+const VISUAL_LINK = '<link rel="stylesheet" href="'+VISUAL_PATH+'?rev=20261121-v6">';
 
 export function backendRequest(request) {
   const source = new URL(request.url);
