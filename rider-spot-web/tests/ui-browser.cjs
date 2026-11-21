@@ -75,7 +75,7 @@ async function check(width,native){
  assert.match(await recap.innerText(),/\+40 XP/,'same-day rides award XP once');
  assert.equal(await recap.locator('.rs-game-recap-award').count(),1,'first ride achievement unlocks only once');
  assert.equal(await recap.locator('.rs-game-copy').count(),0,'recap excludes redundant sharing actions');
- assert.ok(await recap.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.rs56-day-overview')) & Node.DOCUMENT_POSITION_FOLLOWING)), 'recap is above map');
+ assert.ok(await recap.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.rs56-day-overview')) & Node.DOCUMENT_POSITION_PRECEDING)), 'route-first map appears before recap');
  assert.equal(await p.locator('.rs56-day-course>.rs33-course-controls').count(),0,'route controls are in the lower toolbar');
  assert.equal(await p.locator('.rs56-day-course .rs59-course-tools').count(),1,'one consolidated lower toolbar');
  assert.equal(await p.locator('.rs56-day-course .rs59-course-tools button').count(),3,'three compact controls');
