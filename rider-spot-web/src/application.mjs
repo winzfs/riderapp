@@ -2351,7 +2351,7 @@ export function mountApplication({
   const Zo = createRiderMap(S, Jo.default, Xo);
   const { Bike, Income } = createRecords(S, q);
   const Finance = createFinance(S, q);
-  const ss = createTimeline(S, Zo, Income);
+  const ss = createTimeline(S, Zo, Income, q);
   const cs = createUseRide({
     React: S,
     client: q,
