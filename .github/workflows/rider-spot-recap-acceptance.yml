@@ -54,7 +54,7 @@ jobs:
           const js=fs.readFileSync(root+'app.mjs','utf8');
           const css=fs.readFileSync(root+'daily-timeline.css','utf8');
           const source=fs.readFileSync('src/ride-recap.mjs','utf8');
-          for(const word of ['타임라인','라이더스팟','주행 경로']) {
+          for(const word of ['타임라인','라이더스팟','운행거리','출발·종료']) {
             assert.ok(source.includes(word),'Korean poster text missing: '+word);
           }
           for(const key of ['rs-recap-timeline-action','rs-recap-sheet','rs-recap-launch']) {
