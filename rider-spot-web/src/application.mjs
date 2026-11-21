@@ -2045,7 +2045,7 @@ export function mountApplication({
           onClick: toggle,
         },
           rs33J("span", { className: "rs-status-dot", "aria-hidden": true }),
-          busy ? "확인 중" : sharing ? "공유 중" : "공유 꺼짐",
+          busy ? "확인" : sharing ? "공유 중" : "공유",
         ),
         ...rs33LayerItems.map(([id, label]) =>
           rs33J(

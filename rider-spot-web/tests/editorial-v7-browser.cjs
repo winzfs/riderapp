@@ -62,7 +62,7 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
         const order=await page.evaluate(()=>{
           const recap=document.querySelector(".rs33-timeline .rs-game-recap");
           const map=document.querySelector(".rs33-timeline .rs-renewal-route");
-          return {recap:recap?.compareDocumentPosition(map),label:document.querySelector(".rs33-timeline .rs7-map-label")?.innerText};
+          return {recap:recap&&map?recap.compareDocumentPosition(map):null,label:document.querySelector(".rs33-timeline .rs7-map-label")?.innerText};
         });
         if(order.recap!=null)assert.ok(order.recap&4,"Daily recap must precede the route map");
         assert.ok(!document.querySelector(".rs6-timeline-date-title"),"decorative English timeline counter removed");
