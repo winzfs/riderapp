@@ -21,12 +21,9 @@ export function applyRecapEditorialStyle(map) {
       else if(/water|river/.test(name))paint("line-color","#C8DCE1");
     }
     if(layer.type==="symbol"){
-      if(/road|street|poi|place|highway|transportation|housenumber/.test(name)){
-        try{map.setLayoutProperty(layer.id,"visibility","none");changed++;}catch{}
-      }else{
-        paint("text-color","#78858A");
-        paint("text-halo-color","#F8FAF8");
-      }
+      // The upstream basemap mixes romanized streets, waterways and places.
+      // Official Korean administrative labels are drawn separately by Canvas.
+      try{map.setLayoutProperty(layer.id,"visibility","none");changed++;}catch{}
     }
   }
   return changed;
