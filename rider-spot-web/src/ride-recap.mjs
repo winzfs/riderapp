@@ -1,5 +1,6 @@
 import { buildDailyTimeline } from "./daily-timeline.mjs";
 import { financeTotals } from "./finance-model.mjs";
+import { loadRideRecapBasemap } from "./ride-recap-map.mjs";
 
 const formats = new Intl.NumberFormat("ko-KR");
 const won = value => Number.isFinite(value) ? formats.format(Math.round(value)) + "원" : "미입력";
@@ -98,47 +99,70 @@ function duration(millis) {
   return (hours?hours+"시간 ":"")+rest+"분";
 }
 function abbreviatedMoney(n) { return n === null ? "미입력" : "₩"+formats.format(Math.round(n)); }
-function drawRoute(ctx,segments,x,y,w,h,p,showRoute) {
+export function recapMapDimensions(mode,ratio) {
+  if(mode==="finance")return null;
+  const height=ratio==="9:16"?1920:ratio==="1:1"?1080:1350;
+  return {width:936,height:Math.round(mode==="route"?Math.min(height*.53,900):Math.min(height*.35,720))};
+}
+function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
   rounded(ctx,x,y,w,h,30,p.tint);
   ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,30);ctx.clip();
-  // Discreet editorial grid: these are not claimed to be streets or basemap tiles.
-  for(let i=1;i<6;i++) {
-    line(ctx,x+24,y+i*h/6,x+w-24,y+i*h/6,p.grid,2);
-    line(ctx,x+i*w/6,y+24,x+i*w/6,y+h-24,p.grid,2);
+  const actualMap=showRoute && mapSnapshot?.hasBasemap && mapSnapshot?.image;
+  if(actualMap) {
+    ctx.drawImage(mapSnapshot.image,x,y,w,h);
+    for(const place of mapSnapshot.labels||[]){
+      const px=x+place.x,py=y+place.y;
+      ctx.font="600 23px "+fontFamily;
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.lineWidth=5;ctx.lineJoin="round";
+      ctx.strokeStyle="rgba(255,255,255,.92)";
+      ctx.strokeText(place.name,px,py);
+      ctx.fillStyle="#596D75";ctx.fillText(place.name,px,py);
+    }
   }
-  label(ctx,"RIDE TRACE / GPS",x+36,y+52,21,p.muted,700);
   const points=showRoute?segments.flat():[];
   if(!points.length) {
     label(ctx,showRoute?"기록된 GPS 경로가 없어요":"경로 비공개",x+w/2,y+h/2+8,31,p.muted,600,"center");
-    ctx.restore();return;
+  } else {
+    const positions=actualMap?mapSnapshot.positions:null;
+    let project;
+    if(!positions) {
+      const midLat=points.reduce((sum,pt)=>sum+pt.lat,0)/points.length;
+      const cos=Math.max(.1,Math.cos(midLat*Math.PI/180));
+      let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+      for(const pt of points){
+        const px=pt.lng*cos,py=pt.lat;
+        if(px<minX)minX=px;if(px>maxX)maxX=px;
+        if(py<minY)minY=py;if(py>maxY)maxY=py;
+      }
+      const rangeX=Math.max(maxX-minX,.00015),rangeY=Math.max(maxY-minY,.00015);
+      const scale=Math.min((w-150)/rangeX,(h-150)/rangeY);
+      project=pt=>({
+        x:w/2+(pt.lng*cos-(minX+maxX)/2)*scale,
+        y:h/2-(pt.lat-(minY+maxY)/2)*scale
+      });
+    }
+    const paths=positions||segments.map(segment=>segment.map(project));
+    for(const path of paths){
+      if(!path.length)continue;
+      const stride=Math.max(1,Math.ceil(path.length/1200));
+      const sampled=path.filter((_,index)=>index%stride===0);
+      if(sampled[sampled.length-1]!==path[path.length-1])sampled.push(path[path.length-1]);
+      ctx.beginPath();
+      sampled.forEach((pt,i)=>i===0?ctx.moveTo(x+pt.x,y+pt.y):ctx.lineTo(x+pt.x,y+pt.y));
+      ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=p.accent;ctx.stroke();
+    }
+    const visible=paths.flat(),first=visible[0],last=visible[visible.length-1];
+    for(const [pt,color] of [[first,p.accent],[last,p.ink]]){
+      ctx.beginPath();ctx.arc(x+pt.x,y+pt.y,11,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
+      ctx.beginPath();ctx.arc(x+pt.x,y+pt.y,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    }
   }
-  const midLat=points.reduce((s,a)=>s+a.lat,0)/points.length;
-  const cos=Math.max(.1,Math.cos(midLat*Math.PI/180));
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  for(const pt of points) {
-    const px=pt.lng*cos,py=pt.lat;
-    if(px<minX)minX=px;if(px>maxX)maxX=px;
-    if(py<minY)minY=py;if(py>maxY)maxY=py;
-  }
-  const rangeX=Math.max(maxX-minX,0.00015),rangeY=Math.max(maxY-minY,0.00015);
-  const scale=Math.min((w-150)/rangeX,(h-150)/rangeY);
-  const toXY=pt=>[
-    x+w/2+(pt.lng*cos-(minX+maxX)/2)*scale,
-    y+h/2-(pt.lat-(minY+maxY)/2)*scale
-  ];
-  for(const segment of segments) {
-    if(!segment.length)continue;
-    const stride=Math.max(1,Math.ceil(segment.length/850));
-    const sampled=segment.filter((_,index)=>index%stride===0);
-    if(sampled[sampled.length-1]!==segment[segment.length-1])sampled.push(segment[segment.length-1]);
-    ctx.beginPath();
-    sampled.forEach((pt,i)=>{const [px,py]=toXY(pt);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);});
-    ctx.lineWidth=9;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle=p.accent;ctx.stroke();
-  }
-  const first=toXY(points[0]),last=toXY(points[points.length-1]);
-  for(const [pt,color] of [[first,p.accent],[last,p.ink]]) {
-    ctx.beginPath();ctx.arc(pt[0],pt[1],11,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
-    ctx.beginPath();ctx.arc(pt[0],pt[1],7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+  rounded(ctx,x+22,y+20,157,46,12,actualMap?"rgba(255,255,255,.89)":p.panel);
+  label(ctx,"주행 경로",x+39,y+51,24,p.ink,750);
+  if(actualMap){
+    rounded(ctx,x+14,y+h-42,w-28,28,8,"rgba(255,255,255,.80)");
+    label(ctx,"지도 © OpenStreetMap · OpenMapTiles · OpenFreeMap · V-World",x+w-27,y+h-23,17,"#596B73",500,"right");
   }
   ctx.restore();
 }
@@ -148,13 +172,12 @@ function stat(ctx,title,value,x,y,w,p) {
 }
 function footer(ctx,p,W,H) {
   line(ctx,72,H-112,W-72,H-112,p.grid,2);
-  label(ctx,"RIDER SPOT",72,H-61,23,p.ink,750);
-  label(ctx,"YOUR DAILY RIDE  /  RIDESPOT",W-72,H-61,20,p.muted,500,"right");
+  label(ctx,"라이더스팟",72,H-61,23,p.ink,750);
 }
 
 // Pure Canvas 2D export, not a screenshot of the live map. No external images,
 // remote font requests or cross-origin tiles: PNG export cannot be tainted.
-export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="light",showRoute=true,showIncome=true}={}) {
+export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="light",showRoute=true,showIncome=true,mapSnapshot=null}={}) {
   const H=ratio==="9:16"?1920:ratio==="1:1"?1080:1350,W=1080;
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d");
@@ -162,16 +185,15 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
   const p=palettes[theme]||palettes.light;
   rounded(ctx,0,0,W,H,0,p.bg);
   rounded(ctx,72,68,13,13,3,p.accent);
-  label(ctx,"RIDER SPOT",98,83,23,p.ink,800);
-  label(ctx,recap.day.replace(/-/g,".")+"  ·  DAILY RECORD",W-72,83,21,p.muted,600,"right");
-  const title=mode==="finance"?"DAILY SETTLEMENT":mode==="route"?"RIDE IN MOTION":"TODAY IN MOTION";
-  label(ctx,title,72,159,54,p.ink,800);
+  label(ctx,"라이더스팟",98,83,24,p.ink,800);
+  const title=recap.day.replace(/-/g,".")+(mode==="finance"?" 결산":" 타임라인");
+  label(ctx,title,72,158,51,p.ink,800);
   const income=showIncome?abbreviatedMoney(recap.gross):"비공개";
   if(mode==="finance") {
-    label(ctx,"TODAY'S EARNINGS",72,246,27,p.muted,700);
+    label(ctx,"하루 수익",72,246,27,p.muted,700);
     label(ctx,income,72,346,80,p.ink,800);
     rounded(ctx,72,420,936,H-594,32,p.panel);
-    label(ctx,"DAILY BREAKDOWN",116,482,25,p.muted,700);
+    label(ctx,"상세 결산",116,482,25,p.muted,700);
     const rows=[
       ["총수익",income],
       ["업무 비용",showIncome&&recap.financeLoaded?won(recap.cost):"비공개"],
@@ -188,7 +210,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
     });
     const breakdownBottom=550+rows.length*spacing;
     if(showIncome && recap.platforms.length && breakdownBottom+110<H-135) {
-      label(ctx,"PLATFORMS",116,breakdownBottom+42,22,p.muted,700);
+      label(ctx,"플랫폼별 수익",116,breakdownBottom+42,22,p.muted,700);
       let cursor=116;
       const sum=recap.platforms.reduce((a,part)=>a+part[1],0);
       for(const [i,[name,value]] of recap.platforms.slice(0,3).entries()) {
@@ -200,12 +222,12 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
   } else {
     const mapTop=207;
     const mapHeight=mode==="route"?Math.min(H*.53,900):Math.min(H*.35,720);
-    drawRoute(ctx,recap.segments,72,mapTop,936,mapHeight,p,showRoute);
+    drawRoute(ctx,recap.segments,72,mapTop,936,mapHeight,p,showRoute,mapSnapshot);
     const panelTop=mapTop+mapHeight+28;
     const panelHeight=H-panelTop-147;
     rounded(ctx,72,panelTop,936,panelHeight,30,p.panel);
     if(mode==="route") {
-      label(ctx,"THE JOURNEY",112,panelTop+57,24,p.muted,700);
+      label(ctx,"주행 기록",112,panelTop+57,24,p.muted,700);
       stat(ctx,"운행거리",recap.trips?km(recap.distanceKm):"기록 없음",112,panelTop+120,0,p);
       stat(ctx,"기록시간",duration(recap.durationMs),588,panelTop+120,0,p);
       if(panelHeight>260) {
@@ -214,7 +236,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
         label(ctx,recap.trips+"회"+(recap.isLive?" · 운행 중":""),968,panelTop+277,28,p.ink,750,"right");
       }
     } else {
-      label(ctx,"DAILY EARNINGS",112,panelTop+58,23,p.muted,700);
+      label(ctx,"하루 수익",112,panelTop+58,23,p.muted,700);
       label(ctx,income,112,panelTop+146,64,p.ink,800);
       line(ctx,112,panelTop+184,968,panelTop+184,p.grid,2);
       const metricY=panelTop+233;
@@ -291,7 +313,7 @@ export function createRideRecap(React,client) {
             setMessage("이 환경에서는 직접 공유가 지원되지 않아요. 이미지 저장을 이용해 주세요.");
             return;
           }
-          await navigator.share({files:[file],title:"RIDER SPOT · "+day});
+          await navigator.share({files:[file],title:"라이더스팟 · "+day});
           return;
         }
         if(typeof window.__rsNativeSaveImage==="function") {
@@ -331,7 +353,7 @@ export function createRideRecap(React,client) {
     return h("div",{className:"rs-recap-shade",role:"presentation"},
       h("section",{className:"rs-recap-sheet",role:"dialog","aria-modal":true,"aria-label":"라이딩 이미지 만들기"},
         h("header",{className:"rs-recap-head"},
-          h("div",null,h("small",null,"RIDER SPOT / EXPORT"),h("h2",null,"라이딩 이미지 만들기")),
+          h("div",null,h("small",null,"라이더스팟"),h("h2",null,"라이딩 이미지 만들기")),
           button(h,"×",onClose,"rs-recap-close",{"aria-label":"닫기"})),
         h("div",{className:"rs-recap-preview"},
           h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
