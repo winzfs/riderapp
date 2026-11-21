@@ -195,7 +195,9 @@ function mount(map){
       const width=map.getContainer().clientWidth,height=map.getContainer().clientHeight;
       const eligible=[];
       for(const group of grouped.values()){
-        if(group.names.size<zoomMin)continue;
+        // One registered business is already a native Korean map text label.
+        // Only multiple distinct names at the same coordinate need a tappable group chip.
+        if(group.names.size<Math.max(2,zoomMin))continue;
         const pt=map.project([group.lon,group.lat]);
         if(!pt||!Number.isFinite(pt.x)||!Number.isFinite(pt.y)||pt.x<95||pt.x>width-96||pt.y<166||pt.y>height-124)continue;
         eligible.push({...group,px:pt.x,py:pt.y});
