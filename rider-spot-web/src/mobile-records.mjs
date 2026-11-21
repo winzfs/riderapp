@@ -725,7 +725,6 @@ export function createRecords(R, client) {
             ()=>edit({}),{className:"record-primary",disabled:!!user&&!data,"aria-label":"＋ 정비 기록"}),
           btn(h(R.Fragment,null,h(Icon,{name:"fuel",size:19}),"주유 기록"),
             ()=>{window.__rsFinanceAction="fuel";window.__rsGoToTab?.("earnings");}))),
-      ),
       !!urgentParts.length&&h("aside",{className:"rs8-service-alerts",role:"status"},
         h("div",{className:"rs8-alerts-head"},
           h("strong",null,"점검 필요"),
