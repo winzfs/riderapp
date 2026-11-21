@@ -294,12 +294,28 @@ export function createRideRecap(React,client) {
           await navigator.share({files:[file],title:"RIDER SPOT · "+day});
           return;
         }
+        if(typeof window.__rsNativeSaveImage==="function") {
+          const base64=await new Promise((resolve,reject)=>{
+            const reader=new FileReader();
+            reader.onerror=()=>reject(Error("PNG 파일을 읽을 수 없어요."));
+            reader.onload=()=>resolve(String(reader.result).split(",")[1]||"");
+            reader.readAsDataURL(blob);
+          });
+          const answer=await window.__rsNativeSaveImage(base64,fileName);
+          if(answer?.saved!==true)throw Error("갤러리 저장을 확인하지 못했어요.");
+          setMessage("갤러리의 사진 > RiderSpot 앨범에 저장했어요.");
+          return;
+        }
+        if(window.__rsNativeInstalled) {
+          setMessage("이 APK에서는 이미지 저장을 지원하지 않아요. APK 업데이트가 필요합니다. 임시로 모바일 Chrome에서 라이더스팟을 열어 저장할 수 있어요.");
+          return;
+        }
         const url=URL.createObjectURL(blob);
         const a=document.createElement("a");
         a.href=url;a.download=fileName;a.style.display="none";
         document.body.appendChild(a);a.click();a.remove();
         window.setTimeout(()=>URL.revokeObjectURL(url),60000);
-        setMessage("저장을 요청했어요. 다운로드 또는 갤러리에서 확인해 주세요.");
+        setMessage("PNG 다운로드를 요청했어요. 브라우저의 다운로드 폴더를 확인해 주세요.");
       }catch(error){
         if(error?.name!=="AbortError")setMessage(error?.message||"이미지를 저장할 수 없어요.");
       }finally{setSaving(false);}
