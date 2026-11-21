@@ -100,6 +100,6 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   assert.ok(177+800<995 && 995+176<1350,"No map or bottom edge overlap");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
   assert.ok(textValues.includes("출발") && textValues.includes("종료"),"Both route endpoints shown");
-  assert.ok(!textValues.includes("미입력"),"No missing delivery placeholder");
+  assert.ok(!textValues.includes("배달")&&!textValues.includes("배달 건수"),"Do not render missing delivery metrics");
   assert.equal(textValues.filter(x=>x==="라이더스팟").length,5,"Only one top brand per rendered image, no footer");
 });
