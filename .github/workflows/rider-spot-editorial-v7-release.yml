@@ -109,3 +109,4 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 # final design gate: share control compact at 393px and empty-day timeline test guarded
+# final cache safety: pin shell and SW KV keys to release hash; map grid shows all tools

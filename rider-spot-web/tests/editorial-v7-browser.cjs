@@ -56,6 +56,13 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
         assert.equal(await page.locator(".rs7-map-controls .rs-weather-slot").count(),1,"weather is in the concise first row");
         assert.equal(await page.locator(".rs7-map-controls .rs7-share-chip").count(),1,"sharing remains accessible");
         assert.equal(await page.locator(".rs7-map-controls .rs33-map-filters button[aria-pressed]").count(),3,"all map layer switches remain");
+        const filterBounds=await page.locator(".rs7-map-controls .rs33-map-filters").evaluate(el=>({
+          width:el.clientWidth,buttons:[...el.querySelectorAll("button")].map(x=>x.getBoundingClientRect().toJSON()),
+          rect:el.getBoundingClientRect().toJSON()
+        }));
+        assert.equal(filterBounds.buttons.length,4,"share plus 3 map filters");
+        assert.ok(filterBounds.buttons.every(x=>x.right<=filterBounds.rect.right+1&&x.left>=filterBounds.rect.left-1),
+          "all map controls must fit without clipping at "+width);
       }
       if(i===1){
         await page.locator(".rs6-timeline-controller").waitFor({timeout:10000});

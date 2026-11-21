@@ -22,8 +22,8 @@ const PREVIOUS=[
  {hash:"8eb44596629f",commit:"b715913001e0b55f2d29cbc17acdb72d35a025aa",key:"rs-asset-v4::",css:null}
 ];
 function lookup(path){
- if(path==="/"||path==="/index.html")return {key:CURRENT_KEY+"/index.html",file:"index.html"};
- if(path==="/sw.js")return {key:CURRENT_KEY+"/sw.js",file:"sw.js"};
+ if(path==="/"||path==="/index.html")return {key:CURRENT_KEY+"shell/"+RELEASE_HASH+"/index.html",file:"index.html"};
+ if(path==="/sw.js")return {key:CURRENT_KEY+"shell/"+RELEASE_HASH+"/sw.js",file:"sw.js"};
  if(path.startsWith(PREFIX)){
   const file=path.slice(PREFIX.length);
   return ASSETS.has(file)?{key:CURRENT_KEY+path,file,immutable:true}:null;
