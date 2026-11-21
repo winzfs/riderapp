@@ -114,9 +114,12 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute) {
   }
   const midLat=points.reduce((s,a)=>s+a.lat,0)/points.length;
   const cos=Math.max(.1,Math.cos(midLat*Math.PI/180));
-  const transformed=points.map(pt=>({x:pt.lng*cos,y:pt.lat}));
-  const minX=Math.min(...transformed.map(pt=>pt.x)),maxX=Math.max(...transformed.map(pt=>pt.x));
-  const minY=Math.min(...transformed.map(pt=>pt.y)),maxY=Math.max(...transformed.map(pt=>pt.y));
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const pt of points) {
+    const px=pt.lng*cos,py=pt.lat;
+    if(px<minX)minX=px;if(px>maxX)maxX=px;
+    if(py<minY)minY=py;if(py>maxY)maxY=py;
+  }
   const rangeX=Math.max(maxX-minX,0.00015),rangeY=Math.max(maxY-minY,0.00015);
   const scale=Math.min((w-150)/rangeX,(h-150)/rangeY);
   const toXY=pt=>[
@@ -196,7 +199,7 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
     }
   } else {
     const mapTop=207;
-    const mapHeight=mode==="route"?Math.min(H*.53,900):Math.min(H*.39,720);
+    const mapHeight=mode==="route"?Math.min(H*.53,900):Math.min(H*.35,720);
     drawRoute(ctx,recap.segments,72,mapTop,936,mapHeight,p,showRoute);
     const panelTop=mapTop+mapHeight+28;
     const panelHeight=H-panelTop-147;
