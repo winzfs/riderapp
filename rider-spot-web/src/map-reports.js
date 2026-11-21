@@ -359,6 +359,7 @@ import { isVisibleFacility, VISIBLE_FACILITY } from './facility-visibility.mjs';
     const legend = document.getElementById("rs-report-legend");
     if (legend) {
       const share = Boolean(window.__rsRideApi?.sharing);
+      legend.classList.toggle("rs-map-share-notice", filter === "riders" && !share);
       legend.textContent =
         filter === "riders"
           ? share

@@ -1,6 +1,7 @@
 import { openMapSheet } from "./ui-overlays.mjs";
 import { completedRideRows, dailyRideSnapshot, rideEfficiency } from "./ride-insights.mjs";
 import { iconMarkup } from "./ui.mjs";
+import "./map-ui-polish.mjs";
 import { createWorkDrafts } from "./work-drafts.mjs";
 import { upcomingMaintenance } from "./maintenance-due.mjs";
 (function () {
@@ -1129,8 +1130,8 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       b.type = "button";
       b.id = "rs-sos-fab";
       b.innerHTML =
-        '<span class="rs-sos-button-mark" aria-hidden="true">SOS</span><span class="rs-sos-button-title">도움 요청</span>';
-      b.setAttribute("aria-label", "라이더에게 SOS 도움 요청하기");
+        '<span class="rs-sos-button-mark" aria-hidden="true">' + iconMarkup("lifebuoy",19) + '</span><span class="rs-sos-button-title">도움 요청</span>';
+      b.setAttribute("aria-label", "주변 라이더에게 도움 요청하기");
       b.onclick = () => open("sos");
       map.append(b);
     }

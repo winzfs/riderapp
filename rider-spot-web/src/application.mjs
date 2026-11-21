@@ -2034,6 +2034,19 @@ export function mountApplication({
         rs33J("h1", { className: "sr-only" }, "지도"),
         rs33J(RegionSelector),
         rs33J("div", { className: "rs-weather-slot" }),
+        rs33J("details", { className:"rs-map-report", "aria-label":"지도 제보 메뉴" },
+          rs33J("summary", { "aria-label":"지도 제보하기" },
+            rs33J(Icon,{name:"report",size:19}), rs33J("span",null,"제보")),
+          rs33J("div",{className:"rs-map-report-panel"},
+            rs33J("strong",null,"지도 제보"),
+            rs33J("button",{type:"button",onClick:(event)=>{
+                event.currentTarget.closest("details").open=false;
+                window.__rsOpenTool?.("roads");
+              }},rs33J(Icon,{name:"roads",size:18}),rs33J("span",null,"도로 상황 제보")),
+            rs33J("button",{type:"button",onClick:(event)=>{
+                event.currentTarget.closest("details").open=false;
+                window.__rsOpenFacilityRegistration?.();
+              }},rs33J(Icon,{name:"places",size:18}),rs33J("span",null,"편의시설 등록")))),
         rs33J("details", { className: "rs8-map-tools rs12-map-settings" },
           rs33J("summary", { className: "rs8-map-tools-button rs12-map-tools-trigger", "aria-label": "지도 설정 열기" },
             rs33J(Icon, { name: "layers", size: 19 })),
@@ -2626,11 +2639,31 @@ export function mountApplication({
                         }),
                         (0, J.jsx)("div", {
                           className: "ride-launch" + (p.trip ? " active" : ""),
-                          children: (0,J.jsx)("button", {
-                            type:"button", disabled:p.busy,
-                            onClick:()=>p.trip ? navigateTab("trips") : Promise.resolve(p.startTrip()).catch(err=>f(err.message)),
-                            children:p.trip ? (p.paused ? "휴식 중" : "기록 중") + " · " + Math.max(0,Math.floor((Date.now()-Date.parse(p.trip.started_at))/60000)) + "분 ›" : p.busy ? "위치 확인 중…" : "운행 시작",
-                          })
+                          children: [
+                            (0,J.jsx)("button", {
+                              type:"button", disabled:p.busy,
+                              "aria-label":p.trip?(p.paused?"운행 재개":"운행 종료"):"운행 시작",
+                              onClick:()=>p.trip ? (p.paused
+                                  ? Promise.resolve(p.togglePause()).catch(err=>f(err.message))
+                                  : (async()=>{if(!p.trip||p.busy)return;
+    if(!window.confirm("운행 기록을 종료하고 이 기기에 저장할까요?"))return;
+    const finishedId=p.trip.id;
+    try{await p.finish();window.__rsMapFinishedTrip=finishedId;navigateTab("trips")}
+    catch(error){f(error?.message||"운행 기록을 저장하지 못했어요.")}})()
+                                ) : Promise.resolve(p.startTrip()).catch(err=>f(err.message)),
+                              children:p.busy ? (p.trip?"저장 중…":"위치 확인 중…")
+                                : p.trip ? (p.paused?"운행 재개":"운행 종료") : "운행 시작",
+                            }),
+                            p.trip && p.paused ? (0,J.jsx)("button",{
+                              type:"button",className:"rs-map-finish-secondary",
+                              "aria-label":"휴식 중 운행 종료",disabled:p.busy,
+                              onClick:async()=>{if(!p.trip||p.busy)return;
+    if(!window.confirm("운행 기록을 종료하고 이 기기에 저장할까요?"))return;
+    const finishedId=p.trip.id;
+    try{await p.finish();window.__rsMapFinishedTrip=finishedId;navigateTab("trips")}
+    catch(error){f(error?.message||"운행 기록을 저장하지 못했어요.")}},children:"운행 종료"
+                            }) : null
+                          ]
                         }),
                       ],
                     })

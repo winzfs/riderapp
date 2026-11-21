@@ -228,6 +228,14 @@ export function createTimeline(S, Zo, Income, client) {
     const [memo, setMemo] = S.useState("");
     const [memoBusy, setMemoBusy] = S.useState(false);
     const [finished, setFinished] = S.useState(false);
+    // A finish initiated on the map uses the same persisted trip and detail page.
+    S.useEffect(() => {
+      const id = window.__rsMapFinishedTrip;
+      if (!id || !ride.history?.some(row => row.id === id && row.ended_at)) return;
+      window.__rsMapFinishedTrip = null;
+      setSelected(id);
+      setFinished(true);
+    }, [ride.history]);
     const [allDays, setAllDays] = S.useState(false);
     const [ridesOpen, setRidesOpen] = S.useState(true);
     const [following, setFollowing] = S.useState(false);
@@ -546,6 +554,28 @@ export function createTimeline(S, Zo, Income, client) {
             ended ? "완료" : ride.paused ? "휴식 중" : "기록 중",
           ),
         ),
+          !ended
+            ? rs33J(
+                "div",
+                { className: "actions rs-ride-control-bar rs-ride-controls-top", "aria-label": "운행 조작" },
+                rs33J(
+                  "button",
+                  {
+                    type: "button",
+                    className: "secondary rs-ride-pause",
+                    "aria-label": ride.paused ? "운행 재개" : "휴식",
+                    onClick: () => Promise.resolve(ride.togglePause()).catch(error => notify(error?.message || "휴식 상태를 바꾸지 못했어요.")),
+                    disabled: ride.busy,
+                  },
+                  ride.paused ? "운행 재개" : "휴식",
+                ),
+                rs33J(
+                  "button",
+                  { type: "button", className: "primary rs-ride-finish", "aria-label": "운행 종료", onClick: finish, disabled: ride.busy },
+                  ride.busy ? "저장 중…" : "운행 종료",
+                ),
+              )
+            : null,
         rs33J(
           "div",
           {
@@ -646,28 +676,6 @@ export function createTimeline(S, Zo, Income, client) {
                   "GPS 기록 공백 " + raw.gapCount + "구간")
               : null,
           ),
-          !ended
-            ? rs33J(
-                "div",
-                { className: "actions rs-ride-control-bar", "aria-label": "운행 조작" },
-                rs33J(
-                  "button",
-                  {
-                    type: "button",
-                    className: "secondary rs-ride-pause",
-                    "aria-label": ride.paused ? "운행 재개" : "휴식",
-                    onClick: () => Promise.resolve(ride.togglePause()).catch(error => notify(error?.message || "휴식 상태를 바꾸지 못했어요.")),
-                    disabled: ride.busy,
-                  },
-                  ride.paused ? "운행 재개" : "휴식",
-                ),
-                rs33J(
-                  "button",
-                  { type: "button", className: "primary rs-ride-finish", "aria-label": "운행 종료", onClick: finish, disabled: ride.busy },
-                  ride.busy ? "저장 중…" : "운행 종료",
-                ),
-              )
-            : null,
           finished && ended
             ? rs33J(DayRideCard, {
                 history: ride.history,
