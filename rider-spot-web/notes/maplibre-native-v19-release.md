@@ -63,3 +63,28 @@ Changes in v22:
 - Earlier label layers and map data remain unchanged.
 
 Verified full bundled JS parses successfully, handlers and native-map branch are present, all versioned static assets are in KV, and production Worker deployment is 100%. **No actual Galaxy screenshot / touch test was available, so the on-device layout remains to be checked.** Future builds should merge the app JSX, native map control conditional and CSS into source; a normal build from the older repository commit can otherwise undo the fix.
+
+## v23 Shop clusters + complete per-coordinate store list (2026-11-22)
+
+Production version `0fab121b-cd58-47f7-9b1e-4f910cb15149`; immutable asset hash `b6c719a4de20`; Worker `rider-spot-map-v23-assets`; KV prefix `rs-map-v13-shops::`. Production reached 100% deployment.
+
+Why: The existing Gwangju public shop dataset holds 76,391 shop registrations with many repeated coordinates. Public Korean name labels only show at zoom >= 16.1, cap the submitted features at 8,500, and symbol collisions hide many registered names. The v23 view exposes registrations without making 76k DOM markers.
+
+Files added to source on this feature branch:
+- `src/store-clusters.js`: viewport tile loading from existing `/mapdata/manifest.json` and `/mapdata/t*-*.json`; limited promise/LRU cache; exact rounded-to-5-decimal coordinate grouping; MapLibre marker chips; tap opens an accessible bottom sheet with **all unique names at the chosen coordinate**, name search, count of duplicate registrations, and Close/Escape/drag-handle dismissal.
+- `src/store-clusters.css`: compact premium map chips and high-contrast responsive bottom sheet.
+
+Runtime integration:
+- The production `index.html` loads `store-clusters.js` **before** `native-maplibre.js` and the React app module.
+- The new `native-maplibre.js` invokes `window.__rsMountStoreClusters?.(gl)` **only for the main map**, calls its cleanup on unmount, and never changes the native camera, zoom, route, or GPS code.
+- Versioned `sw.js` includes `store-clusters.js`; the new gateway includes it in the immutable static asset set. Previous releases stay routable.
+
+UX behavior:
+- Markers begin around map zoom 15.25 for multi-store coordinates, and single-store coordinates can appear once zoom >= 17.4.
+- Current viewport shows **at most 26 nonoverlapping chips on narrow screens**, not all pins. Tapping an individual chip shows every unique name stored for its exact registered coordinate, without the 8,500 public-label feature cap; exact duplicate names are consolidated with a '등록 N건' notation.
+- The UI explicitly states a shared geocode does **not** prove same-building identity or current business operation.
+- Map tiles/cache from the existing 2026-09 SEMAS dataset. There is **no Kakao Local API key** in connected Workers bindings; this release does not claim real-time Kakao/Naver matching. Live cross-provider enrichment requires authorized API configuration.
+
+QA: Cloudflare Workers compilation passed for the complete React bundle and all new/previous native map scripts. Public dataset tiles and multi-business coordinate groups were sampled; production assets and Worker binding validated. An isolated mocked runtime test Worker was created, but its HTTP invocation was blocked by platform request restrictions, so full browser / Android touch smoke QA remains unverified. The previous v22 asset Worker `rider-spot-map-v22-assets` can be rebound as a rollback without touching authentication, trips, or location persistence.
+
+Maintenance: This is a running immutable-asset hotfix plus standalone source files on a feature branch. A future normal build requires adding script inclusion, CSS and native mount hook to the repository's build process before merging. A build from the older pinned commit may omit this feature.
