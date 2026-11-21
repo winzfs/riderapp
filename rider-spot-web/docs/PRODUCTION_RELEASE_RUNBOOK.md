@@ -8,9 +8,14 @@ deployment state with this record before any change.
 
 - Public origin: `https://rider-spot.jazzhjm.workers.dev/`
 - Public Worker name: `rider-spot`
-- Active **Urban Editorial v5** front: `7db2636b-7944-4fe3-aecc-7ed72727e4a5` (100%)
-- Active v5 asset gateway: `rider-spot-urban-v5-assets`, version `d243ac1d-2c2c-42f8-a2b6-038636356906`
-- Active v5 CSS Worker: `rider-spot-urban-v5`, version `4ccb89fc-5d24-441b-8755-8dbc2e340856`
+- Active **Urban Editorial v6b (actual React re-layout)** front: `84ccf064-b0b1-4a2c-ae76-1738216457d8` (100%)
+- Active immutable v6 JS + CSS: hash `e30517cbf40f`, pin commit `3a010f4866f18098b5ddf9a35eed06e7261067fd`
+- Active v6 asset Worker: `rider-spot-urban-v6-assets` version `a7f092b5-6911-44bb-8387-370f7208d786`
+- Active v6b final presentation Worker: `rider-spot-urban-v6b` version `193f440d-4f50-45a3-a837-e99f0575d9f0`
+- Previous v6 front for immediate style rollback: `738013f7-0ade-4da7-bd9e-8f77d9d8da6e`
+- Previous v5 front for full structural rollback: `7db2636b-7944-4fe3-aecc-7ed72727e4a5`
+- Prior v5 asset gateway (kept for old clients): `rider-spot-urban-v5-assets`, version `d243ac1d-2c2c-42f8-a2b6-038636356906`
+- Prior v5 CSS Worker (kept for rollback): `rider-spot-urban-v5`, version `4ccb89fc-5d24-441b-8755-8dbc2e340856`
 - Immutable v5 bundle: `3305352a56bc`, pinned commit `761432d6af30232b06e983a84c535d33236d043c`
 - Previous v4 front for immediate rollback: `543b2213-2f6c-4f3b-9ae6-bd2a359675a9`
 - Active isolated v4 design Worker: `rider-spot-visual-v4`, version `449b51d4-2eac-4e92-bb4e-04d7d01ee9e3`
@@ -23,11 +28,11 @@ deployment state with this record before any change.
   `44fe53dc-b7a4-4d98-af36-79a8b3dbddc8`
 - Front routing config: `rider-spot-web/wrangler.kv-front-production.json`
 - Front code: `rider-spot-web/edge/static-edge.mjs` (4.7KB)
-- Asset binding `ASSETS` → `rider-spot-urban-v5-assets` (new KV `rs-asset-v5::`, older `rs-asset-v4::` retained read-only)
+- Asset binding `ASSETS` → `rider-spot-urban-v6-assets` (new `rs-asset-v6::` keys; `v5` and `v4` retained read-only)
 - Previous v4 gateway remains available: `rider-spot-renewal-assets`
 - Previous v3 asset gateway retained: `rider-spot-static-candidate-assets` (pinned `16c1eecf6bac`)
 - API routing `LEGACY` → `rider-spot-api-core-qa` (13.8KB API/OAuth)
-- Design `DESIGN` → `rider-spot-urban-v5` (isolated static CSS without data/GPS bindings; loaded last)
+- Design `DESIGN` → `rider-spot-urban-v6b` (isolated static CSS without data/GPS bindings; loaded last)
 - Legacy fallback of the API core `LEGACY_BACKEND` → `rider-spot-backend`
   (the original v220 module, 56,608,825 chars)
 - All existing Supabase and Android local SQLite data stores are reused.
@@ -217,3 +222,24 @@ All route/GPS, Supabase, native bridge, record CRUD and WebView lifecycle code i
 
 **Immediate rollback**: Set the previous `rider-spot` v4 deployment version `543b2213-2f6c-4f3b-9ae6-bd2a359675a9` to 100%. Never delete user data, KV keys, caches or Android SQLite to roll back visual changes.
 Real S24+ long-running GPS, split-screen and Android account flows remain separate on-device acceptance tasks.
+
+
+## Actual React screen re-layout v6b — 2026-11-21
+
+After feedback that v5 was predominantly a recolor, v6 changes the actual React DOM and screen order:
+
+- Map: `MapBar` (region/share, filters, weather slot) is re-parented **inside** the live `map-wrap` above the Leaflet map; overlaid, no camera transform or GPS lifecycle changes.
+- Earnings: period selector, daily amount, expense/net summary and income/expense entry are grouped into a new `rs6-finance-stage` workbench; chart/goal grouped in `rs6-finance-analysis-grid`.
+- My Bike: vehicle controls and entry actions are contained in `rs6-garage-stage`; six parts are now 2-column horizontal service instruments in `rs6-service-board`; records have a separate ledger area.
+- Timeline: compact date controller and **route map before daily recap**, plus route heading. No route point changes.
+- Community: new masthead/filter area and plain feed. v6b fixes a v32-specificity conflict that left old rounded post cards visible in v6.
+
+Immutable bundle `e30517cbf40f` is frozen at `3a010f4866f18098b5ddf9a35eed06e7261067fd`.
+v6b changes only the final isolated CSS Worker and its cache-busting link `?rev=20261121-v6b`; v6b does not modify the compiled app, GPS, database or WebView.
+
+- V6 build + native/CRUD checks: https://github.com/winzfs/riderapp/actions/runs/44865241701
+- V6 isolated mobile preview: https://github.com/winzfs/riderapp/actions/runs/44865462082
+- V6b corrected-feed preview: https://github.com/winzfs/riderapp/actions/runs/44865985414
+- V6b live UI/records validation: https://github.com/winzfs/riderapp/actions/runs/44866209459
+
+**Rollback**: Deploy prior `rider-spot` `738013f7-0ade-4da7-bd9e-8f77d9d8da6e` at 100% to roll back the v6b feed CSS only. Deploy `7db2636b-7944-4fe3-aecc-7ed72727e4a5` at 100% to roll back all v6 React layout changes to v5. Never delete KV version keys, service worker caches, Supabase or Android SQLite for a design rollback. Real Galaxy S24+ long-session ride, native OAuth and split-screen still require physical testing.
