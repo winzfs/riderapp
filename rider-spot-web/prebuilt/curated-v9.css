@@ -359,3 +359,27 @@ html,body,.app,.app .workspace>main{background:var(--ns-paper)!important;color:v
  .app .nearby.nearby-full .rs8-map-searchline{padding-inline:8px!important}
 }
 @media(prefers-reduced-motion:reduce){.app button{transition:none!important;transform:none!important}}
+
+
+/* V10 interaction finishing — controlled touch targets, readable charts, compact ride actions. */
+.app .nearby.nearby-full .ride-launch{background:var(--ns-paper)!important;border-top:1px solid var(--ns-line)!important;padding:9px 13px 12px!important}
+.app .nearby.nearby-full .ride-launch button{background:var(--ns-ink)!important;color:var(--ns-acid)!important;font-weight:900!important;letter-spacing:-.02em;border-radius:13px!important;min-height:53px!important}
+.app .nearby .rs6-map-stage #rs-presence-btn{background:rgba(245,244,238,.96)!important;border:0!important;border-radius:10px!important;color:var(--ns-ink)!important}
+.app .nearby .rs6-map-stage .locate{background:var(--ns-paper)!important;color:var(--ns-ink)!important;border:0!important;border-radius:11px!important}
+.app .nearby .rs6-map-stage .leaflet-bar :is(a,button){border-color:var(--ns-line)!important}
+.app .finance-page .rs8-trend-integrated .fin-chart-point :is(span,small,strong){color:#CCD3CC!important}
+.app .finance-page .rs8-trend-integrated .fin-chart-point.selected :is(span,small,strong){color:var(--ns-acid)!important}
+.app .finance-page .rs8-trend-integrated .fin-chart-point .fin-chart-fill{background:var(--ns-acid)!important}
+.app .finance-page .rs8-income-console button:focus-visible{outline-color:var(--ns-acid)!important}
+.app .finance-page .fin-shortcuts button,.app .finance-page .fin-add-record button{min-height:44px}
+.app .rc-community .rc-feed-row:focus-within{background:#EAEEE3!important}
+.app .bike-page .rs6-service-board .bike-tile:focus-visible{outline:2px solid #677A2A!important;outline-offset:-2px!important}
+.app .bike-page .rs6-service-board .bike-tile[aria-pressed=true]{background:#EDF5D7!important}
+.app .bike-page .rs6-service-board .bike-tile .bike-tile-overdue{color:#B84528!important;font-weight:850}
+.app .bike-page .rs8-bike-settings[open] summary{background:transparent!important}
+.app .rs33-timeline .rs6-timeline-controller button:focus-visible{outline-offset:-2px!important}
+@media(max-width:393px){
+ .app .finance-page .rs8-console-top{gap:5px!important}
+ .app .finance-page .rs8-console-top .fin-period-btn{padding-inline:7px!important;min-width:35px!important}
+ .app .bike-page .rs8-bike-hero .bike-vehicle-data h2{font-size:14px!important}
+}
