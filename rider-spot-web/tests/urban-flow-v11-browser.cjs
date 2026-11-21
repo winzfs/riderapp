@@ -41,8 +41,8 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
     });
     assert.ok(applied.cssLoaded);
     assert.ok(applied.activeBg==="none", "active navigation must not use gradient: "+applied.activeBg);
-    assert.equal(await page.locator(".app>header").evaluate(el=>getComputedStyle(el).backgroundColor),"rgba(247, 246, 242, 0.97)");
-    row.checks.push("NIGHT SHIFT stylesheet loaded","editorial flat selected state");
+    assert.match(await page.locator(".app>header").evaluate(el=>getComputedStyle(el).backgroundColor),/^rgba\(247, 248, 246, 0\.98\d\)$/,"v12 header remains light and opaque");
+    row.checks.push("URBAN EDITORIAL v12 stylesheet loaded","editorial flat selected state");
     for(let i of [0,1,2,3,4]){
       await nav.nth(i).click();
       await page.waitForTimeout(240);
@@ -59,7 +59,10 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
         assert.equal(await drawer.evaluate(el=>el.open),false,"tools closed by default");
         await drawer.locator("summary").click();
         assert.equal(await drawer.evaluate(el=>el.open),true);
-        assert.equal(await drawer.locator(".rs33-map-filters button").count(),4,"map filters and sharing preserved");
+        assert.equal(await drawer.locator(".rs12-layer-options button").count(),3,"existing 3 exclusive map layers retained");
+         const privacy=drawer.locator(".rs12-share-control[role=switch]");
+         assert.equal(await privacy.count(),1,"privacy is separate from layer controls");
+         assert.equal(await privacy.getAttribute("aria-checked"),"false","location remains private in the anonymous fixture");
         const bounds=await drawer.locator(".rs33-map-filters").evaluate(el=>({
           parent:el.getBoundingClientRect().toJSON(),
           children:[...el.querySelectorAll("button")].map(x=>x.getBoundingClientRect().toJSON())
@@ -74,7 +77,7 @@ const report={origin,at:new Date().toISOString(),screens:[],passed:false};
           const map=document.querySelector(".rs33-timeline .rs-renewal-route");
           return {recap:recap&&map?recap.compareDocumentPosition(map):null,label:document.querySelector(".rs33-timeline .rs7-map-label")?.innerText};
         });
-        if(order.recap!=null)assert.ok(order.recap&2,"Route map must precede the recap");
+        if(order.recap!=null)assert.ok(order.recap&4,"Daily ride summary must precede the route map");
         assert.equal(await page.locator(".rs6-timeline-date-title").count(),0,"decorative English timeline counter removed");
       }
       if(i===2){

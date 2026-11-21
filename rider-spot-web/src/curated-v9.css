@@ -359,6 +359,8 @@ body{-webkit-font-smoothing:antialiased}
 @media(prefers-reduced-motion:reduce){.app :is(button,a,[role=button]){transition:none!important;animation:none!important}}
 
 
+/* Rider presence signal tokens stay backward compatible with older status components. */
+:root{--signal-ink:#22334A}
 /* RIDER SPOT / URBAN EDITORIAL V12
    Map-first navigation, session-first timeline, content-first community.
    Intentional scoped rules: do not restyle finance/bike internal interfaces.
