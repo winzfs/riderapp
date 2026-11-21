@@ -1,4 +1,5 @@
 import { createUI } from "./ui.mjs";
+import { createRideRecap } from "./ride-recap.mjs";
 import {
   rs33Zone,
   rs33ISO,
@@ -16,8 +17,9 @@ import { useRoutePlayback } from "./route-playback.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
 import { timelineStartPoint, timelineEndPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
 
-export function createTimeline(S, Zo, Income) {
+export function createTimeline(S, Zo, Income, client) {
   const rs33J = S.createElement;
+  const RideRecap = createRideRecap(S, client);
   const { Icon, Metrics } = createUI(S);
   const { DayRideCard } = createGamificationUI(S);
   const EMPTY = [];
@@ -216,6 +218,7 @@ export function createTimeline(S, Zo, Income) {
       };
     }, []);
     const [selected, setSelected] = S.useState(null);
+    const [recapDay, setRecapDay] = S.useState(null);
     const liveDay = ride.trip?.started_at ? rs33WorkDay(ride.trip.started_at) : today;
     const [day, setDay] = S.useState(today);
     const [week, setWeek] = S.useState(rs33WeekStart(today));
@@ -910,6 +913,12 @@ export function createTimeline(S, Zo, Income) {
         }),
       ),
       ),
+      !allDays && daily ? rs33J("div",{className:"rs-recap-timeline-action"},
+        rs33J("button",{type:"button",className:"rs-recap-launch",onClick:()=>setRecapDay(day),
+          "aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
+          rs33J("svg",{viewBox:"0 0 24 24","aria-hidden":true},
+            rs33J("path",{d:"M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"})),
+          "라이딩 이미지 저장")) : null,
       allDays
         ? rs33J("div", { className: "rs33-trip-summary" },
             rs33J(Metrics, {
@@ -1044,6 +1053,8 @@ export function createTimeline(S, Zo, Income) {
       !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
         rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
 
+      recapDay ? rs33J(RideRecap,{day:recapDay,history:ride.history,user,notify,
+        onClose:()=>setRecapDay(null)}) : null,
       rs33J(
         "div",
         { className: "rs33-list-title" },
