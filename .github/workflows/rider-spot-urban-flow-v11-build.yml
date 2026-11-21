@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/rider-spot-urban-flow-v11-build.yml'
       - 'rider-spot-web/src/mobile-records.mjs'
+      - 'rider-spot-web/tests/mobile-records-browser.cjs'
+      - 'rider-spot-web/tests/urban-flow-v11-browser.cjs'
       - 'rider-spot-web/src/Timeline.mjs'
       - 'rider-spot-web/src/curated-v9.css'
       - 'rider-spot-web/src/application.mjs'
