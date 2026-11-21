@@ -1,4 +1,4 @@
-name: Rider Spot square recap tested assets stage
+name: Rider Spot V5 recap verified assets stage
 on:
   push:
     branches: [feature/rider-spot-native-apk]
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: write
 jobs:
-  stage-square-recap:
+  stage-v5-recap:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -26,7 +26,7 @@ jobs:
       - name: Build native-compatible hashed web assets
         working-directory: rider-spot-web
         run: npm run build
-      - name: Validate square recap and WebView guard before staging
+      - name: Validate V5 exported canvas and WebView guard before staging
         working-directory: rider-spot-web
         run: |
           node --input-type=module <<'NODE'
@@ -40,11 +40,27 @@ jobs:
           assert.ok(js.includes('rs-recap-preview'));
           assert.ok(css.includes('dialog.rs-recap-dialog::backdrop'));
           assert.ok(!js.includes('group("이미지 비율"'));
-          assert.ok(fs.readFileSync('src/ride-recap.mjs','utf8').includes('width:920,height:920'));
+          const recap=fs.readFileSync('src/ride-recap.mjs','utf8');
+          assert.ok(recap.includes('width:936,height:744'),'V5 offscreen rectangle missing');
+          assert.ok(recap.includes('const [showRoute,setShowRoute]'),'User privacy switch missing');
+          assert.ok(!recap.includes('shadowBlur=34'),'Old fake export card present');
           assert.ok(fs.readFileSync('edge/static-edge.mjs','utf8').includes('rs-recovery-guard-v217'));
           assert.ok(m.files.includes('/assets/rider-spot-'+m.hash+'/daily-timeline.css'));
-          console.log('SQUARE_RECAP_STAGE_VALIDATED',m.hash);
+          console.log('RECAP_V5_STAGE_VALIDATED',m.hash);
           NODE
+      - name: Install Chromium for exported PNG checks
+        working-directory: rider-spot-web
+        run: npx playwright install --with-deps chromium
+      - name: Render 15 genuine PNG scenario exports with real Korean basemap
+        working-directory: rider-spot-web
+        run: node tests/ride-recap-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rider-spot-recap-v5-png-evidence
+          path: /tmp/rider-spot-recap/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Commit tested immutable assets for Cloudflare
         working-directory: rider-spot-web
         shell: bash
@@ -72,5 +88,5 @@ jobs:
             echo "Branch advanced; abort stale asset stage"
             exit 1
           fi
-          git commit -m "chore(recap): stage validated square-map assets [skip ci]"
+          git commit -m "chore(recap): stage V5 editorial PNG assets [skip ci]"
           git push origin HEAD:feature/rider-spot-native-apk
