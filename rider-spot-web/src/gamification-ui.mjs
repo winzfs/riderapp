@@ -116,7 +116,7 @@ export function createGamificationUI(React) {
       "aria-label": "운행 결과와 획득한 경험치",
     },
       h("div", { className: "rs-game-recap-heading" },
-        h("span", { className: "rs-game-recap-flare", "aria-hidden": true }, "✦"),
+        h("span", { className: "rs-game-recap-flare", "aria-hidden": true }, "↗"),
         h("div", null,
           h("small", { className: "rs-game-recap-date" }, recapDate(day)),
           h("h2", null, celebrate ? "운행 완료" : "운행 요약")),

@@ -77,6 +77,7 @@ const encoded = {
   "weather-bar.css": weatherCss,
   "premium-shell.css": await read("src/premium-shell.css"),
   "renewal-layout.css": await read("src/renewal-layout.css"),
+  "urban-editorial-v5.css": await read("src/urban-editorial-v5.css"),
 };
 const mapDataDir = join(root, "data/korean-map");
 const mapNames = await readdir(mapDataDir).catch(() => []);
@@ -122,7 +123,7 @@ const html = template
   .replace(/\bsrc="([^"]+)"/g, (_, path) => `src="${substitute(path)}"`)
   .replace(
     "</head>",
-    `<link rel="stylesheet" href="${base}/design-system.css"><link rel="stylesheet" href="${base}/daily-timeline.css"><link rel="stylesheet" href="${base}/weather-bar.css"><link rel="stylesheet" href="${base}/premium-shell.css"><link rel="stylesheet" href="${base}/renewal-layout.css"><script defer src="${base}/weather-bar.js"></script></head>`,
+    `<link rel="stylesheet" href="${base}/design-system.css"><link rel="stylesheet" href="${base}/daily-timeline.css"><link rel="stylesheet" href="${base}/weather-bar.css"><link rel="stylesheet" href="${base}/premium-shell.css"><link rel="stylesheet" href="${base}/renewal-layout.css"><link rel="stylesheet" href="${base}/urban-editorial-v5.css"><script defer src="${base}/weather-bar.js"></script></head>`,
   );
 const oldCore = JSON.parse(previousSw.match(/const CORE=(\[[^\n]+\]);/)[1]);
 const core = [
@@ -137,6 +138,7 @@ const core = [
   `${base}/weather-bar.css`,
   `${base}/premium-shell.css`,
   `${base}/renewal-layout.css`,
+  `${base}/urban-editorial-v5.css`,
   `${base}/weather-bar.js`,
 ];
 const serviceWorker = previousSw
