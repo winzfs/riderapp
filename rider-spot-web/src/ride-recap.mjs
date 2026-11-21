@@ -113,30 +113,22 @@ export function recapEndpointLayout(paths,w,h) {
   const distance=Math.hypot(first.x-last.x,first.y-last.y);
   const coincident=distance<55;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const badgeW=74,badgeH=37;
-  const position=(pt,side)=>{
-    // Use opposite sides if the ride starts and ends close together.
-    let px=side==="start" ? pt.x-badgeW-20 : pt.x+20;
-    let py=side==="start" ? pt.y-59 : pt.y+19;
-    if(!coincident) {
-      px=pt.x+16;
-      py=pt.y-48;
-    }
-    return {x:clamp(px,8,w-badgeW-8),y:clamp(py,76,h-badgeH-8),
-      width:badgeW,height:badgeH};
-  };
-  let start=position(first,"start"),end=position(last,"end");
+  const badgeW=78,badgeH=32,margin=10;
+  // The starting label sits northwest, the finishing label southeast.
+  // Never draw long connector lines across the GPS route.
+  const chip=(p,dx,dy)=>({x:clamp(p.x+dx,margin,w-badgeW-margin),
+    y:clamp(p.y+dy,margin,h-badgeH-margin),width:badgeW,height:badgeH});
+  let start=chip(first,-96,-53),end=chip(last,18,18);
   const collide=(a,b)=>a.x<b.x+b.width+8&&a.x+a.width+8>b.x&&a.y<b.y+b.height+8&&a.y+a.height+8>b.y;
-  if(collide(start,end)) {
-    // The second label must never cover the start label, even when the
-    // day's entire track returns to its initial GPS location.
-    end={...end,y:clamp(start.y+badgeH+13,76,h-badgeH-8)};
-    if(collide(start,end)) {
-      start={...start,y:clamp(end.y-badgeH-13,76,h-badgeH-8)};
+  if(collide(start,end)){
+    end=chip(last,18,42);
+    if(collide(start,end)){
+      start=chip(first,-96,-87);
+      end=chip(last,18,18);
     }
-    if(collide(start,end)) {
-      start={...start,x:8};
-      end={...end,x:w-badgeW-8};
+    if(collide(start,end)){
+      start={...start,x:margin,y:clamp(first.y-53,margin,h-badgeH-margin)};
+      end={...end,x:w-badgeW-margin,y:clamp(last.y+18,margin,h-badgeH-margin)};
     }
   }
   return {first,last,start,end,coincident};
@@ -192,32 +184,35 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
     const endpoints=recapEndpointLayout(paths,w,h);
     if(endpoints){
       const {first,last,start,end,coincident}=endpoints;
-      // Both the true GPS coordinates and their callouts are drawn independently.
-      // Avoid flattening long routes just because the start and end overlap.
-      if(coincident) {
-        // Two color semicircles identify a shared start/finish GPS location.
-        const anchor={x:x+first.x,y:y+first.y};
-        ctx.beginPath();ctx.arc(anchor.x,anchor.y,12,Math.PI/2,3*Math.PI/2);ctx.fillStyle=p.accent;ctx.fill();
-        ctx.beginPath();ctx.arc(anchor.x,anchor.y,12,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
-        ctx.beginPath();ctx.arc(anchor.x,anchor.y,13,0,Math.PI*2);ctx.strokeStyle=p.panel;ctx.lineWidth=3;ctx.stroke();
+      // One compact two-tone pin when an entire ride finishes near its start.
+      // Positions always refer to genuine GPS fixes.
+      if(coincident){
+        const cx=x+(first.x+last.x)/2,cy=y+(first.y+last.y)/2;
+        ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);
+        ctx.fillStyle=p.panel;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,8,Math.PI/2,3*Math.PI/2);
+        ctx.fillStyle=p.accent;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,8,-Math.PI/2,Math.PI/2);
+        ctx.fillStyle=p.ink;ctx.fill();
       }
-      for(const [point,chip,color,word] of [[first,start,p.accent,"출발"],[last,end,p.ink,"종료"]]){
-        const cx=x+point.x,cy=y+point.y;
-        const bx=x+chip.x,by=y+chip.y;
-        // Leader line makes the exact GPS position unambiguous even if
-        // the label has moved to avoid collisions or map edges.
-        const nearestX=Math.max(bx,Math.min(bx+chip.width,cx));
-        const nearestY=Math.max(by,Math.min(by+chip.height,cy));
-        line(ctx,cx,cy,nearestX,nearestY,color,3);
-        rounded(ctx,bx,by,chip.width,chip.height,11,p.panel);
-        ctx.save();ctx.beginPath();ctx.roundRect(bx+1,by+1,chip.width-2,chip.height-2,10);ctx.clip();
-        rounded(ctx,bx+2,by+6,4,chip.height-12,2,color);
-        ctx.restore();
-        label(ctx,word,bx+chip.width/2+2,by+26,21,p.ink,780,"center");
-        if(!coincident){
-          ctx.beginPath();ctx.arc(cx,cy,11,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
-          ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      const pins=coincident?[]:[[first,p.accent,"start"],[last,p.ink,"end"]];
+      for(const [pt,color,type] of pins){
+        const cx=x+pt.x,cy=y+pt.y;
+        ctx.beginPath();ctx.arc(cx,cy,12,0,Math.PI*2);ctx.fillStyle=p.panel;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        if(type==="end"){
+          rounded(ctx,cx-3,cy-3,6,6,1,p.panel);
+        } else {
+          ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);
+          ctx.fillStyle=p.panel;ctx.fill();
         }
+      }
+      for(const [chip,color,word] of [[start,p.accent,"출발"],[end,p.ink,"종료"]]){
+        const bx=x+chip.x,by=y+chip.y;
+        rounded(ctx,bx,by,chip.width,chip.height,11,"rgba(255,255,255,.96)");
+        ctx.beginPath();ctx.arc(bx+14,by+16,4.5,0,Math.PI*2);
+        ctx.fillStyle=color;ctx.fill();
+        label(ctx,word,bx+26,by+22,19,p.ink,740);
       }
     }
   }
@@ -245,10 +240,13 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
   if(!ctx)throw Error("이미지 렌더링을 사용할 수 없어요.");
   const p=palettes[theme]||palettes.light;
   rounded(ctx,0,0,W,H,0,p.bg);
-  rounded(ctx,72,68,13,13,3,p.accent);
-  label(ctx,"라이더스팟",98,83,24,p.ink,800);
+  rounded(ctx,72,66,12,12,3,p.accent);
+  label(ctx,"라이더스팟",97,80,22,p.ink,780);
+  if(mode==="all"&&ratio==="4:5"){
+    label(ctx,"하루의 운행 기록",1008,80,19,p.muted,590,"right");
+  }
   const title=recap.day.replace(/-/g,".")+(mode==="finance"?" 결산":" 타임라인");
-  label(ctx,title,72,158,51,p.ink,800);
+  label(ctx,title,72,151,48,p.ink,800);
   const income=showIncome?abbreviatedMoney(recap.gross):"비공개";
   if(mode==="finance") {
     label(ctx,"하루 수익",72,246,27,p.muted,700);
@@ -286,33 +284,34 @@ export function renderRecapCanvas(canvas,recap,{mode="all",ratio="4:5",theme="li
     const mapSize=recapMapDimensions(mode,ratio);
     const mapLeft=Math.round((W-mapSize.width)/2),mapTop=177;
     drawRoute(ctx,recap.segments,mapLeft,mapTop,mapSize.width,mapSize.height,p,showRoute,mapSnapshot);
-    const top=995;
-    // One compact receipt. Metrics reflow between two and three columns when
-    // deliveries are missing, without generating misleading placeholder text.
+    const top=993;
     const showCost=showIncome&&recap.financeLoaded&&recap.cost>0;
-    const receiptHeight=showCost?202:176;
-    rounded(ctx,72,top,936,receiptHeight,26,p.panel);
-    label(ctx,"하루 수익",104,top+31,20,p.muted,660);
-    label(ctx,income,104,top+79,43,p.ink,800);
-    label(ctx,"순수익",970,top+31,20,p.muted,660,"right");
+    // The receipt fills the poster's lower space instead of floating above
+    // an empty 180px strip. All figures are from saved trip/finance records.
+    rounded(ctx,72,top,936,278,26,p.panel);
+    rounded(ctx,104,top+22,5,19,2,p.accent);
+    label(ctx,"오늘의 운행",119,top+39,21,p.muted,710);
+    label(ctx,recap.trips?recap.trips+"회 기록":"기록 없음",973,top+39,20,p.muted,590,"right");
+    label(ctx,"총수익",105,top+81,21,p.muted,630);
+    label(ctx,income,105,top+144,58,p.ink,800);
+    label(ctx,"순수익",971,top+81,20,p.muted,630,"right");
     label(ctx,showIncome?(recap.uncertain?"확인 필요":abbreviatedMoney(recap.net)):"비공개",
-      970,top+77,31,p.ink,760,"right");
-    line(ctx,104,top+92,976,top+92,p.grid,1.5);
-    const rideMetrics=[
-      ["거리",recap.trips?km(recap.distanceKm):"기록 없음"],
-      ["시간",duration(recap.durationMs)],
+      971,top+138,36,p.ink,760,"right");
+    line(ctx,104,top+168,975,top+168,p.grid,1.5);
+    const metrics=[
+      ["운행거리",recap.trips?km(recap.distanceKm):"기록 없음"],
+      ["운행시간",duration(recap.durationMs)],
+      recap.deliveries!==null?["배달",recap.deliveries+"건"]:["운행 기록",recap.trips+"회"],
     ];
-    if(recap.deliveries!==null)rideMetrics.push(["배달",recap.deliveries+"건"]);
-    const columnW=872/rideMetrics.length;
-    rideMetrics.forEach(([name,value],i)=>{
-      const colX=104+i*columnW;
-      label(ctx,name,colX,top+117,19,p.muted,650);
-      label(ctx,value,colX,top+156,28,p.ink,770);
+    metrics.forEach(([name,value],i)=>{
+      const xx=105+i*292;
+      label(ctx,name,xx,top+200,19,p.muted,620);
+      label(ctx,value,xx,top+242,30,p.ink,760);
     });
-    if(showCost){
-      line(ctx,104,top+166,976,top+166,p.grid,1.5);
-      label(ctx,"업무 비용",104,top+191,19,p.muted,620);
-      label(ctx,won(recap.cost),975,top+191,21,p.ink,720,"right");
+    if(showCost) {
+      // A quiet cost caption occupies the receipt's last corner only when
+      // the cost is greater than zero.
+      label(ctx,"비용 "+won(recap.cost),971,top+265,16,p.muted,550,"right");
     }
   } else {
     const mapTop=207;
