@@ -918,7 +918,7 @@ export function createTimeline(S, Zo, Income, client) {
           "aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
           rs33J("svg",{viewBox:"0 0 24 24","aria-hidden":true},
             rs33J("path",{d:"M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"})),
-          "라이딩 이미지 저장")) : null,
+          rs33J("span",null,"이미지 저장"))) : null,
       allDays
         ? rs33J("div", { className: "rs33-trip-summary" },
             rs33J(Metrics, {
