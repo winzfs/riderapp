@@ -57,13 +57,18 @@ test("no fabricated route or income on empty day and exact finance semantics",()
 
 test("finance lookup is read-only, scoped by account and exact date",async()=>{
   const seen=[];
-  const client={from(table){
-    return {select(columns){assert.equal(columns,"*");return {
-      eq(field,value){seen.push([table,field,value]);return {
-        eq(date,key){seen.push([table,date,key]);return Promise.resolve({data:[],error:null});}
-      };}}
-    };}};
-  }};
+  const client={from:table=>({
+    select:columns=>{
+      assert.equal(columns,"*");
+      return {eq:(field,value)=>{
+        seen.push([table,field,value]);
+        return {eq:(date,key)=>{
+          seen.push([table,date,key]);
+          return Promise.resolve({data:[],error:null});
+        }};
+      }};
+    }
+  })};
   const value=await fetchRecapFinance(client,"account-1",yesterday);
   assert.deepEqual(Object.keys(value),["earnings","fuel","maintenance","extras"]);
   assert.equal(seen.filter(([table,field,value])=>field==="user_id"&&value==="account-1").length,4);
