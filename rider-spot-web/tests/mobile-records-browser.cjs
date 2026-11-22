@@ -453,7 +453,13 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.mouse.move(x,y+170,{steps:8});await page.mouse.up();
     await swipeDialog.waitFor({state:"hidden"});
     await shot("bike-after-swipe");
-    await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
+    await nav("타임라인");
+    // The fixture workday may be in a previous calendar week when the suite
+    // runs after its original authoring date. Navigate instead of assuming today.
+    const fixtureDay=page.getByRole("button",{name:date+" 운행 2회",exact:true});
+    for(let offset=0;offset<30 && !await fixtureDay.isVisible();offset++)
+      await page.getByRole("button",{name:"이전 주",exact:true}).click();
+    await fixtureDay.click();
     await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
     const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");
     await page.getByRole("button",{name:"전체 경로 맞춤",exact:true}).click();
