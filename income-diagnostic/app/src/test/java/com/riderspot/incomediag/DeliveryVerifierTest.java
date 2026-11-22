@@ -6,6 +6,12 @@ import java.util.Collections;
 import static org.junit.Assert.*;
 
 public class DeliveryVerifierTest {
+    @Test public void consumedCompletionCannotBeCountedAgain(){
+        assertTrue(DeliveryVerifier.isNewEvidence(100000L,0L,110000L));
+        assertFalse(DeliveryVerifier.isNewEvidence(100000L,100000L,130000L));
+        assertFalse(DeliveryVerifier.isNewEvidence(100000L,0L,500001L));
+        assertFalse(DeliveryVerifier.isNewEvidence(0L,0L,1000L));
+    }
     @Test public void exactAutomaticMatch(){
         DeliveryVerifier.Verdict v=DeliveryVerifier.classify(7307,
             Arrays.asList(7307),Arrays.asList("7,307원 (라벨 없음) · 3,280원 (라벨 없음)"));

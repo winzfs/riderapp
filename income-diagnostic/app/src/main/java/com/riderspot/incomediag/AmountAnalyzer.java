@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  * Results never contain original screen text, only amount candidates and label categories.
  */
 final class AmountAnalyzer {
-    private static final Pattern NUMBER = Pattern.compile("(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})+|\\d{3,6})(?![\\d,])\\s*(?:원)?");
+    private static final Pattern NUMBER = Pattern.compile("(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})+|\\d{1,6})(?![\\d,])\\s*(?:원)?");
     private static final Pattern COMPLETE = Pattern.compile("배달\\s*완료|배달을\\s*완료|배달이\\s*완료|전달\\s*완료|배송\\s*완료");
     private static final Pattern DIRECT = Pattern.compile("배달료|배달\\s*요금|건당\\s*수익|이번\\s*배달|기본\\s*배달료|배달\\s*수입");
     private static final Pattern TOTAL = Pattern.compile("누적|총\\s*수익|총액|정산|이번\\s*주|이번주|주간|월간|미션|프로모션|보너스|목표|오늘\\s*수익|전체\\s*수익|적립금");
@@ -73,7 +73,7 @@ final class AmountAnalyzer {
             String digits=token.replaceAll("[^0-9]","");
             int value;
             try{value=Integer.parseInt(digits);}catch(NumberFormatException e){continue;}
-            if(value<500||value>150000)continue;
+            if(value<1||value>150000)continue;
             int before=Math.max(0,matcher.start()-38);
             int after=Math.min(s.length(),matcher.end()+24);
             String neighborhood=s.substring(before,after);

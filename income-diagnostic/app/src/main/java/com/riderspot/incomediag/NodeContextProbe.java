@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * Raw accessibility text and resource ID values are NEVER retained.
  */
 final class NodeContextProbe {
-    private static final Pattern WON=Pattern.compile("(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})+|\\d{3,6})\\s*원");
+    private static final Pattern WON=Pattern.compile("(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})+|\\d{1,6})\\s*원");
     // Specific concepts first. All exported labels are fixed strings, never user content.
     private static final String[] LABELS={
         "기본 수수료","기본수수료","추가 수수료","추가수수료","리워드",
@@ -50,6 +50,8 @@ final class NodeContextProbe {
         }
     }
     private final List<Record> nodes=new ArrayList<>();
+    private final List<Entry> directlyPaired=new ArrayList<>();
+    private final java.util.Set<String> allPairKeys=new java.util.LinkedHashSet<>();
 
     int add(int parent,int x,int y,CharSequence text,CharSequence description,
             String resourceId,CharSequence className){
@@ -65,15 +67,34 @@ final class NodeContextProbe {
         Record record=new Record(parent,x,y,resourceId!=null&&!resourceId.isEmpty(),
                 classType,label,new ArrayList<>(money));
         nodes.add(record);
+        // Detect exact "기본수수료 2,700원" / "추가수수료 405원" pairs,
+        // even if an Android WebView exposes multiple text lines in one node.
+        java.util.LinkedHashSet<String> seen=new java.util.LinkedHashSet<>();
+        addPaired(t,classType,record.hasId,seen);
+        addPaired(d,classType,record.hasId,seen);
         return nodes.size()-1;
+    }
+    private void addPaired(String raw,String role,boolean id,java.util.Set<String> seen){
+        for(FeeComponentParser.Item item:FeeComponentParser.extract(raw)){
+            String key=item.label+"|"+item.amount;
+            if(directlyPaired.size()<16 && seen.add(key) && allPairKeys.add(key))
+                directlyPaired.add(new Entry(item.amount,item.label,"같은 문자열","문구 바로 뒤",role,id));
+        }
     }
     int count(){return nodes.size();}
     List<Entry> describe(){
-        List<Entry> entries=new ArrayList<>();
+        List<Entry> entries=new ArrayList<>(directlyPaired);
+        java.util.Set<String> genericSeen=new java.util.LinkedHashSet<>();
         for(int i=0;i<nodes.size()&&entries.size()<16;i++){
             Record money=nodes.get(i);
             for(int amount:money.amounts){
                 if(entries.size()>=16)break;
+                // Do not duplicate a monetary value already paired to its explicit fee label.
+                boolean paired=false;
+                for(Entry item:directlyPaired){
+                    if(item.amount==amount){paired=true;break;}
+                }
+                if(paired)continue;
                 int best=-1,score=Integer.MAX_VALUE;
                 for(int j=0;j<nodes.size();j++){
                     Record label=nodes.get(j);
@@ -88,7 +109,14 @@ final class NodeContextProbe {
                 String relation=best<0?"미확인":relationName(i,best);
                 String label=best<0?"탐지 안 됨":nodes.get(best).label;
                 String proximity=best<0?"미확인":distanceName(money,nodes.get(best));
-                entries.add(new Entry(amount,label,relation,proximity,money.role,money.hasId));
+                // A single aggregated WebView node may contain several unrelated amounts.
+                if(money.amounts.size()>1 && best==i && !directlyPaired.isEmpty()){
+                    label="복합 텍스트·항목 불명";
+                    relation="동일 요소 내 복수 금액";
+                }
+                String key=amount+"|"+label+"|"+(money.x/20)+"|"+(money.y/20);
+                if(genericSeen.add(key))
+                    entries.add(new Entry(amount,label,relation,proximity,money.role,money.hasId));
             }
         }
         return entries;
@@ -130,7 +158,7 @@ final class NodeContextProbe {
             try{
                 String digits=m.group().replaceAll("[^0-9]","");
                 int n=Integer.parseInt(digits);
-                if(n>=500&&n<=150000)out.add(n);
+                if(n>=0&&n<=150000)out.add(n);
             }catch(NumberFormatException ignored){}
         }
     }

@@ -23,6 +23,16 @@ public class NodeContextProbeTest {
         p.add(-1,300,200,"4,489원","",null,"android.widget.TextView");
         assertEquals("탐지 안 됨",p.describe().get(0).label);
     }
+    @Test public void multipleComponentsInOneWebViewNode(){
+        NodeContextProbe p=new NodeContextProbe();
+        p.add(-1,150,150,
+            "배달 완료 3,105원 기본수수료 2,700원 추가수수료 405원 리워드 0원",
+            null,null,"android.webkit.WebView");
+        List<NodeContextProbe.Entry> entries=p.describe();
+        assertEquals(3105,NodeContextProbe.verifiedComponentSum(entries));
+        assertTrue(NodeContextProbe.safeSummary(entries).contains("405원"));
+        assertEquals(4,entries.size());
+    }
     @Test public void realCoupangFeeLabelsCanBeGrouped(){
         NodeContextProbe p=new NodeContextProbe();
         int root=p.add(-1,450,300,"","",null,"android.widget.LinearLayout");

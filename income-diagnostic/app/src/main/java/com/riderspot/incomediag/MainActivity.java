@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(245,247,251));
         LinearLayout body=col();body.setPadding(dp(18),dp(28),dp(18),dp(36));scroll.addView(body);
-        add(body,text("RIDERSPOT  /  INCOME LAB v0.5",12,ACCENT,true),0);
+        add(body,text("RIDERSPOT  /  INCOME LAB v0.6",12,ACCENT,true),0);
         add(body,text("수익 인식 진단",28,INK,true),8);
         add(body,text("접근성 화면 텍스트에서 금액 후보와 주변 라벨을 분류합니다. 화면 캡처·OCR·서버 전송·원문 저장은 하지 않습니다.",13,SUB,false),10);
 
@@ -109,11 +109,12 @@ public final class MainActivity extends Activity {
         lastFee=number("방금 완료한 배달료 (예: 7307)");
         add(individual,lastFee,12);
         buttons(individual,button("마지막 배달 1건 비교 · 저장",true,v->verifyLastFee()));
+        buttons(individual,button("완료 화면 미감지 · 수동 누락 기록",false,v->recordMissedFee()));
         deliverySummary=text("",14,INK,false);
         add(individual,deliverySummary,12);
         deliveryHistory=text("",12,SUB,false);
         add(individual,deliveryHistory,8);
-        add(individual,text("같은 배달의 여러 화면 변화는 최근 30초 구간으로 묶습니다. 가능한 한 완료 직후 비교하세요. 묶음 구간의 정확한 경계는 아직 검증 중입니다.",12,SUB,false),12);
+        add(individual,text("이미 검증한 완료 화면을 다시 입력해도 새 배달로 중복 저장하지 않습니다. 실제 배달을 마쳤는데 완료 화면을 못 읽었다면 '수동 누락 기록'을 선택하세요. 정차 후 입력하세요.",12,SUB,false),12);
 
         LinearLayout measures=card(body,"인식 이벤트");
         counts=text("",14,INK,false);add(measures,counts,10);
@@ -142,13 +143,13 @@ public final class MainActivity extends Activity {
         add(clues,text("금액과 미리 정한 라벨 분류만 저장합니다. 전체 화면 텍스트·고객 이름·주소는 저장하지 않습니다. 3,280원 + 3,074원 + 953원 = 7,307원 같은 합계 구조를 감지합니다.",12,SUB,false),12);
 
         LinearLayout structure=card(body,"수수료 항목 · 접근성 UI 구조");
-        add(structure,text("기본수수료 · 추가수수료 · 리워드가 실제 접근성 요소로 제공되는지 확인합니다. 금액과 문구가 같은 UI 요소인지, 인접하거나 형제 관계인지도 표시합니다.",12,SUB,false),8);
+        add(structure,text("기본수수료 · 추가수수료 · 리워드의 금액과 UI 관계를 확인합니다. 405원 같은 500원 미만의 추가수수료도 수집하며, 동일한 UI 문자열 안에서 직접 짝지어진 항목을 따로 표시합니다.",12,SUB,false),8);
         structureHistory=text("",12,INK,false);
         add(structure,structureHistory,10);
         add(structure,text("화면 원문, 고객 이름·주소, UI 리소스 ID 값, 정확한 좌표는 저장하지 않습니다. 분류된 라벨·금액·관계 유형만 기록합니다.",12,SUB,false),12);
 
         LinearLayout guide=card(body,"테스트 방법");
-        add(guide,text("1. v0.4 테스트는 유지하고, v0.5를 사용할 때만 이전 접근성 서비스를 끕니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 1건을 완료할 때마다 마지막 배달료를 입력해 건별 비교합니다.\n4. 마지막 배달료 비교를 반복하고, 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
+        add(guide,text("1. 기존 v0.5 등 이전 진단 앱의 접근성 서비스를 끄고 v0.6만 켭니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달마다 마지막 배달료를 입력해 비교합니다. 이미 검증한 화면을 다시 누르면 중복 저장을 막습니다.\n4. 신규 완료 화면이 전혀 없었던 실제 배달은 수동 누락 기록을 사용합니다. 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
         setContentView(scroll);
         render();
     }
@@ -162,6 +163,27 @@ public final class MainActivity extends Activity {
             if(s.getId()!=null&&s.getId().contains("com.riderspot.incomediag")&&s.getId().contains("IncomeAccessibilityService"))
                 return true;
         return false;
+    }
+    private void recordMissedFee(){
+        try{
+            String raw=lastFee.getText().toString().replace(",","").trim();
+            if(raw.isEmpty())throw new IllegalArgumentException();
+            int value=Integer.parseInt(raw);
+            if(value<500||value>150000)throw new IllegalArgumentException();
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("완료 화면 수집 누락")
+                .setMessage("실제 배달을 한 건 더 완료했지만, 새로운 완료 화면이 감지되지 않았나요?\n\n"+
+                    String.format(Locale.KOREA,"실제 배달료 %,d원은 수동 누락 건으로만 저장됩니다.",value))
+                .setNegativeButton("취소",null)
+                .setPositiveButton("누락 건 저장",(dialog,which)->{
+                    String message=DiagStore.recordUnseenDelivery(this,value);
+                    Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                    if(message.startsWith("저장됨:"))lastFee.setText("");
+                    render();
+                }).show();
+        }catch(Exception e){
+            Toast.makeText(this,"마지막 배달료를 정확히 입력하세요.",Toast.LENGTH_LONG).show();
+        }
     }
     private void verifyLastFee(){
         try{
@@ -283,7 +305,7 @@ public final class MainActivity extends Activity {
     }
     private void share(){
         render();
-        String report="라이더스팟 수익 인식 진단 v0.5.0\n\n"
+        String report="라이더스팟 수익 인식 진단 v0.6.0\n\n"
             +status.getText()+"\n\n"+counts.getText()+"\n\n"
             +resources.getText()+"\n\n건별 검증\n"+deliverySummary.getText()+"\n"+deliveryHistory.getText()+"\n\n전체 운행 비교\n"+accuracy.getText()
             +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()+"\n\nUI 구조 분석\n"+structureHistory.getText()

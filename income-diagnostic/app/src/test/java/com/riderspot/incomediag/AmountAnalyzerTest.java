@@ -7,6 +7,11 @@ public class AmountAnalyzerTest {
     @Test public void composite4489(){
         assertEquals(4489,AmountAnalyzer.inspect("배달 완료 4,489원 3,280원 624원 585원").uniqueCompositeTotal());
     }
+    @Test public void smallExtraFeeIsParsed(){
+        AmountAnalyzer.Result x=AmountAnalyzer.inspect("배달 완료 3,105원 2,700원 405원");
+        assertEquals(3105,x.uniqueCompositeTotal());
+        assertEquals(3,x.amounts.size());
+    }
     @Test public void composite7307(){
         assertEquals(7307,AmountAnalyzer.inspect("배달 완료 7,307원 3,280원 3,074원 953원").uniqueCompositeTotal());
     }

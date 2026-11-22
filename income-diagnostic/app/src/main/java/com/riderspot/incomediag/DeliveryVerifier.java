@@ -18,6 +18,9 @@ final class DeliveryVerifier {
             this.status=status;this.predicted=predicted;this.candidateScreens=screens;this.visible=visible;
         }
     }
+    static boolean isNewEvidence(long anchor,long consumed,long now){
+        return anchor>consumed&&anchor>0&&anchor<=now&&now-anchor<=300000L;
+    }
     static Verdict classify(int actual,List<Integer> predictions,List<String> observed) {
         Set<Integer> confirmed=new HashSet<>();
         for(Integer value:predictions)if(value!=null&&value>0)confirmed.add(value);
