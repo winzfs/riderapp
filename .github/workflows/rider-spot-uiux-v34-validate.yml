@@ -1,0 +1,93 @@
+name: Rider Spot UIUX v34 full rearchitecture verification
+on:
+  push:
+    branches: [design/riderspot-uiux-v34-rearchitecture-20261123]
+    paths:
+      - '.github/workflows/rider-spot-uiux-v34-validate.yml'
+      - 'rider-spot-web/src/**'
+      - 'rider-spot-web/tests/**'
+      - 'rider-spot-web/prebuilt/**'
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: rider-spot-uiux-v34-verify
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Syntax check for changed React screen modules
+        run: |
+          node --check src/application.mjs
+          node --check src/Timeline.mjs
+          node --check src/mobile-records.mjs
+          node --check src/finance-ui.mjs
+      - name: Full unit and integration suite
+        run: npm test
+      - name: Build immutable web release
+        run: npm run build
+      - name: Verify actual new component tree and source integrity
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const r=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const css=fs.readFileSync('dist/assets/rider-spot-'+r.hash+'/curated-v9.css','utf8');
+          const app=fs.readFileSync('dist/assets/rider-spot-'+r.hash+'/app.mjs','utf8');
+          const f=fs.readFileSync('src/finance-ui.mjs','utf8');
+          const t=fs.readFileSync('src/Timeline.mjs','utf8');
+          const c=fs.readFileSync('src/application.mjs','utf8');
+          const b=fs.readFileSync('src/mobile-records.mjs','utf8');
+          assert.ok(css.includes('RIDERSPOT V34 REARCHITECTURE'));
+          assert.ok(app.includes('rs34-app'));
+          assert.ok(app.includes('rs34-community-list'));
+          assert.ok(app.includes('rs34-ride-dock-status'));
+          assert.ok(app.includes('rs34-odometer-row'));
+          assert.ok(f.indexOf('rs33-goal-card')<f.indexOf('rs11-income-chart'), 'goal is above chart');
+          assert.ok(t.indexOf('rs11-route-first')<t.indexOf('rs11-timeline-insights'), 'map above summary');
+          assert.ok(t.includes('ride.trip ? finish : ride.startTrip'), 'finish from visible header');
+          assert.equal((c.match(/className: "rc-category-wrap"/g)||[]).length,1);
+          assert.ok(c.indexOf('className: "rc-category-wrap"')>c.indexOf('rs34-community-filters'));
+          assert.ok(b.includes('rs34-odo-action'));
+          const html=fs.readFileSync('dist/index.html','utf8');
+          assert.ok(fs.readFileSync('edge/static-edge.mjs','utf8').includes('rs-recovery-guard-v217'));
+          assert.ok(html.includes('rider-spot-'+r.hash+'/curated-v9.css'));
+          console.log('V34_REARCHITECTURE_SOURCE_PASS',r.hash);
+          NODE
+      - name: Browser dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Browser navigation, visual layout, and authenticated records at local release
+        run: |
+          python3 -m http.server 8840 --directory dist >/tmp/rs34-http.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
+            sleep 1
+          done
+          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/uiux-v34-browser.cjs
+          RIDER_TEST_ORIGIN=http://127.0.0.1:8840 RIDER_SCREENSHOTS=/tmp/rs34-screens node tests/mobile-records-browser.cjs
+      - name: Source update safety and native integration invariants
+        run: |
+          mkdir -p /tmp/rs34-native
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/rs34-native
+          RIDER_ANDROID_SOURCE=/tmp/rs34-native node scripts/check-update-safety.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-UIUX-v34-layout-evidence
+          path: |
+            /tmp/rs34-visual-evidence
+            /tmp/rs34-screens
+            rider-spot-web/dist/release.json
+          retention-days: 7
+          if-no-files-found: warn

@@ -1293,12 +1293,12 @@ export function mountApplication({
     );
     return H(
       "section",
-      { className: "page rc-community rc-home rc-community-v32 rs-community-renewal" },
+      { className: "page rc-community rc-home rc-community-v32 rs-community-renewal rs34-community" },
       datalist,
       H("section",{className:"rs6-community-deck"},
       H(
         "div",
-        { className: "rc-head" },
+        { className: "rc-head rs34-community-header" },
         H("div",{className:"rs9-community-title rs11-community-masthead rs12-community-masthead"},
           H("h1",null,dong || district),
           H("p",null,"우리 동네 라이더 이야기")),
@@ -1308,7 +1308,7 @@ export function mountApplication({
           "＋ 글쓰기",
         ),
       ),
-      H("details",{className:"rs8-community-tools"},
+      H("details",{className:"rs8-community-tools rs34-community-filters"},
         H("summary",{className:"rs8-community-trigger"},
           H("span",null,"검색 · 필터"),
           H("small",null,categoryLabel(cat)+" · "+(sort==="latest"?"최신순":sort==="popular"?"인기순":"댓글순"))),
@@ -1415,6 +1415,8 @@ export function mountApplication({
               )
             : null,
         ),
+      ),
+      ),
         H(
           "div",
           { className: "rc-category-wrap" },
@@ -1454,8 +1456,6 @@ export function mountApplication({
             "›",
           ),
         ),
-      ),
-      ),
       ),
       isNews
         ? H(
@@ -1520,7 +1520,7 @@ export function mountApplication({
       rows.length
         ? H(
             "div",
-            { className: "rc-card-list rc-feed-renewal" },
+            { className: "rc-card-list rc-feed-renewal rs34-community-list" },
             ...rows.map((row) => row.node),
           )
         : loading || (isNews && newsBusy)
@@ -2494,7 +2494,7 @@ export function mountApplication({
       l(!0);
     }
     return (0, J.jsxs)(`div`, {
-      className: `app`,
+      className: `app rs34-app`,
       "data-screen": e,
       children: [
         (0, J.jsxs)(`header`, {
@@ -2602,7 +2602,7 @@ export function mountApplication({
                       className: `nearby nearby-full`,
                       children: [
                         (0, J.jsxs)(`div`, {
-                          className: `map-wrap rs33-map-wrap rs6-map-stage rs-map-v2`,
+                          className: `map-wrap rs33-map-wrap rs6-map-stage rs-map-v2 rs34-map-stage`,
                           "data-rs33-layer": mapLayer,
                           children: [
                         (0, J.jsx)(MapBar, {
@@ -2631,8 +2631,10 @@ export function mountApplication({
                           ],
                         }),
                         (0, J.jsx)("div", {
-                          className: "ride-launch" + (p.trip ? " active" : ""),
+                          className: "ride-launch rs34-ride-dock" + (p.trip ? " active" : ""),
                           children: [
+                            (0,J.jsx)("div",{className:"rs34-ride-dock-status",role:"status",
+                              children:p.trip?(p.paused?"운행 일시정지":"운행 기록 중"):"운행 준비"}),
                             (0,J.jsx)("button", {
                               type:"button", disabled:p.busy,
                               "aria-label":p.trip?(p.paused?"운행 재개":"운행 종료"):"운행 시작",

@@ -1,0 +1,94 @@
+name: Rider Spot UIUX v34 isolated preview release
+on:
+  push:
+    branches: [design/riderspot-uiux-v34-rearchitecture-20261123]
+    paths:
+      - '.github/workflows/rider-spot-uiux-v34-preview.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: rider-spot-uiux-v34-preview-release
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run: {working-directory: rider-spot-web}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: f3e379cc8cf3d18061a1948aecc2dad5
+      CF_TOKEN_PRIMARY: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_TOKEN_ALTERNATE: ${{ secrets.CF_API_TOKEN }}
+      RIDER_PREVIEW: https://rider-spot-atelier-v8-preview.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22',cache: npm,cache-dependency-path: rider-spot-web/package-lock.json}
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Browser verify local source before preview
+        run: |
+          npx playwright install --with-deps chromium
+          python3 -m http.server 8840 --directory dist >/tmp/rs34-preview-http.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
+            sleep 1
+          done
+          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/uiux-v34-browser.cjs
+          RIDER_TEST_ORIGIN=http://127.0.0.1:8840 node tests/mobile-records-browser.cjs
+      - name: Choose existing Cloudflare token
+        shell: bash
+        run: |
+          if [ -n "$CF_TOKEN_PRIMARY" ]; then
+            echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN_PRIMARY" >> "$GITHUB_ENV"
+          elif [ -n "$CF_TOKEN_ALTERNATE" ]; then
+            echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN_ALTERNATE" >> "$GITHUB_ENV"
+          else
+            echo 'Existing preview cannot deploy without a Cloudflare token.' >&2
+            exit 1
+          fi
+      - name: Update EXISTING preview Worker only (never create a new Worker or touch production)
+        run: |
+          grep -Fq '"name": "rider-spot-atelier-v8-preview"' wrangler.uiux-v34-preview.json
+          npx --yes wrangler@4.53.0 deploy --config wrangler.uiux-v34-preview.json
+      - name: Validate preview release shell and real hashed resources
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';import assert from 'node:assert/strict';
+          const rel=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base=process.env.RIDER_PREVIEW;
+          const get=async p=>{
+            const r=await fetch(base+p,{headers:{'Cache-Control':'no-cache'},
+              signal:AbortSignal.timeout(30000)});
+            assert.equal(r.status,200,p+' http '+r.status);
+            return r;
+          };
+          const html=await (await get('/')).text();
+          assert.ok(html.includes('rs-recovery-guard-v217'),'native guard');
+          assert.ok(html.includes('/assets/rider-spot-'+rel.hash+'/app.mjs'),'release HTML hash');
+          assert.ok(html.includes('/assets/rider-spot-'+rel.hash+'/curated-v9.css'),'stylesheet');
+          const css=await (await get('/assets/rider-spot-'+rel.hash+'/curated-v9.css')).text();
+          assert.ok(css.includes('RIDERSPOT V34 REARCHITECTURE'));
+          const app=await (await get('/assets/rider-spot-'+rel.hash+'/app.mjs')).text();
+          assert.ok(app.includes('rs34-app'));
+          const sw=await (await get('/sw.js')).text();
+          assert.ok(sw.includes(rel.hash),'service worker hash');
+          console.log('V34_PREVIEW_DEPLOYMENT_PASS',rel.hash,base);
+          NODE
+      - name: Browser acceptance on the real preview Worker
+        run: |
+          RIDER_VISUAL_URL="$RIDER_PREVIEW" node tests/uiux-v34-browser.cjs
+          RIDER_TEST_ORIGIN="$RIDER_PREVIEW" RIDER_TEST_REMOTE_SOURCE=1 RIDER_SCREENSHOTS=/tmp/rs34-preview-records node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-UIUX-v34-preview-visuals
+          path: |
+            /tmp/rs34-visual-evidence
+            /tmp/rs34-preview-records
+            rider-spot-web/dist/release.json
+          retention-days: 7
+          if-no-files-found: warn
+
+# V34 retry: verify the newly folded platform totals via expanded disclosure.

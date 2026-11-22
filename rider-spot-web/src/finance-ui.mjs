@@ -579,7 +579,7 @@ export function createFinance(R, client) {
         [...earningDays].every(day=>recordedDays.has(day));
       const usable=!!duration&&!!distance;
       const coverageLabel=complete?"운행 기록 기준":usable?"일부 운행만 기록됨":"기록 없음";
-      return h("div",{className:"fin-stack rs8-finance-dashboard"},
+      return h("div",{className:"fin-stack rs8-finance-dashboard rs34-finance-dashboard"},
         h("section",{className:"rs8-income-console"},
           h("div",{className:"rs8-console-top"},
             txt("span","rs8-eyebrow","수익 요약"),
@@ -598,14 +598,6 @@ export function createFinance(R, client) {
             h("div",null,txt("span",null,"비용 차감 후"),h("strong",null,totals.uncertain?"확인 필요":money(totals.net)))),
           totals.uncertain&&txt("p","fin-warning","예전 수익의 비용 분류가 불분명해 비용 차감액 확인이 필요해요."),
           ),
-        h("section",{className:"rs11-finance-shortcuts","aria-label":"빠른 기록"},
-          button(h(R.Fragment,null,icon("earnings",19),"수익 기록"),()=>openEditor("income"),"fin-primary"),
-          button(h(R.Fragment,null,icon("fuel",19),"지출 기록"),()=>openEditor("expense"),"fin-secondary")),
-        h("section",{className:"rs8-trend-integrated rs11-income-chart","aria-label":"일별 수익 그래프"},
-          h("div",{className:"rs9-chart-heading"},
-            h("div",null,txt("small","rs11-section-kicker","PERFORMANCE"),txt("strong",null,"지난 7일")),
-            txt("small",null,"일별 수익 · 원")),
-          chart()),
         h("section",{className:"rs8-goal-progress rs33-goal-card","aria-label":"이번 달 목표"},
           h("div",{className:"rs8-section-caption"},
             h("h2",null,"이번 달 목표"),
@@ -625,8 +617,16 @@ export function createFinance(R, client) {
             txt("span",null,money(goalValue)+" / "+money(goalTarget)),
             txt("strong",null,achieved==null?"분류 확인 필요":achieved+"%")),
           txt("small","rs33-goal-deadline",Number(monthTo.slice(5,7))+"월 "+Number(monthTo.slice(8))+"일 마감")),
-        h("section",{className:"rs8-platform-ledger"},
-          h("div",{className:"rs8-section-caption"},h("h2",null,"플랫폼별 수익"),
+        h("section",{className:"rs11-finance-shortcuts","aria-label":"빠른 기록"},
+          button(h(R.Fragment,null,icon("earnings",19),"수익 기록"),()=>openEditor("income"),"fin-primary"),
+          button(h(R.Fragment,null,icon("fuel",19),"지출 기록"),()=>openEditor("expense"),"fin-secondary")),
+        h("section",{className:"rs8-trend-integrated rs11-income-chart","aria-label":"일별 수익 그래프"},
+          h("div",{className:"rs9-chart-heading"},
+            h("div",null,txt("small","rs11-section-kicker","PERFORMANCE"),txt("strong",null,"지난 7일")),
+            txt("small",null,"일별 수익 · 원")),
+          chart()),
+        h("details",{className:"rs8-platform-ledger rs34-platform-disclosure"},
+          h("summary",{className:"rs8-section-caption"},h("strong",null,"플랫폼별 수익"),
             txt("small",null,monthLabel)),
           platformBreakdown()),
         h("details",{className:"rs8-efficiency"},
@@ -655,7 +655,7 @@ export function createFinance(R, client) {
       const collapseZeroService=filter==="all"&&detailFilter==="all"&&!query;
       const zeroService=collapseZeroService?visible.filter(x=>x.type==="maintenance"&&!x.amount):[];
       const ledgerRows=collapseZeroService?visible.filter(x=>x.type!=="maintenance"||!!x.amount):visible;
-      return h("div",{className:"fin-stack"},
+      return h("div",{className:"fin-stack rs34-finance-records"},
         h("div",{className:"fin-month-head"},
           button(icon("left",20),()=>setAnchor(monthDelta(anchor,-1)),"fin-iconbtn",{"aria-label":"이전 달"}),
           txt("strong",null,monthFrom.slice(0,7).replace("-","년 ")+"월"),
@@ -867,8 +867,8 @@ export function createFinance(R, client) {
         txt("p","fin-muted","개인 지출·미기록 비용·세금은 별도"));
 
     }
-    return h("section",{className:"finance-page page narrow"},
-      h("div",{className:"fin-page-head"},h("h1",null,"수익"),
+    return h("section",{className:"finance-page page narrow rs34-finance-page"},
+      h("div",{className:"fin-page-head rs34-page-heading"},h("h1",null,"수익"),
         user&&button(h(R.Fragment,null,icon("analysis",16),"결산 이미지"),
           ()=>setRecapDay(today),"rs-recap-launch",{"aria-label":"오늘의 결산 카드 이미지 만들기"})),
       sectionNav,

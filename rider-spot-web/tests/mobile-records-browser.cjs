@@ -542,7 +542,11 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(await page.locator(".rs8-platform-ledger .rs8-section-caption small").innerText(),
       "2026년 11월","platform totals need an explicit monthly range");
 
-    await page.locator(".rs8-platform-ledger").getByText("쿠팡이츠",{exact:true})
+    // V34: platform breakdown stays accessible but is intentionally folded.
+    const platformDetail=page.locator(".rs8-platform-ledger");
+    if(await platformDetail.evaluate(el=>el.tagName==="DETAILS"&&!el.open))
+      await platformDetail.locator("summary").click();
+    await platformDetail.getByText("쿠팡이츠",{exact:true})
       .waitFor({timeout:12000});
     assert.ok(await page.locator(".rs8-platform-ledger").innerText().then(v=>v.includes("120,000원")),
       "month-wide platform totals must use saved income even while today is zero");
