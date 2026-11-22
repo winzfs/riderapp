@@ -1,0 +1,70 @@
+name: Rider Spot UIUX v34 production release acceptance
+on:
+  push:
+    branches: [design/mobile-layout-v32]
+    paths: [.github/workflows/rider-spot-uiux-v34-production-qa.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    defaults:
+      run: {working-directory: rider-spot-web}
+    env:
+      RIDER_ORIGIN: https://rider-spot.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22',cache: npm,cache-dependency-path: rider-spot-web/package-lock.json}
+      - run: npm ci
+      - name: Verify live production hash and legacy rollback assets
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';import assert from 'node:assert/strict';
+          const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          const root=process.env.RIDER_ORIGIN;
+          const get=async (p,expectHash=release.hash)=>{
+            const r=await fetch(root+p,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(35000)});
+            assert.equal(r.status,200,p+' http '+r.status);
+            if(p.startsWith('/assets/'))assert.equal(r.headers.get('x-rs-release'),expectHash,p);
+            return r;
+          };
+          const html=await (await get('/')).text();
+          assert.ok(html.includes('rs-recovery-guard-v217'),'native recovery guard retained');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/app.mjs'),'active web version');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/curated-v9.css'),'active CSS version');
+          const sw=await (await get('/sw.js')).text();assert.ok(sw.includes(release.hash));
+          const assets=release.files.filter(p=>p.startsWith('/assets/'));
+          assert.equal(assets.length,13);
+          for(const p of assets){const bytes=await (await get(p)).arrayBuffer();assert.ok(bytes.byteLength>100,p);}
+          const css=await (await get('/assets/rider-spot-'+release.hash+'/curated-v9.css')).text();
+          assert.ok(css.includes('RIDERSPOT V34 REARCHITECTURE'));
+          const app=await (await get('/assets/rider-spot-'+release.hash+'/app.mjs')).text();
+          assert.ok(app.includes('rs34-app'));
+          for(const old of ['f6627988c229','e6d76bebe9d1','b18d7e24c9a5'])
+            assert.ok((await (await get('/assets/rider-spot-'+old+'/app.mjs',old)).arrayBuffer()).byteLength>100,'old asset '+old);
+          await get('/mapdata/manifest.json');
+          await get('/rider-spot-shell-v40.js');
+          console.log('V34_PRODUCTION_ASSETS_PASS',release.hash,assets.length);
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Five tabs browser responsive acceptance on production
+        env: {RIDER_VISUAL_URL: https://rider-spot.jazzhjm.workers.dev}
+        run: node tests/uiux-v34-browser.cjs
+      - name: Finance, garage, timeline, Back with mock signed-in on live production
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
+          RIDER_SCREENSHOTS: /tmp/rs34-production-records
+        run: node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-v34-production-qa-evidence
+          path: |
+            /tmp/rs34-visual-evidence
+            /tmp/rs34-production-records
+            rider-spot-web/prebuilt/release.json
+          retention-days: 14
+          if-no-files-found: warn
