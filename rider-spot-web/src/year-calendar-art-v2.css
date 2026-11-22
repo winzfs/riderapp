@@ -112,3 +112,30 @@ body.rs-year-open{overflow:hidden}
   .rs-year-stat strong{font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){.rs-year-dialog *{animation:none!important;transition:none!important}}
+
+/* v3 production repair: isolate poster typography from legacy global header/nav styles. */
+.rs-year-dialog .rs-year-hero,
+.rs-year-dialog .rs-year-month-hero{
+  display:block!important;position:static!important;inset:auto!important;width:auto!important;
+  height:auto!important;min-height:0!important;margin:0!important;transform:none!important;
+  background:transparent!important;color:var(--ry-ink)!important;box-shadow:none!important;
+  overflow:visible!important;text-align:left!important;z-index:auto!important;
+}
+.rs-year-dialog .rs-year-hero{padding:10px 0 23px!important;border-bottom:1px solid var(--ry-rule)!important}
+.rs-year-dialog .rs-year-hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px}
+.rs-year-dialog .rs-year-overline{white-space:nowrap;font-size:10px;letter-spacing:.1em}
+.rs-year-dialog .rs-year-hero-yearline{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0}
+.rs-year-dialog .rs-year-current{display:block;flex:0 1 auto;font-size:clamp(56px,17vw,78px)!important;line-height:1!important;letter-spacing:-.08em!important;white-space:nowrap;margin:0;font-weight:570}
+.rs-year-dialog .rs-year-controls{display:flex!important;position:static!important;inset:auto!important;flex:none!important;
+  width:auto!important;height:auto!important;min-height:0!important;gap:7px!important;padding:0!important;margin:0!important;
+  border:0!important;background:transparent!important;justify-content:flex-end!important;box-shadow:none!important}
+.rs-year-dialog .rs-year-controls .rs-year-nav-icon{display:grid!important;place-items:center!important;position:static!important;flex:none!important;
+  width:35px!important;height:35px!important;padding:0!important;margin:0!important;border:1px solid var(--ry-rule)!important;
+  background:transparent!important;border-radius:50%!important;font-size:22px!important;line-height:1!important;color:var(--ry-ink)!important}
+.rs-year-dialog .rs-year-controls .rs-year-nav-icon:disabled{opacity:.36!important}
+.rs-year-dialog .rs-year-hero-label{display:flex;align-items:baseline;justify-content:flex-start;flex-wrap:wrap;gap:7px 13px;margin-top:13px;min-width:0}
+.rs-year-dialog .rs-year-title{font-size:clamp(21px,5.2vw,27px)!important;line-height:1.25!important;white-space:nowrap!important;
+  word-break:keep-all!important;letter-spacing:-.055em!important;flex:none;max-width:100%;margin:0!important}
+.rs-year-dialog .rs-year-intro-caption{font-size:11px!important;line-height:1.45!important;margin:0!important;white-space:nowrap!important;
+  color:#819085!important;word-break:keep-all!important}
+@media(max-width:355px){.rs-year-dialog .rs-year-current{font-size:52px!important}.rs-year-dialog .rs-year-hero-label{gap:5px 9px}}
