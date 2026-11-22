@@ -1097,3 +1097,22 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
   .app .finance-page .fin-chart-point,.app .rs33-timeline .rs12-route-tools button,
   .app .bike-page .rs11-part-row {transition:none!important;animation:none!important}
 }
+
+
+/* Day-scoped delivery history: this is read-only and distinct from manual earnings. */
+.app .finance-page .rs-auto-income-time-list {
+  margin:20px 0!important;padding:17px 0 16px!important;overflow:visible!important;
+  background:transparent!important;box-shadow:none!important;border:0!important;
+  border-top:1px solid #DEE4E6!important;border-radius:0!important;
+}
+.app .finance-page .rs-auto-income-time-list header {margin-bottom:12px!important}
+.app .finance-page .rs-auto-income-time-list h2 {font-size:18px!important;letter-spacing:-.03em!important;color:#1C2B39!important}
+.app .finance-page .rs-auto-income-time-list :is(button,input[type="date"]) {
+  min-height:44px!important;box-sizing:border-box;touch-action:manipulation;
+}
+.app .finance-page .rs-auto-income-time-list button {border-radius:10px!important}
+.app .finance-page .rs-auto-income-time-list :is(strong,time) {font-variant-numeric:tabular-nums}
+@media(max-width:380px){
+ .app .finance-page .rs-auto-income-time-list header{gap:8px}
+ .app .finance-page .rs-auto-income-time-list input[type="date"]{font-size:12px!important}
+}
