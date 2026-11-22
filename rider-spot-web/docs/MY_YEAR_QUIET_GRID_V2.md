@@ -125,8 +125,18 @@ RIDERSPOT / MY YEAR               ×
 - [ ] 기존 지도, GPS, 자동 수익, 운행 종료 상태의 무회귀
 - [ ] 웹 번들 hash, OAuth recovery guard 및 Workers service binding 유지
 
-## 8. 진행 내역
+## 8. 운영 반영 결과 (2026-11-23)
+- 운영 Worker `rider-spot`에 Quiet Grid v2 반영 성공. 운영 주소 `https://rider-spot.jazzhjm.workers.dev/`.
+- URL `/rider-spot-my-year-v2.js`를 같은 출처에서 제공하며, 소스는 커밋 `5d94b4217132964575438bf2bb732f7b6d95d61a`에 고정된 jsDelivr 정적 자산으로부터 가져옴.
+- 신규 파일 로드 실패 시 기존의 저장된 v1 스크립트로 폴백. 과거 `/rider-spot-my-year-v1.js` 라우트는 그대로 유지.
+- 메인 앱 번들 `82c20b027c23`, recovery guard, OAuth 관련 분기와 ASSETS/DESIGN/LEGACY 서비스 바인딩 유지.
+- Cloudflare Browser Rendering에서 운영 루트 로딩, 수익 탭 내 캘린더 버튼, 다이얼로그 열림, `rs-year-v2-style` 로딩, 비로그인 안내를 검증함.
+- 실제 로그인 사용자의 데이터 합계 검증과 모바일 기기별 스크린샷 비교는 수행되지 않았으므로 별도 현장 확인이 필요함.
+- 임시 테스트 Worker `rider-spot-urban-preview`는 이전 스크립트와 서비스 바인딩으로 원상 복구.
+- 재배포 시 외부 CDN 참조가 필요함. 추후 앱 에셋에 함께 번들링하면 외부 의존성을 줄일 수 있음.
+
+## 9. 최초 작업 내역
 - v2 소스와 CSS를 별도 디자인 브랜치에 작성함.
 - 클라우드 브라우저의 독립 테스트 페이지에서 v2 소스 로딩, 스타일 주입, 비로그인 안내 표시를 확인함.
-- Cloudflare Worker 배포 요청이 안전 검사에서 차단되었으므로 운영 앱에는 아직 v2가 반영되지 않음. **운영 화면은 v1 유지.**
+- 최초 후보 배포 경로가 차단되었으나, 별도 검증 후 기존 Worker에 동일 출처의 v2 로딩 경로를 추가해 운영 반영을 완료함.
 - 이 문서는 작업 인수인계용으로 사용 가능. 추가 QA 후 안전한 배포 수단으로 반영할 것.
