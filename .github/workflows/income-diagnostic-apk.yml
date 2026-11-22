@@ -1,0 +1,64 @@
+name: RiderSpot Income Recognition Diagnostic APK
+on:
+  push:
+    branches: [feature/riderspot-income-diagnostic]
+    paths:
+      - 'income-diagnostic/**'
+      - '.github/workflows/income-diagnostic-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile standalone diagnostic
+        working-directory: income-diagnostic
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Validate, fingerprint and stage APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build-output
+          cp income-diagnostic/app/build/outputs/apk/debug/app-debug.apk build-output/RiderSpot-Income-Diagnostic-v0.7.0.apk
+          APK=build-output/RiderSpot-Income-Diagnostic-v0.7.0.apk
+          test -s "$APK"
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.incomediag.v07'"
+          sha256sum "$APK" > "$APK.sha256"
+      - name: Upload diagnostic APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-Income-Diagnostic-APK
+          path: build-output/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="riderspot-income-diagnostic-v0.7.0-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" build-output/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "RiderSpot Income Diagnostic v0.7.0 · developer test" --notes "Side-by-side Android income-collection prototype. Offline candidate ledger, review, manual approval, CSV export and duplicate guard. No production income writes. Includes per-delivery duplicate guard and amounts below 500 KRW. Accessibility events from Coupang Eats Courier and Baemin Connect only. No screenshots, OCR, internet or raw screen text persistence. Candidate extraction is experimental; accuracy requires manual ground truth comparison. Battery delta reflects the whole device, not solely this application." --prerelease
+          echo "### APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"

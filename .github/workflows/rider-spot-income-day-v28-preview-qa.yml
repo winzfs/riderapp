@@ -1,0 +1,102 @@
+name: RiderSpot Daily Delivery Ledger v28 Preview QA
+on:
+  push:
+    branches: [feature/riderspot-income-diagnostic]
+    paths:
+      - '.github/workflows/rider-spot-income-day-v28-preview-qa.yml'
+      - 'rider-spot-web/src/auto-income-time-list.js'
+      - 'rider-spot-web/tests/auto-income-time-list.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PREVIEW: https://rider-spot-income-day-v28-gateway-preview.jazzhjm.workers.dev
+      PREVIEW_ASSETS: https://rider-spot-income-day-v28-preview.jazzhjm.workers.dev
+      NEW: 6a3892af3623
+      OLD: dd55145c6135
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Verify exact new immutable release and retention of old stop fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --max-time 45 "$PREVIEW/" > /tmp/rs-time-shell.html
+          curl -fsSL --retry 3 --max-time 45 "$PREVIEW/sw.js" > /tmp/rs-time-sw.js
+          curl -fsSL --retry 3 --max-time 45 "$PREVIEW/assets/rider-spot-$NEW/app.mjs" > /tmp/rs-time-app.mjs
+          curl -fsSL --retry 3 --max-time 45 "$PREVIEW/assets/rider-spot-$OLD/app.mjs" > /tmp/rs-old-stops-app.mjs
+          node --check /tmp/rs-time-app.mjs
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const html=fs.readFileSync('/tmp/rs-time-shell.html','utf8');
+          const sw=fs.readFileSync('/tmp/rs-time-sw.js','utf8');
+          const app=fs.readFileSync('/tmp/rs-time-app.mjs','utf8');
+          const old=fs.readFileSync('/tmp/rs-old-stops-app.mjs','utf8');
+          const hash=createHash('sha256').update(app).digest('hex').slice(0,12);
+          assert.equal(hash,process.env.NEW);
+          assert.ok(html.includes('rs-recovery-guard-v217'));
+          assert.ok(html.includes('/assets/rider-spot-'+hash+'/app.mjs'));
+          assert.ok(sw.includes('rider-spot-shell-'+hash));
+          assert.ok(old.includes('rsStopTimelineEvents'));
+          assert.ok(!old.includes('__rsAutoIncomeTimes'));
+          assert.ok(app.includes('rsStopTimelineEvents'));
+          assert.ok(app.includes('rs56-stop-events'));
+          assert.ok(app.includes('rs11-map-commandbar'));
+          assert.ok(app.includes('window.__rsAutoIncomeTimes'));
+          assert.ok(app.includes('rider_auto_deliveries'));
+          assert.ok(app.includes('captured_at,created_at,work_date'));
+          assert.ok(app.includes('일별 배달 수익'));
+          assert.ok(app.includes('rs-auto-income-time-list'));
+          assert.ok(app.includes('work_date'));
+          assert.ok(app.includes('s(window.__rsAutoIncomeTimes,{React:r,client:n,userId:N?.id})'));
+          for(const name of ['curated-v9.css','native-gps.js','native-maplibre.js']){
+            const response=await fetch(process.env.PREVIEW+'/assets/rider-spot-'+hash+'/'+name);
+            assert.equal(response.status,200,name);
+          }
+          console.log('RIDERSPOT_INCOME_TIME_PREVIEW_ASSETS_PASS',hash,app.length);
+          NODE
+      - name: Test KST workday, timestamp rendering, existing GPS and finance
+        working-directory: rider-spot-web
+        run: |
+          npm ci
+          node --test tests/auto-income-time-list.test.cjs
+          npm test
+      - name: Mobile preview smoke without reload, finance regression
+        working-directory: rider-spot-web
+        shell: bash
+        run: |
+          npx playwright install chromium
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import assert from 'node:assert/strict';
+          const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+          try {
+            const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2});
+            const errors=[];
+            let navigation=0;
+            page.on('pageerror',err=>errors.push(err.message));
+            page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigation++;});
+            const response=await page.goto(process.env.PREVIEW+'/',{waitUntil:'domcontentloaded',timeout:50000});
+            assert.equal(response.status(),200);
+            await page.waitForFunction(()=>typeof window.__rsAutoIncomeTimes==='function',{timeout:20000});
+            await page.waitForTimeout(4000);
+            const body=await page.locator('body').innerText();
+            assert.ok(body.includes('타임라인')||body.includes('지도'),'RiderSpot app failed to mount');
+            const settledCount=navigation;
+            await page.waitForTimeout(4500);
+            assert.equal(navigation,settledCount,'repeated page navigation after initial boot');
+            console.log('RIDERSPOT_INCOME_TIME_INITIAL_NAVIGATIONS',settledCount);
+            assert.equal(errors.length,0,'JS crash: '+errors.join('; '));
+            console.log('RIDERSPOT_INCOME_TIME_PREVIEW_BROWSER_PASS');
+          } finally {await browser.close();}
+          NODE
