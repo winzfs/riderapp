@@ -707,7 +707,7 @@ export function createRecords(R, client) {
                 reading?.[0]==null?"거리 미입력":h(R.Fragment,null,
                   h("span",null,number(reading[0]))," ",h("small",null,"km"))),
               btn("수정",()=>vehicleAction("odometer"),
-                {className:"rs34-odo-action","aria-label":"계기판 주행거리 수정",disabled:!!user&&!data})),
+                {className:"rs34-odo-action","aria-label":"계기판 입력",disabled:!!user&&!data})),
             h("small",{className:"rs8-odo-updated"},reading?.[1]||"입력일 미기록",
               !manual&&reading?" · 정비·주유 기록 기준":"")),
           bikeArtSource(model)
