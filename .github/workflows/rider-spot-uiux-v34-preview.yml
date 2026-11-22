@@ -90,3 +90,5 @@ jobs:
             rider-spot-web/dist/release.json
           retention-days: 7
           if-no-files-found: warn
+
+# V34 retry: verify the newly folded platform totals via expanded disclosure.
