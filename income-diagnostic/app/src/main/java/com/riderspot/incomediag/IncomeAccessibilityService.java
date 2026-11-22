@@ -15,6 +15,7 @@ import java.util.ArrayDeque;
  */
 public final class IncomeAccessibilityService extends AccessibilityService {
     private long currentSession=0, raw, scanned, readable, missingRoot, completeScreens, moneyScreens, dedup, lastAt;
+    private final PrototypeCaptureGate prototypeGate=new PrototypeCaptureGate();
     private long lastScan=0,lastFlush=0,lastCandidateAt=0,lastTraceAt=0;
     private String lastCandidateFingerprint="",lastTraceFingerprint="",lastStructureFingerprint="";
     private long lastStructureAt=0;
@@ -97,6 +98,21 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         if(!result.amounts.isEmpty())moneyScreens++;
         String platform=pkg.equals("com.woowahan.bros")?"배민":"쿠팡이츠";
         List<NodeContextProbe.Entry> grouped=structureProbe.describe();
+        // v0.7 collects only local candidates; no production earnings writes.
+        prototypeGate.observe(result.completed,clock);
+        if(IncomePrototypeStore.enabled(this)){
+            IncomePrototypeClassifier.Decision decision=
+                IncomePrototypeClassifier.classify(result,grouped);
+            if(decision.collectable()){
+                long at=System.currentTimeMillis();
+                if(prototypeGate.armed()){
+                    IncomePrototypeStore.capture(this,platform,decision,at);
+                    prototypeGate.markCaptured();
+                } else {
+                    IncomePrototypeStore.promoteRecent(this,platform,decision,at);
+                }
+            }
+        }
         if(!grouped.isEmpty()){
             String summary=NodeContextProbe.safeSummary(grouped);
             String structuralSignature=platform+"|"+result.completed+"|"+summary;

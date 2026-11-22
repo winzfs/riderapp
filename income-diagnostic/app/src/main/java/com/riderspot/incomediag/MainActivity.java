@@ -35,7 +35,9 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final int INK=Color.rgb(23,33,55),SUB=Color.rgb(99,112,133),ACCENT=Color.rgb(56,85,231);
-    private TextView status,counts,resources,accuracy,history,traces,deliverySummary,deliveryHistory,structureHistory;
+    private TextView status,counts,resources,accuracy,history,traces,deliverySummary,deliveryHistory,structureHistory,prototypeSummary;
+    private LinearLayout prototypeRows;
+    private Button prototypeToggle;
     private EditText actualCount,actualTotal,lastFee;
     private final Runnable updater=new Runnable() {
         @Override public void run() { render();handler.postDelayed(this,5000); }
@@ -92,8 +94,8 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(245,247,251));
         LinearLayout body=col();body.setPadding(dp(18),dp(28),dp(18),dp(36));scroll.addView(body);
-        add(body,text("RIDERSPOT  /  INCOME LAB v0.6",12,ACCENT,true),0);
-        add(body,text("수익 인식 진단",28,INK,true),8);
+        add(body,text("RIDERSPOT  /  INCOME LAB v0.7",12,ACCENT,true),0);
+        add(body,text("수익 인식 실사용 프로토타입",26,INK,true),8);
         add(body,text("접근성 화면 텍스트에서 금액 후보와 주변 라벨을 분류합니다. 화면 캡처·OCR·서버 전송·원문 저장은 하지 않습니다.",13,SUB,false),10);
 
         LinearLayout state=card(body,"측정 상태");
@@ -103,6 +105,15 @@ public final class MainActivity extends Activity {
         }),button("측정 시작",true,v->{DiagStore.start(this);render();}));
         buttons(state,button("측정 종료",false,v->{DiagStore.stop(this);render();}),
                       button("보고서 공유",false,v->share()));
+
+        LinearLayout prototype=card(body,"실사용 수익 수집 · 로컬 프로토타입");
+        add(prototype,text("완료 화면의 수수료 항목과 합계가 연결되면 자동 후보로 보관합니다. 후보는 실제 수익에 자동 합산되지 않습니다. 수동 승인된 금액만 별도 합계에 들어갑니다. 서버 전송·본앱 수익 변경 없음.",12,SUB,false),9);
+        prototypeToggle=button("프로토타입 수집 켜기",true,v->togglePrototype());
+        buttons(prototype,prototypeToggle,button("CSV 공유",false,v->sharePrototypeCsv()));
+        prototypeSummary=text("",14,INK,false);
+        add(prototype,prototypeSummary,12);
+        add(prototype,text("최근 자동 수집 내역 · 검토는 안전하게 정차한 뒤 진행하세요.",12,SUB,false),10);
+        prototypeRows=col();add(prototype,prototypeRows,8);
 
         LinearLayout individual=card(body,"건별 검증 · 마지막 배달료");
         add(individual,text("배달 1건을 완료할 때마다 마지막 배달료를 입력하세요. 최근 완료 화면에서 앱이 스스로 추출한 후보와 비교하며, 수동 입력 금액은 인식 결과에 반영하지 않습니다.",12,SUB,false),8);
@@ -149,7 +160,7 @@ public final class MainActivity extends Activity {
         add(structure,text("화면 원문, 고객 이름·주소, UI 리소스 ID 값, 정확한 좌표는 저장하지 않습니다. 분류된 라벨·금액·관계 유형만 기록합니다.",12,SUB,false),12);
 
         LinearLayout guide=card(body,"테스트 방법");
-        add(guide,text("1. 기존 v0.5 등 이전 진단 앱의 접근성 서비스를 끄고 v0.6만 켭니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달마다 마지막 배달료를 입력해 비교합니다. 이미 검증한 화면을 다시 누르면 중복 저장을 막습니다.\n4. 신규 완료 화면이 전혀 없었던 실제 배달은 수동 누락 기록을 사용합니다. 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
+        add(guide,text("1. 이전 v0.6 접근성 서비스를 끄고 v0.7만 켭니다.\n2. 측정 시작 → 프로토타입 수집 켜기(동의)를 순서대로 누릅니다.\n3. 배달 완료 때 자동 후보가 로컬 원장에 추가됩니다. 같은 금액의 연속 배달은 90초 이내 중복으로 오판할 수 있으니 비교 검증이 필요합니다.\n4. 정차 후 후보의 수익 여부를 승인하거나 제외할 수 있습니다. 수동 승인 내역도 실제 라이더스팟 수익 탭에는 반영되지 않습니다.\n5. 측정을 재시작해도 프로토타입 원장은 남지만 진단 세션 로그는 초기화됩니다.\n6. CSV 공유 또는 보고서 공유로 결과를 내보냅니다.\n\nAndroid 접근성 설정이 제한되면 앱 정보 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
         setContentView(scroll);
         render();
     }
@@ -192,10 +203,88 @@ public final class MainActivity extends Activity {
             int value=Integer.parseInt(text);
             String message=DiagStore.verifyLastDelivery(this,value);
             Toast.makeText(this,message,Toast.LENGTH_LONG).show();
-            if(message.startsWith("저장됨:"))lastFee.setText("");
+            if(message.startsWith("저장됨:")){
+                lastFee.setText("");
+                IncomePrototypeStore.noteManualComparison(this,value,message.contains("자동 후보 일치"));
+            }
             render();
         }catch(Exception e){
             Toast.makeText(this,"마지막 배달 1건의 금액을 숫자로 입력하세요",Toast.LENGTH_LONG).show();
+        }
+    }
+    private void togglePrototype(){
+        if(IncomePrototypeStore.enabled(this)){
+            IncomePrototypeStore.setEnabled(this,false);
+            render();return;
+        }
+        if(!DiagStore.running(this)){
+            Toast.makeText(this,"먼저 '측정 시작'을 눌러주세요.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("수익 자동수집 프로토타입 켜기")
+            .setMessage("쿠팡이츠·배민커넥트 접근성 화면에서 수수료 항목·총액만 분석해 이 기기의 별도 원장에 기록합니다.\n\n화면 원문·주문 주소·고객 정보는 저장하지 않고, 라이더스팟 운영 수익에는 반영하지 않습니다.\n\n동일한 배달을 여러 번 잡거나 실제 배달을 누락할 수 있으니 진단용으로 사용하세요.")
+            .setNegativeButton("취소",null)
+            .setPositiveButton("동의하고 켜기",(dialog,which)->{
+                IncomePrototypeStore.setEnabled(this,true);
+                render();
+            }).show();
+    }
+    private void reviewPrototype(String id,String state){
+        boolean confirmed="CONFIRMED".equals(state);
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(confirmed?"수익 후보 승인":"수익 후보 제외")
+            .setMessage(confirmed?
+                "실제 배달 수익인지 직접 확인했나요? 이 승인 내역은 로컬 원장에만 반영됩니다.":
+                "이 후보를 로컬 수익 합계에서 제외할까요?")
+            .setNegativeButton("취소",null)
+            .setPositiveButton(confirmed?"승인":"제외",(dialog,which)->{
+                boolean changed=IncomePrototypeStore.setState(this,id,state);
+                Toast.makeText(this,changed?"로컬 원장을 업데이트했어요.":"변경할 수 없는 내역이에요.",Toast.LENGTH_SHORT).show();
+                render();
+            }).show();
+    }
+    private void sharePrototypeCsv(){
+        Intent send=new Intent(Intent.ACTION_SEND);
+        send.setType("text/plain");
+        send.putExtra(Intent.EXTRA_SUBJECT,"RiderSpot income prototype v0.7 CSV");
+        send.putExtra(Intent.EXTRA_TEXT,IncomePrototypeStore.csv(this));
+        startActivity(Intent.createChooser(send,"수익 원장 CSV 텍스트 공유"));
+    }
+    private void renderPrototype(){
+        if(prototypeRows==null)return;
+        boolean active=IncomePrototypeStore.enabled(this);
+        prototypeToggle.setText(active?"프로토타입 수집 끄기":"프로토타입 수집 켜기");
+        prototypeSummary.setText("수집 상태: "+(active?"켜짐":"꺼짐")+"\n"+
+            IncomePrototypeStore.summary(this));
+        prototypeRows.removeAllViews();
+        JSONArray rows=IncomePrototypeStore.records(this);
+        if(rows.length()==0){
+            add(prototypeRows,text("아직 수집된 수익 후보가 없습니다.",13,SUB,false),4);
+            return;
+        }
+        for(int i=rows.length()-1;i>=Math.max(0,rows.length()-8);i--){
+            JSONObject r=rows.optJSONObject(i);
+            if(r==null)continue;
+            String id=r.optString("id"),state=r.optString("state");
+            String label="CANDIDATE".equals(state)?"강한 자동 후보":
+                "REVIEW".equals(state)?"확인 필요":
+                "CONFIRMED".equals(state)?"수동 승인":"제외";
+            LinearLayout item=col();
+            item.setPadding(dp(12),dp(11),dp(12),dp(11));
+            item.setBackground(bg(Color.rgb(244,247,252),12));
+            add(prototypeRows,item,8);
+            add(item,text(stamp(r.optLong("time",System.currentTimeMillis()))+
+                " · "+r.optString("platform")+" · "+num(r.optInt("amount"))+"원",14,INK,true),0);
+            add(item,text(label+" · "+r.optString("reason"),12,SUB,false),4);
+            add(item,text("기본 "+num(r.optInt("base"))+" · 추가 "+num(r.optInt("extra"))+
+                " · 리워드 "+num(r.optInt("reward")),12,SUB,false),4);
+            if(r.has("manual_actual"))
+                add(item,text("실제 입력 "+num(r.optInt("manual_actual"))+"원 · "+
+                    (r.optBoolean("manual_match")?"금액 일치":"금액 불일치"),12,SUB,false),4);
+            if("CANDIDATE".equals(state)||"REVIEW".equals(state))
+                buttons(item,button("수익 승인",true,v->reviewPrototype(id,"CONFIRMED")),
+                    button("제외",false,v->reviewPrototype(id,"REJECTED")));
         }
     }
     private void saveTruth(){
@@ -302,13 +391,15 @@ public final class MainActivity extends Activity {
               .append("\n\n");
         }
         structureHistory.setText(structural.length()==0?"아직 구조화된 금액·라벨 자료가 없습니다.":structural.toString().trim());
+        renderPrototype();
     }
     private void share(){
         render();
-        String report="라이더스팟 수익 인식 진단 v0.6.0\n\n"
+        String report="라이더스팟 수익 인식 진단 v0.7.0\n\n"
             +status.getText()+"\n\n"+counts.getText()+"\n\n"
             +resources.getText()+"\n\n건별 검증\n"+deliverySummary.getText()+"\n"+deliveryHistory.getText()+"\n\n전체 운행 비교\n"+accuracy.getText()
             +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()+"\n\nUI 구조 분석\n"+structureHistory.getText()
+            +"\n\n프로토타입 수익 원장\n"+IncomePrototypeStore.report(this)
             +"\n\n주의: 건수 후보 비율은 인식 정확도가 아닙니다. 배터리 변화는 휴대폰 전체 수치입니다.";
         Intent send=new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");send.putExtra(Intent.EXTRA_TEXT,report);
