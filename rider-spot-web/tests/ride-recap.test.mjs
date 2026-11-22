@@ -102,7 +102,7 @@ test("portrait, story and square exports choose correct PNG pixel dimensions",()
   const yRule=ops.find(([op,x,y])=>op==="moveTo"&&x===72&&y===974);
   assert.ok(yRule,"Export uses a real map/ledger divider");
   const textValues=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
-  assert.ok(textValues.includes("출발")&&textValues.includes("종료"));
+  assert.ok(textValues.includes("시작")&&textValues.includes("종료"));
   assert.ok(textValues.includes("11월 21일의 기록"),"Date is the editorial headline");
   assert.ok(textValues.includes("총 운행거리"),"Income-free design prioritizes GPS distance");
   assert.ok(textValues.includes("운행시간"));
@@ -236,7 +236,7 @@ test("actual distinct endpoints retain both visual markers at low map zoom",()=>
     distanceKm:0.02,durationMs:1000,gross:null,deliveries:null};
   renderRecapCanvas(canvas,recap);
   const text=ops.filter(x=>x[0]==="fillText").map(x=>x[1]);
-  assert.ok(text.includes("출발")&&text.includes("종료"));
+  assert.ok(text.includes("시작")&&text.includes("종료"));
   assert.ok(!text.includes("출발·종료"),"10–30m endpoints must remain distinct");
   const pinRings=ops.filter(x=>x[0]==="arc"&&x[3]>=15);
   assert.ok(pinRings.length>=2,"Both endpoints must keep visible rings");
@@ -273,4 +273,29 @@ test("V5 export has no fake card frame, preserves truthful costs and fits a larg
   assert.ok(privateLabels.includes("총 운행거리"));
   assert.ok(!privateLabels.some(v=>v.includes("₩")||v.includes("수익 기록 없음")||v.includes("수익 비공개")));
   assert.ok(privateLabels.includes("경로 비공개"));
+});
+
+
+test("return-to-origin export shows both Korean endpoint labels with icons without changing route color",()=>{
+  const ops=[];
+  const target={};
+  const context=new Proxy(target,{get(o,k){
+    if(k==="fillText")return (...args)=>ops.push({kind:"text",args});
+    if(k==="stroke")return ()=>ops.push({kind:"stroke",color:o.strokeStyle,width:o.lineWidth});
+    if(["beginPath","roundRect","fill","moveTo","lineTo","arc","save","clip","restore"].includes(k))return ()=>{};
+    return o[k];
+  },set(o,k,v){o[k]=v;return true;}});
+  const canvas={getContext:()=>context};
+  const recap={day:"2026-11-22",segments:[[
+    {lat:35.170000,lng:126.830000},
+    {lat:35.185000,lng:126.850000},
+    {lat:35.170017,lng:126.830013}
+  ]],trips:1,distanceKm:10,durationMs:3600000,gross:null,deliveries:null};
+  renderRecapCanvas(canvas,recap);
+  const labels=ops.filter(o=>o.kind==="text").map(o=>o.args[0]);
+  assert.ok(labels.includes("시작")&&labels.includes("종료"));
+  assert.ok(labels.includes("▶")&&labels.includes("■"));
+  assert.ok(!labels.includes("출발·종료"));
+  assert.ok(ops.some(o=>o.kind==="stroke"&&o.color==="#4568F3"&&o.width===4.1),
+    "Keep the original blue route stroke width and color");
 });
