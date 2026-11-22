@@ -12,6 +12,7 @@ import {
 } from "./timeline-dates.mjs";
 import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
 import { useRouteAnalysis } from "./use-route-analysis.mjs";
+import { timelineDisplayEvents } from "./timeline-stop-events.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
 import { useRoutePlayback } from "./route-playback.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
@@ -242,9 +243,9 @@ export function createTimeline(S, Zo, Income, client) {
     const onUnfollow = S.useCallback(() => setFollowing(false), []);
     const [eventOpen, setEventOpen] = S.useState(() => {
       try {
-        return localStorage.getItem("rs:trip-events-open") === "1";
+        return localStorage.getItem("rs:trip-events-open") !== "0";
       } catch {
-        return false;
+        return true;
       }
     });
     const [showStamps, setShowStamps] = S.useState(() => {
@@ -255,8 +256,8 @@ export function createTimeline(S, Zo, Income, client) {
       }
     });
     const [showEvents, setShowEvents] = S.useState(() => {
-      try { return localStorage.getItem("rs:route-stop-events") === "1"; }
-      catch { return false; }
+      try { return localStorage.getItem("rs:route-stop-events") !== "0"; }
+      catch { return true; }
     });
     const [roadPreview, setRoadPreview] = S.useState(null);
     const [roadBusy, setRoadBusy] = S.useState(false);
@@ -291,6 +292,12 @@ export function createTimeline(S, Zo, Income, client) {
         : null;
     const shown = activeRoad?.course || raw;
     const stamps = raw?.stamps || EMPTY;
+    // The list also includes read-only GPS-inferred stops, without modifying
+    // persisted ride history or promoting estimates into native events.
+    const visibleTripEvents = S.useMemo(
+      () => timelineDisplayEvents(current?.events, stamps),
+      [current?.events, stamps],
+    );
     // Stable references keep Leaflet labels from being repainted by every
     // replay frame. Time markers and stationary events are independent.
     const displayedStamps = S.useMemo(
@@ -735,7 +742,7 @@ export function createTimeline(S, Zo, Income, client) {
               rs33J(
                 "span",
                 { className: "rs44-count" },
-                (current.events || []).length + "개",
+                visibleTripEvents.length + "개",
               ),
               rs33J(
                 "span",
@@ -750,9 +757,7 @@ export function createTimeline(S, Zo, Income, client) {
                     id: "rs44-event-list",
                     className: "timeline rs44-event-list",
                   },
-                  (Array.isArray(current.events) ? current.events : EMPTY)
-                    .filter((event) => event && typeof event.type === "string")
-                    .map((event, i) =>
+                  visibleTripEvents.map((event, i) =>
                       rs33J(
                         "li",
                         { key: i },
@@ -1018,7 +1023,7 @@ export function createTimeline(S, Zo, Income, client) {
                     ? rs33J("div", { className: "rs56-route-focus", role: "status" },
                         rs33Time(focused.time) + " · " + focused.label)
                     : null,
-                  showEvents && dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
+                  dailyCourse?.course?.stamps?.some((stamp) => stamp.kind === "stop")
                     ? rs33J("details", { className: "rs56-stop-events" },
                         rs33J("summary", null,
                           "정차 ",
