@@ -1,0 +1,188 @@
+name: Rider Spot Android v1.0.13 - live MapLibre v25 APK
+on:
+  push:
+    branches: [feature/rider-spot-native-apk]
+    paths:
+      - '.github/workflows/rider-spot-live-v25-apk-20261122.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-live-v25-apk-20261122
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    name: Build verified production and safe-test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Rider Spot native branch
+        uses: actions/checkout@v4
+
+      - name: Verify deployed live web version
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --max-time 30             -A 'RiderSpot-Android-Build/1.0.13'             'https://rider-spot.jazzhjm.workers.dev/' > /tmp/rs-live-shell.html
+          grep -Fq 'rider-spot-f98a62e74bc1' /tmp/rs-live-shell.html
+          printf 'Verified Rider Spot production web release: f98a62e74bc1\n'
+          echo 'WEB_RELEASE=f98a62e74bc1' >> "$GITHUB_ENV"
+
+      - name: Unpack current native Android project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/riderspot-v25-android
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/riderspot-v25-android
+          test -s /tmp/riderspot-v25-android/app/src/main/java/com/riderspot/android/MainActivity.java
+          test -s /tmp/riderspot-v25-android/app/src/main/assets/native-bridge.js
+          test -s /tmp/riderspot-v25-android/app/build.gradle
+          test -s /tmp/riderspot-v25-android/tests/native-oauth.test.cjs
+
+      - name: Preserve GPS, WebView, OAuth and recap export functionality
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/riderspot-v25-android')
+          main=root/'app/src/main/java/com/riderspot/android/MainActivity.java'
+          bridge=root/'app/src/main/assets/native-bridge.js'
+          manifest=root/'app/src/main/AndroidManifest.xml'
+          gradle=root/'app/build.gradle'
+          src=main.read_text()
+          js=bridge.read_text()
+          assert 'private static final String HOME = "https://rider-spot.jazzhjm.workers.dev/";' in src, 'Android HOME must be production site'
+          assert 'private static final String ORIGIN = "https://rider-spot.jazzhjm.workers.dev";' in src, 'Native bridge origin mismatch'
+          assert 'webView.loadUrl(HOME)' in src, 'Android startup navigation changed'
+          assert 'location.reload(' not in js, 'Native bridge may trigger unwanted map reload'
+          assert 'getOnBackInvokedDispatcher' in src, 'Android 13-17 Back gesture handling missing'
+          assert 'smallestScreenSize|screenLayout' in manifest.read_text(), 'WebView multiwindow guard missing'
+          assert 'riderspot-oauth' in manifest.read_text(), 'Production OAuth callback absent'
+          assert 'TrackingService.java' in '\n'.join(str(p) for p in root.rglob('TrackingService.java'))
+          body=gradle.read_text()
+          body,n=re.subn(r'\bversionCode\s+\d+', 'versionCode 260', body, count=1)
+          assert n==1, 'Gradle versionCode missing'
+          body,n=re.subn(r'\bversionName\s+[\'\"][^\'\"]+[\'\"]',
+                         "versionName '1.0.13-live-v25'", body, count=1)
+          assert n==1, 'Gradle versionName missing'
+          gradle.write_text(body)
+          print('PASS native production origin, GPS tracking, OAuth callback, Back, WebView lifecycle')
+          print('Version: 1.0.13-live-v25 (code 260)')
+          PY
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/riderspot-v25-android/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/riderspot-v25-android
+          fi
+          grep -Fq 'window.__rsNativeSaveImage' /tmp/riderspot-v25-android/app/src/main/assets/native-bridge.js
+          grep -Fq 'case "recap-save":' /tmp/riderspot-v25-android/app/src/main/java/com/riderspot/android/MainActivity.java
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test native GPS, SQLite, OAuth and WebView contracts
+        working-directory: /tmp/riderspot-v25-android
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/*.test.cjs
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || test "${PIPESTATUS[1]}" -eq 0
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Build updated Rider Spot package
+        working-directory: /tmp/riderspot-v25-android
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Archive verified original-package APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/riderspot-v25-dist
+          cp /tmp/riderspot-v25-android/app/build/outputs/apk/debug/app-debug.apk             /tmp/riderspot-v25-dist/RiderSpot-Android-v1.0.13-Live-v25.apk
+          APK=/tmp/riderspot-v25-dist/RiderSpot-Android-v1.0.13-Live-v25.apk
+          test -s "$APK"
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "$APK" | head -8
+          "${ANDROID_HOME}/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "package: name='com\.riderspot\.android' .*versionCode='260'"
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Build separate side-by-side map verification APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/riderspot-v25-android')
+          gradle=root/'app/build.gradle'
+          original=gradle.read_text()
+          assert original.count('defaultConfig {')==1
+          gradle.write_text(original.replace('defaultConfig {',
+                            'defaultConfig {\n        applicationIdSuffix ".v25test"',1))
+          manifest=root/'app/src/main/AndroidManifest.xml'
+          source=manifest.read_text()
+          source,n=re.subn(r'android:label="[^"]+"',
+                           'android:label="라이더스팟 v25 테스트"', source,count=1)
+          assert n==1
+          source=source.replace('android:scheme="riderspot-oauth"',
+                                'android:scheme="riderspot-v25test-oauth"')
+          manifest.write_text(source)
+          main=root/'app/src/main/java/com/riderspot/android/MainActivity.java'
+          s=main.read_text()
+          s,n=re.subn(r'private static final String OAUTH_SCHEME = "riderspot-oauth";',
+                       'private static final String OAUTH_SCHEME = "riderspot-v25test-oauth";',
+                       s,count=1)
+          assert n==1, 'Side-by-side OAuth scheme source changed'
+          main.write_text(s)
+          print('Parallel test app gets separate package and deep link; original APK untouched')
+          PY
+          cd /tmp/riderspot-v25-android
+          gradle --no-daemon --stacktrace :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk             /tmp/riderspot-v25-dist/RiderSpot-Android-v1.0.13-v25-SideBySide-TEST.apk
+          APK=/tmp/riderspot-v25-dist/RiderSpot-Android-v1.0.13-v25-SideBySide-TEST.apk
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Upload build artifacts and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-Android-v1.0.13-Live-v25-APKs
+          path: /tmp/riderspot-v25-dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish direct APK download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="riderspot-android-v1.0.13-live-v25-20261122"
+          gh release create "$TAG" /tmp/riderspot-v25-dist/*             --repo winzfs/riderapp             --target "$GITHUB_SHA"             --title "Rider Spot Android v1.0.13 · Live MapLibre v25"             --notes "Native Android debug-signed APK accessing the Rider Spot live production web app (v25 asset release f98a62e74bc1). Preserves GPS, SQLite trip capture, native OAuth, WebView lifecycle, Android Back gesture and recap PNG export. Two variants: original application ID and separate side-by-side test application ID. Debug signatures from different builds may not be compatible with installed versions; do not uninstall an existing app before confirming that local trip records have synced. Side-by-side test has isolated app storage and OAuth callback; Google login may not be supported there."             --prerelease
+          gh release view "$TAG" --repo winzfs/riderapp --json url,assets --jq '{url,assets:[.assets[].name]}'
+          echo "### Android v1.0.13 - latest Rider Spot v25" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production frontend hash: `$WEB_RELEASE`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- APK: https://github.com/winzfs/riderapp/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Original and parallel-test packages created; no user data migration performed." >> "$GITHUB_STEP_SUMMARY"
