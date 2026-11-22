@@ -1116,3 +1116,422 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
  .app .finance-page .rs-auto-income-time-list header{gap:8px}
  .app .finance-page .rs-auto-income-time-list input[type="date"]{font-size:12px!important}
 }
+
+/* RIDERSPOT V34 REARCHITECTURE
+   Content hierarchy changes live in the React views, not only in styles.
+   Scoped light-system surfaces; GPS/map layers, stored finance data and
+   notification plumbing are deliberately untouched. */
+.app.rs34-app{
+ --rs34-ink:#192D3C;--rs34-muted:#586F7C;--rs34-blue:#315FA7;
+ --rs34-teal:#147A75;--rs34-coral:#D87950;--rs34-line:#DAE3E8;
+ --rs34-canvas:#F5F7F7;--rs34-paper:#FFFFFF;--rs34-sky:#EAF2F9;
+ --rs34-mist:#E8F3F0;--rs34-radius:19px;
+ color:var(--rs34-ink)!important;background:var(--rs34-canvas)!important;
+ -webkit-font-smoothing:antialiased;
+}
+.app.rs34-app >header{
+ background:rgba(255,255,255,.96)!important;border-bottom:1px solid #E4ECEE!important;
+ box-shadow:none!important;
+}
+.app.rs34-app >header .brand{letter-spacing:-.065em!important;font-weight:840!important;color:var(--rs34-ink)!important}
+.app.rs34-app .bottom-nav{
+ background:#fff!important;border-top:1px solid #E1E8EB!important;
+ padding-inline:6px!important;
+}
+.app.rs34-app .bottom-nav button{
+ border-radius:11px!important;min-height:58px!important;letter-spacing:-.025em;
+ color:#627886!important;transition:color .15s ease,background-color .15s ease;
+}
+.app.rs34-app .bottom-nav button.active{
+ color:var(--rs34-blue)!important;background:#F0F5FA!important;
+}
+.app.rs34-app .bottom-nav button.active:after{
+ bottom:2px!important;height:2px!important;background:var(--rs34-blue)!important
+}
+.app.rs34-app .bottom-nav button.active svg{background:none!important;padding:0!important}
+.app.rs34-app :is(.finance-page,.bike-page,.rs34-timeline,.rs34-community){
+ color:var(--rs34-ink);padding-bottom:max(28px,env(safe-area-inset-bottom))!important;
+}
+.app.rs34-app :is(.finance-page,.bike-page,.rs34-timeline,.rs34-community) :is(h1,h2,h3){
+ color:var(--rs34-ink);letter-spacing:-.045em!important;
+}
+.app.rs34-app :is(.finance-page,.bike-page,.rs34-timeline,.rs34-community) :is(button,summary){
+ touch-action:manipulation;
+}
+.app.rs34-app :is(button,summary,a):focus-visible{
+ outline:2px solid var(--rs34-blue)!important;outline-offset:3px;
+}
+.app.rs34-app :is(button,input,select,textarea){font-family:inherit}
+.app.rs34-app :is(.fin-card,.rs34-service-board,.rs34-history-board,.rs34-platform-disclosure){
+ box-shadow:none!important;
+}
+/* EARNINGS — summary, primary daily target, actions, graph, secondary details. */
+.app.rs34-app .finance-page.rs34-finance-page{
+ max-width:700px!important;padding-inline:17px!important;
+}
+.app.rs34-app .finance-page .rs34-page-heading{margin:9px 0 14px!important;gap:10px;align-items:center}
+.app.rs34-app .finance-page .rs34-page-heading h1{font-size:27px!important;font-weight:830!important}
+.app.rs34-app .finance-page .fin-subnav{
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));
+ margin-bottom:19px!important;background:#ECF1F4!important;border:0!important;
+ border-radius:13px!important;padding:4px!important;gap:4px!important;
+}
+.app.rs34-app .finance-page .fin-subnav .fin-subnav-btn{
+ min-width:0;min-height:41px!important;border:0!important;border-radius:10px!important;
+ background:transparent!important;color:#607482!important;box-shadow:none!important;
+ font-size:12px!important;font-weight:730!important;
+}
+.app.rs34-app .finance-page .fin-subnav .fin-subnav-btn.sel,
+.app.rs34-app .finance-page .fin-subnav .fin-subnav-btn[aria-selected=true]{
+ background:#fff!important;color:var(--rs34-ink)!important;
+ box-shadow:0 2px 8px #27465F12!important;
+}
+.app.rs34-app .finance-page .rs34-finance-dashboard{gap:0!important}
+.app.rs34-app .finance-page .rs34-finance-dashboard .rs8-income-console{
+ display:block!important;padding:20px 19px 17px!important;margin-bottom:12px!important;
+ background:#EAF2F8!important;border:1px solid #E0EBF3!important;
+ border-radius:21px!important;box-shadow:none!important;
+}
+.app.rs34-app .finance-page .rs8-console-top{margin-bottom:18px!important}
+.app.rs34-app .finance-page .rs8-eyebrow{color:#58788A!important;font-size:12px!important;letter-spacing:.005em!important}
+.app.rs34-app .finance-page .rs8-console-value{margin-bottom:14px!important;padding-bottom:0!important}
+.app.rs34-app .finance-page .rs8-console-value>span{
+ font-size:13px!important;font-weight:720;color:#49657B!important
+}
+.app.rs34-app .finance-page .rs8-console-value>strong{
+ font-size:clamp(32px,8.2vw,41px)!important;line-height:1.13!important;
+ font-weight:810!important;color:#173A55!important;letter-spacing:-.065em!important;
+ font-variant-numeric:tabular-nums;
+}
+.app.rs34-app .finance-page .rs8-console-metrics{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px!important;margin:0!important;border-top:1px solid #CFDDE7!important;
+ padding:13px 0 0!important;background:transparent!important;
+}
+.app.rs34-app .finance-page .rs8-console-metrics>div{
+ padding:0!important;background:none!important;border:0!important;border-radius:0!important;
+}
+.app.rs34-app .finance-page .rs8-console-metrics :is(span,strong){display:block}
+.app.rs34-app .finance-page .rs8-console-metrics span{font-size:11px!important;color:#66818F!important}
+.app.rs34-app .finance-page .rs8-console-metrics strong{
+ font-size:17px!important;font-weight:770!important;color:#23485F!important;
+ font-variant-numeric:tabular-nums;
+}
+/* The daily target is the primary decision: intentionally before chart. */
+.app.rs34-app .finance-page .rs33-goal-card{
+ padding:19px 18px 17px!important;margin:0 0 10px!important;
+ background:#fff!important;border:1px solid #E0E8EB!important;
+ border-radius:20px!important;box-shadow:none!important;
+}
+.app.rs34-app .finance-page .rs33-goal-card .rs8-section-caption{margin-bottom:4px!important}
+.app.rs34-app .finance-page .rs33-goal-card .rs8-section-caption h2{font-size:16px!important}
+.app.rs34-app .finance-page .rs33-goal-hero{margin:9px 0 15px!important;gap:4px}
+.app.rs34-app .finance-page .rs33-goal-hero>span{font-size:12px!important;color:#5F7481!important}
+.app.rs34-app .finance-page .rs33-goal-hero>strong{
+ font-size:clamp(30px,8.5vw,42px)!important;line-height:1.16!important;
+ font-weight:830!important;color:#1C5876!important;letter-spacing:-.055em!important;
+}
+.app.rs34-app .finance-page .rs33-goal-facts{margin-bottom:13px!important;gap:4px 12px}
+.app.rs34-app .finance-page .fin-goal-track{
+ height:6px!important;border-radius:10px!important;background:#E4EDF1!important;
+ overflow:hidden;
+}
+.app.rs34-app .finance-page .fin-goal-track>div{background:var(--rs34-teal)!important;border-radius:10px!important}
+.app.rs34-app .finance-page .rs33-goal-progress-line{margin-top:11px!important}
+.app.rs34-app .finance-page .rs33-goal-deadline{margin-top:5px!important;font-size:11px!important}
+.app.rs34-app .finance-page .rs11-finance-shortcuts{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ padding:7px 0 14px!important;gap:9px!important;margin:0!important;
+}
+.app.rs34-app .finance-page .rs11-finance-shortcuts button{
+ min-height:50px!important;border-radius:13px!important;font-size:13px!important;
+}
+.app.rs34-app .finance-page .rs11-finance-shortcuts .fin-primary{
+ background:var(--rs34-blue)!important;border-color:var(--rs34-blue)!important;
+}
+.app.rs34-app .finance-page .rs11-finance-shortcuts .fin-secondary{
+ background:#fff!important;border-color:var(--rs34-line)!important;color:#2E5675!important;
+}
+.app.rs34-app .finance-page .rs11-income-chart{
+ margin:0 0 13px!important;padding:15px 14px 12px!important;
+ background:#fff!important;border:1px solid #E2E9ED!important;
+ border-radius:19px!important;
+}
+.app.rs34-app .finance-page .rs9-chart-heading{color:var(--rs34-ink)!important}
+.app.rs34-app .finance-page .rs9-chart-heading strong{color:var(--rs34-ink)!important}
+.app.rs34-app .finance-page .rs34-platform-disclosure{
+ border:1px solid #E1E8EB!important;background:#fff!important;
+ border-radius:16px!important;padding:0 14px!important;margin:0 0 12px!important;
+}
+.app.rs34-app .finance-page .rs34-platform-disclosure>summary{
+ display:flex!important;align-items:center;min-height:52px!important;margin:0!important;
+ cursor:pointer;list-style:none;
+}
+.app.rs34-app .finance-page .rs34-platform-disclosure>summary::-webkit-details-marker{display:none}
+.app.rs34-app .finance-page .rs34-platform-disclosure>summary::after{
+ content:"⌄";font-size:19px;color:#637C8B;margin-left:auto;transition:transform .16s;
+}
+.app.rs34-app .finance-page .rs34-platform-disclosure[open]>summary::after{transform:rotate(180deg)}
+.app.rs34-app .finance-page .rs34-platform-disclosure>summary strong{font-size:14px!important}
+.app.rs34-app .finance-page .rs34-platform-disclosure .fin-platforms{
+ padding:0 0 14px;margin-top:2px;
+}
+.app.rs34-app .finance-page .rs34-finance-records .fin-record-search{
+ border:1px solid #DEE6EB!important;border-radius:13px!important;padding:0 12px!important;background:#fff!important;
+}
+.app.rs34-app .finance-page .rs34-finance-records .fin-record-search>summary{min-height:48px!important}
+.app.rs34-app .finance-page .fin-record{gap:9px!important;min-height:65px!important}
+.app.rs34-app .finance-page .fin-record-end strong{font-variant-numeric:tabular-nums}
+/* TIMELINE — map first, date control as one instrument panel, live end at top. */
+.app.rs34-app .rs34-timeline{padding-inline:16px!important;max-width:730px!important}
+.app.rs34-app .rs34-timeline .rs34-timeline-command{
+ align-items:center!important;gap:12px!important;margin:7px 0 17px!important;
+}
+.app.rs34-app .rs34-timeline .rs11-journey-heading h1{font-size:27px!important;font-weight:830!important}
+.app.rs34-app .rs34-timeline .rs34-ride-state{font-size:12px!important;color:#687C87!important;line-height:1.4}
+.app.rs34-app .rs34-timeline .rs34-ride-main-action{
+ flex:0 0 auto;min-width:111px;min-height:50px!important;background:var(--rs34-blue)!important;
+ font-size:13px!important;border-radius:13px!important;
+}
+.app.rs34-app .rs34-timeline .rs34-ride-main-action.is-running{
+ background:#294958!important;
+}
+.app.rs34-app .rs34-timeline .rs34-timeline-calendar{
+ background:#fff!important;border:1px solid #E1E8EB!important;
+ border-radius:19px!important;padding:12px 11px 7px!important;
+ margin-bottom:13px!important;box-shadow:none!important;
+}
+.app.rs34-app .rs34-timeline .rs33-week-head{padding-bottom:8px!important;margin:0!important}
+.app.rs34-app .rs34-timeline .rs33-week-head>strong{font-size:14px!important}
+.app.rs34-app .rs34-timeline .rs33-week{
+ border-bottom:0!important;gap:4px!important;padding:0!important;
+}
+.app.rs34-app .rs34-timeline .rs33-week button{
+ min-height:67px!important;border:0!important;border-radius:11px!important;
+ background:transparent!important;
+}
+.app.rs34-app .rs34-timeline .rs33-week button[aria-pressed=true]{
+ background:#E9F2FA!important;color:#244F7E!important;
+}
+.app.rs34-app .rs34-timeline .rs33-week button[aria-pressed=true] :is(b,small){color:#244F7E!important}
+.app.rs34-app .rs34-timeline .rs11-route-first{
+ margin:0 0 13px!important;padding:0!important;border:1px solid #E1E9ED!important;
+ border-radius:20px!important;overflow:hidden;background:#fff!important;box-shadow:none!important;
+}
+.app.rs34-app .rs34-timeline .rs11-route-first .rs12-map-heading{
+ display:flex!important;padding:14px 14px 11px!important;margin:0!important;
+}
+.app.rs34-app .rs34-timeline .rs11-route-first .rs12-map-heading-copy strong{font-size:16px!important}
+.app.rs34-app .rs34-timeline .rs11-route-first .rs56-day-course{
+ margin:0!important;border:0!important;border-radius:0!important;
+}
+.app.rs34-app .rs34-timeline .rs11-route-first .rs56-day-map{
+ height:clamp(256px,75vw,350px)!important;min-height:256px!important;
+}
+.app.rs34-app .rs34-timeline .rs11-route-first .rs12-route-tools{
+ padding:9px 11px!important;border-top:1px solid #EBEEF1!important;
+}
+.app.rs34-app .rs34-timeline .rs11-timeline-insights{
+ margin:0 0 15px!important;padding:13px 15px!important;
+ border:1px solid #E1E8EB!important;border-radius:18px!important;
+ background:#fff!important;
+}
+.app.rs34-app .rs34-timeline .rs33-list-title{padding-top:9px!important;margin-bottom:6px!important}
+.app.rs34-app .rs34-timeline .rs56-ride-choice{
+ min-height:67px!important;background:#fff!important;border-bottom:1px solid #EDF1F2!important;
+}
+/* BIKE — visible odometer action; visual vehicle stage; 6 consistent status tiles. */
+.app.rs34-app .rs34-bike-page{max-width:710px!important;padding-inline:16px!important}
+.app.rs34-app .rs34-bike-page .bike-heading:first-child{align-items:center!important;margin:8px 0 14px!important}
+.app.rs34-app .rs34-bike-page .rs11-garage-heading h1{font-size:27px!important;font-weight:830!important}
+.app.rs34-app .rs34-bike-page .rs34-bike-head-status{font-size:12px;color:#597D7C;line-height:1.5}
+.app.rs34-app .rs34-bike-page .rs34-bike-hero{
+ padding:16px 17px 14px!important;border-radius:22px!important;
+ background:#E9F1F6!important;border:1px solid #DBE6EB!important;
+ margin-bottom:12px!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-hero .rs8-bike-feature{
+ min-height:147px!important;grid-template-columns:minmax(0,1.04fr) minmax(118px,.96fr)!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-hero .bike-vehicle-data h2{
+ font-size:clamp(20px,5.5vw,25px)!important;line-height:1.15!important;word-break:keep-all;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-hero .bike-vehicle-art{
+ width:100%!important;max-width:290px!important;max-height:156px!important;object-fit:contain!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-hero .rs8-odo-label{
+ display:block;margin:11px 0 3px!important;color:#647E8C!important;font-size:11px!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-odometer-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.app.rs34-app .rs34-bike-page .rs34-odometer-row .bike-distance{
+ margin:0!important;line-height:1.08;font-variant-numeric:tabular-nums;
+ font-size:clamp(24px,6.2vw,30px)!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-odo-action{
+ min-height:35px!important;border:1px solid #CDDCE5!important;border-radius:9px!important;
+ background:#fff!important;color:#3B607C!important;padding:6px 10px!important;font-size:11px!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-actions{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;
+ margin:12px 0 0!important;padding:0!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-bike-actions button{
+ min-height:48px!important;display:flex!important;gap:7px!important;
+ align-items:center;justify-content:center;border-radius:12px!important;font-size:13px!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-service-board{
+ padding:15px 0 0!important;margin:0 0 15px!important;
+ border:0!important;background:transparent!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-service-board .bike-section-head{
+ margin:0 0 8px!important;padding:0 3px!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-service-board .bike-section-head h2{font-size:19px!important}
+.app.rs34-app .rs34-bike-page .bike-consumables.rs11-service-list{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ border:1px solid #DCE6E9!important;border-radius:19px!important;
+ gap:1px!important;background:#DCE6E9!important;overflow:hidden!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row{
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:center!important;grid-template-columns:none!important;
+ min-width:0!important;min-height:126px!important;height:auto!important;
+ border:0!important;border-radius:0!important;padding:12px 5px!important;
+ background:#fff!important;gap:6px!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-overdue{
+ background:#FFF5EE!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-soon{
+ background:#FFFAF0!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-icon,
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-icon .bike-part-svg{
+ width:45px!important;height:45px!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-copy{
+ display:flex!important;flex-direction:column;gap:5px!important;align-items:center!important;width:100%;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list :is(.bike-tile-name,.bike-tile-status){
+ text-align:center!important;white-space:normal!important;word-break:keep-all!important;
+ overflow-wrap:anywhere!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-name{font-size:12px!important;font-weight:770!important}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-status{font-size:10px!important}
+.app.rs34-app .rs34-bike-page .rs34-history-board{
+ padding:12px 0 0!important;background:transparent!important;border:0!important;
+}
+.app.rs34-app .rs34-bike-page .rs34-history-board .bike-history-row{
+ border-bottom:1px solid #E2E9ED!important;min-height:68px!important;
+}
+/* COMMUNITY — category chips now have their own persistent navigation row. */
+.app.rs34-app .rs34-community{max-width:750px!important;padding-inline:17px!important}
+.app.rs34-app .rs34-community .rs34-community-header{margin:8px 0 13px!important}
+.app.rs34-app .rs34-community .rs12-community-masthead h1{font-size:26px!important}
+.app.rs34-app .rs34-community .rs12-community-masthead p{font-size:12px!important}
+.app.rs34-app .rs34-community .rs34-community-filters{
+ margin:0 0 11px!important;background:#fff!important;border:1px solid #E0E7EA!important;
+ border-radius:13px!important;padding:0 12px!important;box-shadow:none!important;
+}
+.app.rs34-app .rs34-community .rs34-community-filters>summary{
+ padding:0 3px!important;min-height:49px!important;display:flex;align-items:center;
+}
+.app.rs34-app .rs34-community .rc-category-wrap{
+ display:flex!important;align-items:center;gap:6px!important;
+ margin:0 0 13px!important;padding:0!important;border:0!important;background:transparent!important;
+ min-height:45px!important;
+}
+.app.rs34-app .rs34-community .rc-categories{
+ display:flex!important;flex:1 1 auto;min-width:0;align-items:center;gap:7px!important;
+ overflow-x:auto;scrollbar-width:none;overscroll-behavior-inline:contain;
+ padding:1px 0 3px!important;
+}
+.app.rs34-app .rs34-community .rc-categories::-webkit-scrollbar{display:none}
+.app.rs34-app .rs34-community .rc-categories button{
+ flex:0 0 auto!important;min-height:40px!important;
+ padding:8px 13px!important;border-radius:11px!important;border:1px solid #DBE4E9!important;
+ background:#fff!important;color:#577080!important;font-size:12px!important;font-weight:690!important;
+ box-shadow:none!important;
+}
+.app.rs34-app .rs34-community .rc-categories button.selected,
+.app.rs34-app .rs34-community .rc-categories button[aria-pressed=true]{
+ background:#EAF2F8!important;color:#245880!important;border-color:#D2E3EF!important;
+}
+.app.rs34-app .rs34-community .rc-category-next{
+ flex:0 0 36px!important;min-height:39px!important;width:36px!important;
+ border:0!important;border-radius:10px!important;color:#315C7A!important;background:#E9EEF1!important;
+}
+.app.rs34-app .rs34-community .rs12-feed-count{
+ margin:9px 0 3px!important;padding:3px 1px!important;
+}
+.app.rs34-app .rs34-community .rs34-community-list{
+ margin:0!important;padding:0!important;background:#fff!important;
+ border:1px solid #E2EAED!important;border-radius:18px!important;overflow:hidden;
+}
+.app.rs34-app .rs34-community .rs34-community-list>.rc-card.rc-feed-row{
+ padding:16px 14px!important;margin:0!important;border-bottom:1px solid #E7EDEF!important;
+}
+.app.rs34-app .rs34-community .rs34-community-list>.rc-card.rc-feed-row:last-child{
+ border-bottom:0!important;
+}
+.app.rs34-app .rs34-community .rc-write{
+ min-height:46px!important;background:var(--rs34-blue)!important;border-radius:12px!important;
+}
+/* MAP — single clear command surface, transparent map canvas, quiet live dock. */
+.app.rs34-app .nearby.nearby-full .rs34-map-stage{
+ --map-inset:12px;--map-control:46px;--map-source-safe:33px;
+ background:#E7F0EE!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage>.rs-map-v2-header{top:12px!important}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar{
+ max-width:100%!important;min-height:52px!important;border:1px solid #D9E6EC!important;
+ border-radius:16px!important;background:rgba(255,255,255,.97)!important;
+ box-shadow:0 5px 21px #1D40551C!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage :is(.rs-map-v2-share-chip,.rs-map-v2-status-trigger){
+ min-height:39px!important;border-radius:10px!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs-map-v2-actions{
+ left:12px!important;right:12px!important;gap:10px!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs-map-v2-actions :is(#rs-sos-fab,.rs-map-report>summary){
+ min-height:47px!important;border-radius:12px!important;box-shadow:0 3px 13px #243B4F13!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock{
+ padding:10px 13px max(12px,env(safe-area-inset-bottom))!important;
+ background:#fff!important;border-top:1px solid #E1E8ED!important;
+ display:grid!important;grid-template-columns:1fr!important;gap:7px!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock .rs34-ride-dock-status{
+ color:#59707C;font-size:11px;font-weight:730;letter-spacing:.005em;
+ padding:0 3px;line-height:1.25;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock.active .rs34-ride-dock-status{color:#2D7772!important}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock>button{
+ width:100%!important;min-height:51px!important;border-radius:13px!important;
+ background:var(--rs34-blue)!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock.active>button:first-of-type{
+ background:#294958!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock .rs-map-finish-secondary{
+ background:#fff!important;color:#31506D!important;border:1px solid #D6E0E6!important;
+}
+@media(max-width:380px){
+ .app.rs34-app .finance-page.rs34-finance-page,
+ .app.rs34-app :is(.rs34-timeline,.rs34-bike-page,.rs34-community){padding-inline:12px!important}
+ .app.rs34-app .rs34-community .rs34-community-list>.rc-card.rc-feed-row{padding:14px 10px!important}
+ .app.rs34-app .rs34-bike-page .rs34-bike-hero{padding-inline:12px!important}
+ .app.rs34-app .rs34-bike-page .rs34-bike-hero .rs8-bike-feature{
+  grid-template-columns:minmax(0,1fr) minmax(90px,.78fr)!important;
+ }
+ .app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row{padding-inline:2px!important}
+ .app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-status{font-size:9.5px!important}
+ .app.rs34-app .rs34-timeline .rs34-ride-main-action{min-width:99px!important;padding-inline:9px!important}
+ .app.rs34-app .finance-page .rs33-goal-hero>strong{font-size:30px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .app.rs34-app *, .app.rs34-app *::before, .app.rs34-app *::after{
+  scroll-behavior:auto!important;transition-duration:0s!important;animation-duration:0s!important;
+ }
+}
