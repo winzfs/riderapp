@@ -1,0 +1,75 @@
+name: Rider Spot UIUX v33b complete income production acceptance
+on:
+  push:
+    branches: [fix/riderspot-v33-auto-income-day-view-20261123]
+    paths: [.github/workflows/rider-spot-uiux-v33b-production-qa.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_PRODUCTION: https://rider-spot.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22',cache: npm,cache-dependency-path: rider-spot-web/package-lock.json}
+      - run: npm ci
+      - name: Validate new shell, 13 immutable assets and compatibility guard
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const release=JSON.parse(fs.readFileSync('prebuilt/release.json','utf8'));
+          const root=process.env.RIDER_PRODUCTION;
+          const get=async path=>{
+            const response=await fetch(root+path,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(25000)});
+            assert.equal(response.status,200,path+': '+response.status);
+            return response;
+          };
+          const html=await (await get('/')).text();
+          assert.ok(html.includes('rs-recovery-guard-v217'),'native guard not lost');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/app.mjs'),'new JS is active');
+          assert.ok(html.includes('/assets/rider-spot-'+release.hash+'/curated-v9.css'),'new style is active');
+          const sw=await (await get('/sw.js')).text();
+          assert.ok(sw.includes(release.hash),'SW hash aligned');
+          const names=release.files.filter(p=>p.startsWith('/assets/'));
+          assert.equal(names.length,13);
+          for(const path of names){
+            const response=await get(path);
+            assert.equal(response.headers.get('x-rs-release'),release.hash,path);
+            const bytes=await response.arrayBuffer();
+            assert.ok(bytes.byteLength>100,path+' empty');
+          }
+          for(const old of ['e6d76bebe9d1','b18d7e24c9a5','f31a8c70e942']){
+            const response=await get('/assets/rider-spot-'+old+'/app.mjs');
+            assert.ok((await response.arrayBuffer()).byteLength>100,'old asset must remain');
+          }
+          await get('/mapdata/manifest.json');
+          await get('/rider-spot-shell-v40.js');
+          console.log('RIDERSPOT_V33_PRODUCTION_ASSETS_PASS',release.hash,names.length);
+          NODE
+      - run: npx playwright install --with-deps chromium
+      - name: Browser verify five tabs and navigation on live preview
+        env:
+          RIDER_VISUAL_URL: https://rider-spot.jazzhjm.workers.dev
+        run: node tests/uiux-v33-live-browser.cjs
+      - name: Signed-in mock CRUD, timeline and Android Back on live preview
+        env:
+          RIDER_TEST_ORIGIN: https://rider-spot.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
+          RIDER_SCREENSHOTS: /tmp/rider-uiux-v33-live
+        run: node tests/mobile-records-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-UIUX-v33b-production-qa
+          path: |
+            /tmp/rider-uiux-v33-live
+          retention-days: 7
+          if-no-files-found: warn

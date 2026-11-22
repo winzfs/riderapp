@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - design/riderspot-uiux-plan-20261123
+      - fix/riderspot-v33-auto-income-day-view-20261123
     paths:
       - '.github/workflows/rider-spot-uiux-v33-freeze.yml'
+      - 'rider-spot-web/src/finance-ui.mjs'
+      - 'rider-spot-web/src/curated-v9.css'
   workflow_dispatch:
 permissions:
   contents: write
