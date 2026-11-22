@@ -27,7 +27,7 @@ final class DiagStore {
         prefs(c).edit().clear().putBoolean("running",true).putLong("session",id)
           .putLong("startElapsed",SystemClock.elapsedRealtime())
           .putLong("startCpu",Process.getElapsedCpuTime())
-          .putInt("startBattery",battery(c)).putString("logs","[]").putString("snapshots","[]").apply();
+          .putInt("startBattery",battery(c)).putString("logs","[]").putString("snapshots","[]").putString("verifications","[]").apply();
     }
     static void stop(Context c) {
         prefs(c).edit().putBoolean("running",false)
@@ -84,6 +84,73 @@ final class DiagStore {
         try{return new JSONArray(prefs(c).getString("snapshots","[]"));}
         catch(Exception e){return new JSONArray();}
     }
+    /** Each press validates ONE user-confirmed completed delivery, not a session total. */
+    static synchronized String verifyLastDelivery(Context c,int actual) {
+        if(actual<500||actual>150000)return "실제 배달료를 500~150,000원으로 입력하세요.";
+        try {
+            SharedPreferences p=prefs(c);
+            long now=System.currentTimeMillis();
+            JSONArray observed=observations(c);
+            long anchor=0;
+            for(int i=observed.length()-1;i>=0;i--) {
+                JSONObject row=observed.optJSONObject(i);
+                if(row==null)continue;
+                long time=row.optLong("time",0);
+                if(time>anchor){anchor=time;break;}
+            }
+            long lastCompared=p.getLong("lastComparedAnchor",0);
+            boolean fresh=anchor>lastCompared && now-anchor<=300000L;
+            long previousCheck=p.getLong("lastVerifiedAt",0);
+            if(!fresh && now-previousCheck<20000L)
+                return "최근 비교를 이미 저장했어요. 다음 배달 완료 후 다시 입력해 주세요.";
+            java.util.ArrayList<Integer> predicted=new java.util.ArrayList<>();
+            java.util.ArrayList<String> details=new java.util.ArrayList<>();
+            String platform="알 수 없음";
+            long evidenceTime=0;
+            if(fresh) {
+                long lower=Math.max(lastCompared+1,anchor-30000L);
+                for(int i=0;i<observed.length();i++){
+                    JSONObject row=observed.optJSONObject(i);
+                    if(row==null)continue;
+                    long time=row.optLong("time",0);
+                    if(time<lower||time>anchor)continue;
+                    details.add(row.optString("detail",""));
+                    int value=row.optInt("amount",0);
+                    if(value>0)predicted.add(value);
+                    platform=row.optString("platform",platform);
+                }
+                evidenceTime=anchor;
+            }
+            DeliveryVerifier.Verdict v=DeliveryVerifier.classify(actual,predicted,details);
+            JSONArray previous=verifications(c);
+            JSONObject record=new JSONObject();
+            record.put("time",now);
+            record.put("evidenceTime",evidenceTime);
+            record.put("platform",platform);
+            record.put("actual",actual);
+            record.put("predicted",v.predicted);
+            record.put("status",v.status);
+            record.put("visible",v.visible);
+            record.put("screens",v.candidateScreens);
+            previous.put(record);
+            JSONArray limited=new JSONArray();
+            for(int i=Math.max(0,previous.length()-150);i<previous.length();i++)
+                limited.put(previous.getJSONObject(i));
+            SharedPreferences.Editor editor=p.edit()
+                .putString("verifications",limited.toString())
+                .putLong("lastVerifiedAt",now);
+            if(fresh)editor.putLong("lastComparedAnchor",anchor);
+            editor.apply();
+            return "저장됨: "+v.status+" · 실제 "+actual+"원"+(v.predicted>0?" · 자동 "+v.predicted+"원":" · 자동 확정 없음");
+        }catch(Exception error){
+            return "건별 비교 기록에 실패했어요. 다시 시도해 주세요.";
+        }
+    }
+    static JSONArray verifications(Context c){
+        try{return new JSONArray(prefs(c).getString("verifications","[]"));}
+        catch(Exception e){return new JSONArray();}
+    }
+
     static JSONArray observations(Context c) {
         try { return new JSONArray(prefs(c).getString("logs","[]")); }
         catch(Exception e) { return new JSONArray(); }
