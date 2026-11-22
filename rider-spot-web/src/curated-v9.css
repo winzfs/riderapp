@@ -970,3 +970,59 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
  .app :is(button,summary,a) {transition:none!important}
  .app :is(button,summary,a):active {transform:none!important}
 }
+/* Service intervals: six equal targets, kept in urgency order. */
+.app .bike-page .bike-consumables.rs11-service-list {
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:1px!important;background:var(--rs-line)!important;border-radius:16px!important;
+}
+.app .bike-page .rs11-service-list .rs11-part-row {
+ display:flex!important;flex-direction:column;justify-content:center;align-items:center!important;
+ min-height:110px!important;padding:10px 4px!important;gap:5px!important;border:0!important;
+}
+.app .bike-page .rs11-service-list .bike-tile-icon,
+.app .bike-page .rs11-service-list .bike-tile-icon .bike-part-svg {width:40px!important;height:40px!important}
+.app .bike-page .rs11-part-copy {align-items:center;gap:4px;max-width:100%}
+.app .bike-page .rs11-service-list :is(.bike-tile-name,.bike-tile-status) {
+ text-align:center!important;word-break:keep-all;overflow-wrap:anywhere;white-space:normal!important;
+}
+.app .bike-page .rs11-service-list .bike-tile-name {font-size:13px!important}
+.app .bike-page .rs11-service-list .bike-state-overdue {color:#984626!important}
+.app .bike-page .rs11-service-list .bike-state-ok {color:#48665d!important}
+.app .bike-page .rs11-part-chevron,.app .bike-page .rs8-bike-kicker,
+.app .bike-page .rs6-service-board .rs11-eyebrow,.app .finance-page .rs11-income-chart .rs11-section-kicker {display:none!important}
+.app .bike-page .rs11-part-row:focus-visible {outline-offset:-3px}
+.app .bike-page .rs8-bike-hero .rs8-bike-feature {min-height:112px!important;padding-block:8px!important}
+.app .bike-page .rs8-bike-hero .bike-vehicle-art {max-height:128px;object-fit:contain}
+.app .bike-page .bike-safety-detail {margin-bottom:4px}
+.app .bike-page .bike-safety-detail summary {min-height:44px;align-content:center}
+
+/* A folded collection panel shows status and count. Its totals remain in the expanded view. */
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) {
+ display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;
+ padding:4px 10px;margin:8px 0;border-radius:12px;box-shadow:none;
+}
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) .rsai-head {margin:0;min-width:0;flex-wrap:wrap;gap:6px}
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) .rsai-stats {padding:0;margin:0;display:block}
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) .rsai-stat:first-child {display:none}
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) .rsai-stat:last-child {display:grid;gap:1px}
+#rs-native-income-panel-v1.rsai-compact-ready:not(.rsai-expanded) .rsai-warning {grid-column:1/-1}
+.app .finance-page .rs8-console-value {padding-bottom:12px}
+.app .finance-page .rs8-console-top {margin-bottom:12px}
+.app .finance-page .rs8-console-value small {font-size:12px;color:var(--rs-muted)!important}
+.app .rs33-timeline .rs-game-recap::before,.app .rs33-timeline .rs-game-recap::after {display:none!important}
+.app .rs33-timeline .rs-game-xp-earned {background:var(--rs-soft)!important;color:var(--uf-blue)!important;box-shadow:none!important;padding:4px 8px!important;font-size:12px!important}
+.app .rs33-timeline .rs-game-recap-stats {grid-template-columns:minmax(0,.65fr) minmax(0,1fr) minmax(0,1.2fr)}
+.app .rs33-timeline .rs-game-recap-stats strong {color:var(--uf-ink)!important}
+.app .rs33-timeline .rs-game-recap-badges {margin:4px 0!important;padding:4px 0!important;flex-wrap:wrap}
+.app .rc-community.rs-community-renewal .rc-card-grid {min-height:0!important}
+.app .rc-community.rs-community-renewal .rc-card-grid img {width:clamp(48px,15vw,64px)!important}
+.app .rc-community.rs-community-renewal .rc-card-bottom {margin-top:2px!important;min-height:32px!important}
+.app .rc-community.rc-home.rc-community-v32.rs-community-renewal .rc-feed-renewal.rc-card-list>.rc-card.rc-feed-row {padding:10px 0!important}
+.app .rc-community.rs-community-renewal .rc-row-like button {min-height:44px!important}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-commandbar {width:fit-content!important;max-width:100%!important;grid-template-columns:minmax(72px,auto) minmax(86px,auto) 44px!important}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-commandbar .rs33-region-toggle {max-width:clamp(76px,25vw,112px)!important}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-report>summary {min-width:76px!important}
+.app .nearby.nearby-full .rs-map-v2 .rs-map-v2-actions #rs-sos-fab {min-width:94px!important}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-commandbar {position:relative}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-commandbar>.rs-map-v2-settings {position:static!important}
+.app .nearby.nearby-full .rs-map-v2 .rs12-map-tools-panel {left:0!important;right:auto!important}
