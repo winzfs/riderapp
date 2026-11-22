@@ -1,0 +1,23 @@
+{
+  "compatibility_date": "2026-11-19",
+  "bindings": [
+    {
+      "environment": "production",
+      "name": "ASSETS",
+      "service": "rider-spot-curated-v9-assets",
+      "type": "service"
+    },
+    {
+      "environment": "production",
+      "name": "DESIGN",
+      "service": "rider-spot-atelier-v8",
+      "type": "service"
+    },
+    {
+      "environment": "production",
+      "name": "LEGACY",
+      "service": "rider-spot-api-core-qa",
+      "type": "service"
+    }
+  ]
+}
