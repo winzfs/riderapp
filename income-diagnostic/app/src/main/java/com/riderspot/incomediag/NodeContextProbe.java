@@ -138,8 +138,10 @@ final class NodeContextProbe {
         if(raw==null||raw.isEmpty())return "";
         // Exclude long free-form strings such as addresses or instructions.
         if(raw.length()>80)return "";
+        // Normalize only for matching; never retain the original text.
+        String compact=compactLabel(raw);
         for(String term:LABELS){
-            if(raw.contains(term)){
+            if(compact.contains(compactLabel(term))){
                 if(term.equals("기본수수료")||term.equals("기본 수수료"))return "기본수수료";
                 if(term.equals("추가수수료")||term.equals("추가 수수료"))return "추가수수료";
                 if(term.equals("배달완료"))return "배달 완료";
@@ -157,6 +159,18 @@ final class NodeContextProbe {
             }
         }
         return "";
+    }
+    /** Ignore ASCII/multiline, Unicode separators, and zero-width spaces in labels. */
+    private static String compactLabel(String raw){
+        StringBuilder result=new StringBuilder(raw.length());
+        for(int i=0;i<raw.length();){
+            int cp=raw.codePointAt(i);
+            i+=Character.charCount(cp);
+            if(Character.isWhitespace(cp)||Character.isSpaceChar(cp)
+                    ||cp==0x200B||cp==0xFEFF)continue;
+            result.appendCodePoint(cp);
+        }
+        return result.toString();
     }
     /** Export only approved labels, amounts and categorical node relationships. */
     static String safeSummary(List<Entry> entries){

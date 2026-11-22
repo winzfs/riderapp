@@ -5,6 +5,24 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class NodeContextProbeTest {
+    @Test public void whitespaceVariantsAreEquivalent(){
+        NodeContextProbe p=new NodeContextProbe();
+        p.add(-1,320,100,"기본  수수료 3,280원","",null,"android.widget.TextView");
+        p.add(-1,320,200,"추가\n수수료 624원","",null,"android.widget.TextView");
+        p.add(-1,320,300,"리\u00A0워\u200B드 585원","",null,"android.widget.TextView");
+        List<NodeContextProbe.Entry> e=p.describe();
+        assertEquals(3,e.size());
+        assertEquals("기본수수료",e.get(0).label);
+        assertEquals("추가수수료",e.get(1).label);
+        assertEquals("리워드",e.get(2).label);
+        assertEquals(4489,NodeContextProbe.verifiedComponentSum(e));
+    }
+    @Test public void unrelatedWordsRemainUnknown(){
+        NodeContextProbe p=new NodeContextProbe();
+        p.add(-1,200,100,"고객 이름과 배달 주소","",null,"android.widget.TextView");
+        p.add(-1,300,200,"4,489원","",null,"android.widget.TextView");
+        assertEquals("탐지 안 됨",p.describe().get(0).label);
+    }
     @Test public void realCoupangFeeLabelsCanBeGrouped(){
         NodeContextProbe p=new NodeContextProbe();
         int root=p.add(-1,450,300,"","",null,"android.widget.LinearLayout");
