@@ -62,6 +62,7 @@ jobs:
       - name: Signed-in mock CRUD, timeline and Android Back on live preview
         env:
           RIDER_TEST_ORIGIN: https://rider-spot-curated-v9-preview.jazzhjm.workers.dev
+          RIDER_TEST_REMOTE_SOURCE: '1'
           RIDER_SCREENSHOTS: /tmp/rider-uiux-v33-live
         run: node tests/mobile-records-browser.cjs
       - uses: actions/upload-artifact@v4
