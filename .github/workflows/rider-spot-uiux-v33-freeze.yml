@@ -1,0 +1,76 @@
+name: Rider Spot UIUX v33 freeze verified immutable assets
+on:
+  push:
+    branches:
+      - design/riderspot-uiux-plan-20261123
+    paths:
+      - '.github/workflows/rider-spot-uiux-v33-freeze.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-uiux-v33-freeze
+  cancel-in-progress: false
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Verify UI and route logic
+        run: npm test
+      - name: Build from the current integration branch
+        run: npm run build
+      - name: Freeze new release without overwriting past versions
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import assert from 'node:assert/strict';
+          const r=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base=path.join('dist','assets','rider-spot-'+r.hash);
+          for(const name of ['app.mjs','route-worker.mjs','native-gps.js',
+            'map-reports.js','design-system.css','workspace-tools.js',
+            'tab-resume.js','daily-timeline.css','weather-bar.js',
+            'weather-bar.css','premium-shell.css','renewal-layout.css','curated-v9.css']){
+              const src=path.join(base,name);assert.ok(fs.statSync(src).size>100);
+              fs.copyFileSync(src,path.join('prebuilt',name));
+          }
+          for(const name of ['index.html','sw.js','release.json']){
+            fs.copyFileSync(path.join('dist',name),path.join('prebuilt',name));
+          }
+          assert.match(fs.readFileSync('prebuilt/index.html','utf8'),new RegExp('rider-spot-'+r.hash+'/app.mjs'));
+          console.log('FROZEN_UIUX_V33_RELEASE',r.hash);
+          NODE
+      - name: Commit immutable release artifact to the integration branch
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f rider-spot-web/prebuilt
+          if git diff --cached --quiet; then
+            echo 'Release files already frozen.'; exit 0
+          fi
+          git commit -m 'build: freeze RiderSpot UIUX v33 verified assets [skip ci]'
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-UIUX-v33-frozen-release
+          path: |
+            rider-spot-web/prebuilt/release.json
+            rider-spot-web/dist/release.json
+          retention-days: 7
+          if-no-files-found: warn
