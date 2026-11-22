@@ -1,0 +1,71 @@
+name: Rider Spot UIUX v33 integrated native regression
+on:
+  push:
+    branches:
+      - design/riderspot-uiux-plan-20261123
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore RiderSpot native app and integrate existing extensions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/riderspot-uiux-native
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/riderspot-uiux-native
+          test -s /tmp/riderspot-uiux-native/app/src/main/java/com/riderspot/android/MainActivity.java
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/riderspot-uiux-native/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/riderspot-uiux-native
+          fi
+          python3 rider-spot-android/income-integration/patch-native-income.py /tmp/riderspot-uiux-native
+          python3 rider-spot-android/checkpoint-integration/patch-checkpoints.py /tmp/riderspot-uiux-native
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify JavaScript and native GPS/back compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check /tmp/riderspot-uiux-native/app/src/main/assets/native-bridge.js
+          node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
+          cd /tmp/riderspot-uiux-native
+          node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Android SDK 36 preinstalled command-line toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Test and assemble RiderSpot native debug APK
+        working-directory: /tmp/riderspot-uiux-native
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify APK and fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/riderspot-uiux-apk
+          APK=/tmp/riderspot-uiux-native/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          cp "$APK" /tmp/riderspot-uiux-apk/RiderSpot-UIUX-v33-Integration-Debug.apk
+          cd /tmp/riderspot-uiux-apk
+          sha256sum *.apk > RiderSpot-UIUX-v33-Integration-Debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: RiderSpot-UIUX-v33-Integrated-APK
+          path: /tmp/riderspot-uiux-apk/*
+          if-no-files-found: error
+          retention-days: 14
