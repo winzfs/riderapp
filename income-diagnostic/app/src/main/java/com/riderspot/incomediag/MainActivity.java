@@ -35,8 +35,8 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final int INK=Color.rgb(23,33,55),SUB=Color.rgb(99,112,133),ACCENT=Color.rgb(56,85,231);
-    private TextView status,counts,resources,accuracy,history,traces;
-    private EditText actualCount,actualTotal;
+    private TextView status,counts,resources,accuracy,history,traces,deliverySummary,deliveryHistory;
+    private EditText actualCount,actualTotal,lastFee;
     private final Runnable updater=new Runnable() {
         @Override public void run() { render();handler.postDelayed(this,5000); }
     };
@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(245,247,251));
         LinearLayout body=col();body.setPadding(dp(18),dp(28),dp(18),dp(36));scroll.addView(body);
-        add(body,text("RIDERSPOT  /  INCOME LAB v0.3",12,ACCENT,true),0);
+        add(body,text("RIDERSPOT  /  INCOME LAB v0.4",12,ACCENT,true),0);
         add(body,text("수익 인식 진단",28,INK,true),8);
         add(body,text("접근성 화면 텍스트에서 금액 후보와 주변 라벨을 분류합니다. 화면 캡처·OCR·서버 전송·원문 저장은 하지 않습니다.",13,SUB,false),10);
 
@@ -104,6 +104,17 @@ public final class MainActivity extends Activity {
         buttons(state,button("측정 종료",false,v->{DiagStore.stop(this);render();}),
                       button("보고서 공유",false,v->share()));
 
+        LinearLayout individual=card(body,"건별 검증 · 마지막 배달료");
+        add(individual,text("배달 1건을 완료할 때마다 마지막 배달료를 입력하세요. 최근 완료 화면에서 앱이 스스로 추출한 후보와 비교하며, 수동 입력 금액은 인식 결과에 반영하지 않습니다.",12,SUB,false),8);
+        lastFee=number("방금 완료한 배달료 (예: 7307)");
+        add(individual,lastFee,12);
+        buttons(individual,button("마지막 배달 1건 비교 · 저장",true,v->verifyLastFee()));
+        deliverySummary=text("",14,INK,false);
+        add(individual,deliverySummary,12);
+        deliveryHistory=text("",12,SUB,false);
+        add(individual,deliveryHistory,8);
+        add(individual,text("같은 배달의 여러 화면 변화는 최근 30초 구간으로 묶습니다. 가능한 한 완료 직후 비교하세요. 묶음 구간의 정확한 경계는 아직 검증 중입니다.",12,SUB,false),12);
+
         LinearLayout measures=card(body,"인식 이벤트");
         counts=text("",14,INK,false);add(measures,counts,10);
 
@@ -111,8 +122,8 @@ public final class MainActivity extends Activity {
         resources=text("",14,INK,false);add(system,resources,10);
         add(system,text("배터리 변화는 휴대폰 전체 값이며 이 앱만의 전력 소비량이 아닙니다. CPU 시간과 메모리도 진단 화면을 포함한 앱 프로세스 전체 측정치입니다.",12,SUB,false),12);
 
-        LinearLayout truth=card(body,"실제 배달 결과와 비교");
-        add(truth,text("테스트가 끝난 뒤 쿠팡이츠·배민에서 확인한 실제 완료 건수와 총배달료를 입력하세요. 화면별 후보를 수집하므로 개별 건 정확도는 아직 측정하지 않습니다. 실제 건수와 총액은 참고값입니다.",12,SUB,false),8);
+        LinearLayout truth=card(body,"전체 운행 합계 비교 (선택사항)");
+        add(truth,text("테스트가 끝난 뒤 쿠팡이츠·배민에서 확인한 실제 완료 건수와 총배달료를 입력하세요. 건별 검증은 위쪽에서 입력하세요. 이 칸은 하루·운행의 합계를 확인하는 참고용입니다.",12,SUB,false),8);
         actualCount=number("실제 완료 건수");add(truth,actualCount,12);
         actualTotal=number("실제 총배달료(원)");add(truth,actualTotal,8);
         SharedPreferences p=DiagStore.prefs(this);
@@ -131,7 +142,7 @@ public final class MainActivity extends Activity {
         add(clues,text("금액과 미리 정한 라벨 분류만 저장합니다. 전체 화면 텍스트·고객 이름·주소는 저장하지 않습니다. 3,280원 + 3,074원 + 953원 = 7,307원 같은 합계 구조를 감지합니다.",12,SUB,false),12);
 
         LinearLayout guide=card(body,"테스트 방법");
-        add(guide,text("1. 접근성 설정에서 ‘라이더스팟 수익 인식 테스트’를 허용합니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 완료 화면을 지나갈 때 감지 기록이 남는지 확인합니다.\n4. 운행을 마친 후 측정 종료를 누르고 실제 건수·총액을 입력합니다.\n5. 보고서 공유로 결과를 내보냅니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
+        add(guide,text("1. 이전 진단 앱의 접근성을 끄고 v0.4 접근성 서비스를 허용합니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 1건을 완료할 때마다 마지막 배달료를 입력해 건별 비교합니다.\n4. 마지막 배달료 비교를 반복하고, 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
         setContentView(scroll);
         render();
     }
@@ -145,6 +156,19 @@ public final class MainActivity extends Activity {
             if(s.getId()!=null&&s.getId().contains("com.riderspot.incomediag")&&s.getId().contains("IncomeAccessibilityService"))
                 return true;
         return false;
+    }
+    private void verifyLastFee(){
+        try{
+            String text=lastFee.getText().toString().replace(",","").trim();
+            if(text.isEmpty())throw new IllegalArgumentException();
+            int value=Integer.parseInt(text);
+            String message=DiagStore.verifyLastDelivery(this,value);
+            Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+            if(message.startsWith("저장됨:"))lastFee.setText("");
+            render();
+        }catch(Exception e){
+            Toast.makeText(this,"마지막 배달 1건의 금액을 숫자로 입력하세요",Toast.LENGTH_LONG).show();
+        }
     }
     private void saveTruth(){
         try{
@@ -186,6 +210,34 @@ public final class MainActivity extends Activity {
             String ratio=truthCount>0?String.format(Locale.KOREA,"%.1f%%",100.0*accepted/truthCount):"해당 없음";
             accuracy.setText("금액 구조 후보 "+accepted+"건 / 실제 "+truthCount+"건\n금액 후보/실제 건수 "+ratio+" (정확도 아님)\n금액 구조 후보 합계 "+num(sum)+"원 / 실제 "+num(truthTotal)+"원\n금액 차이 "+(sum-truthTotal>=0?"+":"")+num(sum-truthTotal)+"원\n건수 "+(accepted==truthCount?"일치":"불일치")+" · 총액 "+(sum==truthTotal?"일치":"불일치"));
         }else accuracy.setText("실제 배달 결과를 저장하면 건수·총액 비교가 표시됩니다.");
+        JSONArray checks=DiagStore.verifications(this);
+        int matched=0, wrong=0, visible=0, missed=0, collided=0;
+        StringBuilder checkedLines=new StringBuilder();
+        for(int i=0;i<checks.length();i++){
+            JSONObject row=checks.optJSONObject(i);
+            if(row==null)continue;
+            String result=row.optString("status","");
+            if(result.equals("자동 후보 일치"))matched++;
+            else if(result.equals("자동 후보 오인식"))wrong++;
+            else if(result.equals("자동 후보 충돌"))collided++;
+            else if(result.equals("금액 감지·자동 미인식"))visible++;
+            else missed++;
+        }
+        for(int i=checks.length()-1;i>=Math.max(0,checks.length()-8);i--){
+            JSONObject row=checks.optJSONObject(i);
+            if(row==null)continue;
+            checkedLines.append(stamp(row.optLong("time",System.currentTimeMillis())))
+                .append(" · 실제 ").append(num(row.optLong("actual",0))).append("원")
+                .append(" / 자동 ").append(row.optInt("predicted",0)>0?num(row.optInt("predicted"))+"원":"미확정")
+                .append("\n").append(row.optString("status",""))
+                .append(" · 포착 화면 ").append(row.optInt("screens",0)).append("개")
+                .append("\n\n");
+        }
+        String rate=checks.length()>0?String.format(Locale.KOREA,"%.1f%%",100.0*matched/checks.length()):"—";
+        deliverySummary.setText("수동 검증 "+checks.length()+"건 · 자동 금액 일치 "+matched+"건 ("+rate+")\n"+
+            "자동 오인식 "+wrong+" · 후보 충돌 "+collided+"\n금액 포착·미확정 "+visible+" · 미탐지 "+missed);
+        deliveryHistory.setText(checkedLines.length()==0?"아직 건별 비교 내역이 없습니다.":checkedLines.toString().trim());
+
         JSONArray logs=DiagStore.observations(this);
         StringBuilder out=new StringBuilder();
         for(int i=logs.length()-1;i>=Math.max(0,logs.length()-10);i--){
@@ -212,9 +264,9 @@ public final class MainActivity extends Activity {
     }
     private void share(){
         render();
-        String report="라이더스팟 수익 인식 진단 v0.3.0\n\n"
+        String report="라이더스팟 수익 인식 진단 v0.4.0\n\n"
             +status.getText()+"\n\n"+counts.getText()+"\n\n"
-            +resources.getText()+"\n\n"+accuracy.getText()
+            +resources.getText()+"\n\n건별 검증\n"+deliverySummary.getText()+"\n"+deliveryHistory.getText()+"\n\n전체 운행 비교\n"+accuracy.getText()
             +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()
             +"\n\n주의: 건수 후보 비율은 인식 정확도가 아닙니다. 배터리 변화는 휴대폰 전체 수치입니다.";
         Intent send=new Intent(Intent.ACTION_SEND);
