@@ -63,7 +63,7 @@ public final class MainActivity extends Activity {
         return c;
     }
     private Button button(String text,boolean accent,View.OnClickListener click) {
-        Button b=new Button(this);b.setText(text);b.setTextAllCaps(false);b.setTextSize(13);
+        Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(13);
         b.setTextColor(accent?Color.WHITE:INK);
         b.setBackground(bg(accent?ACCENT:Color.rgb(233,238,247),12));
         b.setOnClickListener(click);b.setMinimumHeight(dp(48));return b;
@@ -121,7 +121,7 @@ public final class MainActivity extends Activity {
         if(savedCount>=0)actualCount.setText(String.valueOf(savedCount));
         if(savedTotal>=0)actualTotal.setText(String.valueOf(savedTotal));
         buttons(truth,button("실제 결과 저장 · 비교",true,v->saveTruth()));
-        accuracy=text("",14,INK,false);add(truth,12==0?accuracy:accuracy,12);
+        accuracy=text("",14,INK,false);add(truth,accuracy,12);
 
         LinearLayout events=card(body,"최근 배달 완료 후보");
         history=text("",13,INK,false);add(events,history,10);
