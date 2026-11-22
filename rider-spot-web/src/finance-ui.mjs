@@ -1,5 +1,6 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
 import {monthGoalProjection} from "./goal-view.mjs";
+import "./auto-income-time-list.js"; // Existing read-only per-delivery history, no finance mutation
 import {createRideRecap} from "./ride-recap.mjs";
 import {saveIncomeDay,saveIncomeRecord,financeWriteError} from "./finance-storage.mjs";
 import {icons} from "./ui.mjs";
@@ -675,6 +676,11 @@ export function createFinance(R, client) {
               onChange:e=>setDetailFilter(e.target.value),"aria-label":"내역 분류"},
               h("option",{value:"all"},"모든 분류"),
               options.map(name=>h("option",{key:name,value:name},name)))))),
+        // The native 12-item strip is a recent preview; this date-scoped list
+        // can browse every recognised delivery without changing manual totals.
+        window.__rsAutoIncomeTimes&&h(window.__rsAutoIncomeTimes,{
+          React:R,client,userId:user.id
+        }),
         h("section",{className:"fin-card"},
           h("header",null,h("h2",null,"날짜별 내역"),
             txt("small",null,visible.length+"건"+(query?" · 검색 적용":"")+
