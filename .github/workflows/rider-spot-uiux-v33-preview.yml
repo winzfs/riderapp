@@ -1,0 +1,87 @@
+name: Rider Spot UIUX v33 isolated live preview
+on:
+  push:
+    branches:
+      - design/riderspot-uiux-plan-20261123
+    paths:
+      - '.github/workflows/rider-spot-uiux-v33-preview.yml'
+      - 'rider-spot-web/wrangler.uiux-v33-preview.json'
+      - 'rider-spot-web/src/**'
+      - 'rider-spot-web/web-patches/**'
+      - 'rider-spot-web/edge/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-uiux-v33-preview
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      CF_TOKEN_PRIMARY: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_TOKEN_ALTERNATE: ${{ secrets.CF_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: f3e379cc8cf3d18061a1948aecc2dad5
+      RIDER_PREVIEW_URL: https://rider-spot-uiux-v33-preview.jazzhjm.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Unit and integration tests before preview
+        run: npm test
+      - name: Build immutable release assets
+        run: npm run build
+      - name: Preserve native routing, refresh and GPS safety before preview
+        run: |
+          mkdir -p /tmp/riderspot-uiux-source
+          tar -xJf ../rider-spot-android/source.tar.xz -C /tmp/riderspot-uiux-source
+          RIDER_ANDROID_SOURCE=/tmp/riderspot-uiux-source node scripts/check-update-safety.mjs
+      - name: Configure optional preview credential
+        run: |
+          if [ -n "$CF_TOKEN_PRIMARY" ]; then
+            echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN_PRIMARY" >> "$GITHUB_ENV"
+          elif [ -n "$CF_TOKEN_ALTERNATE" ]; then
+            echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN_ALTERNATE" >> "$GITHUB_ENV"
+          else
+            echo "No preview credentials; deployment skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Deploy isolated preview Worker, never production
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npx --yes wrangler@4.53.0 deploy --config wrangler.uiux-v33-preview.json
+      - name: Verify preview release hash and UI identity
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const rel=JSON.parse(fs.readFileSync('dist/release.json','utf8'));
+          const base=process.env.RIDER_PREVIEW_URL;
+          const get=async path=>{
+            const r=await fetch(base+path,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(30000)});
+            assert.equal(r.status,200,path+' http '+r.status);
+            return r.text();
+          };
+          const html=await get('/');
+          assert.ok(html.includes('/assets/rider-spot-'+rel.hash+'/app.mjs'));
+          assert.ok(html.includes('rs-recovery-guard-v217'));
+          const css=await get('/assets/rider-spot-'+rel.hash+'/curated-v9.css');
+          assert.ok(css.includes('rs33-goal-hero'));
+          assert.ok(css.includes('rs-v32-anchor'));
+          const app=await get('/assets/rider-spot-'+rel.hash+'/app.mjs');
+          assert.ok(app.includes('남은 근무일 하루 목표'));
+          console.log('UIUX_V33_LIVE_PREVIEW_OK',base,rel.hash);
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RiderSpot-UIUX-v33-preview-release
+          path: rider-spot-web/dist/release.json
+          retention-days: 7
