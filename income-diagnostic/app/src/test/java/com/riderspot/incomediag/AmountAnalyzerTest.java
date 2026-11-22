@@ -4,6 +4,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AmountAnalyzerTest {
+    @Test public void composite4489(){
+        assertEquals(4489,AmountAnalyzer.inspect("배달 완료 4,489원 3,280원 624원 585원").uniqueCompositeTotal());
+    }
     @Test public void composite7307(){
         assertEquals(7307,AmountAnalyzer.inspect("배달 완료 7,307원 3,280원 3,074원 953원").uniqueCompositeTotal());
     }
