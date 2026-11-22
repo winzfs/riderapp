@@ -918,3 +918,55 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
 }
 .rs-v32-endpoint.rs-v32-near.rs-v32-start .rs-v32-chip {left:-55px;top:-37px;}
 .rs-v32-endpoint.rs-v32-near.rs-v32-end .rs-v32-chip {left:55px;top:-37px;}
+/* Compact editorial layout for Rider Spot's mobile screens. */
+.app .bottom-nav button.active {
+  background:var(--rs-soft)!important;border-radius:14px!important;
+}
+.app .bottom-nav button.active:after {display:none!important}
+.app .bottom-nav button {font-size:11px!important}
+.app :is(.finance-page,.bike-page,.rs33-timeline) strong {font-variant-numeric:tabular-nums}
+.app .finance-page .rs8-income-console {
+  padding:18px!important;background:white!important;border-radius:18px!important;
+}
+.app .finance-page .rs8-console-top {flex-wrap:wrap;margin-bottom:14px}
+.app .finance-page .rs8-console-top .fin-period-btn {min-height:42px}
+.app .finance-page .rs8-console-value strong {font-size:clamp(32px,9vw,52px)!important;overflow-wrap:anywhere}
+.app .finance-page .rs8-console-metrics {
+  display:flex!important;flex-direction:column;gap:8px;padding:12px 0 0!important;border-bottom:0!important;
+}
+.app .finance-page .rs8-console-metrics>div {
+  display:flex;flex-direction:row;justify-content:space-between;align-items:baseline;
+  gap:12px;border:0;padding:0;
+}
+.app .finance-page .rs8-console-metrics strong {font-size:16px;overflow-wrap:anywhere;text-align:end}
+.app .finance-page .rs8-console-metrics>div:last-child strong {font-size:20px;color:var(--uf-ink)!important}
+.app .finance-page .rs8-console-metrics span {color:var(--rs-muted)!important;font-size:13px;flex:none}
+.app .finance-page .rs11-income-chart {background:white!important;padding:16px!important;border-color:var(--rs-line)!important}
+#rs-native-income-panel-v1.rsai-compact-ready button.rsai-fold-toggle {width:44px;height:44px}
+.app .rs33-timeline .rs12-route-tools {flex-wrap:wrap;row-gap:5px!important}
+.app .rs33-timeline .rs12-route-filters {flex:1 1 auto}
+.app .rs33-timeline .rs12-route-filters button {flex:1 1 auto;min-height:44px!important}
+.app .rs33-timeline .rs12-route-actions {margin-inline-start:auto}
+.app .rs33-timeline .rs12-map-heading {flex-wrap:wrap}
+.app .rs33-timeline .rs12-recap-action {min-height:44px!important}
+.app .rc-community.rs-community-renewal .rc-controls {display:grid;gap:10px}
+.app .rc-community.rs-community-renewal .rc-filter-row {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:8px}
+.app .rc-community.rs-community-renewal .rc-filter-row>* {width:100%;min-width:0;min-height:44px}
+.app .rc-community.rs-community-renewal .rc-card-grid img {width:clamp(64px,19vw,84px)!important;height:auto!important;aspect-ratio:1}
+.app .rc-community.rs-community-renewal .rc-card-grid h2 {word-break:keep-all;overflow-wrap:anywhere;line-height:1.45!important}
+.app .bike-page .rs8-bike-hero .bike-actions {grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:8px}
+.app .bike-page .rs8-bike-hero .bike-distance {overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.app .nearby .rs12-map-tools-panel {overscroll-behavior:contain}
+.app .nearby .rs8-map-tools-panel .rs12-layer-options button[aria-pressed=true] {
+  box-shadow:inset 3px 0 var(--uf-blue)!important;border-radius:8px!important;
+}
+#rs-presence-panel.rs-map-v2-presence-sheet .rs-presence-copy small {font-size:12px;color:#596b7d}
+.app .rs33-profile-tools .rs33-profile-row {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:10px}
+@media(max-width:380px) {
+ .app .rs33-timeline .rs12-route-filters {flex-basis:100%}
+ .app .bike-page .rs8-bike-hero .bike-actions button {padding-inline:6px!important;white-space:normal}
+}
+@media(prefers-reduced-motion:reduce) {
+ .app :is(button,summary,a) {transition:none!important}
+ .app :is(button,summary,a):active {transform:none!important}
+}
