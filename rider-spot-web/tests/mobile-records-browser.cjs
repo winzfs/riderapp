@@ -317,7 +317,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(await page.getByRole("button",{name:"교체 주기 설정",exact:true}).count(),0,
       "global replacement cycle editor is removed");
     await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
-    const oilDetail=page.getByRole("dialog",{name:/^엔진오일 .* 관리$/});
+    const oilDetail=page.getByRole("dialog",{name:"엔진오일 관리",exact:true});
     await oilDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
     const oilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
     await oilCycle.waitFor();
@@ -385,8 +385,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();
     assert.doesNotMatch(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/,"grid tile omits historic mileage");
     await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
-    await page.getByRole("dialog",{name:/^엔진오일 .* 관리$/}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
-    await page.getByRole("dialog",{name:/^엔진오일 .* 관리$/}).getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).getByRole("button",{name:"닫기"}).click();
     await page.getByRole("button",{name:/^뒤 타이어 .* 관리$/}).click();
     assert.equal(await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).locator(".record-log").count(),1);
     await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).locator(".record-log").first().click();
@@ -502,7 +502,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(vehicle.odometer_km,odometerBefore,"model selection must preserve odometer");
     assert.equal(records.length,countBefore,"model selection cannot create fake repairs");
     await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
-    const modelOil=page.getByRole("dialog",{name:/^엔진오일 .* 관리$/});
+    const modelOil=page.getByRole("dialog",{name:"엔진오일 관리",exact:true});
     await modelOil.getByText("6,000 km",{exact:true}).first().waitFor();
     await modelOil.getByRole("button",{name:"주기 수정"}).click();
     const modelOilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
@@ -639,9 +639,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     if(await page.locator(".rs8-zero-maintenance").count())
       await page.locator(".rs8-zero-maintenance summary").click();
     await page.getByRole("button",{name:/엔진오일.*기록 보기/}).first().click();
-    await page.getByRole("dialog",{name:/^엔진오일 .* 관리$/}).waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).waitFor();
     await shot("finance-maintenance-link");
-    await page.getByRole("dialog",{name:/^엔진오일 .* 관리$/}).getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).getByRole("button",{name:"닫기"}).click();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}
