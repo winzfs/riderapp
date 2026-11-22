@@ -611,7 +611,7 @@ export function createFinance(R, client) {
             button(h(R.Fragment,null,icon("settings",15),"설정"),()=>openEditor("goal",goal),
               "fin-textbtn",{"aria-label":"월 목표 설정"})),
           h("div",{className:"rs33-goal-hero"},
-            txt("span",null,goalProjection.remaining===0?"이번 달 목표 달성":"남은 근무일 하루 목표"),
+            txt("span",null,!goalUncertain&&goalProjection.remaining===0?"이번 달 목표 달성":"남은 근무일 하루 목표"),
             h("strong",null,perDay==null?
               (goalUncertain?"비용 확인 필요":"남은 근무일 없음"):money(perDay))),
           h("div",{className:"rs33-goal-facts"},

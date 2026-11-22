@@ -1,0 +1,60 @@
+name: Rider Spot UIUX v33 non-production verification
+on:
+  push:
+    branches:
+      - design/riderspot-uiux-plan-20261123
+  pull_request:
+    branches:
+      - design/mobile-layout-v32
+permissions:
+  contents: read
+jobs:
+  web:
+    name: Finance, maintenance, route and build regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - run: npm ci
+      - name: Run existing tests and month-end goal cases
+        run: npm test
+      - name: Validate JavaScript and production web bundle
+        run: |
+          node --check src/finance-ui.mjs
+          node --check src/Timeline.mjs
+          node --check src/mobile-records.mjs
+          node --check src/workspace-tools.js
+          node --check src/goal-view.mjs
+          npm run build
+      - name: Assert integrated income, GPS and UI assets
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          assert.ok(fs.existsSync('src/auto-income-time-list.js'));
+          assert.ok(fs.existsSync('../rider-spot-android/checkpoint-integration/checkpoint-core.js'));
+          assert.ok(fs.existsSync('../rider-spot-android/income-integration/native-income-bridge-addon.js'));
+          assert.ok(fs.existsSync('../web-patches/rider-route-visibility-v31.cjs'));
+          const css = fs.readFileSync('src/curated-v9.css','utf8');
+          assert.match(css, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+          assert.match(css, /\.rs-v32-anchor/);
+          assert.match(css, /rs33-goal-hero/);
+          const html = fs.readFileSync('dist/index.html','utf8');
+          assert.ok(html.includes('curated-v9.css'));
+          console.log('UIUX_V33_STATIC_CONTRACT_PASS');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: RiderSpot-UIUX-v33-Web-Build
+          path: rider-spot-web/dist/
+          retention-days: 7
+          if-no-files-found: error

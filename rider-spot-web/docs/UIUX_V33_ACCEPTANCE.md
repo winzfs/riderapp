@@ -29,10 +29,11 @@
 15. TalkBack·키보드·모션 축소·선택 요소 포커스
 
 ### 중요한 병합 전 점검
-최근의 `feature/riderspot-income-diagnostic`, `fix/native-route-style-load-20261123`,
-`fix/trip-quota-safe-finalize-20261123`는 별도 이력이다. 이 PR 자체가 이들의
-기능을 배포 환경에 자동 병합하지 않는다. 실제 Android 빌드에선 해당 변경사항이
-포함된 동일 기준 통합 브랜치가 필요하다.
+수익 자동수집 `feature/riderspot-income-diagnostic`, 지도 복원
+`fix/native-route-style-load-20261123`, 운행 종료 복구
+`fix/trip-quota-safe-finalize-20261123`의 추가/변경 파일을 통합 커밋
+`b7c8b331`에 보존했다. 단, 실제 Android APK에 대한 재패키징·서명과
+운영 Worker 배포는 아직 진행되지 않았다.
 
 ### 테스트
 `cd rider-spot-web && npm ci && npm test && npm run build`
