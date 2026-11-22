@@ -32,6 +32,27 @@ final class AmountAnalyzer {
             for(Money m:amounts){if(b.length()>0)b.append(" · ");b.append(m.summary());}
             return b.toString();
         }
+        /** Exactly equal arithmetic total from two to four other amounts on one screen.
+         * Never proof of a completed delivery or its final earnings.
+         */
+        int uniqueCompositeTotal(){
+            int found=0;
+            for(Money candidate:amounts){
+                List<Money> rest=new ArrayList<>(amounts);
+                rest.remove(candidate);
+                int size=rest.size();
+                boolean match=false;
+                for(int mask=1;mask<(1<<size)&&!match;mask++){
+                    int count=Integer.bitCount(mask);
+                    if(count<2||count>4)continue;
+                    long sum=0;
+                    for(int i=0;i<size;i++)if((mask&(1<<i))!=0)sum+=rest.get(i).amount;
+                    if(sum==candidate.amount)match=true;
+                }
+                if(match){if(found!=0&&found!=candidate.amount)return 0;found=candidate.amount;}
+            }
+            return found;
+        }
         Money uniqueDirect(){
             Money selected=null;
             for(Money m:amounts)if("배달료 인접".equals(m.category)){

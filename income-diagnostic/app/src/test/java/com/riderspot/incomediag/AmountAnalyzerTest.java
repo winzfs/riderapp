@@ -4,6 +4,18 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AmountAnalyzerTest {
+    @Test public void composite7307(){
+        assertEquals(7307,AmountAnalyzer.inspect("배달 완료 7,307원 3,280원 3,074원 953원").uniqueCompositeTotal());
+    }
+    @Test public void isolated17800Uncertain(){
+        assertEquals(0,AmountAnalyzer.inspect("배달 완료 17,800원").uniqueCompositeTotal());
+    }
+    @Test public void isolated48000Uncertain(){
+        assertEquals(0,AmountAnalyzer.inspect("배달 완료 48,000원").uniqueCompositeTotal());
+    }
+    @Test public void incompleteSum(){
+        assertEquals(0,AmountAnalyzer.inspect("배달 완료 7,307원 3,280원 3,074원").uniqueCompositeTotal());
+    }
     @Test public void deliveryFeeInCompletionScreen(){
         AmountAnalyzer.Result x=AmountAnalyzer.inspect("배달 완료 배달료 3,697원");
         assertTrue(x.completed);

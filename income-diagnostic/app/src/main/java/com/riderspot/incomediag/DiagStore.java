@@ -56,7 +56,7 @@ final class DiagStore {
             JSONArray limited=new JSONArray();
             for(int i=Math.max(0,a.length()-120);i<a.length();i++)limited.put(a.getJSONObject(i));
             SharedPreferences.Editor e=p.edit().putString("logs",limited.toString());
-            if("배달료 라벨 후보".equals(status)) {
+            if("배달료 라벨 후보".equals(status)||"합계 일치 후보".equals(status)) {
                 e.putInt("accepted",p.getInt("accepted",0)+1)
                   .putLong("sum",p.getLong("sum",0)+amount);
             } else {

@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(245,247,251));
         LinearLayout body=col();body.setPadding(dp(18),dp(28),dp(18),dp(36));scroll.addView(body);
-        add(body,text("RIDERSPOT  /  INCOME LAB v0.2",12,ACCENT,true),0);
+        add(body,text("RIDERSPOT  /  INCOME LAB v0.3",12,ACCENT,true),0);
         add(body,text("수익 인식 진단",28,INK,true),8);
         add(body,text("접근성 화면 텍스트에서 금액 후보와 주변 라벨을 분류합니다. 화면 캡처·OCR·서버 전송·원문 저장은 하지 않습니다.",13,SUB,false),10);
 
@@ -125,10 +125,10 @@ public final class MainActivity extends Activity {
 
         LinearLayout events=card(body,"최근 배달 완료 후보");
         history=text("",13,INK,false);add(events,history,10);
-        add(events,text("배달료 라벨 후보도 실제 배달로 확정된 값은 아닙니다. 화면 구조 변경이나 동시 표시 금액에 주의하세요.",12,SUB,false),12);
+        add(events,text("금액 구조 후보도 실제 배달로 확정된 값은 아닙니다. 화면 구조 변경이나 동시 표시 금액에 주의하세요.",12,SUB,false),12);
         LinearLayout clues=card(body,"화면별 금액 단서 · 최대 최근 12개");
         traces=text("",12,INK,false);add(clues,traces,10);
-        add(clues,text("금액과 미리 정한 라벨 분류만 저장합니다. 전체 화면 텍스트·고객 이름·주소는 저장하지 않습니다. 48,000원과 3,697원 중 어떤 금액이 접근성에 나타나는지 확인하세요.",12,SUB,false),12);
+        add(clues,text("금액과 미리 정한 라벨 분류만 저장합니다. 전체 화면 텍스트·고객 이름·주소는 저장하지 않습니다. 3,280원 + 3,074원 + 953원 = 7,307원 같은 합계 구조를 감지합니다.",12,SUB,false),12);
 
         LinearLayout guide=card(body,"테스트 방법");
         add(guide,text("1. 접근성 설정에서 ‘라이더스팟 수익 인식 테스트’를 허용합니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 완료 화면을 지나갈 때 감지 기록이 남는지 확인합니다.\n4. 운행을 마친 후 측정 종료를 누르고 실제 건수·총액을 입력합니다.\n5. 보고서 공유로 결과를 내보냅니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
@@ -172,7 +172,7 @@ public final class MainActivity extends Activity {
         int accepted=p.getInt("accepted",0),uncertain=p.getInt("uncertain",0);
         long sum=p.getLong("sum",0);
         status.setText("접근성 권한: "+(enabled()?"연결됨":"미설정")+"\n측정: "+(running?"진행 중":"중지")+"\n경과 시간: "+(elapsed/3600000)+"시간 "+((elapsed/60000)%60)+"분\n기록 대상: 쿠팡이츠 배달파트너 · 배민커넥트");
-        counts.setText("접수된 접근성 이벤트  "+num(raw)+"회\n분석 실행  "+num(scan)+"회\n텍스트 접근 가능  "+num(readable)+"회\n화면 트리 미확인  "+num(p.getLong("missingRoot",0))+"회\n완료 문구 감지 화면  "+num(p.getLong("completion",0))+"회\n금액 표시 화면  "+num(p.getLong("money",0))+"회\n배달료 라벨 후보  "+num(accepted)+"건 / "+num(sum)+"원\n확인 필요 후보  "+num(uncertain)+"건\n중복 화면 억제  "+num(p.getLong("duplicates",0))+"회");
+        counts.setText("접수된 접근성 이벤트  "+num(raw)+"회\n분석 실행  "+num(scan)+"회\n텍스트 접근 가능  "+num(readable)+"회\n화면 트리 미확인  "+num(p.getLong("missingRoot",0))+"회\n완료 문구 감지 화면  "+num(p.getLong("completion",0))+"회\n금액 표시 화면  "+num(p.getLong("money",0))+"회\n금액 구조 후보  "+num(accepted)+"건 / "+num(sum)+"원\n확인 필요 후보  "+num(uncertain)+"건\n중복 화면 억제  "+num(p.getLong("duplicates",0))+"회");
         long baseCpu=p.getLong("startCpu",Process.getElapsedCpuTime());
         long nowCpu=running?Process.getElapsedCpuTime():p.getLong("endCpu",baseCpu);
         long cpu=Math.max(0,nowCpu-baseCpu);
@@ -184,7 +184,7 @@ public final class MainActivity extends Activity {
         long truthTotal=p.getLong("truthTotal",-1);
         if(truthCount>=0&&truthTotal>=0){
             String ratio=truthCount>0?String.format(Locale.KOREA,"%.1f%%",100.0*accepted/truthCount):"해당 없음";
-            accuracy.setText("배달료 라벨 후보 "+accepted+"건 / 실제 "+truthCount+"건\n라벨 후보/실제 건수 "+ratio+" (정확도 아님)\n배달료 라벨 후보 합계 "+num(sum)+"원 / 실제 "+num(truthTotal)+"원\n금액 차이 "+(sum-truthTotal>=0?"+":"")+num(sum-truthTotal)+"원\n건수 "+(accepted==truthCount?"일치":"불일치")+" · 총액 "+(sum==truthTotal?"일치":"불일치"));
+            accuracy.setText("금액 구조 후보 "+accepted+"건 / 실제 "+truthCount+"건\n금액 후보/실제 건수 "+ratio+" (정확도 아님)\n금액 구조 후보 합계 "+num(sum)+"원 / 실제 "+num(truthTotal)+"원\n금액 차이 "+(sum-truthTotal>=0?"+":"")+num(sum-truthTotal)+"원\n건수 "+(accepted==truthCount?"일치":"불일치")+" · 총액 "+(sum==truthTotal?"일치":"불일치"));
         }else accuracy.setText("실제 배달 결과를 저장하면 건수·총액 비교가 표시됩니다.");
         JSONArray logs=DiagStore.observations(this);
         StringBuilder out=new StringBuilder();
@@ -212,7 +212,7 @@ public final class MainActivity extends Activity {
     }
     private void share(){
         render();
-        String report="라이더스팟 수익 인식 진단 v0.2.0\n\n"
+        String report="라이더스팟 수익 인식 진단 v0.3.0\n\n"
             +status.getText()+"\n\n"+counts.getText()+"\n\n"
             +resources.getText()+"\n\n"+accuracy.getText()
             +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()

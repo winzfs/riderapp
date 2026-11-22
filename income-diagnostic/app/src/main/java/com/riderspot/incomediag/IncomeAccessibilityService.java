@@ -90,7 +90,9 @@ public final class IncomeAccessibilityService extends AccessibilityService {
                 int amount=0;
                 String status;
                 AmountAnalyzer.Money direct=result.uniqueDirect();
-                if(result.amounts.isEmpty())status="금액 없음";
+                int composite=result.uniqueCompositeTotal();
+                if(composite>0){amount=composite;status="합계 일치 후보";}
+                else if(result.amounts.isEmpty())status="금액 없음";
                 else if(result.amounts.size()>1)status="복수 금액 후보";
                 else if(direct!=null) {
                     amount=direct.amount;
