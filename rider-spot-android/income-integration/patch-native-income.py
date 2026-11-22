@@ -44,7 +44,9 @@ xml_dir.mkdir(exist_ok=True,parents=True)
     android:description="@string/rs_income_accessibility_explanation"/>
 """,encoding="utf-8")
 strings=target/"res/values/strings.xml"
-s=strings.read_text(encoding="utf-8")
+strings.parent.mkdir(parents=True,exist_ok=True)
+s=(strings.read_text(encoding="utf-8") if strings.exists() else
+   '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n')
 assert s.count("</resources>")==1 and "rs_income_accessibility_explanation" not in s
 s=s.replace("</resources>",
 """    <string name="rs_income_accessibility_explanation">사용자가 활성화한 경우에만 배달 완료 금액을 읽고 자동 수익을 계산합니다. 고객 이름과 주소, 전체 화면 원문은 저장하지 않습니다.</string>
