@@ -12,6 +12,10 @@ const historyKey = (uid) => `trips:${uid}`;
 const intentKey = (uid) => `native-stop-intent:${uid}`;
 const mergeKey = (uid, tripId) => `native-merged:${uid}:${tripId}`;
 const now = () => new Date().toISOString();
+const isStorageQuota = (error) =>
+  error?.name === "QuotaExceededError" ||
+  /exceeded the quota|quota exceeded|storage quota/i.test(String(error?.message || ""));
+
 
 export function createUseRide({
   React,
@@ -138,7 +142,13 @@ export function createUseRide({
           .then((server) => {
             if (!current()) return;
             const merged = storage.mergeHistory(uid, server);
-            write(historyKey(uid), merged);
+            try {
+              write(historyKey(uid), merged);
+            } catch (error) {
+              // A full WebView localStorage must not hide valid remote records.
+              if (!isStorageQuota(error)) throw error;
+              console.warn("운행 이력 로컬 캐시 용량 초과: 서버 기록을 표시합니다.");
+            }
             setHistory(merged);
           })
           .catch(() => {
@@ -454,7 +464,51 @@ export function createUseRide({
             };
         if (!sameAccount())
           throw Error("운행을 기록한 계정에서 다시 열어 주세요.");
-        const updated = storage.commit(uid, finished);
+        let updated;
+        let remotelySavedAfterQuota = false;
+        try {
+          updated = storage.commit(uid, finished);
+        } catch (error) {
+          if (!isStorageQuota(error)) throw error;
+          // Never delete or truncate old unsynced trips to free storage.
+          // The native SQLite recorder has already stopped and retains GPS samples.
+          if (uid === "guest") {
+            throw Error("저장공간이 가득 찼어요. GPS 원본은 기기에 보관 중입니다. 로그인 후 다시 종료해 주세요.");
+          }
+          const { id, started_at, ended_at, distance_km, points, events, memo } = finished;
+          try {
+            await request(client.from("trips").upsert(
+              { id, user_id: uid, started_at, ended_at, distance_km, points, events, memo },
+              { onConflict: "id" },
+            ));
+          } catch (uploadError) {
+            console.warn("운행 종료 서버 직접 저장 대기", uploadError?.message);
+            throw Error("로컬 저장공간이 가득 찼고 서버 저장도 실패했어요. GPS 원본은 기기에 남아 있습니다. 인터넷 연결 후 다시 종료해 주세요.");
+          }
+          remotelySavedAfterQuota = true;
+          // Keep the full record in memory for this session. Earlier trips and
+          // their local backup stay untouched; the server rehydrates on relaunch.
+          updated = [
+            finished,
+            ...storage.getHistory(uid).filter((row) => row.id !== finished.id),
+          ];
+        }
+        if (remotelySavedAfterQuota) {
+          if (!alreadyComplete || read(activeKey(uid), null)?.id === finished.id)
+            saveActive(null);
+          if (bridge) {
+            write(mergeKey(uid, finished.id), true);
+            write(intentKey(uid), null);
+          }
+          setHistory(updated);
+          isPaused.current = false;
+          setPaused(false);
+          try { odometerSync.enqueue(uid, finished); }
+          catch (error) { console.warn("주행거리 동기화 대기", error?.message); }
+          notify("저장공간 초과로 기기 저장 대신 서버에 운행을 안전하게 저장했어요.");
+          void flush();
+          return finished;
+        }
         storage.enqueue(uid, finished.id);
         odometerSync.enqueue(uid,finished);
         if (!alreadyComplete || read(activeKey(uid), null)?.id === finished.id)
