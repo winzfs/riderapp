@@ -219,3 +219,85 @@ body.rs-year-open{overflow:hidden}
  .rs4-day-axis,.rs4-month-row{grid-template-columns:32px minmax(0,1fr) 30px;column-gap:11px}
  .rs4-day-ribbon,.rs4-day-ticks{gap:3px}
 }
+
+/* v5 / Quiet Rhythm — visual density must remain calm even at 280–365 recorded days.
+   Month/day positions remain unchanged; the source of truth remains trips/earnings. */
+.rs-year-dialog .rs-year-hero{padding-top:4px!important;padding-bottom:14px!important}
+.rs-year-dialog .rs-year-hero-top{margin-bottom:10px!important}
+.rs-year-dialog .rs-year-hero-label{margin-top:6px!important}
+.rs-year-dialog .rs-year-current{font-size:clamp(64px,19vw,88px)!important}
+.rs-year-dialog .rs4-stat-composition{padding:17px 0 22px!important;margin-bottom:19px!important}
+.rs-year-dialog .rs4-feature-number{font-size:clamp(57px,17vw,76px)!important}
+.rs-year-dialog .rs4-stat-kicker{font-size:10px!important;letter-spacing:-.01em!important;color:#7B8B98!important}
+.rs-year-dialog .rs4-stat-income-number{margin-top:12px!important}
+.rs-year-dialog .rs4-stat-minor{padding-top:12px}
+.rs-year-dialog .rs4-artwork-heading{margin-bottom:10px!important}
+.rs-year-dialog .rs4-artwork-title>strong{font-size:20px!important}
+.rs-year-dialog .rs4-artwork-aside{display:none!important}
+.rs-year-dialog .rs4-overline{font-size:9px!important;letter-spacing:.10em!important}
+.rs-year-dialog .rs-year-toggle.rs4-ink-tabs{margin-bottom:13px!important}
+.rs-year-dialog .rs4-artwork{border-top:1px solid #D6DBDC!important;border-bottom:1px solid #D6DBDC!important;padding-top:11px!important;padding-bottom:11px!important}
+.rs-year-dialog .rs4-axis-label{font-size:10px!important;line-height:1.2!important;color:#8A979C!important;white-space:nowrap}
+.rs-year-dialog .rs4-day-axis,.rs-year-dialog .rs5-month-row{
+  grid-template-columns:34px minmax(0,1fr) 30px!important;column-gap:8px!important}
+.rs-year-dialog .rs4-day-ticks{gap:2px!important}
+.rs-year-dialog .rs5-month-row{
+  height:32px!important;min-height:32px!important;max-height:32px!important;
+  padding:0!important;opacity:1!important}
+.rs-year-dialog .rs5-month-row:hover{background:#F1F3F2!important}
+.rs-year-dialog .rs5-month-row:focus-visible{outline:2px solid #416EAF;outline-offset:1px}
+.rs-year-dialog .rs4-month-index{
+  white-space:nowrap!important;font-size:12px!important;font-weight:650!important;
+  color:#62717E!important;letter-spacing:-.04em!important}
+.rs-year-dialog .rs5-future-month .rs4-month-index{color:#9BA4A6!important}
+.rs-year-dialog .rs4-month-count{font-size:10px!important;color:#8C989C!important}
+.rs-year-dialog .rs4-day-ribbon{
+  position:relative!important;display:grid!important;align-items:center!important;
+  grid-template-columns:repeat(31,minmax(0,1fr))!important;
+  gap:2px!important;width:100%!important;min-width:0!important}
+.rs-year-dialog .rs4-day-ribbon::before{
+  content:"";position:absolute;z-index:0;left:0;top:50%;height:1px;
+  width:var(--rs5-valid-width,100%);
+  background:linear-gradient(to right,#DCE1E3 0%,#DCE1E3 var(--rs5-past-width,100%),#EFF0ED var(--rs5-past-width,100%),#EFF0ED 100%);
+  transform:translateY(-.5px);pointer-events:none}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell{
+  position:relative!important;z-index:1;display:block!important;
+  min-width:0!important;width:100%!important;height:9px!important;
+  border:0!important;border-radius:1.5px!important;
+  background:transparent!important}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell.light{background:#B9CBDD!important}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell.middle{background:#91A9C6!important}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell.strong{background:#6484AE!important}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell.outside{background:transparent!important}
+.rs-year-dialog .rs4-day-ribbon .rs4-day-cell.rs5-future-day{background:transparent!important}
+.rs-year-dialog .rs5-legend{
+  display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:flex-end!important;
+  gap:7px!important;margin-top:15px!important}
+.rs-year-dialog .rs5-legend-head{font-size:10px;color:#728398}
+.rs-year-dialog .rs5-legend .rs4-legend-cells{display:inline-flex;gap:4px}
+.rs-year-dialog .rs5-legend .rs4-legend-cells>.rs4-day-cell{
+  background:#E2E5E5;width:13px;height:8px;border-radius:1px;display:block;min-width:13px}
+.rs-year-dialog .rs5-legend .rs4-legend-cells>.rs4-day-cell.light{background:#B9CBDD}
+.rs-year-dialog .rs5-legend .rs4-legend-cells>.rs4-day-cell.middle{background:#91A9C6}
+.rs-year-dialog .rs5-legend .rs4-legend-cells>.rs4-day-cell.strong{background:#6484AE}
+.rs-year-dialog .rs5-legend-tail{font-size:10px!important;color:#87949A!important}
+.rs-year-dialog .rs4-artwork-note{margin-top:10px!important;font-size:10px!important}
+@media(max-width:390px){
+ .rs-year-dialog .rs4-day-axis,.rs-year-dialog .rs5-month-row{
+   grid-template-columns:32px minmax(0,1fr) 25px!important;column-gap:5px!important}
+ .rs-year-dialog .rs5-month-row{height:31px!important;min-height:31px!important;max-height:31px!important}
+ .rs-year-dialog .rs4-day-ribbon{gap:1.5px!important}
+ .rs-year-dialog .rs4-day-ribbon .rs4-day-cell{height:8px!important}
+ .rs-year-dialog .rs4-stat-income-number{font-size:21px!important}
+}
+@media(max-width:350px){
+ .rs-year-dialog .rs4-day-axis,.rs-year-dialog .rs5-month-row{grid-template-columns:29px minmax(0,1fr) 21px!important;column-gap:4px!important}
+ .rs-year-dialog .rs4-day-ribbon{gap:1px!important}
+ .rs-year-dialog .rs4-month-index{font-size:11px!important}
+}
+@media(min-width:560px){
+ .rs-year-dialog .rs4-day-axis,.rs-year-dialog .rs5-month-row{grid-template-columns:38px minmax(0,1fr) 34px!important;column-gap:10px!important}
+ .rs-year-dialog .rs5-month-row{height:37px!important;min-height:37px!important;max-height:37px!important}
+ .rs-year-dialog .rs4-day-ribbon{gap:3px!important}
+ .rs-year-dialog .rs4-day-ribbon .rs4-day-cell{height:11px!important}
+}
