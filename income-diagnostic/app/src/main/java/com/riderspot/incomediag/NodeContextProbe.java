@@ -18,6 +18,7 @@ final class NodeContextProbe {
     private static final Pattern WON=Pattern.compile("(?<![\\d,])(?:\\d{1,3}(?:,\\d{3})+|\\d{3,6})\\s*원");
     // Specific concepts first. All exported labels are fixed strings, never user content.
     private static final String[] LABELS={
+        "기본 수수료","기본수수료","추가 수수료","추가수수료","리워드",
         "총 배달료","총배달료","기본 배달료","기본배달료","추가 배달료","추가배달료",
         "배달 완료","배달완료","배달료","배달 요금","배달요금","기본료",
         "할증료","할증","추가 요금","추가요금","추가금","수수료","라이더 수익",
@@ -139,6 +140,8 @@ final class NodeContextProbe {
         if(raw.length()>80)return "";
         for(String term:LABELS){
             if(raw.contains(term)){
+                if(term.equals("기본수수료")||term.equals("기본 수수료"))return "기본수수료";
+                if(term.equals("추가수수료")||term.equals("추가 수수료"))return "추가수수료";
                 if(term.equals("배달완료"))return "배달 완료";
                 if(term.equals("총배달료"))return "총 배달료";
                 if(term.equals("기본배달료"))return "기본 배달료";
@@ -154,6 +157,35 @@ final class NodeContextProbe {
             }
         }
         return "";
+    }
+    /** Export only approved labels, amounts and categorical node relationships. */
+    static String safeSummary(List<Entry> entries){
+        if(entries==null||entries.isEmpty())return "금액 UI 노드 없음";
+        StringBuilder b=new StringBuilder();
+        for(Entry e:entries){
+            if(b.length()>0)b.append("\n");
+            b.append(e.diagnostic());
+        }
+        int sum=verifiedComponentSum(entries);
+        if(sum>0)b.append("\n세 항목 합계 후보: ")
+            .append(String.format(Locale.KOREA,"%,d원",sum))
+            .append(" (실제 총액과 일치 여부 검증 필요)");
+        return b.toString();
+    }
+    /** A sum is only a structural hypothesis when each label has exactly one amount. */
+    static int verifiedComponentSum(List<Entry> entries){
+        Integer base=null,extra=null,reward=null;
+        for(Entry e:entries){
+            if("기본수수료".equals(e.label)){
+                if(base!=null)return 0;base=e.amount;
+            }else if("추가수수료".equals(e.label)){
+                if(extra!=null)return 0;extra=e.amount;
+            }else if("리워드".equals(e.label)){
+                if(reward!=null)return 0;reward=e.amount;
+            }
+        }
+        if(base==null||extra==null||reward==null)return 0;
+        return base+extra+reward;
     }
     private static String approvedRole(CharSequence raw){
         if(raw==null)return "기타";

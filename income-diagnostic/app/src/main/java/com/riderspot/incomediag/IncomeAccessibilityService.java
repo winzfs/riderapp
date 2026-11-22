@@ -3,6 +3,8 @@ package com.riderspot.incomediag;
 import android.accessibilityservice.AccessibilityService;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.graphics.Rect;
+import java.util.List;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayDeque;
@@ -14,7 +16,13 @@ import java.util.ArrayDeque;
 public final class IncomeAccessibilityService extends AccessibilityService {
     private long currentSession=0, raw, scanned, readable, missingRoot, completeScreens, moneyScreens, dedup, lastAt;
     private long lastScan=0,lastFlush=0,lastCandidateAt=0,lastTraceAt=0;
-    private String lastCandidateFingerprint="",lastTraceFingerprint="";
+    private String lastCandidateFingerprint="",lastTraceFingerprint="",lastStructureFingerprint="";
+    private long lastStructureAt=0;
+    private static final class Visit {
+        final AccessibilityNodeInfo node;
+        final int parent;
+        Visit(AccessibilityNodeInfo node,int parent){this.node=node;this.parent=parent;}
+    }
     private void restoreForSession() {
         SharedPreferences p=DiagStore.prefs(this);
         currentSession=DiagStore.session(this);
@@ -28,6 +36,7 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         lastAt=p.getLong("lastAt",0);
         lastScan=0;lastCandidateAt=0;lastCandidateFingerprint="";
         lastTraceAt=0;lastTraceFingerprint="";
+        lastStructureAt=0;lastStructureFingerprint="";
         lastFlush=SystemClock.elapsedRealtime();
     }
     private void flush() {
@@ -49,22 +58,35 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         }
         lastScan=clock;scanned++;lastAt=System.currentTimeMillis();
         StringBuilder visible=new StringBuilder();
+        NodeContextProbe structureProbe=new NodeContextProbe();
         for(CharSequence cs:e.getText())append(visible,cs);
         try {
             AccessibilityNodeInfo root=getRootInActiveWindow();
             if(root!=null&&root.getPackageName()!=null&&pkg.equals(root.getPackageName().toString())) {
-                ArrayDeque<AccessibilityNodeInfo> nodes=new ArrayDeque<>();
-                nodes.add(root);
+                ArrayDeque<Visit> nodes=new ArrayDeque<>();
+                nodes.add(new Visit(root,-1));
                 int count=0;
                 while(!nodes.isEmpty()&&count++<200&&visible.length()<24000) {
-                    AccessibilityNodeInfo n=nodes.removeFirst();
+                    Visit visit=nodes.removeFirst();
+                    AccessibilityNodeInfo n=visit.node;
+                    int parentForChildren=visit.parent;
                     if(n.isVisibleToUser()) {
-                        append(visible,n.getText());
-                        append(visible,n.getContentDescription());
+                        CharSequence t=n.getText();
+                        CharSequence description=n.getContentDescription();
+                        append(visible,t);
+                        append(visible,description);
+                        Rect bounds=new Rect();
+                        n.getBoundsInScreen(bounds);
+                        parentForChildren=structureProbe.add(visit.parent,
+                            bounds.centerX(),bounds.centerY(),t,description,
+                            n.getViewIdResourceName(),n.getClassName());
+                    } else {
+                        parentForChildren=structureProbe.add(visit.parent,0,0,
+                            null,null,null,n.getClassName());
                     }
                     for(int i=0;i<Math.min(n.getChildCount(),30)&&nodes.size()<240;i++) {
                         AccessibilityNodeInfo child=n.getChild(i);
-                        if(child!=null)nodes.add(child);
+                        if(child!=null)nodes.add(new Visit(child,parentForChildren));
                     }
                 }
             } else missingRoot++;
@@ -74,6 +96,17 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         if(result.completed)completeScreens++;
         if(!result.amounts.isEmpty())moneyScreens++;
         String platform=pkg.equals("com.woowahan.bros")?"배민":"쿠팡이츠";
+        List<NodeContextProbe.Entry> grouped=structureProbe.describe();
+        if(!grouped.isEmpty()){
+            String summary=NodeContextProbe.safeSummary(grouped);
+            String structuralSignature=platform+"|"+result.completed+"|"+summary;
+            if(!structuralSignature.equals(lastStructureFingerprint)||clock-lastStructureAt>=30000){
+                DiagStore.addStructureSnapshot(this,platform,result.completed,
+                    summary,NodeContextProbe.verifiedComponentSum(grouped),grouped.size());
+                lastStructureFingerprint=structuralSignature;
+                lastStructureAt=clock;
+            }
+        }
         String signature=platform+"|"+result.completed+"|"+result.summary();
         if((result.completed||!result.amounts.isEmpty())&&
            (!signature.equals(lastTraceFingerprint)||clock-lastTraceAt>=30000)) {

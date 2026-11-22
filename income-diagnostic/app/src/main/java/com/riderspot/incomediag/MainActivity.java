@@ -35,7 +35,7 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final int INK=Color.rgb(23,33,55),SUB=Color.rgb(99,112,133),ACCENT=Color.rgb(56,85,231);
-    private TextView status,counts,resources,accuracy,history,traces,deliverySummary,deliveryHistory;
+    private TextView status,counts,resources,accuracy,history,traces,deliverySummary,deliveryHistory,structureHistory;
     private EditText actualCount,actualTotal,lastFee;
     private final Runnable updater=new Runnable() {
         @Override public void run() { render();handler.postDelayed(this,5000); }
@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(245,247,251));
         LinearLayout body=col();body.setPadding(dp(18),dp(28),dp(18),dp(36));scroll.addView(body);
-        add(body,text("RIDERSPOT  /  INCOME LAB v0.4",12,ACCENT,true),0);
+        add(body,text("RIDERSPOT  /  INCOME LAB v0.5",12,ACCENT,true),0);
         add(body,text("수익 인식 진단",28,INK,true),8);
         add(body,text("접근성 화면 텍스트에서 금액 후보와 주변 라벨을 분류합니다. 화면 캡처·OCR·서버 전송·원문 저장은 하지 않습니다.",13,SUB,false),10);
 
@@ -141,8 +141,14 @@ public final class MainActivity extends Activity {
         traces=text("",12,INK,false);add(clues,traces,10);
         add(clues,text("금액과 미리 정한 라벨 분류만 저장합니다. 전체 화면 텍스트·고객 이름·주소는 저장하지 않습니다. 3,280원 + 3,074원 + 953원 = 7,307원 같은 합계 구조를 감지합니다.",12,SUB,false),12);
 
+        LinearLayout structure=card(body,"수수료 항목 · 접근성 UI 구조");
+        add(structure,text("기본수수료 · 추가수수료 · 리워드가 실제 접근성 요소로 제공되는지 확인합니다. 금액과 문구가 같은 UI 요소인지, 인접하거나 형제 관계인지도 표시합니다.",12,SUB,false),8);
+        structureHistory=text("",12,INK,false);
+        add(structure,structureHistory,10);
+        add(structure,text("화면 원문, 고객 이름·주소, UI 리소스 ID 값, 정확한 좌표는 저장하지 않습니다. 분류된 라벨·금액·관계 유형만 기록합니다.",12,SUB,false),12);
+
         LinearLayout guide=card(body,"테스트 방법");
-        add(guide,text("1. 이전 진단 앱의 접근성을 끄고 v0.4 접근성 서비스를 허용합니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 1건을 완료할 때마다 마지막 배달료를 입력해 건별 비교합니다.\n4. 마지막 배달료 비교를 반복하고, 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
+        add(guide,text("1. v0.4 테스트는 유지하고, v0.5를 사용할 때만 이전 접근성 서비스를 끕니다.\n2. 측정 시작을 누른 뒤 평소처럼 배달합니다.\n3. 배달 1건을 완료할 때마다 마지막 배달료를 입력해 건별 비교합니다.\n4. 마지막 배달료 비교를 반복하고, 종료 후 보고서를 공유합니다.\n5. 전체 운행 합계 비교는 선택사항입니다.\n\nAndroid가 설치된 앱의 접근성 설정을 제한하면 앱 정보 화면의 ⋮ → 제한된 설정 허용을 확인하세요.",13,INK,false),12);
         setContentView(scroll);
         render();
     }
@@ -261,13 +267,26 @@ public final class MainActivity extends Activity {
                 .append("\n").append(o.optString("amounts","금액 없음")).append("\n\n");
         }
         traces.setText(recent.length()==0?"수집된 금액 단서가 없습니다.":recent.toString().trim());
+        JSONArray structures=DiagStore.structures(this);
+        StringBuilder structural=new StringBuilder();
+        for(int i=structures.length()-1;i>=Math.max(0,structures.length()-6);i--){
+            JSONObject o=structures.optJSONObject(i);
+            if(o==null)continue;
+            structural.append(stamp(o.optLong("time",System.currentTimeMillis())))
+              .append(" · ").append(o.optString("platform"))
+              .append(o.optBoolean("complete")?" · 완료 화면":" · 일반 화면")
+              .append("\n")
+              .append(o.optString("summary",""))
+              .append("\n\n");
+        }
+        structureHistory.setText(structural.length()==0?"아직 구조화된 금액·라벨 자료가 없습니다.":structural.toString().trim());
     }
     private void share(){
         render();
-        String report="라이더스팟 수익 인식 진단 v0.4.0\n\n"
+        String report="라이더스팟 수익 인식 진단 v0.5.0\n\n"
             +status.getText()+"\n\n"+counts.getText()+"\n\n"
             +resources.getText()+"\n\n건별 검증\n"+deliverySummary.getText()+"\n"+deliveryHistory.getText()+"\n\n전체 운행 비교\n"+accuracy.getText()
-            +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()
+            +"\n\n최근 후보\n"+history.getText()+"\n\n화면별 금액 단서\n"+traces.getText()+"\n\nUI 구조 분석\n"+structureHistory.getText()
             +"\n\n주의: 건수 후보 비율은 인식 정확도가 아닙니다. 배터리 변화는 휴대폰 전체 수치입니다.";
         Intent send=new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");send.putExtra(Intent.EXTRA_TEXT,report);

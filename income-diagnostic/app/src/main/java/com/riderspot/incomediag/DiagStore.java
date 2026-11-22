@@ -27,7 +27,7 @@ final class DiagStore {
         prefs(c).edit().clear().putBoolean("running",true).putLong("session",id)
           .putLong("startElapsed",SystemClock.elapsedRealtime())
           .putLong("startCpu",Process.getElapsedCpuTime())
-          .putInt("startBattery",battery(c)).putString("logs","[]").putString("snapshots","[]").putString("verifications","[]").apply();
+          .putInt("startBattery",battery(c)).putString("logs","[]").putString("snapshots","[]").putString("verifications","[]").putString("structures","[]").apply();
     }
     static void stop(Context c) {
         prefs(c).edit().putBoolean("running",false)
@@ -151,6 +151,29 @@ final class DiagStore {
         catch(Exception e){return new JSONArray();}
     }
 
+    /** Persist sanitized, predefined label tokens and categorical spatial relations only. */
+    static synchronized void addStructureSnapshot(Context c,String platform,boolean complete,
+            String safeSummary,int componentSum,int matchingAmounts){
+        try{
+            SharedPreferences p=prefs(c);
+            JSONArray arr=structures(c);
+            JSONObject row=new JSONObject();
+            row.put("time",System.currentTimeMillis());
+            row.put("platform",platform);
+            row.put("complete",complete);
+            row.put("summary",safeSummary);
+            row.put("sum",componentSum);
+            row.put("count",matchingAmounts);
+            arr.put(row);
+            JSONArray recent=new JSONArray();
+            for(int i=Math.max(0,arr.length()-30);i<arr.length();i++)recent.put(arr.getJSONObject(i));
+            p.edit().putString("structures",recent.toString()).apply();
+        }catch(Exception ignored){}
+    }
+    static JSONArray structures(Context c){
+        try{return new JSONArray(prefs(c).getString("structures","[]"));}
+        catch(Exception e){return new JSONArray();}
+    }
     static JSONArray observations(Context c) {
         try { return new JSONArray(prefs(c).getString("logs","[]")); }
         catch(Exception e) { return new JSONArray(); }

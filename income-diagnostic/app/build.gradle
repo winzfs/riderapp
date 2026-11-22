@@ -3,11 +3,11 @@ android {
     namespace 'com.riderspot.incomediag'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.riderspot.incomediag.v04'
+        applicationId 'com.riderspot.incomediag.v05'
         minSdk 26
         targetSdk 35
-        versionCode 4
-        versionName '0.4.0-dev'
+        versionCode 5
+        versionName '0.5.0-dev'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
