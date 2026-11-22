@@ -342,7 +342,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.locator(".bike-consumable").filter({hasText:"엔진오일"})
       .getByText("2,800 km 남음",{exact:true}).waitFor();
     await page.getByRole("button",{name:/^앞 타이어 .* 관리$/}).click();
-    const tireDetail=page.getByRole("dialog",{name:/^앞 타이어 .* 관리$/});
+    const tireDetail=page.getByRole("dialog",{name:"앞 타이어 관리",exact:true});
     await tireDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
     const tireCycle=page.getByRole("dialog",{name:"앞 타이어 교체 주기"});
     await tireCycle.getByLabel("교체 기간 (일)").fill("90");
@@ -388,20 +388,20 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
     await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).getByRole("button",{name:"닫기"}).click();
     await page.getByRole("button",{name:/^뒤 타이어 .* 관리$/}).click();
-    assert.equal(await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).locator(".record-log").count(),1);
-    await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).locator(".record-log").first().click();
+    assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").count(),1);
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").first().click();
     await page.goBack();
     await page.getByRole("dialog",{name:"정비 기록 수정"}).waitFor({state:"hidden"});
-    await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).waitFor();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).waitFor();
     assert.equal(await page.locator(".bottom-nav button.active").innerText(),"내 바이크",
       "Back from nested edit preserves the underlying part detail");
-    await page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/}).locator(".record-log").first().click();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").first().click();
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("계기판").fill("40000");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"변경사항 저장"}).click();
-    const rear=page.getByRole("dialog",{name:/^뒤 타이어 .* 관리$/});
+    const rear=page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true});
     await rear.getByText("0원").waitFor();
     await rear.getByText("40,000 km",{exact:true}).first().waitFor();
     await rear.getByRole("button",{name:"주기 수정",exact:true}).click();
@@ -440,7 +440,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       "deleted rear tire record leaves the compact status-only card");
     assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
     await page.getByRole("button",{name:/^브레이크 패드 .* 관리$/}).click();
-    const swipeDialog=page.getByRole("dialog",{name:/^브레이크 패드 .* 관리$/});
+    const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리",exact:true});
     const handle=swipeDialog.locator(".record-heading");
     const rect=await handle.boundingBox();
     assert.ok(rect,"draggable sheet handle has visible geometry");
@@ -526,7 +526,7 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(modelSettings.find(x=>x.model_key==="honda-pcx125"&&x.item_key==="엔진오일").interval_km,2600,
       "previous bike edits remain scoped to previous model");
     await page.getByRole("button",{name:/^구동벨트 .* 관리$/}).click();
-    const nmaxBelt=page.getByRole("dialog",{name:/^구동벨트 .* 관리$/});
+    const nmaxBelt=page.getByRole("dialog",{name:"구동벨트 관리",exact:true});
     await nmaxBelt.getByText("18,000 km",{exact:true}).waitFor();
     await nmaxBelt.getByRole("button",{name:"닫기"}).click();
 
