@@ -58,7 +58,7 @@ jobs:
       - name: Browser verify five tabs and navigation on live preview
         env:
           RIDER_VISUAL_URL: https://rider-spot-curated-v9-preview.jazzhjm.workers.dev
-        run: node tests/urban-flow-v11-browser.cjs
+        run: node tests/uiux-v33-live-browser.cjs
       - name: Signed-in mock CRUD, timeline and Android Back on live preview
         env:
           RIDER_TEST_ORIGIN: https://rider-spot-curated-v9-preview.jazzhjm.workers.dev
