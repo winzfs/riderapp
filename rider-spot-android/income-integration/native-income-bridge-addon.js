@@ -1,5 +1,7 @@
   /* RiderSpot auto-income native bridge v1: trusted-origin, local first. */
   (() => {
+    if(typeof document==='undefined' || typeof document.getElementById!=='function' ||
+       typeof document.querySelector!=='function' || typeof document.createElement!=='function')return;
     const API = Object.freeze({
       call: (action, payload={}) => send(action, payload),
     });
