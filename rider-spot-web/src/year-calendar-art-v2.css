@@ -139,3 +139,83 @@ body.rs-year-open{overflow:hidden}
 .rs-year-dialog .rs-year-intro-caption{font-size:11px!important;line-height:1.45!important;margin:0!important;white-space:nowrap!important;
   color:#819085!important;word-break:keep-all!important}
 @media(max-width:355px){.rs-year-dialog .rs-year-current{font-size:52px!important}.rs-year-dialog .rs-year-hero-label{gap:5px 9px}}
+
+/* v4 — ANNUAL ARCHIVE / A single gallery-grade data composition.
+   Strictly scoped to the calendar dialog; no page-wide app selectors. */
+.rs-year-dialog{--ry-paper:#F9F8F5;--ry-ink:#202B31;--ry-quiet:#778187;--ry-rule:#D9DEDC;
+ --ry-empty:#E7E9E7;--ry-sage-1:#BCCCE4;--ry-sage-2:#7795CD;--ry-sage-3:#3559AC}
+.rs-year-dialog .rs-year-panel{background:#F9F8F5!important;color:#202B31!important}
+.rs-year-dialog .rs-year-topbar{background:#F9F8F5!important;border-bottom:1px solid #D9DEDC!important}
+.rs-year-dialog .rs-year-brand{color:#3F5D9C!important}
+.rs-year-dialog .rs-year-body{background:#F9F8F5!important}
+.rs-year-dialog .rs-year-hero{border-bottom:0!important;padding-bottom:22px!important}
+.rs-year-dialog .rs-year-hero-top{margin-bottom:16px}
+.rs-year-dialog .rs-year-overline{color:#687C8B;font-size:10px;font-weight:750;letter-spacing:.13em}
+.rs-year-dialog .rs-year-index{font-family:inherit;font-size:10px!important;font-style:normal!important;letter-spacing:.065em;color:#89939A!important}
+.rs-year-dialog .rs-year-current{font-family:inherit;font-weight:650;font-size:clamp(66px,20vw,93px)!important;letter-spacing:-.095em!important;line-height:.98!important;color:#202B31!important}
+.rs-year-dialog .rs-year-hero-yearline{align-items:center}
+.rs-year-dialog .rs-year-controls{gap:8px!important}
+.rs-year-dialog .rs-year-controls .rs-year-nav-icon{border:1px solid #CFD6D2!important;background:transparent!important;color:#344E64!important}
+.rs-year-dialog .rs-year-hero-label{display:flex;justify-content:space-between;align-items:baseline;gap:6px 14px;margin-top:8px}
+.rs-year-dialog .rs-year-title{font-size:27px!important;font-weight:740;color:#202B31!important;letter-spacing:-.055em!important}
+.rs-year-dialog .rs-year-intro-caption{font-size:11px!important;color:#74828B!important;white-space:normal!important;text-align:right;line-height:1.35}
+.rs4-stat-composition{display:grid;grid-template-columns:.82fr 1.18fr;gap:20px;align-items:stretch;padding:19px 0 28px;margin:0 0 23px;border-top:1px solid #C8CFD0;border-bottom:1px solid #C8CFD0}
+.rs4-stat-primary,.rs4-stat-secondary,.rs4-stat-income{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.rs4-stat-primary{border-right:1px solid #D9DEDC}
+.rs4-stat-kicker{color:#88959C;font-size:9px;font-weight:750;letter-spacing:.095em;white-space:nowrap}
+.rs4-feature-number{margin:5px 0 0;font-size:clamp(57px,18vw,82px);line-height:1;font-weight:650;letter-spacing:-.11em;color:#263D53}
+.rs4-feature-desc{margin-top:5px;font-size:11px;line-height:1.4;color:#697980;font-weight:550}
+.rs4-stat-income-number{font-size:clamp(19px,5.4vw,27px);line-height:1.15;font-weight:730;letter-spacing:-.055em;color:#202B31;overflow-wrap:anywhere;margin-top:11px}
+.rs4-stat-minor{width:100%;margin-top:auto;padding-top:16px;display:grid;grid-template-columns:1fr 1fr;column-gap:12px}
+.rs4-stat-minor-cell{min-width:0;border-top:1px solid #D9DEDC;padding:9px 0 0;display:flex;flex-direction:column;gap:6px}
+.rs4-stat-minor-cell>span{font-size:10px;color:#7B898F;letter-spacing:-.035em;white-space:normal}
+.rs4-stat-minor-cell>strong{font-size:clamp(13px,3.7vw,17px);font-weight:680;color:#33434D;letter-spacing:-.055em;overflow-wrap:anywhere}
+.rs4-artwork-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 14px}
+.rs4-artwork-title{display:flex;flex-direction:column;gap:5px}
+.rs4-overline{font-size:9px;letter-spacing:.12em;color:#6684B0;font-weight:800}
+.rs4-artwork-title>strong{font-size:19px;line-height:1.25;font-weight:740;color:#273440;letter-spacing:-.048em}
+.rs4-artwork-aside{font-size:9px;letter-spacing:.055em;color:#8A9297;white-space:nowrap;padding-bottom:3px}
+.rs-year-dialog .rs-year-toggle.rs4-ink-tabs{margin:0 0 15px!important;display:flex!important;gap:18px!important;border-bottom:0!important}
+.rs-year-dialog .rs-year-toggle.rs4-ink-tabs .rs-year-toggle-option{font-size:11px!important;padding:6px 0 7px!important}
+.rs-year-dialog .rs-year-toggle.rs4-ink-tabs .rs-year-toggle-option.active::after{background:#3559AC!important;height:2px}
+.rs4-artwork{width:100%;padding:8px 0 3px;display:block;border-top:1px solid #CBD1D1;border-bottom:1px solid #CBD1D1}
+.rs4-day-axis,.rs4-month-row{display:grid!important;grid-template-columns:28px minmax(0,1fr) 25px;column-gap:7px;align-items:center;width:100%;min-width:0}
+.rs4-day-axis{padding:0 0 10px;margin-bottom:2px}
+.rs4-axis-label{font-size:0;line-height:0}
+.rs4-day-ticks{display:grid;grid-template-columns:repeat(31,minmax(0,1fr));gap:2px;width:100%}
+.rs4-day-ticks>span{display:block;color:#929EA3;font-size:9px;font-weight:620;letter-spacing:-.02em;white-space:nowrap;transform:translateX(-2px)}
+.rs4-month-row{box-sizing:border-box;min-height:27px!important;height:27px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;
+ box-shadow:none!important;text-align:left!important;cursor:pointer!important;transform:none!important;position:relative!important;color:#303F49!important}
+.rs4-month-row:focus-visible{outline:2px solid #3559AC;outline-offset:2px}
+.rs4-month-row:hover .rs4-month-index{color:#3559AC}
+.rs4-month-index{font-size:12px;line-height:1;font-weight:700;letter-spacing:-.04em;color:#66737D;white-space:nowrap}
+.rs4-month-count{font-size:10px;color:#929DA3;text-align:right;white-space:nowrap}
+.rs4-day-ribbon{display:grid;grid-template-columns:repeat(31,minmax(0,1fr));gap:2px;align-items:center;width:100%;min-width:0}
+.rs4-day-cell{display:block;width:100%;height:13px;min-width:0;min-height:0;border-radius:1.6px;background:#E7E9E7}
+.rs4-day-cell.light{background:#BCCCE4}.rs4-day-cell.middle{background:#7795CD}.rs4-day-cell.strong{background:#3559AC}
+.rs4-day-cell.outside{background:transparent}
+.rs4-artwork-legend{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:17px;color:#839099;font-size:10px}
+.rs4-legend-cells{display:inline-flex;gap:4px;align-items:center}
+.rs4-legend-cells .rs4-day-cell{width:12px;height:10px}
+.rs-year-dialog .rs4-artwork-note{font-size:10px!important;line-height:1.65!important;letter-spacing:-.015em;color:#858F94!important;margin:12px 0 0!important}
+@media(max-width:390px){
+ .rs4-stat-composition{gap:13px}
+ .rs4-stat-minor{gap:9px}
+ .rs4-day-axis,.rs4-month-row{grid-template-columns:25px minmax(0,1fr) 21px;column-gap:5px}
+ .rs4-day-ribbon,.rs4-day-ticks{gap:2px}
+ .rs4-day-cell{height:12px}
+ .rs4-month-row{min-height:26px!important;height:26px!important}
+ .rs4-stat-income-number{font-size:21px}
+}
+@media(max-width:340px){
+ .rs4-stat-minor{grid-template-columns:1fr;row-gap:6px}
+ .rs4-stat-composition{grid-template-columns:.7fr 1.3fr}
+ .rs4-day-ribbon,.rs4-day-ticks{gap:1px}
+}
+@media(min-width:560px){
+ .rs4-stat-composition{grid-template-columns:1fr 1.4fr;gap:34px}
+ .rs4-month-row{height:33px!important;min-height:33px!important}
+ .rs4-day-cell{height:17px}
+ .rs4-day-axis,.rs4-month-row{grid-template-columns:32px minmax(0,1fr) 30px;column-gap:11px}
+ .rs4-day-ribbon,.rs4-day-ticks{gap:3px}
+}
