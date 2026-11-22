@@ -27,7 +27,7 @@ final class DiagStore {
         prefs(c).edit().clear().putBoolean("running",true).putLong("session",id)
           .putLong("startElapsed",SystemClock.elapsedRealtime())
           .putLong("startCpu",Process.getElapsedCpuTime())
-          .putInt("startBattery",battery(c)).putString("logs","[]").apply();
+          .putInt("startBattery",battery(c)).putString("logs","[]").putString("snapshots","[]").apply();
     }
     static void stop(Context c) {
         prefs(c).edit().putBoolean("running",false)
@@ -42,7 +42,7 @@ final class DiagStore {
           .putLong("completion",completion).putLong("money",money)
           .putLong("duplicates",dedup).putLong("lastAt",lastAt).apply();
     }
-    static synchronized void addObservation(Context c,String platform,int amount,String status) {
+    static synchronized void addObservation(Context c,String platform,int amount,String status,String detail) {
         try {
             SharedPreferences p=prefs(c);
             JSONArray a=new JSONArray(p.getString("logs","[]"));
@@ -51,11 +51,12 @@ final class DiagStore {
             item.put("platform",platform);
             item.put("amount",amount);
             item.put("status",status);
+            item.put("detail",detail);
             a.put(item);
             JSONArray limited=new JSONArray();
             for(int i=Math.max(0,a.length()-120);i<a.length();i++)limited.put(a.getJSONObject(i));
             SharedPreferences.Editor e=p.edit().putString("logs",limited.toString());
-            if("단일 금액 후보".equals(status)) {
+            if("배달료 라벨 후보".equals(status)) {
                 e.putInt("accepted",p.getInt("accepted",0)+1)
                   .putLong("sum",p.getLong("sum",0)+amount);
             } else {
@@ -63,6 +64,25 @@ final class DiagStore {
             }
             e.apply();
         } catch(Exception ignored) { }
+    }
+    static synchronized void addSnapshot(Context c,String platform,boolean complete,String amounts) {
+        try {
+            SharedPreferences p=prefs(c);
+            JSONArray a=new JSONArray(p.getString("snapshots","[]"));
+            JSONObject item=new JSONObject();
+            item.put("time",System.currentTimeMillis());
+            item.put("platform",platform);
+            item.put("completed",complete);
+            item.put("amounts",amounts);
+            a.put(item);
+            JSONArray recent=new JSONArray();
+            for(int i=Math.max(0,a.length()-30);i<a.length();i++)recent.put(a.getJSONObject(i));
+            p.edit().putString("snapshots",recent.toString()).apply();
+        } catch(Exception ignored) { }
+    }
+    static JSONArray snapshots(Context c) {
+        try{return new JSONArray(prefs(c).getString("snapshots","[]"));}
+        catch(Exception e){return new JSONArray();}
     }
     static JSONArray observations(Context c) {
         try { return new JSONArray(prefs(c).getString("logs","[]")); }
