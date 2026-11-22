@@ -160,7 +160,7 @@ public final class MainActivity extends Activity {
         if(a==null)return false;
         List<AccessibilityServiceInfo> list=a.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
         for(AccessibilityServiceInfo s:list)
-            if(s.getId()!=null&&s.getId().contains("com.riderspot.incomediag")&&s.getId().contains("IncomeAccessibilityService"))
+            if(s.getId()!=null&&s.getId().startsWith(getPackageName()+"/")&&s.getId().contains("IncomeAccessibilityService"))
                 return true;
         return false;
     }
