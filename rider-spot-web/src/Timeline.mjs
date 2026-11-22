@@ -862,10 +862,9 @@ export function createTimeline(S, Zo, Income, client) {
           },
           "‹",
         ),
-        rs33J(
-          "strong",
-          null,
+        rs33J("strong",null,
           Number(day.slice(0, 4)) + "년 " + Number(day.slice(5, 7)) + "월",
+          rs33J("small",{className:"rs33-workday-hint"}," · 업무일")
         ),
         rs33J("button", {
           type: "button",

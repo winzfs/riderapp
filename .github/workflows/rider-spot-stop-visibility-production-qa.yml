@@ -1,0 +1,83 @@
+name: RiderSpot v26 Stop Visibility Live Production QA
+on:
+  push:
+    branches: [feature/riderspot-income-diagnostic]
+    paths:
+      - '.github/workflows/rider-spot-stop-visibility-production-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PREVIEW: https://rider-spot.jazzhjm.workers.dev
+      ASSETS: https://rider-spot-stops-v26-preview.jazzhjm.workers.dev
+      NEW: dd55145c6135
+      OLD: f98a62e74bc1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rider-spot-web/package-lock.json
+      - name: Verify LIVE gateway shell, new immutable assets and old session continuity
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --max-time 40 "$PREVIEW/" > /tmp/rs-stop-shell.html
+          curl -fsSL --retry 3 --max-time 40 "$PREVIEW/sw.js" > /tmp/rs-stop-sw.js
+          curl -fsSL --retry 3 --max-time 40 "$PREVIEW/assets/rider-spot-$NEW/app.mjs" > /tmp/rs-stop-app.mjs
+          curl -fsSL --retry 3 --max-time 40 "$PREVIEW/assets/rider-spot-$OLD/app.mjs" > /tmp/rs-old-app.mjs
+          node --check /tmp/rs-stop-app.mjs
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html=fs.readFileSync('/tmp/rs-stop-shell.html','utf8');
+          const sw=fs.readFileSync('/tmp/rs-stop-sw.js','utf8');
+          const app=fs.readFileSync('/tmp/rs-stop-app.mjs','utf8');
+          const old=fs.readFileSync('/tmp/rs-old-app.mjs','utf8');
+          assert.ok(html.includes('/assets/rider-spot-'+process.env.NEW+'/app.mjs'));
+          assert.ok(html.includes('rs-recovery-guard-v217'));
+          assert.ok(sw.includes('rider-spot-shell-'+process.env.NEW));
+          assert.ok(app.includes('rsStopTimelineEvents'));
+          assert.ok(app.includes('localStorage.getItem("rs:route-stop-events")!=="0"'));
+          assert.ok(app.includes('localStorage.getItem("rs:trip-events-open")!=="0"'));
+          assert.ok(app.includes('rs56-stop-events'));
+          assert.ok(app.includes('rs11-map-commandbar'));
+          assert.ok(old.includes('rs56-stop-events'));
+          assert.ok(!old.includes('rsStopTimelineEvents'),'old immutable asset was modified');
+          assert.ok(app.length>2000000 && old.length>2000000);
+          for(const part of ['assets/rider-spot-'+process.env.NEW+'/curated-v9.css','assets/rider-spot-'+process.env.NEW+'/native-gps.js']){
+            const r=await fetch(process.env.PREVIEW+'/'+part);
+            assert.equal(r.status,200,part);
+          }
+          console.log('PREVIEW_ASSET_PASS',process.env.NEW,app.length);
+          NODE
+      - name: Run existing GPS and timeline tests
+        working-directory: rider-spot-web
+        run: |
+          npm ci
+          npm test
+      - name: Browser open LIVE without auto reload
+        working-directory: rider-spot-web
+        run: |
+          npx playwright install chromium
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import assert from 'node:assert/strict';
+          const b=await chromium.launch({headless:true,args:['--no-sandbox']});
+          try{
+            const p=await b.newPage({viewport:{width:393,height:852},deviceScaleFactor:2});
+            const errors=[];
+            p.on('pageerror',e=>errors.push(e.message));
+            const initial=await p.goto(process.env.PREVIEW+'/',{waitUntil:'domcontentloaded',timeout:50000});
+            assert.equal(initial.status(),200);
+            await p.waitForTimeout(4000);
+            const text=await p.locator('body').innerText();
+            assert.ok(text.includes('타임라인')||text.includes('지도'),'app failed to mount');
+            assert.equal(errors.length,0,'unhandled JS error '+errors.join(';'));
+            console.log('PREVIEW_BROWSER_PASS',text.slice(0,125));
+          } finally {await b.close()}
+          NODE

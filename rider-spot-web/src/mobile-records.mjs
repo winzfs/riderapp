@@ -691,7 +691,7 @@ export function createRecords(R, client) {
     }).filter(x=>x.state==="overdue"||x.state==="soon");
     return h("section",{className:"bike-page page narrow"},
       h("div",{className:"bike-heading"},
-        h("div",{className:"rs11-garage-heading"},h("span",{className:"rs11-eyebrow"},"내 모빌리티"),h("h1",null,"마이 차고")),
+        h("div",{className:"rs11-garage-heading"},h("h1",null,"마이 차고")),
         btn(h(R.Fragment,null,h(Icon,{name:"settings",size:17}),"프로필·설정"),profile,
           {className:"bike-quiet-action","aria-label":"프로필·설정"})),
       h("section",{className:"rs6-garage-stage rs8-bike-hero"},
@@ -710,7 +710,8 @@ export function createRecords(R, client) {
               alt:modelLabel(model)+" 바이크 이미지",width:1100,height:660,decoding:"async"})
             :h("img",{className:"bike-vehicle-art",src:scooter,alt:"기본 스쿠터 일러스트",width:130,height:82})),
         h("div",{className:"rs8-bike-feature-bottom"},
-          h("span",null,model?modelLabel(model):"모델 미설정"),
+          (model&&modelLabel(model)===vehicle?.vehicle_name?null:
+            h("span",null,model?modelLabel(model):"모델 미설정")),
           h("details",{className:"rs8-bike-settings"},
             h("summary",null,"차량 설정"),
             h("div",{className:"bike-vehicle-actions bike-vehicle-tools"},
@@ -727,13 +728,17 @@ export function createRecords(R, client) {
             ()=>{window.__rsFinanceAction="fuel";window.__rsGoToTab?.("earnings");}))),
       !!urgentParts.length&&h("aside",{className:"rs8-service-alerts",role:"status"},
         h("div",{className:"rs8-alerts-head"},
-          h("strong",null,"정비 알림"),
-          h("span",null,urgentParts.length+"개 소모품")),
+          h("strong",null,urgentParts.every(x=>x.state==="overdue")?"교체 주기 초과":
+            urgentParts.every(x=>x.state==="soon")?"교체 임박":"정비 알림"),
+          h("span",null,urgentParts.length+"개")),
         h("div",{className:"rs8-alerts-items"},
           urgentParts.map(({item,state})=>
-            btn(h(R.Fragment,null,item,h("span",null,state==="overdue"?"교체 주기 초과":"교체 임박")),
+            btn(h(R.Fragment,null,item,
+                urgentParts.some(x=>x.state!==state)&&h("span",null,
+                  state==="overdue"?"주기 초과":"교체 임박")),
               ()=>user?setDetailItem(item):login(),
-              {key:item,className:"rs8-alert-chip","aria-label":item+" 관리 열기"})))),
+              {key:item,className:"rs8-alert-chip","aria-label":item+" "+
+                (state==="overdue"?"교체 주기 초과":"교체 임박")+" 관리 열기"})))),
       error && h("p",{role:"alert"},error,btn("다시 조회",changed)),
       h("section",{className:"rs6-service-board"},
       h("div",{className:"bike-section-head"},
@@ -758,7 +763,7 @@ export function createRecords(R, client) {
               h("span",{className:"bike-tile-status bike-state-"+due.state},status)),
             h("span",{className:"rs11-part-chevron","aria-hidden":true},"›")),
           ()=>user?setDetailItem(item):login(),
-          {key:item,className:"bike-consumable bike-tile rs11-part-row rs11-"+tone,"aria-label":item+" 관리"}); 
+          {key:item,className:"bike-consumable bike-tile rs11-part-row rs11-"+tone,"aria-label":item+" "+status+" 관리"}); 
         }).sort((a,b)=>{
           const priority=el=>el.props.className.includes("rs11-overdue")?0:el.props.className.includes("rs11-soon")?1:2;
           return priority(a)-priority(b);

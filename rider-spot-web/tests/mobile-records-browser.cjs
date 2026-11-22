@@ -262,9 +262,15 @@ async function run(browser,width,height,{smokeOnly=false}={}){
         rows:children.map(x=>Math.round(x.y)),
         widths:children.map(x=>x.width),outer:rect.width};
     });
-    assert.equal(layout.display,"flex","v11 maintenance is a vertical list, not a 3×2 grid");
-    assert.ok(layout.rows.every((y,i)=>!i||y>layout.rows[i-1]),"maintenance rows are stacked in one column");
-    assert.ok(layout.widths.every(w=>w>layout.outer-6),"each maintenance row uses the full content width");
+    assert.equal(layout.display,"grid","six service parts retain the required 3×2 layout");
+    assert.equal(new Set(layout.rows).size,2,"two service tile rows are visible");
+    assert.deepEqual(layout.rows.slice(0,3),Array(3).fill(layout.rows[0]),
+      "the first three service parts share a grid row");
+    assert.deepEqual(layout.rows.slice(3),Array(3).fill(layout.rows[3]),
+      "the last three service parts share a grid row");
+    assert.ok(layout.rows[3]>layout.rows[0],"second row is below first");
+    assert.ok(layout.widths.every(w=>w>layout.outer/3-12 && w<layout.outer/3+12),
+      "service parts occupy three equal-width columns");
     assert.equal(await page.locator(".rs6-garage-stage .bike-actions").count(),1,
       "maintenance and fuel entries remain accessible in the vehicle stage");
     assert.doesNotMatch(await cards.first().innerText(),/24,500 km|2026-11-16/,"dates and mileage stay in detail");
@@ -310,8 +316,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
       "custom manual bike name does not imply a verified model identity");
     assert.equal(await page.getByRole("button",{name:"교체 주기 설정",exact:true}).count(),0,
       "global replacement cycle editor is removed");
-    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
-    const oilDetail=page.getByRole("dialog",{name:"엔진오일 관리"});
+    await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
+    const oilDetail=page.getByRole("dialog",{name:"엔진오일 관리",exact:true});
     await oilDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
     const oilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
     await oilCycle.waitFor();
@@ -335,8 +341,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await oilDetail.waitFor({state:"hidden",timeout:10000});
     await page.locator(".bike-consumable").filter({hasText:"엔진오일"})
       .getByText("2,800 km 남음",{exact:true}).waitFor();
-    await page.getByRole("button",{name:"앞 타이어 관리",exact:true}).click();
-    const tireDetail=page.getByRole("dialog",{name:"앞 타이어 관리"});
+    await page.getByRole("button",{name:/^앞 타이어 .* 관리$/}).click();
+    const tireDetail=page.getByRole("dialog",{name:"앞 타이어 관리",exact:true});
     await tireDetail.getByRole("button",{name:"주기 수정",exact:true}).click();
     const tireCycle=page.getByRole("dialog",{name:"앞 타이어 교체 주기"});
     await tireCycle.getByLabel("교체 기간 (일)").fill("90");
@@ -378,24 +384,24 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await dialog.getByLabel("계기판").fill("21000");await dialog.getByRole("button",{name:"변경사항 저장"}).click();
     await page.locator(".bike-history-row").filter({hasText:"21,000 km"}).waitFor();
     assert.doesNotMatch(await page.locator(".bike-consumable").filter({hasText:"엔진오일"}).innerText(),/24,500 km/,"grid tile omits historic mileage");
-    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
-    await page.getByRole("button",{name:"뒤 타이어 관리",exact:true}).click();
-    assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").count(),1);
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();
+    await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).locator(".record-detail-summary").getByText("24,500 km",{exact:true}).waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("button",{name:/^뒤 타이어 .* 관리$/}).click();
+    assert.equal(await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").count(),1);
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").first().click();
     await page.goBack();
     await page.getByRole("dialog",{name:"정비 기록 수정"}).waitFor({state:"hidden"});
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).waitFor();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).waitFor();
     assert.equal(await page.locator(".bottom-nav button.active").innerText(),"내 바이크",
       "Back from nested edit preserves the underlying part detail");
-    await page.getByRole("dialog",{name:"뒤 타이어 관리"}).locator(".record-log").first().click();
+    await page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true}).locator(".record-log").first().click();
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"앞 타이어"}).getAttribute("aria-pressed"),"true");
     assert.equal(await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"뒤 타이어"}).getAttribute("aria-pressed"),"true");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("총비용").fill("0");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByLabel("계기판").fill("40000");
     await page.getByRole("dialog",{name:"정비 기록 수정"}).getByRole("button",{name:"변경사항 저장"}).click();
-    const rear=page.getByRole("dialog",{name:"뒤 타이어 관리"});
+    const rear=page.getByRole("dialog",{name:"뒤 타이어 관리",exact:true});
     await rear.getByText("0원").waitFor();
     await rear.getByText("40,000 km",{exact:true}).first().waitFor();
     await rear.getByRole("button",{name:"주기 수정",exact:true}).click();
@@ -433,8 +439,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(await page.locator(".bike-consumable").filter({hasText:"뒤 타이어"}).locator(".bike-tile-status").count(),1,
       "deleted rear tire record leaves the compact status-only card");
     assert.equal(cycles.find(c=>c.item_key==="뒤 타이어").interval_km,40000,"deleting a record leaves its cycle intact");
-    await page.getByRole("button",{name:"브레이크 패드 관리",exact:true}).click();
-    const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리"});
+    await page.getByRole("button",{name:/^브레이크 패드 .* 관리$/}).click();
+    const swipeDialog=page.getByRole("dialog",{name:"브레이크 패드 관리",exact:true});
     const handle=swipeDialog.locator(".record-heading");
     const rect=await handle.boundingBox();
     assert.ok(rect,"draggable sheet handle has visible geometry");
@@ -447,7 +453,13 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await page.mouse.move(x,y+170,{steps:8});await page.mouse.up();
     await swipeDialog.waitFor({state:"hidden"});
     await shot("bike-after-swipe");
-    await nav("타임라인");await page.getByRole("button",{name:date+" 운행 2회",exact:true}).click();
+    await nav("타임라인");
+    // The fixture workday may be in a previous calendar week when the suite
+    // runs after its original authoring date. Navigate instead of assuming today.
+    const fixtureDay=page.getByRole("button",{name:date+" 운행 2회",exact:true});
+    for(let offset=0;offset<30 && !await fixtureDay.isVisible();offset++)
+      await page.getByRole("button",{name:"이전 주",exact:true}).click();
+    await fixtureDay.click();
     await page.locator(".rs56-day-map").waitFor();await page.locator(".rs-course-end-pin").first().waitFor();
     const clocks=page.locator(".rs56-day-map .rs33-stamp-label:not(.stop)");
     await page.getByRole("button",{name:"전체 경로 맞춤",exact:true}).click();
@@ -495,8 +507,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(vehicle.model_key,"honda-pcx125");
     assert.equal(vehicle.odometer_km,odometerBefore,"model selection must preserve odometer");
     assert.equal(records.length,countBefore,"model selection cannot create fake repairs");
-    await page.getByRole("button",{name:"엔진오일 관리",exact:true}).click();
-    const modelOil=page.getByRole("dialog",{name:"엔진오일 관리"});
+    await page.getByRole("button",{name:/^엔진오일 .* 관리$/}).click();
+    const modelOil=page.getByRole("dialog",{name:"엔진오일 관리",exact:true});
     await modelOil.getByText("6,000 km",{exact:true}).first().waitFor();
     await modelOil.getByRole("button",{name:"주기 수정"}).click();
     const modelOilCycle=page.getByRole("dialog",{name:"엔진오일 교체 주기"});
@@ -519,8 +531,8 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     assert.equal(vehicle.model_key,"yamaha-nmax125");
     assert.equal(modelSettings.find(x=>x.model_key==="honda-pcx125"&&x.item_key==="엔진오일").interval_km,2600,
       "previous bike edits remain scoped to previous model");
-    await page.getByRole("button",{name:"구동벨트 관리"}).click();
-    const nmaxBelt=page.getByRole("dialog",{name:"구동벨트 관리"});
+    await page.getByRole("button",{name:/^구동벨트 .* 관리$/}).click();
+    const nmaxBelt=page.getByRole("dialog",{name:"구동벨트 관리",exact:true});
     await nmaxBelt.getByText("18,000 km",{exact:true}).waitFor();
     await nmaxBelt.getByRole("button",{name:"닫기"}).click();
 
@@ -633,9 +645,9 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     if(await page.locator(".rs8-zero-maintenance").count())
       await page.locator(".rs8-zero-maintenance summary").click();
     await page.getByRole("button",{name:/엔진오일.*기록 보기/}).first().click();
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).waitFor();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).waitFor();
     await shot("finance-maintenance-link");
-    await page.getByRole("dialog",{name:"엔진오일 관리"}).getByRole("button",{name:"닫기"}).click();
+    await page.getByRole("dialog",{name:"엔진오일 관리",exact:true}).getByRole("button",{name:"닫기"}).click();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);
     console.log("PASS mobile forms, retry, history and timeline",width,height);
   } finally {await context.close();}

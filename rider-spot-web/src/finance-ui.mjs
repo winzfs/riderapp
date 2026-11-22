@@ -1,4 +1,5 @@
 import {dailyRideSnapshot} from "./ride-insights.mjs";
+import {monthGoalProjection} from "./goal-view.mjs";
 import {createRideRecap} from "./ride-recap.mjs";
 import {saveIncomeDay,saveIncomeRecord,financeWriteError} from "./finance-storage.mjs";
 import {icons} from "./ui.mjs";
@@ -298,8 +299,14 @@ export function createFinance(R, client) {
     const goalUncertain=goal.goal_basis==="net"&&monthly.uncertain;
     const achieved=goalUncertain?null:goalTarget?Math.max(0,Math.min(100,Math.round(goalValue/goalTarget*100))):100;
     const workedDays=new Set(monthly.earnings.filter(x=>num(x.gross_won)>0).map(x=>x.work_date)).size;
-    const remainingWorkDays=Math.max(1,num(goal.planned_work_days)-workedDays);
-    const perDay=goalUncertain?null:Math.ceil(Math.max(0,goalTarget-goalValue)/remainingWorkDays);
+    // The existing ledger remains the source of truth for earnings and worked days.
+    // Cap the planned workdays by actual days left until this month's end.
+    const goalProjection=monthGoalProjection({
+      monthFrom,monthTo,today,plannedWorkDays:num(goal.planned_work_days),
+      workedDays,target:goalTarget,value:goalValue,uncertain:goalUncertain
+    });
+    const remainingWorkDays=goalProjection.remainingWorkDays;
+    const perDay=goalProjection.perDay;
     const graph=financeDays(data||emptyData,today,7);
     const ceiling=Math.max(1,...graph.map(x=>x.gross));
     const openMaintenance=(row,mode="detail")=>{
@@ -598,21 +605,25 @@ export function createFinance(R, client) {
             h("div",null,txt("small","rs11-section-kicker","PERFORMANCE"),txt("strong",null,"지난 7일")),
             txt("small",null,"일별 수익 · 원")),
           chart()),
-        h("section",{className:"rs8-goal-progress"},
+        h("section",{className:"rs8-goal-progress rs33-goal-card","aria-label":"이번 달 목표"},
           h("div",{className:"rs8-section-caption"},
-            h("h2",null,"월 목표"),
-            button(h(R.Fragment,null,icon("settings",15),"설정"),()=>openEditor("goal",goal),"fin-textbtn")),
-          h("div",{className:"rs8-goal-numbers"},
-            h("strong",null,goalUncertain?"확인 필요":money(goalValue)),
-            txt("small",null,"/ "+money(goalTarget))),
-          h("div",{className:"fin-goal-track"},h("div",{style:{width:(achieved??0)+"%"}})),
-          h("div",{className:"fin-goal-numbers"},
-            txt("span",null,achieved==null?"분류 확인 필요":achieved+"% 달성"),
-            txt("span",null,goalUncertain?"확인 필요":"남은 "+money(Math.max(0,goalTarget-goalValue)))),
-          h("details",{className:"rs8-goal-detail"},
-            h("summary",null,"하루 목표 계산"),
-            h("div",{className:"fin-goal-daily"},txt("small",null,"남은 "+remainingWorkDays+"일"),
-              txt("strong",null,perDay==null?"확인 필요":money(perDay))))),
+            h("h2",null,"이번 달 목표"),
+            button(h(R.Fragment,null,icon("settings",15),"설정"),()=>openEditor("goal",goal),
+              "fin-textbtn",{"aria-label":"월 목표 설정"})),
+          h("div",{className:"rs33-goal-hero"},
+            txt("span",null,!goalUncertain&&goalProjection.remaining===0?"이번 달 목표 달성":"남은 근무일 하루 목표"),
+            h("strong",null,perDay==null?
+              (goalUncertain?"비용 확인 필요":"남은 근무일 없음"):money(perDay))),
+          h("div",{className:"rs33-goal-facts"},
+            txt("span",null,"남은 근무일 "+remainingWorkDays+"일 / 계획 "+num(goal.planned_work_days)+"일"),
+            txt("span",null,goalUncertain?"차감액 확인 필요":"목표까지 "+money(goalProjection.remaining))),
+          h("div",{className:"fin-goal-track","role":"progressbar","aria-valuemin":0,
+            "aria-valuemax":100,"aria-valuenow":achieved??undefined,
+            "aria-label":"월 수익 목표 달성률"},h("div",{style:{width:(achieved??0)+"%"}})),
+          h("div",{className:"rs33-goal-progress-line"},
+            txt("span",null,money(goalValue)+" / "+money(goalTarget)),
+            txt("strong",null,achieved==null?"분류 확인 필요":achieved+"%")),
+          txt("small","rs33-goal-deadline",Number(monthTo.slice(5,7))+"월 "+Number(monthTo.slice(8))+"일 마감")),
         h("section",{className:"rs8-platform-ledger"},
           h("div",{className:"rs8-section-caption"},h("h2",null,"플랫폼별 수익"),
             txt("small",null,monthLabel)),
@@ -665,7 +676,9 @@ export function createFinance(R, client) {
               h("option",{value:"all"},"모든 분류"),
               options.map(name=>h("option",{key:name,value:name},name)))))),
         h("section",{className:"fin-card"},
-          h("header",null,h("h2",null,"날짜별 내역"),txt("small",null,visible.length+"건")),
+          h("header",null,h("h2",null,"날짜별 내역"),
+            txt("small",null,visible.length+"건"+(query?" · 검색 적용":"")+
+              (detailFilter!=="all"?" · "+detailFilter:""))),
           ledgerRows.length?ledgerRows.map((x,i)=>h(R.Fragment,{key:x.type+x.row.id},
             (!i||ledgerRows[i-1].day!==x.day)&&txt("h3","fin-record-date",x.day),
             h("div",{className:"fin-record"},
@@ -770,7 +783,7 @@ export function createFinance(R, client) {
               txt("small",null,x.work_date+(x.paid_at?" · 입금일 "+x.paid_at+" · 실제 "+money(x.paid_won??x.gross_won):" · 미확인"))),
             h("div",{className:"fin-settlement-actions"},
               button(x.paid_at?"입금 수정":"입금 입력",()=>openEditor("settlement",x),
-                "fin-paid-btn"+(x.paid_at?" completed":""),{disabled:busy}),
+                "fin-paid-btn rs33-payout-action"+(x.paid_at?" completed":""),{disabled:busy}),
               x.paid_at&&button("확인 취소",()=>paid(x),"fin-textbtn fin-danger",{disabled:busy}))))));
     }
     function analysis() {
@@ -779,7 +792,9 @@ export function createFinance(R, client) {
       const weeks=[];
       for(let i=0;i<days.length;i+=7) {
         const start=days[i],end=days[Math.min(i+6,days.length-1)];
-        weeks.push({label:dateLabel(start)+"~"+dateLabel(end),...financeTotals(data||emptyData,start,end)});
+        weeks.push({label:Number(start.slice(8))+"~"+Number(end.slice(8))+"일",
+          fullLabel:dateLabel(start)+"~"+dateLabel(end),
+          ...financeTotals(data||emptyData,start,end)});
       }
       const monthlySeries=financeMonths(data||emptyData,anchor,6)
         .map(x=>({...x,label:x.month.slice(2).replace("-","/"),key:x.month}));
@@ -822,13 +837,13 @@ export function createFinance(R, client) {
           h("div",{className:"fin-chart fin-chart-analysis"+(analysisMode==="monthly"?" fin-chart-month":" fin-chart-week")},
             graphRows.map(x=>h("button",{type:"button",key:x.key,
               className:"fin-chart-col fin-chart-point"+(selectedAnalysis===x.key?" selected":""),
-              "aria-label":x.label+" 수익 "+money(x.gross),"aria-pressed":selectedAnalysis===x.key,
+              "aria-label":(x.fullLabel||x.label)+" 수익 "+money(x.gross),"aria-pressed":selectedAnalysis===x.key,
               onClick:()=>setSelectedAnalysis(selectedAnalysis===x.key?null:x.key)},
               txt("small","fin-chart-value",x.gross?new Intl.NumberFormat("ko-KR",{notation:"compact"}).format(x.gross):""),
               h("span",{className:"fin-chart-track"},chartBar(x.gross,top)),
               txt("small","fin-chart-date",x.label)))),
           selected&&h("div",{className:"fin-chart-detail",role:"status"},
-            txt("strong",null,selected.label),
+            txt("strong",null,selected.fullLabel||selected.label),
             txt("span",null,"수익 "+money(selected.gross)),
             txt("span",null,"업무 비용 "+money(selected.cost)),
             txt("span",null,selected.uncertain?"차감액 확인 필요":"비용 차감액 "+money(selected.net)))),

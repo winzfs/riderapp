@@ -532,7 +532,7 @@ window.__rsMapLibreRiderMapFactory=(React,_oldLeaflet,fallback)=>{
         '<span class="rs-v32-caption">'+text+'</span></span>';
       const layer=iconMarker(gl,point,
         "rs-v32-endpoint rs-v32-"+kind+(close?" rs-v32-near":""),
-        html,[104,44],[52,22]);
+        html,[82,40],[41,20]);
       layer.getElement()?.setAttribute("aria-label","운행 "+text+" 지점");
       return layer;
     };

@@ -801,7 +801,7 @@ import { upcomingMaintenance } from "./maintenance-due.mjs";
       (S.user
         ? card(
         "내 연락 도구",
-        '<p class="rs-small">문자 전송은 직접 확인 후 보내며, 연락처는 본인만 조회할 수 있도록 수익 기록 저장해요.</p><form data-rs-form="settings" class="rs-form">' +
+        '<p class="rs-small">문자 전송은 직접 확인 후 보내며, 등록한 연락처는 본인만 확인할 수 있어요.</p><form data-rs-form="settings" class="rs-form">' +
           formField("긴급 연락처 번호", "emergency_phone", "tel", {
             maxLength: 24,
             value: S.data.settings?.emergency_phone || "",
