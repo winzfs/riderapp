@@ -35,8 +35,9 @@ test("saved manual rest does not produce a duplicate inferred event", () => {
   ];
   const course = analyzeCourse(stationary, recorded);
   const stops = course.stamps.filter((stamp) => stamp.kind === "stop");
-  assert.equal(stops.length, 2);
-  assert.ok(stops.every((stamp) => !stamp.inferred));
+  // Only "휴식 시작" becomes a map pin; "운행 재개" remains in the event list.
+  assert.equal(stops.length, 1);
+  assert.equal(stops[0].inferred, false);
   const displayed = timelineDisplayEvents(recorded, course.stamps);
   assert.equal(displayed.length, 3);
   assert.equal(displayed.filter((event) => event.inferred).length, 0);
