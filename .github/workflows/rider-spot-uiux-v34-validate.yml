@@ -61,7 +61,7 @@ jobs:
           assert.ok(c.indexOf('className: "rc-category-wrap"')>c.indexOf('rs34-community-filters'));
           assert.ok(b.includes('rs34-odo-action'));
           const html=fs.readFileSync('dist/index.html','utf8');
-          assert.ok(html.includes('rs-recovery-guard-v217'));
+          assert.ok(fs.readFileSync('edge/static-edge.mjs','utf8').includes('rs-recovery-guard-v217'));
           assert.ok(html.includes('rider-spot-'+r.hash+'/curated-v9.css'));
           console.log('V34_REARCHITECTURE_SOURCE_PASS',r.hash);
           NODE
@@ -74,7 +74,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8840/ >/dev/null; then break; fi
             sleep 1
           done
-          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/uiux-v33-live-browser.cjs
+          RIDER_VISUAL_URL=http://127.0.0.1:8840 node tests/uiux-v34-browser.cjs
           RIDER_TEST_ORIGIN=http://127.0.0.1:8840 RIDER_SCREENSHOTS=/tmp/rs34-screens node tests/mobile-records-browser.cjs
       - name: Source update safety and native integration invariants
         run: |
@@ -86,7 +86,7 @@ jobs:
         with:
           name: RiderSpot-UIUX-v34-layout-evidence
           path: |
-            /tmp/rider-uiux-v33-live
+            /tmp/rs34-visual-evidence
             /tmp/rs34-screens
             rider-spot-web/dist/release.json
           retention-days: 7
