@@ -573,6 +573,16 @@ async function run(browser,width,height,{smokeOnly=false}={}){
 
     // A recurring plan is not a booked expense until the rider confirms it.
     await page.getByRole("button",{name:"내역",exact:true}).click();
+    const autoHistory=page.locator(".rs-auto-income-time-list");
+    await autoHistory.waitFor({timeout:12000});
+    assert.equal(await autoHistory.getByRole("heading",{name:"일별 배달 수익"}).count(),1,
+      "read-only per-delivery history is actually mounted in finance records");
+    await autoHistory.getByLabel("이전 날짜").click();
+    assert.equal(await autoHistory.getByLabel("배달 수익 조회 날짜").inputValue(),
+      new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",
+        year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Date.now()-3*3600000-86400000)),
+      "prev workday is selected without modifying manual ledger");
+    await autoHistory.getByRole("button",{name:"오늘 보기"}).click();
     await page.locator(".fin-recurring summary").click();
     await page.getByRole("button",{name:"＋ 반복 지출 설정"}).click();
     const recurringDialog=page.getByRole("dialog",{name:"반복 지출 입력"});
