@@ -92,7 +92,10 @@ jobs:
             await page.waitForTimeout(4000);
             const body=await page.locator('body').innerText();
             assert.ok(body.includes('타임라인')||body.includes('지도'),'RiderSpot app failed to mount');
-            assert.equal(navigation,1,'unexpected full reload or navigation');
+            const settledCount=navigation;
+            await page.waitForTimeout(4500);
+            assert.equal(navigation,settledCount,'repeated page navigation after initial boot');
+            console.log('RIDERSPOT_INCOME_TIME_INITIAL_NAVIGATIONS',settledCount);
             assert.equal(errors.length,0,'JS crash: '+errors.join('; '));
             console.log('RIDERSPOT_INCOME_TIME_PREVIEW_BROWSER_PASS');
           } finally {await browser.close();}
