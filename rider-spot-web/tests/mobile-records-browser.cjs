@@ -577,10 +577,12 @@ async function run(browser,width,height,{smokeOnly=false}={}){
     await autoHistory.waitFor({timeout:12000});
     assert.equal(await autoHistory.getByRole("heading",{name:"일별 배달 수익"}).count(),1,
       "read-only per-delivery history is actually mounted in finance records");
+    const autoDayBefore=await autoHistory.getByLabel("배달 수익 조회 날짜").inputValue();
     await autoHistory.getByLabel("이전 날짜").click();
+    const yesterday=new Date(autoDayBefore+"T12:00:00Z");
+    yesterday.setUTCDate(yesterday.getUTCDate()-1);
     assert.equal(await autoHistory.getByLabel("배달 수익 조회 날짜").inputValue(),
-      new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",
-        year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Date.now()-3*3600000-86400000)),
+      yesterday.toISOString().slice(0,10),
       "prev workday is selected without modifying manual ledger");
     await autoHistory.getByRole("button",{name:"오늘 보기"}).click();
     await page.locator(".fin-recurring summary").click();
