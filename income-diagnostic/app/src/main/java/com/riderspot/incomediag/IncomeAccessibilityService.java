@@ -6,19 +6,15 @@ import android.os.SystemClock;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.ArrayDeque;
-import java.util.LinkedHashSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-/** On-device, event-driven diagnostic. No screenshot, OCR, uploads or saved screen text. */
+/**
+ * Event-driven on-device diagnostic. No screenshot, OCR, network, or original screen text persistence.
+ * Observations are *screen candidates* and must never be treated as final payment records.
+ */
 public final class IncomeAccessibilityService extends AccessibilityService {
-    private static final Pattern MONEY=Pattern.compile("(?<![0-9,])(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{3,6})\\s*원");
-    private static final Pattern COMPLETE=Pattern.compile("배달\\s*완료|배달을\\s*완료|배달이\\s*완료|전달\\s*완료|배송\\s*완료");
-    private static final Pattern TOTAL=Pattern.compile("총\\s*수익|누적\\s*수익|총\\s*금액|총액|정산\\s*금액|이번\\s*주\\s*수익");
     private long currentSession=0, raw, scanned, readable, missingRoot, completeScreens, moneyScreens, dedup, lastAt;
-    private long lastScan=0,lastFlush=0,lastCandidateAt=0;
-    private String lastCandidateFingerprint="";
-    private boolean completionPreviously=false;
+    private long lastScan=0,lastFlush=0,lastCandidateAt=0,lastTraceAt=0;
+    private String lastCandidateFingerprint="",lastTraceFingerprint="";
     private void restoreForSession() {
         SharedPreferences p=DiagStore.prefs(this);
         currentSession=DiagStore.session(this);
@@ -30,7 +26,8 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         moneyScreens=p.getLong("money",0);
         dedup=p.getLong("duplicates",0);
         lastAt=p.getLong("lastAt",0);
-        lastScan=0;lastCandidateAt=0;lastCandidateFingerprint="";completionPreviously=false;
+        lastScan=0;lastCandidateAt=0;lastCandidateFingerprint="";
+        lastTraceAt=0;lastTraceFingerprint="";
         lastFlush=SystemClock.elapsedRealtime();
     }
     private void flush() {
@@ -45,78 +42,75 @@ public final class IncomeAccessibilityService extends AccessibilityService {
         if(currentSession!=DiagStore.session(this))restoreForSession();
         raw++;
         long clock=SystemClock.elapsedRealtime();
-        if(clock-lastScan<850) {
+        // 350ms sampling allows short-lived completion screens, without periodic polling.
+        if(clock-lastScan<350) {
             if(clock-lastFlush>10000)flush();
             return;
         }
         lastScan=clock;scanned++;lastAt=System.currentTimeMillis();
         StringBuilder visible=new StringBuilder();
-        int[] nodes={0};
-        for(CharSequence cs:e.getText()) append(visible,cs);
-        AccessibilityNodeInfo root=null;
+        for(CharSequence cs:e.getText())append(visible,cs);
         try {
-            root=getRootInActiveWindow();
+            AccessibilityNodeInfo root=getRootInActiveWindow();
             if(root!=null&&root.getPackageName()!=null&&pkg.equals(root.getPackageName().toString())) {
-                ArrayDeque<AccessibilityNodeInfo> q=new ArrayDeque<>();
-                q.add(root);
-                while(!q.isEmpty()&&nodes[0]<180&&visible.length()<28000) {
-                    AccessibilityNodeInfo node=q.removeFirst();
-                    nodes[0]++;
-                    if(node.isVisibleToUser()) {
-                        append(visible,node.getText());
-                        append(visible,node.getContentDescription());
+                ArrayDeque<AccessibilityNodeInfo> nodes=new ArrayDeque<>();
+                nodes.add(root);
+                int count=0;
+                while(!nodes.isEmpty()&&count++<200&&visible.length()<24000) {
+                    AccessibilityNodeInfo n=nodes.removeFirst();
+                    if(n.isVisibleToUser()) {
+                        append(visible,n.getText());
+                        append(visible,n.getContentDescription());
                     }
-                    int count=Math.min(node.getChildCount(),30);
-                    for(int i=0;i<count&&q.size()<250;i++) {
-                        AccessibilityNodeInfo child=node.getChild(i);
-                        if(child!=null)q.add(child);
+                    for(int i=0;i<Math.min(n.getChildCount(),30)&&nodes.size()<240;i++) {
+                        AccessibilityNodeInfo child=n.getChild(i);
+                        if(child!=null)nodes.add(child);
                     }
                 }
             } else missingRoot++;
-        }catch(RuntimeException ignored) { missingRoot++; }
+        } catch(RuntimeException ignored) { missingRoot++; }
         if(visible.length()>0)readable++;
-        String screen=visible.toString();
-        LinkedHashSet<Integer> amounts=new LinkedHashSet<>();
-        Matcher m=MONEY.matcher(screen);
-        while(m.find()&&amounts.size()<12) {
-            String s=m.group().replaceAll("[^0-9]","");
-            try {
-                int n=Integer.parseInt(s);
-                if(n>=500&&n<=150000)amounts.add(n);
-            }catch(NumberFormatException ignored){}
+        AmountAnalyzer.Result result=AmountAnalyzer.inspect(visible.toString());
+        if(result.completed)completeScreens++;
+        if(!result.amounts.isEmpty())moneyScreens++;
+        String platform=pkg.equals("com.woowahan.bros")?"배민":"쿠팡이츠";
+        String signature=platform+"|"+result.completed+"|"+result.summary();
+        if((result.completed||!result.amounts.isEmpty())&&
+           (!signature.equals(lastTraceFingerprint)||clock-lastTraceAt>=30000)) {
+            // Store amounts and fixed category labels only, not extracted text or UI tree.
+            DiagStore.addSnapshot(this,platform,result.completed,result.summary());
+            lastTraceFingerprint=signature;
+            lastTraceAt=clock;
         }
-        boolean complete=COMPLETE.matcher(screen).find();
-        if(!amounts.isEmpty())moneyScreens++;
-        if(complete)completeScreens++;
-        if(complete) {
-            String fingerprint=pkg+"|"+amounts.toString();
-            boolean duplicate=completionPreviously&&lastCandidateFingerprint.equals(fingerprint)
-                   &&clock-lastCandidateAt<120000;
-            if(duplicate) {
+        if(result.completed) {
+            String fingerprint=platform+"|"+result.summary();
+            if(fingerprint.equals(lastCandidateFingerprint)&&clock-lastCandidateAt<60000) {
                 dedup++;
             } else {
-                boolean total=TOTAL.matcher(screen).find();
-                String status;
                 int amount=0;
-                if(amounts.size()==1&&!total) { status="단일 금액 후보";amount=amounts.iterator().next(); }
-                else if(amounts.isEmpty())status="금액 없음";
-                else if(total)status="합계 화면 의심";
-                else status="여러 금액 표시";
-                DiagStore.addObservation(this,pkg.equals("com.woowahan.bros")?"배민":"쿠팡이츠",amount,status);
+                String status;
+                AmountAnalyzer.Money direct=result.uniqueDirect();
+                if(result.amounts.isEmpty())status="금액 없음";
+                else if(result.amounts.size()>1)status="복수 금액 후보";
+                else if(direct!=null) {
+                    amount=direct.amount;
+                    status="배달료 라벨 후보";
+                } else if("합계·미션 인접".equals(result.amounts.get(0).category))status="합계·미션 의심";
+                else status="금액 근거 불명";
+                DiagStore.addObservation(this,platform,amount,status,result.summary());
                 lastCandidateFingerprint=fingerprint;
                 lastCandidateAt=clock;
             }
         }
-        completionPreviously=complete;
-        if(complete||clock-lastFlush>=10000)flush();
+        if(result.completed||clock-lastFlush>=10000)flush();
     }
-    private static void append(StringBuilder out,CharSequence s) {
-        if(s==null||out.length()>27000)return;
-        String v=s.toString().trim();
-        if(v.isEmpty())return;
-        if(v.length()>240)v=v.substring(0,240);
-        out.append(' ').append(v).append(' ');
+    private static void append(StringBuilder out,CharSequence cs) {
+        if(cs==null||out.length()>22000)return;
+        String text=cs.toString().trim();
+        if(text.length()==0)return;
+        if(text.length()>240)text=text.substring(0,240);
+        out.append(' ').append(text).append(' ');
     }
-    @Override public void onInterrupt() { flush(); }
-    @Override public void onDestroy() {flush();super.onDestroy();}
+    @Override public void onInterrupt(){flush();}
+    @Override public void onDestroy(){flush();super.onDestroy();}
 }
