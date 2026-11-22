@@ -1,0 +1,122 @@
+name: Rider Spot Active Trip 5-Minute Checkpoint APK
+on:
+  push:
+    branches: [feature/riderspot-income-diagnostic]
+    paths:
+      - 'rider-spot-android/checkpoint-integration/**'
+      - '.github/workflows/rider-spot-trip-checkpoint-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rider-spot-trip-autobackup-native
+  cancel-in-progress: false
+jobs:
+  android-income:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack and integrate income with native RiderSpot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-income-native
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-income-native
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/rs-income-native/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/rs-income-native
+          fi
+          python3 rider-spot-android/income-integration/patch-native-income.py /tmp/rs-income-native
+          python3 rider-spot-android/checkpoint-integration/patch-checkpoints.py /tmp/rs-income-native
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native JavaScript syntax and GPS regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check /tmp/rs-income-native/app/src/main/assets/native-bridge.js
+          node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
+          cd /tmp/rs-income-native
+          node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build Android original package and run all tests
+        working-directory: /tmp/rs-income-native
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify and stage original package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-income-dist
+          APK=/tmp/rs-income-native/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android' .*versionCode='262'"
+          cp "$APK" /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-Integrated.apk
+          sha256sum /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-Integrated.apk > /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-Integrated.apk.sha256
+      - name: Build safe side-by-side test package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('/tmp/rs-income-native/app')
+          gradle=root/'build.gradle'
+          s=gradle.read_text()
+          assert s.count('defaultConfig {')==1
+          gradle.write_text(s.replace('defaultConfig {','defaultConfig {\n        applicationIdSuffix ".tripbackup"',1))
+          manifest=root/'src/main/AndroidManifest.xml'
+          m=manifest.read_text()
+          import re
+          m,n=re.subn(r'android:label="[^"]+"','android:label="라이더스팟 운행 백업 테스트"',m,count=1)
+          assert n==1
+          m=m.replace('android:scheme="riderspot-oauth"','android:scheme="riderspot-tripbackup-oauth"')
+          manifest.write_text(m)
+          java=root/'src/main/java/com/riderspot/android/MainActivity.java'
+          j=java.read_text()
+          assert 'private static final String OAUTH_SCHEME = "riderspot-oauth";' in j
+          java.write_text(j.replace('private static final String OAUTH_SCHEME = "riderspot-oauth";',
+                             'private static final String OAUTH_SCHEME = "riderspot-tripbackup-oauth";'))
+          PY
+          cd /tmp/rs-income-native
+          gradle --no-daemon --stacktrace :app:assembleDebug
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android.tripbackup' "
+          cp "$APK" /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-SideBySide-TEST.apk
+          sha256sum /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-SideBySide-TEST.apk > /tmp/rs-income-dist/RiderSpot-Android-v1.0.15-TripBackup-SideBySide-TEST.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-Android-TripBackup-v1.0.15-APKs
+          path: /tmp/rs-income-dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish GitHub direct APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="riderspot-trip-checkpoint-v1.0.15-$GITHUB_RUN_NUMBER"
+          gh release create "$TAG" /tmp/rs-income-dist/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Rider Spot Android v1.0.15 · 5-minute trip backup" \
+            --notes "RiderSpot Android 1.0.15 beta. Active native GPS trip tracks are backed up incrementally as private, small Supabase checkpoint batches roughly every 5 minutes while the WebView runs and has network. Reconnects and app foreground resumes catch up from durable native SQLite. Android may suspend the WebView in other apps, so exact five-minute cloud persistence in background is not guaranteed; local SQLite recording continues. Final trip still persists in the original trips table on finish and clears temp backups only after server success. Preserves native income recording and no live Worker deployment. Debug signing keys can differ; back up local trips before replacing or uninstalling. Side-by-side package login may require configured OAuth callback." \
+            --prerelease
+          echo "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
