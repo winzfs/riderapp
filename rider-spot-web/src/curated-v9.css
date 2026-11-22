@@ -884,3 +884,37 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
 .app .nearby.nearby-full .rs-map-v2.rs-map-picking :is(
  .rs-map-v2-actions,.rs-map-v2-header,.leaflet-control-zoom,.locate,#rs-report-legend
 ){visibility:hidden!important;pointer-events:none!important}
+
+
+/* v32 route endpoints: exact GPS anchors with separate Korean start/end chips. */
+.maplibregl-marker.rs-v32-endpoint,
+.rs-v32-endpoint {
+  display:block!important;overflow:visible!important;background:transparent!important;
+  border:0!important;box-shadow:none!important;pointer-events:none!important;
+  position:absolute;width:104px;height:44px;z-index:630!important;
+}
+.rs-v32-endpoint .rs-v32-anchor {
+  position:absolute;left:50%;top:50%;width:11px;height:11px;border-radius:50%;
+  border:3px solid white;box-shadow:0 1px 5px rgba(35,55,70,.22);
+  transform:translate(-50%,-50%);background:#13836F;z-index:2;
+}
+.rs-v32-endpoint.rs-v32-end .rs-v32-anchor {background:#D46B65;}
+.rs-v32-endpoint .rs-v32-chip {
+  position:absolute;box-sizing:border-box;left:0;top:-23px;width:104px;height:39px;
+  display:flex;gap:8px;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.98);border:1px solid rgba(31,57,69,.12);
+  border-radius:13px;box-shadow:0 5px 15px rgba(28,48,59,.17);
+  white-space:nowrap;z-index:3;
+}
+.rs-v32-endpoint .rs-v32-glyph {
+  width:23px;height:23px;border-radius:8px;display:inline-flex;
+  align-items:center;justify-content:center;background:#0F816A;
+  color:white;font:700 11px/1 system-ui,sans-serif;
+}
+.rs-v32-endpoint.rs-v32-end .rs-v32-glyph {background:#D46B65;}
+.rs-v32-endpoint .rs-v32-caption {
+  color:#233C45;font:750 15px/1.1 "Pretendard","Noto Sans KR",system-ui,sans-serif;
+  letter-spacing:-.025em;
+}
+.rs-v32-endpoint.rs-v32-near.rs-v32-start .rs-v32-chip {left:-55px;top:-37px;}
+.rs-v32-endpoint.rs-v32-near.rs-v32-end .rs-v32-chip {left:55px;top:-37px;}

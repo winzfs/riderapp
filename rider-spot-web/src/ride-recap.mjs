@@ -268,9 +268,12 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
       };
       const badge=(rect,text,color)=>{
         const bx=x+rect.x,by=y+rect.y;
-        rounded(ctx,bx,by,rect.width,rect.height,8,"rgba(255,255,255,.97)");
-        ctx.beginPath();ctx.arc(bx+15,by+17.5,4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-        label(ctx,text,bx+27,by+25,text.includes("·")?19:20,p.ink,650);
+        rounded(ctx,bx,by,rect.width,rect.height,9,"rgba(255,255,255,.96)");
+        ctx.beginPath();ctx.arc(bx+18,by+17.5,10,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+        ctx.save();ctx.font="800 12px system-ui";ctx.textAlign="center";
+        ctx.textBaseline="middle";ctx.fillStyle="#fff";
+        ctx.fillText(color===p.accent?"▶":"■",bx+18,by+17.5);ctx.restore();
+        label(ctx,text,bx+36,by+24.7,19,p.ink,730);
       };
       if(coincident){
         // Only physically coincident GPS fixes share a pin. This is a split
@@ -280,7 +283,12 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
         ctx.beginPath();ctx.arc(cx,cy,15,Math.PI/2,Math.PI*3/2);ctx.fillStyle=p.accent;ctx.fill();
         ctx.beginPath();ctx.arc(cx,cy,15,-Math.PI/2,Math.PI/2);ctx.fillStyle=p.ink;ctx.fill();
         ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();
-        badge(endpoints.joint,"출발·종료",p.accent);
+        // Both truthful endpoint labels stay visible when the rider returns
+        // to the same physical position. Only caption boxes are displaced.
+        const joint=endpoints.joint;
+        const chipX=Math.max(18,Math.min(w-218,joint.x+joint.width/2-103));
+        badge({x:chipX,y:joint.y,width:98,height:35},"시작",p.accent);
+        badge({x:chipX+108,y:joint.y,width:98,height:35},"종료",p.ink);
       }else{
         // At wide map zoom two genuinely different GPS fixes may project to
         // almost the same pixel. Keep both pins at their real coordinates:
@@ -288,7 +296,7 @@ function drawRoute(ctx,segments,x,y,w,h,p,showRoute,mapSnapshot=null) {
         const projectedAdjacent=Math.hypot(first.x-last.x,first.y-last.y)<34;
         pin(first,p.accent,false,projectedAdjacent);
         pin(last,p.ink,true);
-        badge(start,"출발",p.accent);
+        badge(start,"시작",p.accent);
         badge(end,"종료",p.ink);
       }
 
