@@ -41,7 +41,9 @@
       const url = new URL(API + "/rest/v1/" + table);
       url.searchParams.set("select", select);
       url.searchParams.set("user_id", "eq." + auth.userId);
-      for (const [field, value] of Object.entries(filters)) url.searchParams.set(field, value);
+      for (const [field, value] of Object.entries(filters)) {
+        for (const part of Array.isArray(value) ? value : [value]) url.searchParams.append(field, part);
+      }
       url.searchParams.set("limit", "1000");
       url.searchParams.set("offset", String(offset));
       const response = await fetch(url.toString(), {
@@ -107,9 +109,9 @@
     try {
       const [trips, earnings] = await Promise.all([
         list("trips","started_at,ended_at,distance_km",
-          {started_at:"gte." + isoStart(year), "started_at":"gte." + isoStart(year), "ended_at":"not.is.null"},auth,controller.signal),
+          {started_at:["gte." + isoStart(year),"lt." + isoStart(year+1)], ended_at:"not.is.null"},auth,controller.signal),
         list("rider_earnings","work_date,gross_won,gross_entered,deliveries",
-          {work_date:"gte." + year + "-01-01", "work_date_lte":"",},auth,controller.signal)
+          {work_date:["gte." + year + "-01-01","lt." + (year+1) + "-01-01"]},auth,controller.signal)
       ]);
       // Filter to the selected KST year. The user_id filter and RLS both apply.
       if (state.request !== requestId || controller.signal.aborted) return;
@@ -327,7 +329,6 @@
     const btn=button("▦ 나의 1년","rs-year-entry",open,"나의 1년 근무 캘린더 열기");
     heading.append(btn);
   }
-  const css=String.raw;
   const style=make("style");
   style.id="rs-year-v1-style";
   style.textContent=[
