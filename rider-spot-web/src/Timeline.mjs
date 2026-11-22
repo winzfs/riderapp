@@ -833,23 +833,26 @@ export function createTimeline(S, Zo, Income, client) {
     const labels = ["월", "화", "수", "목", "금", "토", "일"];
     return rs33J(
       "section",
-      { className: "page rs33-timeline" },
+      { className: "page rs33-timeline rs34-timeline" },
       rs33J(
         "div",
-        { className: "rs33-title" },
-        rs33J("div",{className:"rs11-journey-heading"},rs33J("h1",null,"타임라인"),rs33J("small",{className:"rs12-journal-subtitle"},"날짜별 주행 기록")),
+        { className: "rs33-title rs34-timeline-command" },
+        rs33J("div",{className:"rs11-journey-heading"},rs33J("h1",null,"타임라인"),
+          rs33J("small",{className:"rs34-ride-state",role:"status"},
+            ride.trip?(ride.paused?"일시정지 중":"운행 기록 중"):"날짜별 주행 기록")),
         rs33J(
           "button",
           {
             type: "button",
-            className: "primary",
+            className: "primary rs34-ride-main-action" + (ride.trip?" is-running":""),
             disabled: ride.busy,
-            onClick: ride.startTrip,
+            onClick: ride.trip ? finish : ride.startTrip,
+            "aria-label":ride.trip?"운행 종료 후 기록 저장":"운행 시작",
           },
-          ride.busy ? "위치 확인 중…" : "운행 시작",
+          ride.busy ? (ride.trip?"저장 중…":"위치 확인 중…") : ride.trip ? "운행 종료" : "운행 시작",
         ),
       ),
-      rs33J("section",{className:"rs6-timeline-controller"},
+      rs33J("section",{className:"rs6-timeline-controller rs34-timeline-calendar"},
       rs33J(
         "div",
         { className: "rs33-week-head" },
@@ -922,8 +925,6 @@ export function createTimeline(S, Zo, Income, client) {
             }),
           )
         : null,
-      !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
-        rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
       !allDays && daily
         ? rs33J("section", {
             className: "rs56-day-overview rs-renewal-route rs11-route-first", "aria-label": "하루 통합 운행 경로",
@@ -1048,6 +1049,8 @@ export function createTimeline(S, Zo, Income, client) {
           )
         : null,
 
+      !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
+        rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
       recapDay ? rs33J(RideRecap,{day:recapDay,history:ride.history,user,notify,
         onClose:()=>setRecapDay(null)}) : null,
       rs33J(
