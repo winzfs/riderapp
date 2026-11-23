@@ -683,7 +683,14 @@ export function createTimeline(S, Zo, Income, client) {
                       }
                       if (!isTimelineCoordinate(livePosition)) {
                         notify("현재 위치를 확인하는 중이에요.");
-                        ride.locate?.().catch(() => {});
+                        // One tap must also work immediately after restoring a
+                        // paused native ride, before its next SQLite GPS poll.
+                        Promise.resolve(ride.locate?.()).then(point => {
+                          if (isTimelineCoordinate(point)) {
+                            setFocused(null);
+                            setFollowing(true);
+                          }
+                        }).catch(error => notify(error?.message || "위치를 확인하지 못했어요."));
                         return;
                       }
                       setFocused(null);
@@ -1072,7 +1079,12 @@ export function createTimeline(S, Zo, Income, client) {
                           const point = timelineLivePosition(ride.position, ride.trip);
                           if (!isTimelineCoordinate(point)) {
                             notify("현재 위치를 확인하는 중이에요.");
-                            ride.locate?.().catch(() => {});
+                            Promise.resolve(ride.locate?.()).then(found => {
+                              if (isTimelineCoordinate(found)) {
+                                setFocused(null);
+                                setFollowing(true);
+                              }
+                            }).catch(error => notify(error?.message || "위치를 확인하지 못했어요."));
                             return;
                           }
                           setFocused(null);
