@@ -76,3 +76,32 @@ test("backup file is a local JSON archive with source and no network data",async
  assert.equal(payload.entries[0].trip_id,ID);
  assert.equal(payload.entries[0].partial,false);
 });
+
+test("an orphan native SQLite track is exportable even when timeline has zero trips",async()=>{
+  const {win,api}=mock({points:[{seq:1,t:1795410000000,lat:35.3,lng:126.4}]});
+  win.__rsRideApi.history=[];
+  win.__rsGPS42NativeRead.call=async(action)=>action==="state"
+    ? {activeId:ID,startedAt:1795410000000}
+    : {points:[{seq:1,t:1795410000000,lat:35.3,lng:126.4}]};
+  const records=await api.available();
+  assert.equal(records.length,1);
+  assert.equal(records[0].native_orphan,true);
+  assert.equal(records[0].native_state,"active");
+  const backup=await api.entry(records[0]);
+  assert.equal(backup.points.length,1);
+  assert.equal(backup.partial,true);
+});
+test("last-stopped native SQLite track can back up without inventing an end time",async()=>{
+  const {win,api}=mock({points:[{seq:1,t:1795410000000,lat:35.3,lng:126.4}]});
+  win.__rsRideApi.history=[];
+  win.__rsGPS42NativeRead.call=async(action)=>action==="state"
+    ? {activeId:null,lastStoppedId:ID}
+    : {points:[{seq:1,t:1795410000000,lat:35.3,lng:126.4}]};
+  const records=await api.available();
+  assert.equal(records.length,1);
+  assert.equal(records[0].native_state,"stopped");
+  assert.equal(records[0].ended_at,null);
+  const backup=await api.entry(records[0]);
+  assert.equal(backup.partial,false);
+  assert.equal(backup.native_state,"stopped");
+});
