@@ -32,7 +32,7 @@
   const original=win.fetch?.bind(win);
   if(original){
     win.fetch=function(input,init){
-      try{
+      if(!publicKey)try{
         const url=new URL(typeof input==='string'?input:input?.url||String(input),win.location.href);
         if(url.origin===BASE){
           const headers=new Headers(init?.headers||input?.headers||{});
