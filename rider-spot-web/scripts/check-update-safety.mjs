@@ -82,11 +82,10 @@ check("Map retains manually selected camera across GPS and resize events", () =>
   assert.match(initial, /!userInteracted/);
   const resize = section(camera, "function resize()", "function scheduleResize()");
   assert.match(resize, /map\.invalidateSize/);
-  // A viewport resize can shift Leaflet's geographical origin. Restoring the
-  // captured user camera is allowed, but following GPS or fitting a new route
-  // inside resize is not.
-  assert.match(resize, /const locked = \{ lat: center\.lat, lng: center\.lng, zoom \}/);
-  assert.match(resize, /map\.setView\(\[locked\.lat, locked\.lng\], locked\.zoom/);
+  // Leaflet may round the origin by less than one screen pixel at fractional
+  // zoom; resizes must not moveTo GPS or reset the chosen camera.
+  assert.match(resize, /pan:\s*true/);
+  assert.doesNotMatch(resize, /map\.setView\s*\(/);
   assert.doesNotMatch(resize, /\b(?:moveTo|showBounds|initialLocation|gpsReady)\s*\(/);
 });
 check("Compiled web release references current GPS/map code, not legacy bridge", () => {
