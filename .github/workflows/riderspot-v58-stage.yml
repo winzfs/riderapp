@@ -35,7 +35,7 @@ jobs:
           mkdir -p prebuilt-v58
           hash=$(node -p "require('./dist/release.json').hash")
           source="dist/assets/rider-spot-${hash}"
-          for f in app.mjs native-gps.js route-worker.mjs; do
+          for f in app.mjs native-gps.js route-worker.mjs map-reports.js design-system.css workspace-tools.js tab-resume.js daily-timeline.css weather-bar.js weather-bar.css premium-shell.css renewal-layout.css curated-v9.css; do
             test -s "${source}/${f}"
             cp "${source}/${f}" "prebuilt-v58/${f}"
           done
