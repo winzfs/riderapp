@@ -100,16 +100,10 @@ export function createMapController(L, node, cameraId, fallback) {
     height = node.clientHeight;
     resizing = true;
     try {
-      // Preserve exactly the user's committed geographical camera after
-      // Leaflet adjusts its pixel origin. Do not recenter on GPS, refit route
-      // bounds, or modify the user's zoom during a resize.
-      const locked = { lat: center.lat, lng: center.lng, zoom };
-      map.invalidateSize({ pan: false, animate: false });
-      const shifted = map.getCenter();
-      if (Math.abs(shifted.lat - locked.lat) > 1e-8 ||
-          Math.abs(shifted.lng - locked.lng) > 1e-8 ||
-          Math.abs(map.getZoom() - locked.zoom) > 1e-8)
-        map.setView([locked.lat, locked.lng], locked.zoom, { animate: false });
+      // Preserve the manual camera rather than the old pixel origin.
+      // At fractional zoom Leaflet may round the new center by <1 screen px.
+      // Do not refocus GPS or invoke setView on resize.
+      map.invalidateSize({ pan: true, animate: false });
     } finally {
       resizing = false;
     }
