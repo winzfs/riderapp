@@ -21,8 +21,7 @@
       timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit',
       hour:'2-digit', hourCycle:'h23'
     }).formatToParts(at).map(p => [p.type, p.value]));
-    const day = parts.year + '-' + parts.month + '-' + parts.day;
-    return Number(parts.hour) < 3 ? addDays(day, -1) : day;
+    return parts.year + '-' + parts.month + '-' + parts.day;
   };
   const monthLast = day => {
     const d = new Date(day.slice(0,7) + '-01T12:00:00Z');
@@ -73,7 +72,7 @@
   // Include completed trips plus the active trip, with no duplicated IDs.
   // Event-based rests are excluded rather than counting paused time as work.
   function rideTimeMs(day,ride=win.__rsRideApi,at=Date.now()) {
-    const startOfDay=Date.parse(day+'T03:00:00+09:00');
+    const startOfDay=Date.parse(day+'T00:00:00+09:00');
     if(!Number.isFinite(startOfDay))return 0;
     const endOfDay=startOfDay+86400000;
     const live=ride?.trip;
