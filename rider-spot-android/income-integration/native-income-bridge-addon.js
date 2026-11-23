@@ -10,7 +10,7 @@
     const STYLE_ID = 'rs-native-income-css-v1';
     const fmt = n => new Intl.NumberFormat('ko-KR').format(Number(n)||0)+'원';
     const weekday = (date=new Date()) => {
-      const shifted = new Date(date.getTime()-3*3600000);
+      const shifted = new Date(date.getTime());
       const pieces = Object.fromEntries(new Intl.DateTimeFormat('en-US',{
         timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'
       }).formatToParts(shifted).map(p=>[p.type,p.value]));
