@@ -589,7 +589,18 @@ async function nativeTest() {
     await page
       .getByRole("button", { name: "지도에서 내 현재 위치로 이동" })
       .click();
-    await page.waitForFunction(() => window.__rsMap?.getZoom() === 17);
+    try {
+      await page.waitForFunction(() => window.__rsMap?.getZoom() === 17);
+    } catch (error) {
+      console.error("Native follow camera diagnostic", await page.evaluate(() => ({
+        mapZoom: window.__rsMap?.getZoom(), mapCenter: window.__rsMap?.getCenter(),
+        mapCount: document.querySelectorAll(".leaflet-container").length,
+        tripId: window.__rsRideApi?.trip?.id,
+        gpsMetrics: window.__rsTimelineGpsMetrics,
+        page: document.querySelector(".rs33-trip-detail") ? "detail" : "timeline",
+      })));
+      throw error;
+    }
     await page.evaluate(() => {
       __riderDevice.failRead = true;
       __saveDevice();
