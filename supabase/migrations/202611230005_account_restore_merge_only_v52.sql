@@ -16,6 +16,7 @@ declare
   restored integer := 0;
   ignored integer := 0;
   affected integer;
+  present_columns text;
   ordered_tables constant text[] := array[
     'rider_profiles',
     'rider_settings',
@@ -73,12 +74,21 @@ begin
       if table_name='trips' then
         row_data:=pg_catalog.jsonb_set(row_data,'{points}','[]'::jsonb,true);
       end if;
-      -- Known table names only. jsonb_populate_record ignores unknown fields.
-      -- ON CONFLICT DO NOTHING prevents duplicate earnings/auto delivery IDs
-      -- and never changes a newer record already in the account.
+      -- A previous app version may omit columns added by a newer schema.
+      -- Insert only present, known columns; let PostgreSQL apply column
+      -- defaults to the remainder. All column identifiers are schema-checked.
+      select pg_catalog.string_agg(pg_catalog.format('%I',a.attname),','
+        order by a.attnum) into present_columns
+      from pg_catalog.jsonb_object_keys(row_data) as j(key)
+      join pg_catalog.pg_attribute a
+        on a.attrelid=pg_catalog.to_regclass('public.'||table_name)
+        and a.attname=j.key and a.attnum>0 and not a.attisdropped;
+      if present_columns is null then raise exception 'RS_BACKUP_EMPTY_ROW';end if;
+      -- Whitelisted table names, quoted schema fields; data stays parameterized.
+      -- ON CONFLICT DO NOTHING keeps all existing account rows untouched.
       execute pg_catalog.format(
-        'insert into public.%I select * from pg_catalog.jsonb_populate_record(null::public.%I,$1) on conflict do nothing',
-        table_name,table_name
+        'insert into public.%I (%s) select %s from pg_catalog.jsonb_populate_record(null::public.%I,$1) on conflict do nothing',
+        table_name,present_columns,present_columns,table_name
       ) using row_data;
       get diagnostics affected=row_count;
       restored:=restored+affected;
