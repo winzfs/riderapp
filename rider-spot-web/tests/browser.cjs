@@ -245,9 +245,10 @@ async function open({
     errors.push(error.message);
     if (process.env.RIDER_DEBUG) console.error(error.stack);
   });
-  page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) mainNavigations++;
-  });
+  // framenavigated also fires for history.pushState/replaceState in
+  // Chromium; only DOMContentLoaded indicates a full document load.
+  // The tab switch regression must count reloads, not SPA history updates.
+  page.on("domcontentloaded", () => { mainNavigations++; });
   page.on("dialog", (dialog) => dialog.accept());
   const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   assert.equal(response.status(), 200);
