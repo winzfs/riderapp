@@ -1,4 +1,5 @@
 import { buildDailyTimeline } from "./daily-timeline.mjs";
+import { loadCalendarGps, overlapsKstDay } from "./timeline-gps-read.mjs";
 import { financeTotals } from "./finance-model.mjs";
 import { loadRideRecapBasemap } from "./ride-recap-map.mjs";
 
@@ -510,6 +511,29 @@ export function createRideRecap(React,client) {
     const [saving,setSaving]=React.useState(false);
     const [renderError,setRenderError]=React.useState(false);
     const saveBusyRef=React.useRef(false);
+    const gpsCache=React.useRef(new Map());
+    const [gpsState,setGpsState]=React.useState({source:null,day:null,records:[],report:null});
+    React.useEffect(()=>{
+      let active=true;
+      loadCalendarGps(history,day,{
+        reader:window.__rsGPS42NativeRead,cache:gpsCache.current,
+        owner:user?.id||"guest",
+      }).then(({records,report})=>{
+        if(active)setGpsState({source:history,day,records,report});
+      }).catch(error=>{
+        if(active)console.warn("[RiderSpot] recap GPS read",error?.message);
+      });
+      return ()=>{active=false;};
+    },[history,day,user?.id]);
+    const gpsPending=gpsState.source!==history||gpsState.day!==day;
+    const fallbackHistory=React.useMemo(()=>
+      history.filter(row=>overlapsKstDay(row,day)).map(row=>({...row,points:[]})),
+      [history,day],
+    );
+    const recapHistory=gpsPending?fallbackHistory:gpsState.records;
+    const gpsBlocked=!gpsPending&&recapHistory.some(row=>
+      row.gps_native && Number(row.gps_point_count)>0 && !row.points?.length);
+
     const [mapState,setMapState]=React.useState({key:null,status:"idle",snapshot:null,error:null});
     const [mapRetry,setMapRetry]=React.useState(0);
     const [message,setMessage]=React.useState("");
@@ -540,7 +564,7 @@ export function createRideRecap(React,client) {
     const finance=user?.id && financeData ? financeData :
       remote?.userId===user?.id && remote?.day===day ? remote.data : null;
     const loading=!!user?.id && !financeData && !finance && !loadError;
-    const recap=React.useMemo(()=>buildRecapSnapshot(history,day,finance),[history,day,finance]);
+    const recap=React.useMemo(()=>buildRecapSnapshot(recapHistory,day,finance),[recapHistory,day,finance]);
     const mapSize=recapMapDimensions(mode,ratio);
     const hasTrack=recap.segments.some(segment=>segment.length);
     const activeKey=showRoute&&mapSize&&hasTrack
@@ -578,7 +602,7 @@ export function createRideRecap(React,client) {
     });
     const fileName="riderspot-"+day+"-"+mode+".png";
     const save=async(share=false)=>{
-      if(saveBusyRef.current || saving || loading || mapLoading || mapFailed || renderError)return;
+      if(saveBusyRef.current || saving || loading || gpsPending || (showRoute && gpsBlocked) || mapLoading || mapFailed || renderError)return;
       saveBusyRef.current=true;setSaving(true);setMessage("");
       try{
         const blob=await toPng();
@@ -631,6 +655,9 @@ export function createRideRecap(React,client) {
         h("div",{className:"rs-recap-content"},
           h("div",{className:"rs-recap-preview"},
             h("canvas",{ref:preview,role:"img","aria-label":day+" 라이딩 이미지 미리보기"})),
+          gpsPending?h("p",{className:"rs-recap-state",role:"status"},"기기 GPS 기록을 읽는 중…"):null,
+          showRoute&&gpsBlocked?h("p",{className:"rs-recap-state",role:"alert"},
+            "기기 GPS를 읽지 못했어요. 경로를 표시하려면 기록을 복원해 주세요."):null,
           mapLoading?h("p",{className:"rs-recap-state",role:"status"},"주행 지도와 동 이름을 불러오는 중…"):null,
           mapFailed?h("div",{className:"rs-recap-map-error",role:"alert"},
             h("span",null,mapState.error||"지도를 불러오지 못했어요."),
@@ -651,8 +678,8 @@ export function createRideRecap(React,client) {
             h("span",{className:"rs-recap-switch","aria-hidden":true})),
           message&&h("p",{className:"rs-recap-state",role:"status"},message)),
         h("footer",{className:"rs-recap-actions"},
-          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||mapLoading||mapFailed||renderError}),
-          button(h,saving?"저장하는 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||mapLoading||mapFailed||renderError}))));
+          button(h,"공유하기",()=>save(true),"rs-recap-share",{disabled:saving||loading||gpsPending||(showRoute&&gpsBlocked)||mapLoading||mapFailed||renderError}),
+          button(h,saving?"저장하는 중…":"PNG 저장",()=>save(false),"rs-recap-download",{disabled:saving||loading||gpsPending||(showRoute&&gpsBlocked)||mapLoading||mapFailed||renderError}))));
 
   }
   return RideRecap;
