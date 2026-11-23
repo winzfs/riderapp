@@ -8,7 +8,7 @@
   const doc = win.document;
   const ID = 'rs-ride-daily-goal-v1';
   const STYLE = 'rs-ride-daily-goal-style-v1';
-  const CYCLE_MS = 60000;
+  const CYCLE_MS = 90000;
   const now = () => Date.now();
   const money = value => Math.max(0, Math.round(value)).toLocaleString('ko-KR') + '원';
   const noon = day => new Date(day + 'T12:00:00Z');
@@ -94,8 +94,10 @@
   }
   function attach() {
     if(!isRiding()){
+      const hadState=Boolean(state.element || state.userId || state.day);
       if(state.element){state.element.remove();state.element=null;}
-      if(state.userId){state.userId=null;state.day=null;state.data=null;state.needsRefresh=true;++requestSerial;}
+      if(hadState){state.userId=null;state.day=null;state.data=null;state.lastFetch=0;
+        state.status='loading';state.needsRefresh=true;++requestSerial;}
       return false;
     }
     const header=doc.querySelector('.app.rs34-app > header');
@@ -157,18 +159,22 @@
     const client=win.__rsClient;
     if(!client)return;
     const start=day.slice(0,7)+'-01';
-    const [goalRes,earnings,fuel,maintenance,extras]=await Promise.all([
+    const [goalRes,earnings]=await Promise.all([
       client.from('rider_finance_goals').select('monthly_target_won,planned_work_days,goal_basis')
         .eq('user_id',uid).maybeSingle(),
       pages(client,'rider_earnings','work_date',
-        'work_date,gross_won,gross_entered,expenses_won,expense_scope',uid,start,day),
-      pages(client,'rider_fuel_logs','fueled_on','fueled_on,cost_won',uid,start,day),
-      pages(client,'maintenance_logs','serviced_on','serviced_on,cost_won',uid,start,day),
-      pages(client,'rider_extra_expenses','expense_date','expense_date,amount_won,category',uid,start,day)
+        'work_date,gross_won,gross_entered,expenses_won,expense_scope',uid,start,day)
     ]);
     if(goalRes.error)throw goalRes.error;
     if(token!==requestSerial || !isRiding())return;
     const goal={monthly_target_won:3000000,planned_work_days:25,goal_basis:'gross',...(goalRes.data||{})};
+    // Cost tables are only needed for goals defined in net income.
+    const [fuel,maintenance,extras]=goal.goal_basis==='net' ? await Promise.all([
+      pages(client,'rider_fuel_logs','fueled_on','fueled_on,cost_won',uid,start,day),
+      pages(client,'maintenance_logs','serviced_on','serviced_on,cost_won',uid,start,day),
+      pages(client,'rider_extra_expenses','expense_date','expense_date,amount_won,category',uid,start,day)
+    ]) : [[],[],[]];
+    if(token!==requestSerial || !isRiding())return;
     state.data=calculate(day,goal,{earnings,fuel,maintenance,extras});
     state.status=state.data.status;
     state.lastFetch=now();
