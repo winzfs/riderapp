@@ -303,11 +303,11 @@
   }
   async function decodeZstd(bytes){
     if(!win.fzstd?.decompress){
-      // Only load the pinned, open-source MIT decoder when a user explicitly
+      // Only load the same-origin, pinned MIT decoder when a user explicitly
       // selects a Zstandard file. Do not send the backup to a remote server.
       await new Promise((resolve,reject)=>{
         const script=doc.createElement('script');
-        script.src='https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js';
+        script.src='/rider-spot-fzstd-v61.js?rev=20261124-v61';
         script.crossOrigin='anonymous';
         script.onload=resolve;
         script.onerror=()=>reject(Error('Zstd 해제 모듈을 불러오지 못했어요. ZIP 파일도 지원해요.'));
