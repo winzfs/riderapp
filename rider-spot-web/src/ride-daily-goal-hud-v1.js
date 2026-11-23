@@ -69,19 +69,62 @@
       days, basis
     };
   }
-  // Exposed for deterministic offline verification only. No storage or public API writes.
-  win.__rsDailyGoalMathV1 = Object.freeze({calculate,workDay,monthLast});
+  // Same 03:00 KST work-day boundary used by income recognition.
+  // Include completed trips plus the active trip, with no duplicated IDs.
+  // Event-based rests are excluded rather than counting paused time as work.
+  function rideTimeMs(day,ride=win.__rsRideApi,at=Date.now()) {
+    const startOfDay=Date.parse(day+'T03:00:00+09:00');
+    if(!Number.isFinite(startOfDay))return 0;
+    const endOfDay=startOfDay+86400000;
+    const live=ride?.trip;
+    const records=[...(Array.isArray(ride?.history)?ride.history:[]),live].filter(Boolean);
+    const seen=new Set();
+    let sum=0;
+    for(let i=records.length-1;i>=0;i--){
+      const record=records[i];
+      if(record.id && seen.has(record.id))continue;
+      if(record.id)seen.add(record.id);
+      const start=Date.parse(record.started_at);
+      const finished=record.ended_at?Date.parse(record.ended_at):at;
+      const end=Math.min(finished,at);
+      if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)continue;
+      if(end<=startOfDay||start>=endOfDay)continue;
+      const overlap=(a,b)=>Math.max(0,Math.min(b,endOfDay,end)-Math.max(a,startOfDay,start));
+      let running=true,cursor=start;
+      const events=Array.isArray(record.events)?record.events.filter(e=>
+        (e?.type==='휴식 시작'||e?.type==='운행 재개') &&
+        Number.isFinite(Date.parse(e.at))
+      ).slice().sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)):[];
+      for(const event of events){
+        const moment=Date.parse(event.at);
+        if(moment<start||moment>end)continue;
+        if(event.type==='휴식 시작'&&running){
+          sum+=overlap(cursor,moment);
+          running=false;
+        }else if(event.type==='운행 재개'&&!running){
+          cursor=moment;
+          running=true;
+        }
+      }
+      if(running)sum+=overlap(cursor,end);
+    }
+    return Math.max(0,sum);
+  }
+  // Read-only math functions, available for deterministic regression testing.
+  win.__rsDailyGoalMathV1 = Object.freeze({calculate,workDay,monthLast,rideTimeMs});
 
   const state = {element:null, userId:null, day:null, data:null,
-    requestKey:null, lastFetch:0, needsRefresh:true, busy:false, retryAfter:0, status:'loading'};
+    requestKey:null, lastFetch:0, needsRefresh:true, busy:false, retryAfter:0,
+    status:'loading',mode:'goal',todayGross:null};
   let requestSerial = 0;
   function style() {
     if(doc.getElementById(STYLE)) return;
     const node=doc.createElement('style'); node.id=STYLE;
     node.textContent = [
-      '.app.rs34-app > header #'+ID+'{flex:0 1 auto;min-width:0;max-width:160px;margin:0 7px;padding:4px 10px;min-height:40px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;border:1px solid #E3EAF0;border-radius:12px;background:#F3F6FA;color:#31537B;pointer-events:none;box-shadow:none;line-height:1.25;white-space:nowrap;overflow:hidden}',
+      '.app.rs34-app > header #'+ID+':focus-visible{outline:2px solid #4A72B4;outline-offset:2px}',
+      '.app.rs34-app > header #'+ID+'{flex:0 1 auto;min-width:0;max-width:176px;margin:0 6px;padding:4px 8px;min-height:44px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;border:1px solid #E3EAF0;border-radius:12px;background:#F3F6FA;color:#31537B;pointer-events:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;box-shadow:none;line-height:1.25;white-space:nowrap;overflow:hidden}',
       '#'+ID+' .rsdg-caption{max-width:100%;color:#758598;font-size:10px;font-weight:700;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis}',
-      '#'+ID+' .rsdg-amount{max-width:100%;font-size:14px;color:#355D91;font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.035em;overflow:hidden;text-overflow:ellipsis}',
+      '#'+ID+' .rsdg-amount{max-width:100%;font-size:13px;color:#355D91;font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.035em;overflow:hidden;text-overflow:ellipsis}',
       '#'+ID+'[data-complete="true"]{background:#ECF7F1;border-color:#D5EBDD}',
       '#'+ID+'[data-complete="true"] .rsdg-amount{color:#397C5B}',
       '@media(max-width:360px){.app.rs34-app > header #'+ID+'{margin:0 3px;padding:4px 7px;max-width:125px;min-height:39px}#'+ID+' .rsdg-caption{font-size:9px}#'+ID+' .rsdg-amount{font-size:12px}}',
@@ -96,16 +139,20 @@
     if(!isRiding()){
       const hadState=Boolean(state.element || state.userId || state.day);
       if(state.element){state.element.remove();state.element=null;}
-      if(hadState){state.userId=null;state.day=null;state.data=null;state.lastFetch=0;
-        state.status='loading';state.needsRefresh=true;++requestSerial;}
+      if(hadState){state.userId=null;state.day=null;state.data=null;state.todayGross=null;
+        state.mode='goal';state.lastFetch=0;state.status='loading';state.needsRefresh=true;++requestSerial;}
       return false;
     }
     const header=doc.querySelector('.app.rs34-app > header');
     if(!header)return false;
     if(state.element?.parentNode !== header){
       style();
-      const el=doc.createElement('div');el.id=ID;
-      el.setAttribute('role','status');el.setAttribute('aria-label','오늘 목표 남은 금액');
+      const el=doc.createElement('button');el.id=ID;el.type='button';
+      el.setAttribute('aria-label','오늘 목표 남은 금액');
+      el.addEventListener('click',()=>{
+        state.mode=state.mode==='goal'?'earnings':'goal';
+        render();
+      });
       const cap=doc.createElement('span');cap.className='rsdg-caption';
       const val=doc.createElement('strong');val.className='rsdg-amount';
       el.append(cap,val);
@@ -122,20 +169,34 @@
     const cap=el.querySelector('.rsdg-caption');
     const val=el.querySelector('.rsdg-amount');
     if(!cap || !val)return;
-    let caption='오늘 목표까지',amount='확인 중';
+    let caption='오늘 목표까지',amount='확인 중',description='';
     let complete=false;
-    if(state.status==='error'){caption='오늘 목표';amount='조회 실패';}
-    else if(state.status==='no-goal'){caption='오늘 목표';amount='로그인 필요';}
-    else if(state.status==='uncertain'){caption='오늘 목표';amount='비용 확인 필요';}
-    else if(state.status==='no-days'){caption='월 목표';amount='근무일 확인';}
-    else if(state.status==='month-complete'){caption='이번 달 목표';amount='달성 완료';complete=true;}
-    else if(state.data?.status === 'complete'){caption='오늘 목표';amount='달성 완료';complete=true;}
-    else if(state.data?.status === 'remaining')amount=money(state.data.remaining);
+    if(state.mode==='earnings'){
+      const elapsed=state.day?rideTimeMs(state.day):0;
+      const hours=(elapsed/3600000).toFixed(1);
+      const hourly=state.todayGross!=null&&elapsed>=60000 ?
+        money(state.todayGross/(elapsed/3600000)):'—';
+      caption=hours+'h · 시급 '+hourly;
+      amount=state.todayGross!=null?'수익 '+money(state.todayGross):
+        state.status==='no-goal'?'로그인 필요':
+        state.status==='error'?'조회 실패':'수익 확인 중';
+      description='오늘 수익 '+(state.todayGross==null?'확인 중':money(state.todayGross))+
+        ', 운행시간 '+hours+'시간, 시급 '+hourly+', 누르면 오늘 목표 보기';
+    }else{
+      if(state.status==='error'){caption='오늘 목표';amount='조회 실패';}
+      else if(state.status==='no-goal'){caption='오늘 목표';amount='로그인 필요';}
+      else if(state.status==='uncertain'){caption='오늘 목표';amount='비용 확인 필요';}
+      else if(state.status==='no-days'){caption='월 목표';amount='근무일 확인';}
+      else if(state.status==='month-complete'){caption='이번 달 목표';amount='달성 완료';complete=true;}
+      else if(state.data?.status === 'complete'){caption='오늘 목표';amount='달성 완료';complete=true;}
+      else if(state.data?.status === 'remaining')amount=money(state.data.remaining);
+      description=caption+' '+amount+', 누르면 오늘 수익과 시급 보기';
+    }
     if(cap.textContent!==caption)cap.textContent=caption;
     if(val.textContent!==amount)val.textContent=amount;
     if(el.dataset.complete!==(complete?'true':'false'))el.dataset.complete=complete?'true':'false';
-    const label=caption + ' ' + amount;
-    if(el.getAttribute('aria-label')!==label)el.setAttribute('aria-label',label);
+    el.setAttribute('aria-pressed',String(state.mode==='earnings'));
+    if(el.getAttribute('aria-label')!==description)el.setAttribute('aria-label',description);
   }
   async function fetchUser(client) {
     const {data,error}=await client.auth.getUser();
@@ -175,6 +236,8 @@
       pages(client,'rider_extra_expenses','expense_date','expense_date,amount_won,category',uid,start,day)
     ]) : [[],[],[]];
     if(token!==requestSerial || !isRiding())return;
+    state.todayGross=earnings.filter(row=>row.work_date===day&&row.gross_entered!==false)
+      .reduce((sum,row)=>sum+number(row.gross_won),0);
     state.data=calculate(day,goal,{earnings,fuel,maintenance,extras});
     state.status=state.data.status;
     state.lastFetch=now();
@@ -184,7 +247,8 @@
   async function refresh() {
     if(!isRiding() || state.busy || !win.__rsClient || doc.hidden)return;
     const day=workDay();
-    if(state.day!==day){state.day=day;state.needsRefresh=true;state.data=null;state.status='loading';render();}
+    if(state.day!==day){state.day=day;state.needsRefresh=true;state.data=null;
+      state.todayGross=null;state.status='loading';render();}
     if(!state.needsRefresh && now()-state.lastFetch<CYCLE_MS)return;
     if(now()<state.retryAfter)return;
     state.busy=true;
@@ -192,8 +256,8 @@
     try {
       const uid=await fetchUser(win.__rsClient);
       if(token!==requestSerial||!isRiding())return;
-      if(!uid){state.userId=null;state.data=null;state.status='no-goal';state.needsRefresh=false;state.lastFetch=now();render();return;}
-      if(state.userId && state.userId!==uid){state.data=null;state.status='loading';render();}
+      if(!uid){state.userId=null;state.data=null;state.todayGross=null;state.status='no-goal';state.needsRefresh=false;state.lastFetch=now();render();return;}
+      if(state.userId && state.userId!==uid){state.data=null;state.todayGross=null;state.status='loading';render();}
       state.userId=uid;
       await fetchData(uid,day,token);
     }catch(err){
@@ -212,6 +276,7 @@
     if(active){
       if(!lastRide){state.status='loading';state.data=null;state.needsRefresh=true;render();}
       void refresh();
+      if(state.mode==='earnings')render();
     }
     lastRide=active;
   }
