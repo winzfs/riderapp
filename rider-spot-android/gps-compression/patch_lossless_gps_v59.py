@@ -190,6 +190,8 @@ additional=r'''
     private static volatile long lastArchiveTryV59;
     private void scheduleArchiveV59(){
         if(preferences.getBoolean("gps_archive_scan_completed_v59",false))return;
+        // Compression must never compete with live high-frequency GPS writes.
+        if(!activeTrip().isEmpty())return;
         long now=android.os.SystemClock.elapsedRealtime();
         if(now-lastArchiveTryV59<15000L)return;
         if(!ARCHIVING_V59.compareAndSet(false,true))return;
@@ -208,7 +210,7 @@ additional=r'''
                         }
                     }
                     if(id==null){success=true;break;}
-                    if(id.equals(activeTrip()))break;
+                    if(!activeTrip().isEmpty())break;
                     if(!archiveOneBlockV59(id))break;
                     Thread.yield();
                 }
@@ -222,7 +224,7 @@ additional=r'''
     }
 
     private synchronized boolean archiveOneBlockV59(String id) throws java.io.IOException {
-        if(id.equals(activeTrip()))return false;
+        if(!activeTrip().isEmpty())return false;
         final SQLiteDatabase db=getWritableDatabase();
         try(Cursor c=db.rawQuery("SELECT stopped_at FROM sessions WHERE trip_id=?",
             new String[]{id})){
