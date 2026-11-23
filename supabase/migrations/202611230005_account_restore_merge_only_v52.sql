@@ -23,7 +23,8 @@ declare
     'rider_finance_goals',
     'rider_finance_payout_rules',
     'rider_recurring_expenses',
-    'rider_earnings',
+    'trips',
+    'rider_earnings', 
     'rider_auto_deliveries',
     'rider_fuel_logs',
     'rider_extra_expenses',
@@ -67,6 +68,11 @@ begin
              and user_id=owner
          )
       then raise exception 'RS_BACKUP_INCOME_LINK_INVALID';end if;
+      -- Older server GPS is for *device import only*. Never restore GPS
+      -- coordinates into Supabase when restoring an account archive.
+      if table_name='trips' then
+        row_data:=pg_catalog.jsonb_set(row_data,'{points}','[]'::jsonb,true);
+      end if;
       -- Known table names only. jsonb_populate_record ignores unknown fields.
       -- ON CONFLICT DO NOTHING prevents duplicate earnings/auto delivery IDs
       -- and never changes a newer record already in the account.
