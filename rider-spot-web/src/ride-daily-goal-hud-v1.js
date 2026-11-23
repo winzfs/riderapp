@@ -173,15 +173,17 @@
     let complete=false;
     if(state.mode==='earnings'){
       const elapsed=state.day?rideTimeMs(state.day):0;
-      const hours=(elapsed/3600000).toFixed(1);
-      const hourly=state.todayGross!=null&&elapsed>=60000 ?
-        money(state.todayGross/(elapsed/3600000)):'—';
-      caption=hours+'h · 시급 '+hourly;
-      amount=state.todayGross!=null?'수익 '+money(state.todayGross):
+      const hourlyWon=state.todayGross!=null&&elapsed>=60000 ?
+        state.todayGross/(elapsed/3600000):null;
+      const hourlyManwon=hourlyWon===null?'—':(hourlyWon/10000).toFixed(1);
+      caption='시급(만원) / 수익';
+      const gross=state.todayGross!=null?money(state.todayGross):
         state.status==='no-goal'?'로그인 필요':
-        state.status==='error'?'조회 실패':'수익 확인 중';
-      description='오늘 수익 '+(state.todayGross==null?'확인 중':money(state.todayGross))+
-        ', 운행시간 '+hours+'시간, 시급 '+hourly+', 누르면 오늘 목표 보기';
+        state.status==='error'?'조회 실패':'확인 중';
+      amount=hourlyManwon+' / '+gross;
+      const hours=(elapsed/3600000).toFixed(1);
+      description='시급 '+(hourlyWon===null?'계산 중':money(hourlyWon))+
+        ', 오늘 수익 '+gross+', 운행시간 '+hours+'시간, 누르면 오늘 목표 보기';
     }else{
       if(state.status==='error'){caption='오늘 목표';amount='조회 실패';}
       else if(state.status==='no-goal'){caption='오늘 목표';amount='로그인 필요';}
