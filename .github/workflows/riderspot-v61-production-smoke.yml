@@ -1,0 +1,62 @@
+name: RiderSpot v61 compressed account backup production smoke
+on:
+  push:
+    branches: [fix/riderspot-compressed-account-backup-v61]
+    paths: ['.github/workflows/riderspot-v61-production-smoke.yml']
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify live HTTPS v61 backup, old GPS/timeline and immutable visual assets
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFile} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          const root='https://rider-spot.jazzhjm.workers.dev';
+          const get=async(path)=>{
+            const res=await fetch(root+path,{signal:AbortSignal.timeout(30000)});
+            return {res,body:await res.text()};
+          };
+          const home=await get('/');
+          assert.equal(home.res.status,200);
+          assert.equal(home.res.headers.get('x-rs-backup-codec'),'v61');
+          assert.ok(home.body.includes('/rider-spot-account-backup-v52.js?rev=20261124-v61'));
+          assert.ok(home.body.includes('/assets/rider-spot-b227b31db568/app.mjs'));
+          const native=await get('/rider-spot-native-day-v58.js');
+          assert.equal(native.res.status,200);
+          assert.ok(native.body.includes('allPointsForDay'));
+          for(const [path,expectedPath] of [
+            ['/rider-spot-account-backup-v52.js?rev=20261124-v61','rider-spot-web/src/account-backup-restore-v52.js'],
+            ['/rider-spot-fzstd-v61.js?rev=20261124-v61','rider-spot-web/vendor/fzstd-0.1.1-umd.js']
+          ]){
+            const target=await get(path);
+            assert.equal(target.res.status,200);
+            const expected=await readFile(expectedPath);
+            const hash=(input)=>createHash('sha256').update(input).digest('hex');
+            assert.equal(hash(target.body),hash(expected),'Live script does not match reviewed source: '+path);
+            console.log('PASS v61 production source integrity:',path,expected.length,'bytes');
+          }
+          for(const css of [
+            'design-system.css','daily-timeline.css','weather-bar.css',
+            'premium-shell.css','renewal-layout.css','curated-v9.css'
+          ]){
+            const old=await get('/assets/rider-spot-33203ffb677c/'+css);
+            const current=await get('/assets/rider-spot-b227b31db568/'+css);
+            assert.equal(old.res.status,200);
+            assert.equal(current.res.status,200);
+            assert.equal(old.body,current.body,'CSS changed: '+css);
+          }
+          const sw=await get('/sw.js');
+          assert.match(sw.body,/v61-compressed-backup/);
+          assert.equal((await get('/api/weather?lat=0&lon=0')).res.status,400);
+          const head=await fetch(root+'/',{method:'HEAD'});
+          assert.equal(head.status,200);
+          console.log('PASS v61 live gzip-json direct restore, ZIP/Zstd, GPS/Map/Timeline existing CSS, API');
+          NODE
