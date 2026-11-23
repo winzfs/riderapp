@@ -333,6 +333,18 @@ j=j.replace(anchor,anchor+'''
                 return new JSONObject().put("events",store.getEventsV59(id));''',1)
 main.write_text(j)
 
+# The existing trusted-origin bridge exposes a read-only native-events helper.
+# No CSS, HTML, Android view or existing handler is modified.
+bridge=root/"app/src/main/assets/native-bridge.js"
+b=bridge.read_text()
+anchor="  window.__rsNativeGpsDiagnostics = () => send('state');"
+assert b.count(anchor)==1
+b=b.replace(anchor,
+    "  window.__rsNativeGpsArchiveV59 = true;\n"
+    "  window.__rsNativeReadEventsV59 = (tripId) => send('gps-events-read', {tripId});\n"
+    +anchor,1)
+bridge.write_text(b)
+
 g=gradle.read_text()
 assert "versionCode 265" in g and "versionName '1.0.18-device-only-auto5m'" in g
 g=g.replace("versionCode 265","versionCode 266",1)
