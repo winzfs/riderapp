@@ -100,9 +100,15 @@ export function createMapController(L, node, cameraId, fallback) {
     height = node.clientHeight;
     resizing = true;
     try {
-      // Resizing the WebView must not trigger a camera reset or a fresh GPS follow.
-      // Leaflet already keeps the geographical center when invalidating size.
+      // With pan:false Leaflet preserves its pixel-origin rather than the
+      // geographical center on some WebView viewport changes. Restore the
+      // last committed camera while resize's move handlers are suppressed.
+      const fixed = { lat: center.lat, lng: center.lng, zoom };
       map.invalidateSize({ pan: false, animate: false });
+      if (map.getZoom() !== fixed.zoom ||
+          Math.abs(map.getCenter().lat - fixed.lat) > 1e-8 ||
+          Math.abs(map.getCenter().lng - fixed.lng) > 1e-8)
+        map.setView([fixed.lat, fixed.lng], fixed.zoom, { animate: false });
     } finally {
       resizing = false;
     }
