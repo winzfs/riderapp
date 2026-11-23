@@ -2,14 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {koreanWorkDay,koreanCalendarDay,plusDays,financeTotals,financeDays,financePeriod,monthLastDay,financeLedger,validWon,plannedExpenseDate,recurringOccurrences,nextPayoutDate,financeMonths,accountFinanceData} from "../src/finance-model.mjs";
 
-test("Seoul accounting date rolls over at 03:00, not midnight",()=>{
-  assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
-  assert.equal(koreanWorkDay(new Date("2026-11-18T18:00:00Z")),"2026-11-19");
-  // 02:59 KST Nov 19 = Nov 18 UTC 17:59; period belongs Nov 18.
-  assert.equal(koreanWorkDay(new Date("2026-11-18T17:59:59Z")),"2026-11-18");
-  // 03:00 KST on Nov 19.
-  assert.equal(koreanWorkDay(new Date("2026-11-18T18:00:00Z")),"2026-11-19");
-  assert.equal(koreanWorkDay(new Date("2026-12-31T16:30:00Z")),"2026-12-31");
+test("Seoul accounting date rolls over at midnight across days and years",()=>{
+  assert.equal(koreanWorkDay(new Date("2026-11-18T14:59:59Z")),"2026-11-18");
+  assert.equal(koreanWorkDay(new Date("2026-11-18T15:00:00Z")),"2026-11-19");
+  assert.equal(koreanWorkDay(new Date("2026-12-31T16:30:00Z")),"2027-01-01");
 });
 test("work periods cross months correctly",()=>{
   assert.deepEqual(financePeriod("2026-11-19","today"),["2026-11-19","2026-11-19"]);
@@ -102,9 +98,9 @@ test("account transitions never reveal the previous rider's financial records",(
   assert.equal(accountFinanceData("user-a","user-a",privateRecords),privateRecords);
 });
 
-test("calendar-paid and fuel dates roll over at midnight while rider earnings roll over at 03:00",()=>{
+test("calendar-paid and fuel dates roll over at midnight alongside rider earnings",()=>{
   const before=new Date("2026-11-18T14:59:59Z"),after=new Date("2026-11-18T15:00:00Z");
   assert.equal(koreanCalendarDay(before),"2026-11-18");
   assert.equal(koreanCalendarDay(after),"2026-11-19");
-  assert.equal(koreanWorkDay(after),"2026-11-18");
+  assert.equal(koreanWorkDay(after),"2026-11-19");
 });

@@ -1,4 +1,3 @@
-import { rs33WorkDay } from "./timeline-dates.mjs";
 import { rs33Timestamp } from "./route-analysis.mjs";
 
 /**
@@ -29,9 +28,11 @@ function segmentDistanceKm(points) {
   return meters / 1000;
 }
 export function projectRideForCalendarDay(trip, day, clock = Date.now()) {
+  return projectRideInWindow(trip, KST_MIDNIGHT(day), clock);
+}
+function projectRideInWindow(trip, from, clock) {
   const start = rs33Timestamp(trip?.started_at);
   const end = rs33Timestamp(trip?.ended_at) || clock;
-  const from = KST_MIDNIGHT(day);
   if (!Number.isFinite(from) || !start || end <= from || start >= from + 86400000)
     return null;
   const begin = Math.max(start,from);
@@ -60,8 +61,10 @@ export function projectRideForCalendarDay(trip, day, clock = Date.now()) {
 }
 
 export function buildDailyTimeline(history, day) {
+  const from = KST_MIDNIGHT(day);
+  const clock = Date.now();
   const trips = (Array.isArray(history) ? history : [])
-    .map(trip=>projectRideForCalendarDay(trip,day))
+    .map(trip=>projectRideInWindow(trip,from,clock))
     .filter(Boolean)
     .sort((a, b) =>
       rs33Timestamp(a.started_at) - rs33Timestamp(b.started_at) ||

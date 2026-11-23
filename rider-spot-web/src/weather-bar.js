@@ -168,7 +168,17 @@ async function refresh(force = false) {
     current = null;
     try {
       const saved = JSON.parse(sessionStorage.getItem(CACHE) || "null");
-      if (saved?.key === key && Date.now() - saved.savedAt < 2 * 3600000) current = saved.data;
+      const age = Date.now() - saved?.savedAt;
+      if (saved?.key === key && saved.data?.source === "MET Norway" &&
+          saved.data.current && age >= 0 && age < 2 * 3600000) {
+        current = saved.data;
+        loadedAt = saved.savedAt;
+        if (!force && age < REFRESH_MS) {
+          currentKey = key;
+          paint();
+          return;
+        }
+      }
     } catch {}
   }
   currentKey = key;

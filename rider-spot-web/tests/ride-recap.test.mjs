@@ -7,12 +7,12 @@ const trip=(id,start,end,points,distance=0)=>({
   id,started_at:start,ended_at:end,points,distance_km:distance
 });
 const yesterday="2026-11-21";
-const first=trip("first","2026-11-21T17:30:00Z","2026-11-21T17:50:00Z",
+const first=trip("first","2026-11-21T14:30:00Z","2026-11-21T14:50:00Z",
   [point(35.16,126.82,1000),point(35.17,126.83,5000)],4.1);
 const second=trip("second","2026-11-21T18:10:00Z","2026-11-21T18:40:00Z",
   [point(35.19,126.85,10000),point(35.20,126.86,12000)],5.7);
 
-test("recap workday honors Seoul 03:00 boundary and does not mutate tracks",()=>{
+test("recap workday honors Seoul midnight boundary and does not mutate tracks",()=>{
   const original=JSON.stringify([first,second]);
   const old=buildRecapSnapshot([first,second],yesterday);
   const next=buildRecapSnapshot([first,second],"2026-11-22");

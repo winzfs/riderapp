@@ -33,9 +33,10 @@
     if(url.protocol!=='https:'||url.hostname!==HOST)return original(input,init);
     const method=String(init?.method||input?.method||'GET').toUpperCase();
     if(!isWrite(method))return original(input,init);
-    if(url.pathname==='/rest/v1/rider_trip_checkpoints')
+    const path = url.pathname.replace(/\/+$/, '');
+    if(path==='/rest/v1/rider_trip_checkpoints')
       return Promise.resolve(deny('GPS 서버 백업이 해제되었어요. 기기에만 보관됩니다.'));
-    if(url.pathname!=='/rest/v1/trips')return original(input,init);
+    if(path!=='/rest/v1/trips')return original(input,init);
     // Unknown request bodies fail closed, never leaking raw coordinates.
     return Promise.resolve().then(async()=>{
       try{
@@ -48,8 +49,8 @@
           return original(safeRequest);
         }
         return original(input,{...(init||{}),body:safeBody});
-      }catch(error){
-        console.warn('[RiderSpot GPS private] Unsafe trip write blocked',error?.message||error);
+      }catch{
+        console.warn('[RiderSpot GPS private] Unsafe trip write blocked');
         return deny('GPS를 서버로 전송하지 않도록 차단했어요.');
       }
     });
