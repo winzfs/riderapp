@@ -71,7 +71,10 @@ export function financeMonthPeriod(day){ return [day.slice(0,7)+"-01",monthLastD
 export function financeLedger(data,from,to) {
   const rows=[];
   for(const row of data?.earnings||[]) if(row.gross_entered!==false)
-    rows.push({type:"income",day:row.work_date,amount:num(row.gross_won),row,name:row.platform});
+    rows.push({type:"income",day:row.work_date,amount:num(row.gross_won),row,
+      name:row.source_type==="manual" &&
+        ["수기입력 추가분","자동수집 누락분 보충 · 실제 총수입 기준"].includes(row.note)
+        ?"수기입력 추가분":row.platform});
   for(const row of data?.fuel||[]) rows.push({type:"fuel",day:row.fueled_on,amount:num(row.cost_won),row,name:"주유비"});
   for(const row of data?.maintenance||[]) rows.push({type:"maintenance",day:row.serviced_on,amount:num(row.cost_won),row,name:row.item||"정비"});
   for(const row of data?.extras||[]) rows.push({type:"expense",day:row.expense_date,amount:num(row.amount_won),row,name:row.category,personal:isPersonalExpense(row)});
