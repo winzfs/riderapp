@@ -53,3 +53,10 @@ test("queued MapLibre transition after Leaflet teardown never accesses a null ma
   layer._glMap = null;
   assert.doesNotThrow(() => gl.done());
 });
+
+test("late vector load failure never adds raster fallback to a detached Leaflet map", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../src/basemap.mjs", import.meta.url), "utf8");
+  assert.match(source, /function restoreOsm\(\)\s*\{[\s\S]{0,300}if \(!state\.alive \|\| !map\.getPane\?\.\("tilePane"\)\) return/);
+  assert.match(source, /Never resurrect an unmounted map from a stale asynchronous error/);
+});
