@@ -1,4 +1,5 @@
 import { rs33Timestamp } from "./route-analysis.mjs";
+import { rs33ISO } from "./timeline-dates.mjs";
 
 /**
  * Calendar day boundaries are 00:00–23:59:59.999 in Asia/Seoul.
@@ -53,7 +54,10 @@ function projectRideInWindow(trip, from, clock) {
     started_at:new Date(begin).toISOString(),
     ended_at:trip.ended_at ? new Date(finish).toISOString() : null,
     points,events,
-    distance_km:segmentDistanceKm(points),
+    // Calendar can show the saved exact daily summary before SQLite has
+    // returned the route. After loading, recompute from original samples.
+    distance_km:points.length ? segmentDistanceKm(points) :
+      Math.max(0, Number(trip.gps_day_summary?.[rs33ISO(from)]?.distance_km) || 0),
     calendar_segment:true,
     original_started_at:trip.started_at,
     original_ended_at:trip.ended_at||null,
