@@ -532,10 +532,10 @@ async function timelineTest(count) {
       const shown = await camera(page);
       await page.getByRole("button", { name: "크게 보기" }).click();
       await page.waitForTimeout(200);
-      sameCamera(shown, await camera(page));
+      resizeCamera(shown, await camera(page));
       await page.getByRole("button", { name: "닫기", exact: true }).click();
       await page.waitForTimeout(200);
-      sameCamera(shown, await camera(page));
+      resizeCamera(shown, await camera(page));
       await page.getByRole("button", { name: "전체 경로" }).click();
       sameCamera(initial, await camera(page));
       await page.getByRole("button", { name: /운행 이벤트/ }).click();
