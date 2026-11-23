@@ -12,8 +12,8 @@ export const rs33Clock = new Intl.DateTimeFormat("ko-KR", {
   hourCycle: "h23",
 });
 export const rs33ISO = (value) => rs33DayFormat.format(new Date(value));
-// A delivery workday is 03:00–02:59:59 KST; keep the underlying trip timestamps unchanged.
-export const rs33WorkDay = (value) => rs33ISO(new Date(value).getTime() - 3 * 60 * 60 * 1000);
+// Ride calendar display uses 00:00 KST. Never alter native GPS timestamps.
+export const rs33WorkDay = value => rs33ISO(value);
 export const rs33Time = (value) => rs33Clock.format(new Date(value));
 export const rs33Format = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 1,
