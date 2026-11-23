@@ -81,6 +81,41 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android' .*versionCode='266'"
           cp "$APK" /tmp/rs-v59-artifacts/RiderSpot-1.0.19-LosslessGPS-v59-DEBUG.apk
           sha256sum /tmp/rs-v59-artifacts/*.apk > /tmp/rs-v59-artifacts/SHA256SUMS.txt
+      - name: Build isolated side-by-side GPS v59 test APK without touching installed app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/rs-v59/app')
+          g=root/'build.gradle'
+          body=g.read_text()
+          assert body.count('defaultConfig {')==1
+          g.write_text(body.replace('defaultConfig {',
+            'defaultConfig {\\n        applicationIdSuffix ".gpsv59test"',1))
+          manifest=root/'src/main/AndroidManifest.xml'
+          m=manifest.read_text()
+          m,n=re.subn(r'android:label="[^"]+"',
+            'android:label="라이더스팟 GPS v59 시험"',m,count=1)
+          assert n==1
+          m=m.replace('android:scheme="riderspot-oauth"',
+                      'android:scheme="riderspot-gpsv59test-oauth"')
+          manifest.write_text(m)
+          java=root/'src/main/java/com/riderspot/android/MainActivity.java'
+          a=java.read_text()
+          old='private static final String OAUTH_SCHEME = "riderspot-oauth";'
+          assert a.count(old)==1
+          java.write_text(a.replace(old,
+            'private static final String OAUTH_SCHEME = "riderspot-gpsv59test-oauth";',1))
+          PY
+          cd /tmp/rs-v59
+          gradle --no-daemon :app:assembleDebug
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android.gpsv59test'"
+          cp "$APK" /tmp/rs-v59-artifacts/RiderSpot-1.0.19-LosslessGPS-v59-SideBySide-TEST.apk
+          (cd /tmp/rs-v59-artifacts && sha256sum ./*.apk > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: RiderSpot-v59-lossless-android-debug-review
