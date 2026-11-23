@@ -632,8 +632,16 @@ async function nativeTest() {
     );
     const record = records.get(id);
     const device = await page.evaluate(() => __riderDevice);
-    assert.equal(record.points.length, 5000);
+    // v58: only a small summary reaches the server. The original 5,000
+    // samples remain solely in the Android SQLite recorder.
+    assert.equal(record.points.length, 0, "native coordinates must not be uploaded");
     assert.equal(device.points.length, 5000);
+    const localStored=await page.evaluate(userId=>
+      JSON.parse(localStorage.getItem("rs:trips:"+userId)||"[]"),userId);
+    const summary=localStored.find(row=>row.id===id);
+    assert.equal(summary?.points?.length,0,"WebView stores metadata, not GPS duplication");
+    assert.equal(summary?.gps_point_count,5000);
+    assert.ok(Object.keys(summary?.gps_day_ranges||{}).length);
     assert.equal(record.events.filter((e) => e.type === "운행 종료").length, 1);
     assert.equal(records.size, 1);
     assert.equal(device.calls.filter((call) => call === "stop").length, 1);
