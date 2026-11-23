@@ -1,0 +1,484 @@
+/* RiderSpot / Timeline Route Player · v1
+   Read-only presentation layer. Scoped to timeline map cards and detail maps.
+   Do not alter Leaflet transforms, route canvas, GPS data or map export. */
+:root{--rs-tl-ink:#1c2b39;--rs-tl-subtle:#687b8b;--rs-tl-rule:#e2e8ed;--rs-tl-blue:#416fb7;--rs-tl-blue-dark:#315ca0;--rs-tl-surface:#f8fafb;--rs-tl-paper:#fff}
+.app .rs33-timeline .rs12-map-heading{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex-wrap:nowrap!important;gap:12px!important;margin:0!important;
+  padding:17px 18px 15px!important;background:#fff!important;border-bottom:1px solid #eaf0f2!important
+}
+.app .rs33-timeline .rs12-map-heading-copy{min-width:0!important;gap:4px!important}
+.app .rs33-timeline .rs12-map-heading-copy>strong{
+  font-size:18px!important;font-weight:770!important;line-height:1.35!important;
+  letter-spacing:-.045em!important;color:var(--rs-tl-ink)!important;word-break:keep-all
+}
+.app .rs33-timeline .rs12-map-heading-copy>span{
+  color:var(--rs-tl-subtle)!important;font-size:12px!important;letter-spacing:-.01em
+}
+.app .rs33-timeline .rs12-recap-action{
+  flex:none!important;display:inline-flex!important;align-items:center!important;gap:7px!important;
+  min-width:0!important;min-height:42px!important;max-height:44px!important;
+  padding:9px 12px!important;margin:0!important;border:1px solid #dce5ed!important;
+  border-radius:12px!important;box-shadow:none!important;
+  background:#fff!important;color:#365f9e!important;font-size:0!important
+}
+.app .rs33-timeline .rs12-recap-action::before{
+  content:"↗  저장";display:inline-block;font-size:12px!important;
+  font-weight:760!important;white-space:nowrap!important;line-height:1.1!important
+}
+/* The map's actual geometry, tiles, overlays and buttons retain their DOM. */
+.app .rs33-timeline .rs56-day-course:not(.rs33-course-full){
+  background:#fff!important;overflow:hidden!important;border:1px solid #e3e9ed!important;
+  border-radius:18px!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map{
+  position:relative!important;isolation:isolate
+}
+/* Independent attribution panel appears over the map and does not affect the replay player.
+   Preserve full data-license links. Original full attribution remains visible for 5s. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-tl-source-trigger{
+  appearance:none!important;position:absolute!important;bottom:11px!important;left:10px!important;
+  z-index:910!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:28px!important;padding:5px 9px!important;border:1px solid #d9e2e8!important;
+  border-radius:9px!important;background:rgba(255,255,255,.95)!important;
+  box-shadow:0 2px 7px rgba(19,39,61,.07)!important;color:#536779!important;
+  font:650 10px/1.15 Pretendard,"Noto Sans KR",system-ui,sans-serif!important;
+  letter-spacing:-.02em!important;cursor:pointer!important;white-space:nowrap
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-tl-source-trigger[hidden]{display:none!important}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map.rs-tl-credits-collapsed .leaflet-control-attribution{
+  display:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map:not(.rs-tl-credits-collapsed) .rs-tl-source-trigger{
+  display:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-tl-source-popover{
+  position:absolute!important;z-index:920!important;bottom:47px!important;left:10px!important;
+  width:min(325px,calc(100% - 22px))!important;max-height:230px!important;overflow:auto!important;
+  box-sizing:border-box!important;padding:14px 15px!important;border:1px solid #e2e8eb!important;
+  border-radius:13px!important;background:rgba(255,255,255,.985)!important;
+  box-shadow:0 8px 32px rgba(31,49,69,.15)!important;
+  color:#273a4c!important;font:500 11px/1.75 Pretendard,"Noto Sans KR",system-ui,sans-serif!important;
+  overflow-wrap:anywhere!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-tl-source-popover[hidden]{display:none!important}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover strong{
+  display:block!important;font-size:12px!important;font-weight:760!important;margin:0 0 5px!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover .rs-tl-source-full a{
+  color:#3769a2!important;text-decoration:underline!important;text-underline-offset:2px!important;
+  font-size:inherit!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover .rs-tl-source-full{display:block!important}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map :is(.rs-tl-source-trigger,.rs-tl-source-popover):focus-visible{
+  outline:2px solid #416fb7!important;outline-offset:2px!important
+}
+/* Zoom: one quiet vertical capsule, not raw Leaflet buttons. Never reposition the map. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-top.leaflet-right{
+  right:12px!important;top:12px!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom{
+  border:1px solid #e4e9ef!important;border-radius:15px!important;overflow:hidden!important;
+  background:#fff!important;padding:3px!important;margin:0!important;
+  box-shadow:0 4px 18px rgba(27,50,71,.10)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom a{
+  box-sizing:border-box!important;width:40px!important;height:40px!important;line-height:39px!important;
+  display:block!important;margin:0!important;border-radius:11px!important;border:0!important;
+  background:#fff!important;color:#416fae!important;font-size:24px!important;
+  font-weight:500!important;text-align:center!important;text-decoration:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom a+a{
+  border-top:1px solid #edf0f4!important;border-radius:0 0 11px 11px!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom a:focus-visible{
+  outline:2px solid #416fb7!important;outline-offset:-2px!important
+}
+/* One visual unit for replay, speed and map fit. Original handlers unchanged. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player{
+  display:block!important;border-top:1px solid var(--rs-tl-rule)!important;
+  border-radius:0!important;padding:14px 17px 12px!important;margin:0!important;
+  background:#fff!important;box-shadow:none!important;color:var(--rs-tl-ink)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player-top{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;
+  align-items:center!important;gap:8px!important;flex-wrap:nowrap!important;width:100%!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player :is(button,select){
+  box-sizing:border-box!important;min-height:44px!important;height:44px!important;
+  border-radius:11px!important;font-size:12px!important;line-height:1.2!important;
+  font-weight:720!important;white-space:nowrap!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play{
+  width:100%!important;min-width:0!important;display:flex!important;gap:7px!important;flex:1 1 auto!important;
+  border:1px solid #416fb7!important;background:#416fb7!important;
+  color:#fff!important;padding:9px 12px!important;font-size:13px!important;letter-spacing:-.02em!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play[aria-pressed="true"]{
+  background:#2d528e!important;border-color:#2d528e!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-speed{
+  flex:none!important;display:flex!important;align-items:center!important;gap:0!important;
+  white-space:nowrap!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-speed>span{
+  position:absolute!important;clip-path:inset(50%)!important;
+  width:1px!important;height:1px!important;overflow:hidden!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-speed select{
+  appearance:none!important;-webkit-appearance:none!important;min-width:67px!important;max-width:80px!important;
+  padding:9px 18px 9px 10px!important;border:1px solid #e0e7ec!important;
+  background:#f7f9fb!important;color:#355577!important;font-weight:760!important;
+  text-align:center!important;cursor:pointer!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-reset{
+  flex:none!important;min-width:81px!important;padding:8px 10px!important;
+  border:1px solid #e0e6ea!important;background:#f8fafb!important;color:#53697d!important;
+  font-size:12px!important
+}
+/* A comfortable 44px touch strip with a restrained 4px visual track. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-seek{
+  display:block!important;appearance:none!important;-webkit-appearance:none!important;
+  min-width:0!important;width:100%!important;height:42px!important;min-height:42px!important;
+  padding:0!important;margin:5px 0 0!important;background:transparent!important;
+  accent-color:#416fb7!important;cursor:pointer!important;touch-action:pan-y!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-seek::-webkit-slider-runnable-track{
+  height:4px!important;border:0!important;border-radius:999px!important;background:#dce4ed!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-seek::-webkit-slider-thumb{
+  -webkit-appearance:none!important;appearance:none!important;
+  width:16px!important;height:16px!important;margin-top:-6px!important;
+  border:3px solid #fff!important;border-radius:50%!important;
+  background:#416fb7!important;box-shadow:0 1px 5px rgba(35,70,121,.25)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-time-row{
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  gap:8px!important;font-size:11px!important;font-variant-numeric:tabular-nums!important;
+  color:#85929d!important;min-height:18px!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-elapsed{
+  color:#53687a!important;font-size:11px!important;font-weight:660!important
+}
+/* Display selection: one slim segmented control, with distinct passive action. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:10px!important;flex-wrap:nowrap!important;min-height:58px!important;
+  padding:9px 15px!important;background:#fff!important;
+  border-top:1px solid #e6ebef!important;border-radius:0!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters{
+  display:flex!important;flex:1 1 auto!important;min-width:0!important;
+  align-items:center!important;gap:3px!important;padding:3px!important;
+  background:#f1f4f7!important;border:0!important;border-radius:12px!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters button{
+  flex:1 1 50%!important;min-width:0!important;min-height:40px!important;height:40px!important;
+  margin:0!important;padding:6px 8px!important;border:0!important;border-radius:9px!important;
+  background:transparent!important;box-shadow:none!important;color:#708294!important;
+  font-size:12px!important;font-weight:740!important;letter-spacing:-.035em!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters button[aria-pressed="true"]{
+  background:#fff!important;color:#365e9d!important;box-shadow:0 1px 5px rgba(40,66,95,.09)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions{
+  flex:none!important;display:flex!important;align-items:center!important;gap:5px!important;
+  margin:0!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions .rs12-expand{
+  min-height:40px!important;height:40px!important;min-width:56px!important;
+  margin:0!important;padding:7px 8px!important;background:transparent!important;
+  border:0!important;border-radius:9px!important;box-shadow:none!important;
+  color:#41638d!important;font-size:0!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-expand[aria-expanded="false"]::after{
+  content:"⤢ 확대";font-size:12px!important;font-weight:750!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-expand[aria-expanded="true"]::after{
+  content:"닫기";font-size:12px!important;font-weight:750!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-more>summary{
+  min-width:36px!important;min-height:40px!important;display:grid!important;place-items:center!important;
+  color:#6b7e91!important;border-radius:9px!important;background:transparent!important
+}
+/* Marker graphics are smaller, but never touch Leaflet's positioned root transforms. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-start-label,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs-end-label{
+  height:23px!important;padding-inline:7px!important;border-radius:7px!important;
+  font-size:11px!important;box-shadow:0 2px 5px rgba(31,58,65,.14)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .rs33-stamp-label{
+  padding:3px 6px!important;border-radius:7px!important;
+  box-shadow:0 2px 6px rgba(31,58,65,.10)!important
+}
+@media(max-width:390px){
+  .app .rs33-timeline .rs12-map-heading{padding-inline:13px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player{padding-inline:11px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player-top{gap:6px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-reset{min-width:72px!important;padding-inline:7px!important;font-size:11px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-speed select{min-width:65px!important;padding-left:8px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools{padding-inline:10px!important;gap:5px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools button,
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player button{transition:none!important;animation:none!important}
+}
+
+
+/* ================================================================
+   RiderSpot map experience v2 — understated instrument panel.
+   v1 foundation retained, v2 wins explicitly. No map canvas/geometry edits.
+   ================================================================ */
+.app .nearby.nearby-full .map-wrap.rs-map-v2 .map.leaflet-container,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container {
+  isolation:isolate
+}
+/* Fix upstream rule forcing main-map attribution permanently expanded.
+   Keep full credits visible for first 5 seconds before collapse. */
+.app .nearby.nearby-full .map-wrap.rs-map-v2 .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution,
+.app .nearby.nearby-full .rs-map-v2 .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution {
+  display:none!important;visibility:hidden!important;pointer-events:none!important
+}
+.app .nearby.nearby-full .map-wrap.rs-map-v2 .map.leaflet-container:not(.rs-tl-credits-collapsed) .rs-tl-source-trigger,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container:not(.rs-tl-credits-collapsed) .rs-tl-source-trigger{
+  display:none!important
+}
+/* Identical small exclamation mark for both maps. Touchable but unobtrusive. */
+.app .nearby.nearby-full .rs-map-v2 .map.leaflet-container>.rs-tl-source-trigger,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container>.rs-tl-source-trigger{
+  appearance:none!important;position:absolute!important;z-index:1000!important;
+  left:10px!important;right:auto!important;bottom:10px!important;top:auto!important;
+  display:grid!important;place-items:center!important;box-sizing:border-box!important;
+  width:29px!important;height:29px!important;min-width:29px!important;min-height:29px!important;
+  max-width:29px!important;max-height:29px!important;padding:0!important;margin:0!important;
+  background:#fffffff0!important;color:#5f7687!important;border:1px solid #dae4e9!important;
+  border-radius:50%!important;box-shadow:0 2px 7px rgba(25,44,62,.075)!important;
+  font:800 14px/1 system-ui,sans-serif!important;letter-spacing:0!important;white-space:nowrap!important;
+  text-align:center!important;cursor:pointer!important;touch-action:manipulation!important
+}
+.app .nearby.nearby-full .rs-map-v2 .map.leaflet-container>.rs-tl-source-trigger[hidden],
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container>.rs-tl-source-trigger[hidden]{
+  display:none!important
+}
+.app .nearby.nearby-full .rs-map-v2 .map.leaflet-container>.rs-tl-source-popover,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container>.rs-tl-source-popover{
+  position:absolute!important;left:10px!important;bottom:46px!important;top:auto!important;
+  right:auto!important;z-index:1100!important;box-sizing:border-box!important;
+  width:min(310px,calc(100% - 20px))!important;max-height:240px!important;overflow:auto!important;
+  padding:14px!important;background:#fff!important;color:#273b4a!important;
+  border:1px solid #e0e7ec!important;border-radius:13px!important;
+  box-shadow:0 9px 32px rgba(22,39,58,.16)!important;
+  font:500 11px/1.7 Pretendard,"Noto Sans KR",system-ui,sans-serif!important;
+  white-space:normal!important;overflow-wrap:anywhere!important
+}
+.app .nearby.nearby-full .rs-map-v2 .map.leaflet-container>.rs-tl-source-popover[hidden],
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container>.rs-tl-source-popover[hidden]{
+  display:none!important
+}
+.app .nearby.nearby-full .rs-tl-source-popover strong,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover strong{
+  display:block!important;margin-bottom:5px!important;font-size:12px!important;font-weight:750!important
+}
+.app .nearby.nearby-full .rs-tl-source-popover a,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover a{
+  color:#416ba2!important;text-decoration:underline!important;text-underline-offset:2px!important
+}
+.app .nearby.nearby-full .rs-tl-source-popover a:focus-visible,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-popover a:focus-visible,
+.app .nearby.nearby-full .rs-tl-source-trigger:focus-visible,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs-tl-source-trigger:focus-visible{
+  outline:2px solid #416fb7!important;outline-offset:2px!important
+}
+/* Focus on the map: remove oversized boxed controls in favor of a
+   restrained replay toolbar with one blue play glyph and ink labels. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player{
+  padding:10px 15px 10px!important;border-top:1px solid #e8edf1!important;
+  border-bottom:0!important;background:#fff!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player>.rs59-player-top{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;
+  align-items:center!important;column-gap:14px!important;height:46px!important;
+  min-height:46px!important;margin:0!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play{
+  justify-self:start!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:9px!important;width:auto!important;min-width:0!important;max-width:none!important;
+  height:44px!important;min-height:44px!important;padding:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+  color:#23364a!important;font-size:0!important;letter-spacing:-.02em!important;font-weight:740!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play .rs-icon,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play svg{
+  flex:none!important;box-sizing:border-box!important;
+  display:inline-block!important;width:35px!important;height:35px!important;
+  padding:10px!important;border-radius:50%!important;
+  background:#eaf0fa!important;color:#3c69ae!important;stroke:#3c69ae!important;
+  box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play::after{
+  content:"경로 재생";display:inline-block!important;font-size:13px!important;
+  color:#274260!important;letter-spacing:-.035em!important;font-weight:750!important;white-space:nowrap!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play[aria-pressed="true"]::after{content:"일시정지"}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play[aria-label*="처음부터"]::after{content:"다시 재생"}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play[aria-pressed="true"] .rs-icon,
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play[aria-pressed="true"] svg{
+  background:#416fb7!important;color:#fff!important;stroke:#fff!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-speed{
+  justify-self:end!important;flex:none!important;position:relative!important;display:flex!important;
+  align-items:center!important;gap:0!important;padding:0!important;margin:0!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-speed::after{
+  content:"⌄";display:block!important;position:absolute;top:50%;right:1px;
+  transform:translateY(-54%);font-size:15px;line-height:1;color:#7d8d99;pointer-events:none
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-speed select{
+  min-width:60px!important;max-width:73px!important;height:44px!important;min-height:44px!important;
+  padding:0 15px 0 5px!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;background:transparent!important;color:#52677c!important;
+  font-size:12px!important;font-weight:740!important;appearance:none!important;-webkit-appearance:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-reset{
+  flex:none!important;min-width:70px!important;max-width:none!important;height:44px!important;min-height:44px!important;
+  padding:0 2px 0 7px!important;border:0!important;border-left:1px solid #e6ebef!important;
+  border-radius:0!important;box-shadow:none!important;background:transparent!important;
+  color:#53677c!important;font-size:12px!important;font-weight:720!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player>.rs59-seek{
+  box-sizing:border-box!important;display:block!important;
+  appearance:none!important;-webkit-appearance:none!important;
+  border:0!important;outline-offset:4px!important;border-radius:0!important;
+  box-shadow:none!important;background:transparent!important;
+  padding:0!important;width:100%!important;height:29px!important;min-height:29px!important;
+  margin:4px 0 0!important;touch-action:pan-y!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-seek::-webkit-slider-runnable-track{
+  height:3px!important;border:0!important;border-radius:999px!important;background:#dee5ec!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-seek::-webkit-slider-thumb{
+  appearance:none!important;-webkit-appearance:none!important;
+  width:15px!important;height:15px!important;margin-top:-6px!important;
+  border:3px solid #fff!important;background:#4a74b0!important;
+  box-shadow:0 1px 5px rgba(36,69,106,.17)!important;border-radius:50%!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player>.rs59-time-row{
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  padding:0!important;margin:0!important;min-height:18px!important;
+  color:#96a1ac!important;font-size:11px!important;line-height:1.35!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs59-time-row .rs59-elapsed{
+  font-weight:680!important;color:#52687b!important;white-space:nowrap!important
+}
+/* Unboxed viewing controls: light segmented ink underline, not padded cards. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools,
+.app.rs34-app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools{
+  min-height:54px!important;margin:0!important;padding:8px 15px!important;
+  flex-wrap:nowrap!important;display:flex!important;align-items:center!important;
+  justify-content:space-between!important;gap:12px!important;
+  border-top:1px solid #ecf0f2!important;background:#fff!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters{
+  display:flex!important;flex:0 1 auto!important;align-items:center!important;gap:15px!important;
+  width:auto!important;min-width:0!important;max-width:none!important;height:40px!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters button{
+  flex:none!important;width:auto!important;min-width:48px!important;height:40px!important;min-height:40px!important;
+  padding:0 2px 0!important;margin:0!important;border:0!important;border-bottom:2px solid transparent!important;
+  border-radius:0!important;background:transparent!important;box-shadow:none!important;
+  color:#84919d!important;font-size:12px!important;font-weight:660!important;letter-spacing:-.035em!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters button[aria-pressed="true"]{
+  color:#3967a5!important;border-bottom-color:#416fb7!important;
+  background:transparent!important;box-shadow:none!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions{
+  display:flex!important;align-items:center!important;gap:4px!important;
+  width:auto!important;margin:0!important;padding:0!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions .rs12-expand,
+.app.rs34-app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions .rs12-expand{
+  min-width:60px!important;min-height:40px!important;height:40px!important;
+  padding:0 2px!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;background:transparent!important;color:#42678e!important;
+  font-size:0!important;font-weight:700!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions .rs12-expand[aria-expanded="false"]::after{
+  content:"⤢  확대";font-size:12px!important;font-weight:730!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-actions .rs12-expand[aria-expanded="true"]::after{
+  content:"닫기";font-size:12px!important;font-weight:730!important
+}
+/* Smaller zoom card to align with the new toolbar. */
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom{
+  padding:2px!important;border-radius:13px!important;box-shadow:0 3px 14px rgba(23,40,59,.09)!important
+}
+.app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .leaflet-control-zoom a{
+  width:37px!important;height:37px!important;line-height:36px!important;font-size:22px!important;border-radius:10px!important
+}
+/* Small ghost save action without a heavyweight card. */
+.app .rs33-timeline .rs12-map-heading{
+  padding-block:14px!important;border-bottom:1px solid #edf0f2!important
+}
+.app .rs33-timeline .rs12-recap-action{
+  min-height:40px!important;height:40px!important;
+  padding:7px 10px!important;border:1px solid #e0e7ed!important;
+  border-radius:11px!important;background:#fbfcfd!important;color:#416a9b!important;
+  box-shadow:none!important
+}
+.app .rs33-timeline .rs12-recap-action::before{
+  content:"↗  저장";font-size:12px!important;font-weight:710!important
+}
+@media(max-width:390px){
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player{
+    padding-inline:12px!important
+  }
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player>.rs59-player-top{column-gap:7px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play{gap:6px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-play::after{font-size:12px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-reset{min-width:62px!important;font-size:11px!important;padding-left:6px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-speed select{min-width:53px!important;max-width:61px!important;font-size:11px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-tools{padding-inline:12px!important}
+}
+@media(max-width:350px){
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player>.rs59-player-top{column-gap:3px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs59-player .rs59-reset{min-width:58px!important}
+  .app :is(.rs33-timeline,.rs33-trip-detail) .rs12-route-filters{gap:9px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .app :is(.rs33-timeline,.rs33-trip-detail) :is(.rs59-player,.rs12-route-tools) *{
+    transition:none!important;animation:none!important
+  }
+}
+
+
+/* v3 production corrections: no timed exposure of credits; opaque app header. */
+.app.rs34-app > header {
+  background:#fff!important;
+  background-color:#fff!important;
+  opacity:1!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  isolation:isolate;
+  z-index:1201!important;
+}
+.app.rs34-app .nearby.nearby-full .rs-map-v2 .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution,
+.app.rs34-app .rs33-timeline .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution,
+.app.rs34-app .rs33-trip-detail .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .leaflet-control-attribution{
+  display:none!important; visibility:hidden!important; opacity:0!important; pointer-events:none!important;
+  height:0!important;min-height:0!important;max-height:0!important;
+  border:0!important;padding:0!important;margin:0!important
+}
+.app.rs34-app .nearby.nearby-full .rs-map-v2 .map.leaflet-container.rs-tl-credits-collapsed .leaflet-bottom.leaflet-right,
+.app.rs34-app .rs33-timeline .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .leaflet-bottom.leaflet-right,
+.app.rs34-app .rs33-trip-detail .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .leaflet-bottom.leaflet-right {
+  min-height:0!important;height:0!important;pointer-events:none!important
+}
+.app.rs34-app .nearby.nearby-full .rs-map-v2 .map.leaflet-container.rs-tl-credits-collapsed .rs-tl-source-trigger,
+.app.rs34-app :is(.rs33-timeline,.rs33-trip-detail) .rs33-course-map .map.leaflet-container.rs-tl-credits-collapsed .rs-tl-source-trigger{
+  display:grid!important;opacity:1!important;visibility:visible!important
+}
+.app.rs34-app .rs33-timeline .rs12-map-heading{background:#fff!important}
