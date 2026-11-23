@@ -1,0 +1,46 @@
+name: RiderSpot v60 account JSON backup APK release
+on:
+  push:
+    branches: [fix/riderspot-account-backup-v60]
+    paths: ['.github/workflows/riderspot-v60-account-backup-release.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the verified Android v60 APK set
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run view 45257848896 --repo "${GITHUB_REPOSITORY}" --json conclusion --jq '.conclusion' | grep -Fx success
+          mkdir -p /tmp/riderspot-v60
+          gh run download 45257848896 --repo "${GITHUB_REPOSITORY}" \
+            --name RiderSpot-v60-account-backup-android --dir /tmp/riderspot-v60
+          cd /tmp/riderspot-v60
+          sha256sum --check SHA256SUMS.txt
+          test -s RiderSpot-1.0.20-AccountBackup-v60-DEBUG.apk
+          test -s RiderSpot-1.0.20-AccountBackup-v60-SideBySide-TEST.apk
+      - name: Publish safe, independently-installable backup test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=riderspot-android-v1.0.20-account-backup-v60-20261124
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json url,assets --jq '{url,assets:[.assets[].name]}'
+            exit 0
+          fi
+          gh release create "${TAG}" /tmp/riderspot-v60/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target badb51d8a6ab4a30394d51a6bd6045afb5a4aa7a \
+            --title "RiderSpot Android v1.0.20 · 계정 백업 저장 수정" \
+            --notes "v60: 내 기록 백업 버튼이 Android WebView 파일 저장 선택창에서 AbortError로 실패하던 문제를 고쳤습니다. 계정 JSON 파일을 Downloads/RiderSpot에 저장한 뒤 SHA-256으로 완전성 검증을 수행합니다. 기존 v59 무손실 GPS 압축과 디자인은 그대로입니다.\n\n주의: Github Actions debug APK의 서명키는 기존 v1.0.19 설치본과 다를 수 있으므로 업데이트 설치에 실패할 수 있습니다. 이런 경우 기존 앱을 삭제하지 마세요. 기기에 저장한 GPS 데이터가 유실될 수 있습니다. 별도 설치 SideBySide-TEST.apk는 기존 앱을 보존한 채 같은 계정으로 로그인하여 계정 백업 기능을 시험하는 용도입니다. 다른 패키지이므로 기존 앱에 저장된 SQLite GPS 원본은 공유되지 않습니다." \
+            --prerelease
+          gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json url,assets --jq '{url,assets:[.assets[].name]}'

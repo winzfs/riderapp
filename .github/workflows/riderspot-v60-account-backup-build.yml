@@ -1,0 +1,128 @@
+name: RiderSpot v60 Android account backup fix & v59 GPS regression
+on:
+  push:
+    branches: [fix/riderspot-account-backup-v60]
+    paths:
+      - 'rider-spot-android/gps-compression/**'
+      - 'rider-spot-android/account-backup/**'
+      - 'rider-spot-web/src/native-trip.mjs'
+      - 'rider-spot-web/src/timeline-gps-read.mjs'
+      - 'rider-spot-web/tests/**'
+      - '.github/workflows/riderspot-v60-account-backup-build.yml'
+permissions:
+  contents: read
+concurrency:
+  group: riderspot-v60-native-qa
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply compatible native GPS v48 -> v49 -> v50 -> v59 source migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v60
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-v60
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/rs-v60/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/rs-v60
+          fi
+          python3 rider-spot-android/income-integration/patch-native-income.py /tmp/rs-v60
+          python3 rider-spot-android/checkpoint-integration/patch-checkpoints.py /tmp/rs-v60
+          python3 rider-spot-android/gps-local-backup/patch-local-gps-backup.py /tmp/rs-v60
+          python3 rider-spot-android/gps-local-backup/patch-device-only-gps-v49.py /tmp/rs-v60
+          python3 rider-spot-android/gps-local-backup/patch-device-autobackup-v50.py /tmp/rs-v60
+          python3 rider-spot-android/gps-compression/patch_lossless_gps_v59.py /tmp/rs-v60
+          python3 rider-spot-android/account-backup/patch_native_account_save_v60.py /tmp/rs-v60
+          mkdir -p /tmp/rs-v60/app/src/test/java/com/riderspot/android
+          cp rider-spot-android/gps-compression/RiderSpotGpsCodecV59Test.java /tmp/rs-v60/app/src/test/java/com/riderspot/android/
+          node --check /tmp/rs-v60/app/src/main/assets/native-bridge.js
+          grep -Fq 'gps_blocks_v59' /tmp/rs-v60/app/src/main/java/com/riderspot/android/TrackStore.java
+          grep -Fq 'gps-events-save' /tmp/rs-v60/app/src/main/java/com/riderspot/android/MainActivity.java
+          ! grep -Fq '>= 14_500' /tmp/rs-v60/app/src/main/java/com/riderspot/android/TrackStore.java
+          grep -Fq "versionCode 267" /tmp/rs-v60/app/build.gradle
+          grep -Fq 'account-backup-save' /tmp/rs-v60/app/src/main/java/com/riderspot/android/MainActivity.java
+          grep -Fq '__rsNativeSaveAccountBackup' /tmp/rs-v60/app/src/main/assets/native-bridge.js
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Web and GPS bridge regression without UI layout changes
+        run: |
+          set -euo pipefail
+          node --test rider-spot-web/tests/timeline-gps-read.test.mjs rider-spot-web/tests/route-playback.test.mjs rider-spot-web/tests/stop-events.test.mjs rider-spot-web/tests/gps-local-backup-v48.test.mjs rider-spot-web/tests/gps-lossless-v59.test.mjs
+          node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
+          node --test rider-spot-android/gps-local-backup/tests/device-autobackup-v50.test.cjs
+          cd /tmp/rs-v60
+          # Four v1.0.6-era assertions expected Supabase GPS uploads; v49
+          # deliberately disabled those writes. Run remaining native tests.
+          node --test --test-skip-pattern='finishing merges screen-off SQLite points into both local history and Supabase|network failure keeps the COMPLETE route queued for retry without losing samples|notification end finishes local trip, then synchronizes complete SQLite route|stop timestamps and locations are written locally and uploaded only after finish' tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Run native exact-bit roundtrip tests and build original app
+        working-directory: /tmp/rs-v60
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify native APK and stage isolated installation test package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v60-artifacts
+          APK=/tmp/rs-v60/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android' .*versionCode='267'"
+          cp "$APK" /tmp/rs-v60-artifacts/RiderSpot-1.0.20-AccountBackup-v60-DEBUG.apk
+          sha256sum /tmp/rs-v60-artifacts/*.apk > /tmp/rs-v60-artifacts/SHA256SUMS.txt
+      - name: Build isolated side-by-side GPS v59 test APK without touching installed app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('/tmp/rs-v60/app')
+          g=root/'build.gradle'
+          body=g.read_text()
+          assert body.count('defaultConfig {')==1
+          g.write_text(body.replace('defaultConfig {',
+            'defaultConfig {\n        applicationIdSuffix ".gpsv60test"',1))
+          manifest=root/'src/main/AndroidManifest.xml'
+          m=manifest.read_text()
+          m,n=re.subn(r'android:label="[^"]+"',
+            'android:label="라이더스팟 계정 백업 v60 시험"',m,count=1)
+          assert n==1
+          m=m.replace('android:scheme="riderspot-oauth"',
+                      'android:scheme="riderspot-gpsv60test-oauth"')
+          manifest.write_text(m)
+          java=root/'src/main/java/com/riderspot/android/MainActivity.java'
+          a=java.read_text()
+          old='private static final String OAUTH_SCHEME = "riderspot-oauth";'
+          assert a.count(old)==1
+          java.write_text(a.replace(old,
+            'private static final String OAUTH_SCHEME = "riderspot-gpsv60test-oauth";',1))
+          PY
+          cd /tmp/rs-v60
+          gradle --no-daemon :app:assembleDebug
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android.gpsv60test'"
+          cp "$APK" /tmp/rs-v60-artifacts/RiderSpot-1.0.20-AccountBackup-v60-SideBySide-TEST.apk
+          (cd /tmp/rs-v60-artifacts && sha256sum ./*.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-v60-account-backup-android
+          path: /tmp/rs-v60-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
