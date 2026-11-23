@@ -1,4 +1,5 @@
-import {dailyRideSnapshot} from "./ride-insights.mjs";
+import {readIncomeForEdit,sumRideDays} from "./finance-reads.mjs";
+import {completedRideRows} from "./ride-insights.mjs";
 import {monthGoalProjection} from "./goal-view.mjs";
 import "./auto-income-time-list.js"; // Existing read-only per-delivery history, no finance mutation
 import {createRideRecap} from "./ride-recap.mjs";
@@ -228,7 +229,8 @@ export function createFinance(R, client) {
     const [anchor,setAnchor]=R.useState(koreanWorkDay);
     const [cachedFinance,setData]=R.useState(null);
     const [cachedUserId,setCachedUserId]=R.useState(null);
-    const data=accountFinanceData(user?.id,cachedUserId,cachedFinance);
+    const monthKey=section==="overview" && anchor.slice(0,7)===koreanWorkDay().slice(0,7) ? anchor.slice(0,7) : "";
+    const data=cachedFinance?.monthKey===monthKey ? accountFinanceData(user?.id,cachedUserId,cachedFinance) : null;
     const [loading,setLoading]=R.useState(false);
     const [error,setError]=R.useState("");
     const [notice,setNotice]=R.useState("");
@@ -275,8 +277,10 @@ export function createFinance(R, client) {
       const fetchRows=async(table,date)=>{
         const list=[];
         for(let offset=0;offset<10000;offset+=500){
-          const res=await client.from(table).select("*").eq("user_id",user.id)
-            .order(date,{ascending:false}).range(offset,offset+499);
+          if (!active) return list;
+          let query=client.from(table).select("*").eq("user_id",user.id);
+          if (monthKey) query=query.gte(date,plusDays(monthKey+"-01",-6)).lte(date,financeMonthPeriod(monthKey+"-01")[1]);
+          const res=await query.order(date,{ascending:false}).order("id").range(offset,offset+499);
           if(res.error)throw res.error;
           list.push(...(res.data||[]));if((res.data||[]).length<500)break;
         }
@@ -296,14 +300,14 @@ export function createFinance(R, client) {
         if(res[4].error)throw res[4].error;
         if(res[5].error)throw res[5].error;
         if(res[6].error)throw res[6].error;
-        setData({earnings:res[0],fuel:res[1],maintenance:res[2],extras:res[3],
+        setData({monthKey,earnings:res[0],fuel:res[1],maintenance:res[2],extras:res[3],
           goal:res[4].data,recurring:res[5].data||[],payoutRules:res[6].data||[]});
         setCachedUserId(user.id);
         setLoading(false);
       }).catch(e=>{if(active){setError(e?.message||"수익 데이터를 불러오지 못했어요.");
         setLoading(false);}});
       return ()=>{active=false;};
-    },[user?.id,rev]);
+    },[user?.id,rev,monthKey]);
     const today=koreanWorkDay(),calendarToday=koreanCalendarDay();
     const [from,to]=scope==="month"?financeMonthPeriod(anchor):
       scope==="week"?[plusDays(today,-6),today]:[today,today];
@@ -421,8 +425,7 @@ export function createFinance(R, client) {
               promo:values.promo_won,tip:values.tip_won,note:values.note,
               expectedUpdated:row.updated_at});
           }else{
-            const matches=(data?.earnings||[]).filter(x=>x.work_date===values.work_date &&
-              x.platform===values.platform);
+            const matches=await readIncomeForEdit(client,user.id,values.work_date,values.platform);
             const previous=matches.filter(x=>x.gross_entered!==false)
               .reduce((n,x)=>n+Number(x.gross_won||0),0);
             const hasExisting=matches.length>0;
@@ -586,7 +589,7 @@ export function createFinance(R, client) {
       const monthLabel=monthFrom.slice(0,7).replace("-","년 ")+"월";
       const snapDays=scope==="today"?[today]:scope==="week"?graph.map(x=>x.day):
         Array.from({length:31},(_,i)=>plusDays(monthFrom,i)).filter(x=>x<=monthTo);
-      const rides=snapDays.map(day=>dailyRideSnapshot(window.__rsRideApi?.history,day));
+      const rides=sumRideDays(completedRideRows(window.__rsRideApi?.history),snapDays);
       const duration=rides.reduce((n,x)=>n+num(x.durationMs),0);
       const distance=rides.reduce((n,x)=>n+num(x.distanceKm),0);
       const recordedDays=new Set(rides.filter(x=>x.trips>0&&x.durationMs>0&&x.distanceKm>0).map(x=>x.day));
@@ -892,7 +895,7 @@ export function createFinance(R, client) {
       !user?h("section",{className:"fin-card"},h("h2",null,"내 수익을 안전하게 보관해요."),
         txt("p","fin-muted","로그인하면 수익·지출·정산 기록을 모든 기기에서 확인할 수 있어요."),
         button("로그인",login,"fin-primary")):
-      loading&&!data?txt("p","fin-load","수익 기록을 불러오는 중…"):
+      (loading||!error)&&!data?txt("p","fin-load","수익 기록을 불러오는 중…"):
       error?h("section",{className:"fin-card"},txt("p","fin-error",error),
         button("다시 불러오기",()=>refresh(n=>n+1),"fin-secondary")):
       h(R.Fragment,null,(notice||undo?.forUser===user.id)&&
