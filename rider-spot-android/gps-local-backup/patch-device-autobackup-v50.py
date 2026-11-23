@@ -160,6 +160,32 @@ new="""        main.removeCallbacks(gpsHealthCheck);
 assert t.count(old)==1
 t=t.replace(old,new,1)
 service.write_text(t,encoding="utf-8")
+
+# Expose read-only backup status through the existing trusted native bridge.
+activity=root/"app/src/main/java/com/riderspot/android/MainActivity.java"
+bridge=root/"app/src/main/assets/native-bridge.js"
+a=activity.read_text(encoding="utf-8")
+key='            case "gps-backup-list":'
+assert a.count(key)==1 and 'case "gps-auto-backup-status":' not in a
+a=a.replace(key,'''            case "gps-auto-backup-status": {
+                android.content.SharedPreferences status=getSharedPreferences(
+                    "riderspot_device_backup_v50",MODE_PRIVATE);
+                return new JSONObject().put("enabled",true)
+                    .put("localOnly",true).put("intervalMinutes",5)
+                    .put("lastSuccessAt",status.getLong("last_success_at",0L))
+                    .put("lastTripId",status.getString("last_trip_id",""))
+                    .put("pointCount",status.getInt("last_point_count",0))
+                    .put("directory","Downloads/RiderSpot/AutoBackup");
+            }
+'''+key,1)
+activity.write_text(a,encoding="utf-8")
+b=bridge.read_text(encoding="utf-8")
+anchor="  window.__rsNativeListGpsTrips = () => send('gps-backup-list');"
+assert b.count(anchor)==1
+b=b.replace(anchor,anchor+'''
+  window.__rsNativeGpsAutoBackupStatusV50 = () => send('gps-auto-backup-status');''',1)
+bridge.write_text(b,encoding="utf-8")
+
 g=gradle.read_text(encoding="utf-8")
 assert "versionCode 264" in g and "versionName '1.0.17-device-only-gps-restore'" in g
 g=g.replace("versionCode 264","versionCode 265",1)
