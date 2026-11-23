@@ -60,7 +60,11 @@
 .app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-trigger {
   left:12px!important;right:auto!important;
   bottom:81px!important;top:auto!important;
-  z-index:1030!important;
+  z-index:1010!important;
+}
+/* The expanded report menu occupies this same corner; prevent icon overlap. */
+.app.rs34-app .nearby.nearby-full .rs34-map-stage:has(.rs-map-report[open]) .map.leaflet-container > .rs-tl-source-trigger{
+  visibility:hidden!important;pointer-events:none!important;
 }
 .app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-popover {
   left:12px!important;right:auto!important;
