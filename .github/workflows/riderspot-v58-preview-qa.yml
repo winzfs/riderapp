@@ -64,6 +64,7 @@ jobs:
       - name: Remote map smoke
         env: {RIDER_TEST_CASE: map}
         run: node tests/browser.cjs
+      # Route-toolbar selectors follow the current tested v58 UI.
       - name: Remote timeline GPS tests
         env: {RIDER_TEST_CASE: timeline}
         run: node tests/browser.cjs
