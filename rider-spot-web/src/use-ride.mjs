@@ -275,7 +275,7 @@ export function createUseRide({
       if (!isSharing.current) return;
       const generation = shareGeneration.current;
       return nearbyRefresh.current(generation, async () => {
-        const list = await request(client.from("locations").select("*").neq("user_id", uid));
+        const list = await request(client.rpc("rs_nearby_riders"));
         if (generation === shareGeneration.current && isSharing.current && sameAccount())
           setRiders(list);
       });
@@ -323,21 +323,12 @@ export function createUseRide({
           void sharePosition(lastPosition.current);
         void refresh();
       }, 10000);
-      const channel = client
-        .channel(`nearby:${uid}`)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "locations" },
-          refresh,
-        )
-        .subscribe();
       const hidden = () => {
         if (document.hidden) void stopSharing();
       };
       document.addEventListener("visibilitychange", hidden);
       return () => {
         clearInterval(timer);
-        client.removeChannel(channel);
         document.removeEventListener("visibilitychange", hidden);
       };
     }, [sharing, uid]);
