@@ -69,8 +69,9 @@ async function save(file){
    return true;
  }
  const blob=new Blob([file.content],{type:'application/json;charset=utf-8'});
- const item=new File([blob],file.name,{type:'application/json'});
- if(win.navigator?.canShare?.({files:[item]})&&typeof win.navigator?.share==='function'){
+ const item=typeof File==='function'?
+   new File([blob],file.name,{type:'application/json'}):null;
+ if(item&&win.navigator?.canShare?.({files:[item]})&&typeof win.navigator?.share==='function'){
    await win.navigator.share({files:[item],title:'라이더스팟 GPS 기록 백업'});
    return true;
  }
@@ -91,6 +92,10 @@ async function backup(status,button){
  if(saving)return;
  saving=true;button.disabled=true;let saved=0;
  try{
+   if(native()&&typeof win.__rsNativeSaveGpsBackup!=='function'&&
+      typeof win.navigator?.share!=='function'&&
+      typeof win.showSaveFilePicker!=='function')
+     throw Error('현재 APK는 JSON 백업 저장을 지원하지 않아요. GPS 백업 지원 버전 설치가 필요해요.');
    const records=await available();
    if(!records.length)throw Error('백업할 운행 기록이 없어요.');
    const entries=[];
