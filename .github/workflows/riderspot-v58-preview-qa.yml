@@ -59,6 +59,7 @@ jobs:
           NODE
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      # Candidate 8db9ceac7179 passed stage map + 235 unit checks at commit 1c38d524.
       - name: Remote map smoke
         env: {RIDER_TEST_CASE: map}
         run: node tests/browser.cjs
