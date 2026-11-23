@@ -245,9 +245,10 @@ async function open({
     errors.push(error.message);
     if (process.env.RIDER_DEBUG) console.error(error.stack);
   });
-  page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) mainNavigations++;
-  });
+  // framenavigated also fires for history.pushState/replaceState in
+  // Chromium; only DOMContentLoaded indicates a full document load.
+  // The tab switch regression must count reloads, not SPA history updates.
+  page.on("domcontentloaded", () => { mainNavigations++; });
   page.on("dialog", (dialog) => dialog.accept());
   const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   assert.equal(response.status(), 200);
@@ -277,6 +278,16 @@ function camera(page) {
       p = map.getCenter();
     return [p.lat, p.lng, map.getZoom()];
   });
+}
+function resizeCamera(expected, actual) {
+  const zoom=expected[2], m=256*Math.pow(2,zoom)/(2*Math.PI);
+  const projection=lat=>Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
+  const pixels=Math.hypot(
+    (actual[1]-expected[1])*Math.PI/180*m,
+    (projection(actual[0])-projection(expected[0]))*m
+  );
+  assert.ok(pixels<=1.5 && Math.abs(zoom-actual[2])<0.04,
+    "unexpected map camera movement after resize: "+pixels.toFixed(2)+"px");
 }
 function sameCamera(expected, actual) {
   assert.ok(
@@ -434,13 +445,13 @@ async function mapTest() {
     sameCamera(chosen, await camera(page));
     await page.setViewportSize({ width: 447, height: 780 });
     await page.waitForTimeout(300);
-    sameCamera(chosen, await camera(page));
+    resizeCamera(chosen, await camera(page));
     for (let i = 0; i < 5; i++) {
       await tab(page, "타임라인").click();
       await page.getByRole("heading", { name: "타임라인" }).waitFor();
-      await tab(page, baseline ? "지도" : "운행").click();
+      await tab(page, "지도").click();
       await page.getByLabel(mapLabel, { exact: true }).waitFor();
-      sameCamera(chosen, await camera(page));
+      resizeCamera(chosen, await camera(page));
     }
     assert.equal(navs(), 1);
     await page.reload();
@@ -484,7 +495,7 @@ async function mapTest() {
         window.__rsGoToTab("trips");
       });
       await page.getByRole("heading", { name: "타임라인" }).waitFor();
-      await tab(page, baseline ? "지도" : "운행").click();
+      await tab(page, "지도").click();
       await page.getByLabel(mapLabel, { exact: true }).waitFor();
     }
     await page.waitForTimeout(350);
@@ -506,8 +517,8 @@ async function timelineTest(count) {
     const metric = await openTrip(page, trip);
     if (!baseline && !benchmark) {
       const cdp = await context.newCDPSession(page);
-      await page.getByRole("button", { name: "경로 시간 표시 숨기기" }).click();
-      await page.getByRole("button", { name: "경로 시간 표시 켜기" }).click();
+      await page.getByRole("button", { name: "시간 끄기" }).click();
+      await page.getByRole("button", { name: "시간 켜기" }).click();
       const initial = await camera(page);
       for (let i = 0; i < (count === 15000 ? 31 : 4); i++)
         await gesture(
@@ -521,10 +532,10 @@ async function timelineTest(count) {
       const shown = await camera(page);
       await page.getByRole("button", { name: "크게 보기" }).click();
       await page.waitForTimeout(200);
-      sameCamera(shown, await camera(page));
+      resizeCamera(shown, await camera(page));
       await page.getByRole("button", { name: "닫기", exact: true }).click();
       await page.waitForTimeout(200);
-      sameCamera(shown, await camera(page));
+      resizeCamera(shown, await camera(page));
       await page.getByRole("button", { name: "전체 경로" }).click();
       sameCamera(initial, await camera(page));
       await page.getByRole("button", { name: /운행 이벤트/ }).click();
@@ -532,18 +543,19 @@ async function timelineTest(count) {
         await page.locator(".rs44-event-list li").count(),
         trip.events.length,
       );
+      await page.locator('summary[aria-label="경로 추가 옵션"]').click();
       await page
         .getByRole("button", { name: "도로 보정", exact: true })
         .click();
       if (count === 100) {
-        await page.getByRole("button", { name: "원본 경로" }).waitFor();
+        await page.getByRole("button", { name: "원본 경로로 보기" }).waitFor();
         assert.ok(roadRequests() > 0);
-        await page.getByRole("button", { name: "원본 경로" }).click();
+        await page.getByRole("button", { name: "원본 경로로 보기" }).click();
       } else {
         await page.getByText(/최대 5개/).waitFor();
         assert.equal(roadRequests(), 0);
       }
-      await tab(page, baseline ? "지도" : "운행").click();
+      await tab(page, "지도").click();
       await openTrip(page, trip);
       assert.equal(
         await page.evaluate(
@@ -589,7 +601,18 @@ async function nativeTest() {
     await page
       .getByRole("button", { name: "지도에서 내 현재 위치로 이동" })
       .click();
-    await page.waitForFunction(() => window.__rsMap?.getZoom() === 17);
+    try {
+      await page.waitForFunction(() => window.__rsMap?.getZoom() === 17);
+    } catch (error) {
+      console.error("Native follow camera diagnostic", await page.evaluate(() => ({
+        mapZoom: window.__rsMap?.getZoom(), mapCenter: window.__rsMap?.getCenter(),
+        mapCount: document.querySelectorAll(".leaflet-container").length,
+        tripId: window.__rsRideApi?.trip?.id,
+        gpsMetrics: window.__rsTimelineGpsMetrics,
+        page: document.querySelector(".rs33-trip-detail") ? "detail" : "timeline",
+      })));
+      throw error;
+    }
     await page.evaluate(() => {
       __riderDevice.failRead = true;
       __saveDevice();
@@ -621,8 +644,16 @@ async function nativeTest() {
     );
     const record = records.get(id);
     const device = await page.evaluate(() => __riderDevice);
-    assert.equal(record.points.length, 5000);
+    // v58: only a small summary reaches the server. The original 5,000
+    // samples remain solely in the Android SQLite recorder.
+    assert.equal(record.points.length, 0, "native coordinates must not be uploaded");
     assert.equal(device.points.length, 5000);
+    const localStored=await page.evaluate(userId=>
+      JSON.parse(localStorage.getItem("rs:trips:"+userId)||"[]"),userId);
+    const summary=localStored.find(row=>row.id===id);
+    assert.equal(summary?.points?.length,0,"WebView stores metadata, not GPS duplication");
+    assert.equal(summary?.gps_point_count,5000);
+    assert.ok(Object.keys(summary?.gps_day_ranges||{}).length);
     assert.equal(record.events.filter((e) => e.type === "운행 종료").length, 1);
     assert.equal(records.size, 1);
     assert.equal(device.calls.filter((call) => call === "stop").length, 1);

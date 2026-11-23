@@ -120,6 +120,10 @@ export function addBasemap(L, map) {
     }
   }
   function restoreOsm() {
+    // Late MapLibre load failures may run after a tab removed the Leaflet
+    // map. A detached map has no tile pane, so adding a fallback tile layer
+    // would throw inside Leaflet's GridLayer._initContainer.
+    if (!state.alive || !map.getPane?.("tilePane")) return;
     removePublicNames();
     removePublicNames = () => {};
     if (state.creditAdded && map.attributionControl) {
@@ -348,6 +352,8 @@ export function addBasemap(L, map) {
         }
       }, 14000);
     } catch (error) {
+      // Never resurrect an unmounted map from a stale asynchronous error.
+      if (!state.alive) return;
       console.warn("Rider Spot map fallback:", error?.message || error);
       state.mode = "classic";
       restoreOsm();

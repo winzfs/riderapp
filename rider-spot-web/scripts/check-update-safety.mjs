@@ -82,7 +82,11 @@ check("Map retains manually selected camera across GPS and resize events", () =>
   assert.match(initial, /!userInteracted/);
   const resize = section(camera, "function resize()", "function scheduleResize()");
   assert.match(resize, /map\.invalidateSize/);
+  // Leaflet may round the origin by less than one screen pixel at fractional
+  // zoom; resizes must not moveTo GPS or reset the chosen camera.
+  assert.match(resize, /pan:\s*true/);
   assert.doesNotMatch(resize, /map\.setView\s*\(/);
+  assert.doesNotMatch(resize, /\b(?:moveTo|showBounds|initialLocation|gpsReady)\s*\(/);
 });
 check("Compiled web release references current GPS/map code, not legacy bridge", () => {
   assert.match(release.hash, /^[0-9a-f]{12}$/);

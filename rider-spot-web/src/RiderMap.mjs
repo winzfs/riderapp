@@ -254,7 +254,9 @@ export function createRiderMap(React, L, fallback) {
     }, [cameraId, course?.live, course?.onUnfollow]);
 
     React.useEffect(() => {
-      if (!course?.bounds) return;
+      // A late async day-route analysis must not override a rider's explicit
+      // live-location follow camera. Fit remains available after un-follow.
+      if (!course?.bounds || (course.live && course.follow)) return;
       const explicit = initialFit.current !== course.fitRequest;
       initialFit.current = course.fitRequest;
       controller.current.showBounds(course.bounds, explicit);

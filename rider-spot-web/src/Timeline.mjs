@@ -13,6 +13,7 @@ import {
 import { rs33Timestamp, analyzeMatchedCourse } from "./route-analysis.mjs";
 import { useRouteAnalysis } from "./use-route-analysis.mjs";
 import { buildDailyTimeline } from "./daily-timeline.mjs";
+import { calendarDaysForTrip, loadCalendarGps, loadDetailGps, overlapsKstDay } from "./timeline-gps-read.mjs";
 import { useRoutePlayback } from "./route-playback.mjs";
 import { createGamificationUI } from "./gamification-ui.mjs";
 import { timelineStartPoint, timelineEndPoint, timelineLivePosition, isTimelineCoordinate } from "./timeline-location.mjs";
@@ -221,6 +222,7 @@ export function createTimeline(S, Zo, Income, client) {
     const [recapDay, setRecapDay] = S.useState(null);
     const liveDay = ride.trip ? today : today;
     const [day, setDay] = S.useState(today);
+    const gpsDayClick = S.useRef({day:today,at:null,logged:false});
     // Calendar rolls to the new day while the original native GPS track
     // remains continuous; never call stop/start at midnight.
     S.useEffect(()=>{
@@ -266,21 +268,89 @@ export function createTimeline(S, Zo, Income, client) {
     const [roadPreview, setRoadPreview] = S.useState(null);
     const [roadBusy, setRoadBusy] = S.useState(false);
     const [roadNotice, setRoadNotice] = S.useState("");
-    // Compose only a read-only projection: original run ids, coordinates and
-    // on-device GPS stores remain independent.
-    const daily = S.useMemo(
-      () => buildDailyTimeline([
-        ...(ride.history||[]),
-        ...(ride.trip && !ride.trip.ended_at ? [ride.trip] : [])
-      ], day),
-      [ride.history, ride.trip, day],
+    // GPS samples are not part of the calendar model. Only day-overlapping
+    // trips are requested from SQLite; quick date changes cancel stale results.
+    const gpsCache = S.useRef(new Map());
+    const [gpsReaderVersion, setGpsReaderVersion] = S.useState(0);
+    S.useEffect(() => {
+      const readerReady = () => setGpsReaderVersion(value => value + 1);
+      window.addEventListener("riderspot:native-gps-reader-ready", readerReady);
+      return () => window.removeEventListener("riderspot:native-gps-reader-ready", readerReady);
+    }, []);
+    const [dayGps, setDayGps] = S.useState({ day: null, source: null, owner: null, records: [], report: null });
+    const [detailGps, setDetailGps] = S.useState({ source: null, owner: null, record: null });
+    const summaryRows = S.useMemo(() =>
+      (ride.history || []).filter(row => overlapsKstDay(row, day))
+        .map(row => ({ ...row, points: [] })),
+      [ride.history, day],
     );
+    S.useEffect(() => {
+      let active = true;
+      loadCalendarGps(ride.history, day, {
+        reader: window.__rsGPS42NativeRead,
+        cache: gpsCache.current,
+        owner: user?.id || "guest",
+      }).then(({ records, report }) => {
+        if (!active) return;
+        setDayGps({ day, source: ride.history, owner: user?.id || "guest", records, report });
+        window.__rsTimelineGpsMetrics = report; // Counts/timing only, never raw locations.
+        console.info("[RiderSpot] timeline GPS day read", report);
+      }).catch(error => {
+        if (active) console.warn("[RiderSpot] timeline GPS day read", error?.message);
+      });
+      return () => { active = false; };
+    }, [ride.history, day, user?.id, gpsReaderVersion]);
+    const dayReady = dayGps.day === day && dayGps.source === ride.history && dayGps.owner === (user?.id || "guest");
+    const dayRows = dayReady ? dayGps.records : summaryRows;
+    const daily = S.useMemo(() => buildDailyTimeline([
+      ...dayRows,
+      ...(ride.trip && !ride.trip.ended_at ? [ride.trip] : []),
+    ], day), [dayRows, ride.trip, day]);
     const dailyCourse = useRouteAnalysis(
       S,
       selected || ride.trip || allDays ? null : daily?.route,
     );
-    const current =
-      ride.history.find((row) => row?.id === selected) || ride.trip;
+    // User-tap -> route analysis + two paint frames, in addition to native
+    // GPS read timings. The real Android map/paint latency is measured on-device.
+    S.useEffect(() => {
+      const sample=gpsDayClick.current;
+      if(sample.day!==day || sample.logged || !dayReady || selected || allDays) return;
+      if(daily?.route?.points?.length && !dailyCourse?.course?.geometry)return;
+      if(!Number.isFinite(sample.at))return;
+      let cancelled=false,frame1=0,frame2=0;
+      frame1=requestAnimationFrame(()=>{
+        frame2=requestAnimationFrame(()=>{
+          if(cancelled || gpsDayClick.current!==sample)return;
+          sample.logged=true;
+          const completed=Math.round(((globalThis.performance?.now?.()??Date.now())-sample.at)*10)/10;
+          window.__rsTimelineGpsMetrics={
+            ...(dayGps.report||{}),routeReadyMs:completed,
+            routeFrameApproximation:true,
+          };
+          console.info("[RiderSpot] timeline day route frame",window.__rsTimelineGpsMetrics);
+        });
+      });
+      return ()=>{cancelled=true;cancelAnimationFrame(frame1);cancelAnimationFrame(frame2);};
+    },[day,dayReady,daily?.route?.points?.length,dailyCourse?.course?.geometry,selected,allDays]);
+
+    const currentOriginal =
+      ride.history.find(row => row?.id === selected) || ride.trip;
+    S.useEffect(() => {
+      if (!selected || !currentOriginal?.id) return;
+      let active = true;
+      loadDetailGps(currentOriginal, {
+        reader: window.__rsGPS42NativeRead,
+        cache: gpsCache.current,
+        owner: user?.id || "guest",
+      }).then(record => {
+        if (active) setDetailGps({ source: currentOriginal, owner: user?.id || "guest", record });
+      }).catch(error => {
+        if (active) console.warn("[RiderSpot] timeline GPS detail read", error?.message);
+      });
+      return () => { active = false; };
+    }, [selected, currentOriginal, user?.id]);
+    const current = selected && detailGps.source === currentOriginal && detailGps.owner === (user?.id || "guest")
+      ? detailGps.record : currentOriginal;
     const ended = Boolean(current?.ended_at);
     const isLive = Boolean(ride.trip && current?.id === ride.trip.id && !ended);
     const livePosition = isLive ? timelineLivePosition(ride.position, current) : null;
@@ -433,6 +503,7 @@ export function createTimeline(S, Zo, Income, client) {
       setRoadPreview(null);
     }
     function choose(date) {
+      gpsDayClick.current={day:date,at:globalThis.performance?.now?.()??Date.now(),logged:false};
       setDay(date);
       setWeek(rs33WeekStart(date));
       setAllDays(false);
@@ -612,7 +683,14 @@ export function createTimeline(S, Zo, Income, client) {
                       }
                       if (!isTimelineCoordinate(livePosition)) {
                         notify("현재 위치를 확인하는 중이에요.");
-                        ride.locate?.().catch(() => {});
+                        // One tap must also work immediately after restoring a
+                        // paused native ride, before its next SQLite GPS poll.
+                        Promise.resolve(ride.locate?.()).then(point => {
+                          if (isTimelineCoordinate(point)) {
+                            setFocused(null);
+                            setFollowing(true);
+                          }
+                        }).catch(error => notify(error?.message || "위치를 확인하지 못했어요."));
                         return;
                       }
                       setFocused(null);
@@ -819,9 +897,10 @@ export function createTimeline(S, Zo, Income, client) {
     );
     const byDay = new Map();
     for (const trip of history) {
-      const key = rs33WorkDay(trip.started_at);
-      if (!byDay.has(key)) byDay.set(key, []);
-      byDay.get(key).push(trip);
+      for (const key of calendarDaysForTrip(trip)) {
+        if (!byDay.has(key)) byDay.set(key, []);
+        byDay.get(key).push(trip);
+      }
     }
     const entries = allDays ? history : daily?.trips || [];
     const km = entries.reduce(
@@ -942,7 +1021,8 @@ export function createTimeline(S, Zo, Income, client) {
                 rs33J("strong",null,Number(day.slice(5,7))+"월 "+Number(day.slice(8,10))+"일의 이동"),
                 rs33J("span",null,daily.trips.length+"개 운행 구간")),
               rs33J("button",{type:"button",className:"rs-recap-launch rs12-recap-action",
-                onClick:()=>setRecapDay(day),"aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
+                onClick:()=>setRecapDay(day),disabled:!dayReady,
+                "aria-label":day+" 라이딩 이미지를 만들고 저장하기"},
                 "↥ 이미지 저장")),
             daily.route.points.length
               ? rs33J(
@@ -999,7 +1079,12 @@ export function createTimeline(S, Zo, Income, client) {
                           const point = timelineLivePosition(ride.position, ride.trip);
                           if (!isTimelineCoordinate(point)) {
                             notify("현재 위치를 확인하는 중이에요.");
-                            ride.locate?.().catch(() => {});
+                            Promise.resolve(ride.locate?.()).then(found => {
+                              if (isTimelineCoordinate(found)) {
+                                setFocused(null);
+                                setFollowing(true);
+                              }
+                            }).catch(error => notify(error?.message || "위치를 확인하지 못했어요."));
                             return;
                           }
                           setFocused(null);
@@ -1052,14 +1137,16 @@ export function createTimeline(S, Zo, Income, client) {
               : rs33J(
                   "div",
                   { className: "rs56-day-empty" },
-                  "GPS 경로 없음",
+                  dayReady ? "GPS 경로 없음" : "기기 GPS 경로 읽는 중…",
                 ),
           )
         : null,
 
       !allDays ? rs33J("section",{className:"rs11-timeline-insights","aria-label":"운행 결산"},
         rs33J(DayRideCard,{history:ride.history,day,income:rs33J(Income,{key:day,day,user,login})})) : null,
-      recapDay ? rs33J(RideRecap,{day:recapDay,history:ride.history,user,notify,
+      recapDay ? rs33J(RideRecap,{day:recapDay,history:[
+        ...dayRows, ...(ride.trip && !ride.trip.ended_at ? [ride.trip] : []),
+      ],user,notify,
         onClose:()=>setRecapDay(null)}) : null,
       rs33J(
         "div",
@@ -1141,10 +1228,11 @@ export function createTimeline(S, Zo, Income, client) {
                     null,
                     rs33Format.format(distance) +
                       " km · " +
-                      (!trip.points?.some(
+                      (!(trip.gps_native || Number(trip.gps_point_count) > 0 ||
+                      trip.points?.some(
                         (p) =>
                           Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
-                      )
+                      ))
                         ? "GPS 경로 없음"
                         : distance === 0
                           ? "이동 거리 없음"

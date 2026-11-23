@@ -1,5 +1,6 @@
 import { createNearbyRefreshGate } from "./nearby-refresh.mjs";
 import { createTripStorage } from "./trip-storage.mjs";
+import { toNativeGpsSummary } from "./timeline-gps-read.mjs";
 import { createTripOdometerSync } from "./odometer-sync.mjs";
 import {
   isNative,
@@ -471,7 +472,10 @@ export function createUseRide({
         let updated;
         let remotelySavedAfterQuota = false;
         try {
-          updated = storage.commit(uid, finished);
+          // The complete GPS session remains in the on-device native SQLite.
+          // Persist only the date/sequence index in WebView storage; it can be
+          // queried lazily by Timeline without duplicating a full-year route.
+          updated = storage.commit(uid, bridge ? toNativeGpsSummary(finished) : finished);
         } catch (error) {
           if (!isStorageQuota(error)) throw error;
           // Never delete or truncate old unsynced trips to free storage.
@@ -479,7 +483,8 @@ export function createUseRide({
           if (uid === "guest") {
             throw Error("저장공간이 가득 찼어요. GPS 원본은 기기에 보관 중입니다. 로그인 후 다시 종료해 주세요.");
           }
-          const { id, started_at, ended_at, distance_km, points, events, memo } = finished;
+          const { id, started_at, ended_at, distance_km, points, events, memo } =
+            bridge ? toNativeGpsSummary(finished) : finished;
           try {
             await request(client.from("trips").upsert(
               { id, user_id: uid, started_at, ended_at, distance_km, points, events, memo },

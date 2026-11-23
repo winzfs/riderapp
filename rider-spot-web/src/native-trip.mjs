@@ -1,4 +1,5 @@
 import { rs43Meters } from "./route-analysis.mjs";
+import { rs33ISO } from "./timeline-dates.mjs";
 
 export const isNative = () =>
   Boolean(window.__rsNativeInstalled && window.RiderSpotHost);
@@ -47,6 +48,25 @@ export function nativeDistance(points) {
   return Math.round(meters / 10) / 100;
 }
 
+// Native sequence IDs let the existing indexed SQLite "points" bridge seek
+// directly into a selected day, even when a single ride crosses midnight.
+export function nativeGpsDayRanges(points) {
+  const ranges = {};
+  for (const point of Array.isArray(points) ? points : []) {
+    const seq = Number(point?.seq), timestamp = Number(point?.t);
+    if (!Number.isSafeInteger(seq) || seq < 1 ||
+        !Number.isFinite(timestamp) || timestamp <= 0) continue;
+    const day = rs33ISO(timestamp);
+    const range = ranges[day] || (ranges[day] = {
+      firstSeq: seq, lastSeq: seq, pointCount: 0,
+    });
+    range.firstSeq = Math.min(range.firstSeq, seq);
+    range.lastSeq = Math.max(range.lastSeq, seq);
+    range.pointCount++;
+  }
+  return ranges;
+}
+
 export async function readStoppedTrip(bridge, trip, stopTime) {
   let state = await bridge.call("state");
   if (state.activeId === trip.id) {
@@ -80,6 +100,7 @@ export async function readStoppedTrip(bridge, trip, stopTime) {
     ended_at,
     points,
     events,
+    gps_day_ranges: nativeGpsDayRanges(nativePoints),
     distance_km: Math.max(
       Number(trip.distance_km) || 0,
       nativeDistance(points),

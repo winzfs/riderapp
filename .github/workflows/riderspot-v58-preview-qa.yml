@@ -1,0 +1,79 @@
+name: RiderSpot v58 Cloudflare version-preview acceptance
+on:
+  push:
+    branches: [perf/riderspot-timeline-gps-day-read-v58]
+    paths:
+      - '.github/workflows/riderspot-v58-preview-qa.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_TEST_URL: https://gps-v58-preview-rider-spot.jazzhjm.workers.dev
+      RIDER_CHROMIUM: /usr/bin/google-chrome
+      RIDER_DEBUG: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci
+      - name: HTTP, immutable GPS and safety assertions against undeployed v58 preview
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base=process.env.RIDER_TEST_URL;
+          const fetchPath=async(path,opt={})=>{
+            const res=await fetch(base+path,{...opt,signal:AbortSignal.timeout(30000)});
+            const body=await res.text();
+            return {res,body};
+          };
+          const {res,body}=await fetchPath('/');
+          assert.equal(res.status,200);
+          assert.equal(res.headers.get('x-rs-gps-read'),'v58');
+          assert.match(body,/\/assets\/rider-spot-33203ffb677c\/app\.mjs/);
+          assert.match(body,/\/rider-spot-native-gps-safe-v46\.js/);
+          assert.match(body,/\/rider-spot-native-day-v58\.js/);
+          assert.match(body,/rider-spot-midnight-rollover-v57/);
+          for(const [url,needle] of [
+            ['/assets/rider-spot-33203ffb677c/app.mjs','gps_day_ranges'],
+            ['/assets/rider-spot-33203ffb677c/route-worker.mjs',''],
+            ['/rider-spot-native-day-v58.js','allPointsForDay'],
+            ['/rider-spot-native-gps-safe-v46.js','__rsGPS42NativeRead'],
+            ['/sw.js','33203ffb677c']
+          ]){
+            const {res,body}=await fetchPath(url);
+            assert.equal(res.status,200,url);
+            if(needle)assert.ok(body.includes(needle),url+' missing '+needle);
+            assert.ok(body.length>100,url+' too short');
+            console.log('PASS',url,res.status,body.length);
+          }
+          const oauth=await fetchPath('/',{headers:{cookie:'rs_android_oauth='+'a'.repeat(32)}});
+          assert.equal(oauth.res.status,200);
+          assert.match(oauth.body,/riderspot-oauth:\/\/signin\/callback/);
+          const api=await fetchPath('/api/weather?lat=0&lon=0');
+          assert.equal(api.res.status,400);
+          console.log('PASS Worker v58 route, OAuth, API, SW, native-safe compatibility');
+          NODE
+      - run: npm run build
+      - run: test -x /usr/bin/google-chrome && google-chrome --version
+      # Candidate 33203ffb677c passed stage map + 235 unit checks at commit 1c38d524.
+      - name: Remote map smoke
+        env: {RIDER_TEST_CASE: map}
+        run: node tests/browser.cjs
+      # Route-toolbar selectors follow the current tested v58 UI.
+      # Verify 1.5px projection tolerance for full-screen course resizing.
+      - name: Remote timeline GPS tests
+        env: {RIDER_TEST_CASE: timeline}
+        run: node tests/browser.cjs
+      - name: Remote native SQLite and stop/retry tests
+        env:
+          RIDER_TEST_CASE: native
+          RIDER_APK_BRIDGE: /tmp/rider-native-bridge.js
+        run: |
+          tar -xOf ../rider-spot-android/source.tar.xz ./app/src/main/assets/native-bridge.js > "$RIDER_APK_BRIDGE"
+          node tests/browser.cjs
