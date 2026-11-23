@@ -93,7 +93,7 @@ jobs:
           body=g.read_text()
           assert body.count('defaultConfig {')==1
           g.write_text(body.replace('defaultConfig {',
-            'defaultConfig {\\n        applicationIdSuffix ".gpsv59test"',1))
+            'defaultConfig {\n        applicationIdSuffix ".gpsv59test"',1))
           manifest=root/'src/main/AndroidManifest.xml'
           m=manifest.read_text()
           m,n=re.subn(r'android:label="[^"]+"',
