@@ -16,6 +16,7 @@ jobs:
     env:
       RIDER_TEST_URL: https://gps-v58-preview-rider-spot.jazzhjm.workers.dev
       RIDER_CHROMIUM: /usr/bin/google-chrome
+      RIDER_DEBUG: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
