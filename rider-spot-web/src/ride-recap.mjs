@@ -512,6 +512,12 @@ export function createRideRecap(React,client) {
     const [renderError,setRenderError]=React.useState(false);
     const saveBusyRef=React.useRef(false);
     const gpsCache=React.useRef(new Map());
+    const [gpsReaderVersion,setGpsReaderVersion]=React.useState(0);
+    React.useEffect(()=>{
+      const ready=()=>setGpsReaderVersion(value=>value+1);
+      window.addEventListener("riderspot:native-gps-reader-ready",ready);
+      return()=>window.removeEventListener("riderspot:native-gps-reader-ready",ready);
+    },[]);
     const [gpsState,setGpsState]=React.useState({source:null,day:null,records:[],report:null});
     React.useEffect(()=>{
       let active=true;
@@ -524,7 +530,7 @@ export function createRideRecap(React,client) {
         if(active)console.warn("[RiderSpot] recap GPS read",error?.message);
       });
       return ()=>{active=false;};
-    },[history,day,user?.id]);
+    },[history,day,user?.id,gpsReaderVersion]);
     const gpsPending=gpsState.source!==history||gpsState.day!==day;
     const fallbackHistory=React.useMemo(()=>
       history.filter(row=>overlapsKstDay(row,day)).map(row=>({...row,points:[]})),
