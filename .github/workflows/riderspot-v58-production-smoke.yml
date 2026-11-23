@@ -1,0 +1,55 @@
+name: RiderSpot v58 production smoke
+on:
+  push:
+    branches: [perf/riderspot-timeline-gps-day-read-v58]
+    paths:
+      - '.github/workflows/riderspot-v58-production-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify the actual deployed HTTPS production app and legacy safety
+        env:
+          BASE: https://rider-spot.jazzhjm.workers.dev
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base=process.env.BASE;
+          async function read(path,options={}){
+            const response=await fetch(base+path,{...options,signal:AbortSignal.timeout(20000)});
+            return {response,content:await response.text()};
+          }
+          const root=await read('/');
+          assert.equal(root.response.status,200);
+          assert.equal(root.response.headers.get('x-rs-gps-read'),'v58');
+          for(const marker of [
+            '/assets/rider-spot-33203ffb677c/app.mjs',
+            '/rider-spot-native-day-v58.js',
+            '/rider-spot-native-gps-safe-v46.js',
+            'rider-spot-midnight-rollover-v57.js',
+          ])assert.ok(root.content.includes(marker),'Missing production marker '+marker);
+          for(const [path,needle] of [
+            ['/assets/rider-spot-33203ffb677c/app.mjs','gps_day_ranges'],
+            ['/assets/rider-spot-33203ffb677c/route-worker.mjs',''],
+            ['/rider-spot-native-day-v58.js','allPointsForDay'],
+            ['/rider-spot-native-gps-safe-v46.js','__rsGPS42NativeRead'],
+            ['/sw.js','33203ffb677c'],
+            ['/assets/rider-spot-82c20b027c23/app.mjs',''],
+          ]) {
+            const {response,content}=await read(path);
+            assert.equal(response.status,200,path);
+            assert.ok(content.length>100,path+' empty');
+            if(needle)assert.ok(content.includes(needle),'missing '+needle);
+            console.log('PASS',path,content.length);
+          }
+          const head=await fetch(base+'/',{method:'HEAD',signal:AbortSignal.timeout(20000)});
+          assert.equal(head.status,200);
+          assert.equal((await head.text()).length,0);
+          console.log('PASS production v58, v57 safety, legacy immutable routes, HEAD');
+          NODE
