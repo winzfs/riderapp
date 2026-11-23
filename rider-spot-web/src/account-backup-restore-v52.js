@@ -170,7 +170,21 @@
     if(size(encoded)>MAX_BYTES)throw Error('계정 기록이 파일 크기 제한을 초과했어요. 기존 기록은 그대로 유지됩니다.');
     return {archive,content:encoded};
   }
-  async function saveFile(content,filename){
+  async function saveFile(content,filename,preselectedHandle){
+    // The file picker MUST be opened synchronously from the user's click.
+    // Awaiting account queries first loses Android/WebView user activation.
+    if(preselectedHandle){
+      const handle=preselectedHandle;
+      const output=await handle.createWritable();
+      try{
+        await output.write(new Blob([content],{type:'application/json'}));
+        await output.close();
+      }catch(error){
+        try{await output.abort?.();}catch{}
+        throw error;
+      }
+      return 'saved';
+    }
     // Native bridge for arbitrary JSON is only present in future signed APKs.
     if(typeof win.__rsNativeSaveAccountBackup==='function'){
       const base64=await encode(content);
@@ -184,15 +198,6 @@
     if(file&&win.navigator?.canShare?.({files:[file]})&&win.navigator?.share){
       await win.navigator.share({files:[file],title:'라이더스팟 계정 백업'});
       return 'shared';
-    }
-    if(typeof win.showSaveFilePicker==='function'){
-      const handle=await win.showSaveFilePicker({
-        suggestedName:filename,
-        types:[{description:'RiderSpot 계정 백업',accept:{'application/json':['.json']}}]
-      });
-      const stream=await handle.createWritable();
-      await stream.write(blob);await stream.close();
-      return 'saved';
     }
     const url=URL.createObjectURL(blob);
     try{
@@ -214,11 +219,24 @@
     if(busy)return;
     busy=true;button.disabled=true;
     try{
-      if(!win.confirm('현재 계정의 운행 요약·수익·정비·설정을 JSON 파일로 백업할까요? 과거 서버 GPS도 파일에 함께 보관하며 서버 데이터는 변경하지 않아요.'))return;
+      const file='RiderSpot-Account-'+new Date().toISOString().slice(0,10)+'.json';
+      let chosenFile=null;
+      if(typeof win.__rsNativeSaveAccountBackup!=='function' &&
+         typeof win.showSaveFilePicker==='function'){
+        // Do this BEFORE the first await on any network/database request.
+        // The picker itself is the user's confirmation to create a backup.
+        status.textContent='백업 파일을 저장할 위치를 선택해 주세요.';
+        chosenFile=await win.showSaveFilePicker({
+          suggestedName:file,
+          types:[{description:'RiderSpot 계정 백업',accept:{'application/json':['.json']}}]
+        });
+        if(!chosenFile)throw Error('파일 저장 위치를 선택하지 못했어요.');
+      }else if(!win.confirm('현재 계정의 운행 요약·수익·정비·설정을 JSON 파일로 백업할까요? 과거 서버 GPS도 파일에 함께 보관하며 서버 데이터는 변경하지 않아요.')){
+        return;
+      }
       const {archive,content}=await gather(status);
       status.textContent='백업 파일 저장 중…';
-      const file='RiderSpot-Account-'+new Date().toISOString().slice(0,10)+'.json';
-      const result=await saveFile(content,file);
+      const result=await saveFile(content,file,chosenFile);
       status.textContent=result==='download-requested'?
         '다운로드를 요청했어요. 파일 앱에서 JSON 파일이 저장됐는지 확인해 주세요.':
         '계정 백업 완료 · '+archive.summary.records+'개 기록 · 운행 '+archive.summary.trips+
