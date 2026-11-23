@@ -455,6 +455,8 @@
   }
 
   window.__rsGPS42NativeRead = { call, allPoints, allPointsForDay };
+  if (typeof window.dispatchEvent === "function" && typeof Event === "function")
+    window.dispatchEvent(new Event("riderspot:native-gps-reader-ready"));
   window.__rsGPS41Poll = poll;
   setInterval(poll, 3000);
   window.addEventListener("focus", poll);
