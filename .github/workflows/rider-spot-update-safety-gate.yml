@@ -3,7 +3,7 @@ name: Rider Spot update regression safety gate
 # Read-only verification. No Worker, APK or user-data changes.
 on:
   push:
-    branches: [feature/rider-spot-native-apk]
+    branches: [main]
     paths:
       - 'rider-spot-web/**'
       - 'rider-spot-android/**'

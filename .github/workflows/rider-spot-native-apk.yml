@@ -1,7 +1,7 @@
 name: Rider Spot Native APK
 on:
   push:
-    branches: [feature/rider-spot-native-apk]
+    branches: [main]
     paths:
       - 'rider-spot-android/**'
       - '.github/workflows/rider-spot-native-apk.yml'
