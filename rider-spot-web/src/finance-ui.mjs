@@ -691,7 +691,8 @@ export function createFinance(R, client) {
               h("span",{className:"fin-record-icon "+(x.type==="income"?"gain":"spend")},
                 icon(x.type==="income"?"earnings":x.type==="fuel"?"fuel":"settings",19)),
               button(h(R.Fragment,null,txt("strong",null,x.name),
-                txt("small",null,x.type==="income"?(x.row.paid_at?"입금 확인 "+x.row.paid_at:"입금 확인 전") :
+                txt("small",null,x.type==="income"?(x.name==="수기입력 추가분"?
+                  x.row.platform+" · 실제 총수입 차액":x.row.paid_at?"입금 확인 "+x.row.paid_at:"입금 확인 전") :
                   x.type==="maintenance"?"정비 원본 기록 보기":x.personal?"개인 지출 · 업무비 제외":x.row.memo||x.row.note||"업무 지출")),
                 ()=>x.type==="maintenance"?openMaintenance(x.row):openEditor(x.type,x.row),
                 "fin-record-info fin-record-open",{"aria-label":x.name+" "+x.day+" 기록 보기"}),
