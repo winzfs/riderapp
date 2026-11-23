@@ -1,0 +1,38 @@
+name: RiderSpot v61 vendor pinned MIT Zstd decoder
+on:
+  push:
+    branches: [fix/riderspot-compressed-account-backup-v61]
+    paths:
+      - '.github/workflows/riderspot-v61-vendor-zstd.yml'
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Fetch audited fzstd 0.1.1 without executing package install scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v61-fzstd
+          cd /tmp/rs-v61-fzstd
+          npm pack fzstd@0.1.1 --ignore-scripts --pack-destination .
+          tar -xzf fzstd-0.1.1.tgz
+          test -s package/umd/index.js
+          test "$(wc -c < package/umd/index.js)" -lt 30000
+          mkdir -p "$GITHUB_WORKSPACE/rider-spot-web/vendor"
+          cp package/umd/index.js "$GITHUB_WORKSPACE/rider-spot-web/vendor/fzstd-0.1.1-umd.js"
+          git -C "$GITHUB_WORKSPACE" config user.name 'github-actions[bot]'
+          git -C "$GITHUB_WORKSPACE" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$GITHUB_WORKSPACE" add -f rider-spot-web/vendor/fzstd-0.1.1-umd.js
+          if ! git -C "$GITHUB_WORKSPACE" diff --cached --quiet; then
+            git -C "$GITHUB_WORKSPACE" commit -m "chore(v61): vendor pinned MIT fzstd browser decoder [skip ci]"
+            git -C "$GITHUB_WORKSPACE" fetch origin fix/riderspot-compressed-account-backup-v61
+            git -C "$GITHUB_WORKSPACE" rebase origin/fix/riderspot-compressed-account-backup-v61
+            git -C "$GITHUB_WORKSPACE" push origin HEAD:fix/riderspot-compressed-account-backup-v61
+          fi
+          echo "Zstd UMD SHA256: $(sha256sum package/umd/index.js)"

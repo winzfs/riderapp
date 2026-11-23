@@ -1,0 +1,30 @@
+name: RiderSpot v61 compressed account backup validation
+on:
+  push:
+    branches: [fix/riderspot-compressed-account-backup-v61]
+    paths:
+      - 'rider-spot-web/src/account-backup-restore-v52.js'
+      - 'rider-spot-web/tests/account-compressed-v61.test.cjs'
+      - '.github/workflows/riderspot-v61-compressed-backup-qa.yml'
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: All compressed backup restore roundtrip and corruption regression
+        run: |
+          set -euo pipefail
+          node --check rider-spot-web/src/account-backup-restore-v52.js
+          node --test rider-spot-web/tests/account-compressed-v61.test.cjs
+          node --test rider-spot-web/tests/route-playback.test.mjs rider-spot-web/tests/timeline-gps-read.test.mjs rider-spot-web/tests/gps-lossless-v59.test.mjs
+      - name: Verify no GPS, UI, CSS, Android sources changed from production v59
+        run: |
+          set -euo pipefail
+          ! git diff --name-only feature/riderspot-lossless-gps-v59 HEAD | grep -E '^rider-spot-web/src/.*\.css$|^rider-spot-web/src/(native-trip|route-analysis|timeline-gps-read)\.mjs$' || {
+            echo 'Unexpected GPS/UI source change'; exit 1;
+          }

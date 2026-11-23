@@ -12,6 +12,9 @@
   const BASE='https://qkcqzhkvfbymzjdktshp.supabase.co';
   const PREFIX='sb-qkcqzhkvfbymzjdktshp-auth-token';
   const MAX_BYTES=7_400_000, PAGE=600;
+  const COMPRESSED_V61='riderspot-gzip-json-v61';
+  const COMPRESSED_MAX=7_400_000;
+
   const TABLES=[
     'rider_profiles','rider_settings','rider_vehicle_profiles',
     'rider_finance_goals','rider_finance_payout_rules',
@@ -170,6 +173,185 @@
     if(size(encoded)>MAX_BYTES)throw Error('계정 기록이 파일 크기 제한을 초과했어요. 기존 기록은 그대로 유지됩니다.');
     return {archive,content:encoded};
   }
+  // v61: save compressed files even in older native APKs. The compact JSON
+  // envelope retains v52 keys because Android v60's verified MediaStore saver
+  // intentionally accepts only a v52 JSON file. Its payload is always gzip.
+  // No GPS coordinates or other account values are quantized or modified.
+  const coder = new TextEncoder();
+  const decoder = new TextDecoder('utf-8', {fatal:true});
+  function bytesToBase64(data){
+    let text='';
+    for(let i=0;i<data.length;i+=0x4000)
+      text+=String.fromCharCode(...data.subarray(i,i+0x4000));
+    return btoa(text);
+  }
+  function base64ToBytes(value){
+    if(typeof value!=='string' || value.length>COMPRESSED_MAX*2 ||
+       !/^[A-Za-z0-9+/]*={0,2}$/.test(value)||value.length%4)
+      throw Error('압축 백업의 인코딩이 손상됐어요.');
+    const text=atob(value);
+    const data=new Uint8Array(text.length);
+    for(let i=0;i<text.length;i++)data[i]=text.charCodeAt(i);
+    return data;
+  }
+  async function sha256Hex(data){
+    if(!win.crypto?.subtle)throw Error('안전한 백업 검증 기능을 사용할 수 없어요.');
+    const hash=new Uint8Array(await win.crypto.subtle.digest('SHA-256',data));
+    return [...hash].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  async function inflateBounded(data,format){
+    if(typeof win.DecompressionStream!=='function')
+      throw Error('이 기기의 압축 복원 기능을 사용할 수 없어요.');
+    const input=new Blob([data]).stream()
+      .pipeThrough(new win.DecompressionStream(format)).getReader();
+    let total=0;const pieces=[];
+    try{
+      for(;;){
+        const {done,value}=await input.read();
+        if(done)break;
+        total+=value.length;
+        if(total>MAX_BYTES)throw Error('압축을 푼 기록이 용량 제한을 넘었어요.');
+        pieces.push(value);
+      }
+    }catch(error){
+      await input.cancel().catch(()=>{});
+      throw error;
+    }finally{input.releaseLock();}
+    const output=new Uint8Array(total);let offset=0;
+    for(const piece of pieces){output.set(piece,offset);offset+=piece.length;}
+    return output;
+  }
+  async function compressedAccountJsonV61(archive,content){
+    if(typeof win.CompressionStream!=='function')
+      throw Error('이 기기는 압축 백업을 지원하지 않아요.');
+    const raw=coder.encode(content);
+    if(raw.length>MAX_BYTES)throw Error('기록 원본이 안전 용량 제한을 넘었어요.');
+    const packed=new Uint8Array(await new Response(
+      new Blob([raw]).stream().pipeThrough(new win.CompressionStream('gzip'))
+    ).arrayBuffer());
+    // Do not write a backup that cannot be read back losslessly.
+    const check=await inflateBounded(packed,'gzip');
+    if(check.length!==raw.length ||
+       await sha256Hex(check)!==await sha256Hex(raw))
+      throw Error('압축 백업의 복원 검증이 실패했어요.');
+    const container={
+      format:'riderspot-account-backup-v52',
+      account_id:archive.account_id,
+      data_policy:'gps-original-only-on-device',
+      tables:{}, legacy_gps:[],
+      compression_v61:{
+        codec:COMPRESSED_V61, raw_bytes:raw.length,
+        sha256:await sha256Hex(raw),
+        encoded:bytesToBase64(packed)
+      }
+    };
+    const output=JSON.stringify(container);
+    if(size(output)>COMPRESSED_MAX)throw Error('압축된 백업 파일의 크기가 너무 커요.');
+    return {content:output,compressedBytes:size(output),originalBytes:raw.length};
+  }
+  function unzipEntry(data){
+    // Classic ZIP: only one non-encrypted JSON file, no ZIP64 or symlinks.
+    if(data.length<30)throw Error('ZIP 파일이 올바르지 않아요.');
+    const view=new DataView(data.buffer,data.byteOffset,data.byteLength);
+    let eocd=-1;
+    for(let i=data.length-22;i>=Math.max(0,data.length-65557);i--){
+      if(view.getUint32(i,true)===0x06054b50){eocd=i;break;}
+    }
+    if(eocd<0||view.getUint16(eocd+10,true)!==1||
+       view.getUint16(eocd+8,true)!==1)
+      throw Error('JSON 파일 하나가 포함된 ZIP 백업만 지원해요.');
+    const central=view.getUint32(eocd+16,true);
+    if(central+46>data.length||view.getUint32(central,true)!==0x02014b50)
+      throw Error('ZIP 파일 정보가 손상됐어요.');
+    const flags=view.getUint16(central+8,true),method=view.getUint16(central+10,true);
+    const crc=view.getUint32(central+16,true);
+    const compLen=view.getUint32(central+20,true);
+    const rawLen=view.getUint32(central+24,true);
+    const nameLen=view.getUint16(central+28,true);
+    const extraLen=view.getUint16(central+30,true);
+    const commentLen=view.getUint16(central+32,true);
+    const offset=view.getUint32(central+42,true);
+    if(rawLen>MAX_BYTES||compLen>COMPRESSED_MAX||
+       (flags&1)||(method!==0&&method!==8)||rawLen===0||
+       offset+30>data.length||central+46+nameLen+extraLen+commentLen>data.length)
+      throw Error('지원하지 않는 ZIP 백업 형식이에요.');
+    const name=decoder.decode(data.subarray(central+46,central+46+nameLen));
+    if(!/^[^/\\]+\.json$/i.test(name))
+      throw Error('라이더스팟 JSON 파일이 포함된 ZIP을 선택해 주세요.');
+    if(view.getUint32(offset,true)!==0x04034b50)
+      throw Error('ZIP 데이터 시작 위치가 손상됐어요.');
+    const headName=view.getUint16(offset+26,true);
+    const headExtra=view.getUint16(offset+28,true);
+    const from=offset+30+headName+headExtra;
+    if(from+compLen>data.length)throw Error('ZIP 파일이 불완전해요.');
+    return {compressed:data.subarray(from,from+compLen),method,rawLen,crc};
+  }
+  function crc32(data){
+    let crc=0xffffffff;
+    for(const byte of data){
+      crc^=byte;
+      for(let i=0;i<8;i++)crc=crc&1?(crc>>>1)^0xedb88320:crc>>>1;
+    }
+    return (crc^0xffffffff)>>>0;
+  }
+  async function decodeZip(bytes){
+    const item=unzipEntry(bytes);
+    const raw=item.method===0?item.compressed:await inflateBounded(item.compressed,'deflate-raw');
+    if(raw.length!==item.rawLen||crc32(raw)!==item.crc)
+      throw Error('ZIP 원본 무결성 검증이 실패했어요.');
+    return decoder.decode(raw);
+  }
+  async function decodeZstd(bytes){
+    if(!win.fzstd?.decompress){
+      // Only load the same-origin, pinned MIT decoder when a user explicitly
+      // selects a Zstandard file. Do not send the backup to a remote server.
+      await new Promise((resolve,reject)=>{
+        const script=doc.createElement('script');
+        script.src='/rider-spot-fzstd-v61.js?rev=20261124-v61';
+        script.crossOrigin='anonymous';
+        script.onload=resolve;
+        script.onerror=()=>reject(Error('Zstd 해제 모듈을 불러오지 못했어요. ZIP 파일도 지원해요.'));
+        doc.head.append(script);
+      });
+    }
+    if(!win.fzstd?.decompress)throw Error('Zstd 복원 기능을 사용할 수 없어요.');
+    const unpacked=win.fzstd.decompress(bytes);
+    if(unpacked.length>MAX_BYTES)throw Error('압축된 원본이 허용 용량을 넘었어요.');
+    return decoder.decode(unpacked);
+  }
+  async function parseBackupFileV61(file){
+    if(!file||file.size<24||file.size>COMPRESSED_MAX)
+      throw Error('계정 백업 파일 크기를 확인해 주세요.');
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    let text;
+    if(bytes[0]===0x50&&bytes[1]===0x4b)
+      text=await decodeZip(bytes);
+    else if(bytes[0]===0x28&&bytes[1]===0xb5&&bytes[2]===0x2f&&bytes[3]===0xfd)
+      text=await decodeZstd(bytes);
+    else if(bytes[0]===0x1f&&bytes[1]===0x8b)
+      text=decoder.decode(await inflateBounded(bytes,'gzip'));
+    else text=decoder.decode(bytes);
+    let data=JSON.parse(text);
+    if(data?.compression_v61){
+      const wrapper=data;
+      const part=wrapper.compression_v61;
+      if(wrapper.format!=='riderspot-account-backup-v52'||
+         part.codec!==COMPRESSED_V61||
+         !isUuid(wrapper.account_id)||
+         !Number.isSafeInteger(part.raw_bytes)||
+         part.raw_bytes<90||part.raw_bytes>MAX_BYTES||
+         !/^[0-9a-f]{64}$/i.test(part.sha256))
+        throw Error('압축 백업 헤더가 올바르지 않아요.');
+      const unpacked=await inflateBounded(base64ToBytes(part.encoded),'gzip');
+      if(unpacked.length!==part.raw_bytes ||
+         await sha256Hex(unpacked)!==part.sha256.toLowerCase())
+        throw Error('압축 백업 원본 검증이 실패했어요.');
+      data=JSON.parse(decoder.decode(unpacked));
+      if(data.account_id!==wrapper.account_id)
+        throw Error('압축 백업 계정 정보가 일치하지 않아요.');
+    }
+    return data;
+  }
   async function saveFile(content,filename,preselectedHandle){
     // The file picker MUST be opened synchronously from the user's click.
     // Awaiting account queries first loses Android/WebView user activation.
@@ -235,12 +417,14 @@
         return;
       }
       const {archive,content}=await gather(status);
-      status.textContent='백업 파일 저장 중…';
-      const result=await saveFile(content,file,chosenFile);
+      status.textContent='무손실 압축 및 복원 검증 중…';
+      const compressed=await compressedAccountJsonV61(archive,content);
+      status.textContent='압축 백업 파일 저장 중…';
+      const result=await saveFile(compressed.content,file,chosenFile);
       status.textContent=result==='download-requested'?
         '다운로드를 요청했어요. 파일 앱에서 JSON 파일이 저장됐는지 확인해 주세요.':
         '계정 백업 완료 · '+archive.summary.records+'개 기록 · 운행 '+archive.summary.trips+
-        '건 · 과거 GPS '+archive.summary.old_cloud_gps_points+'개 좌표';
+        '건 · 과거 GPS '+archive.summary.old_cloud_gps_points+'개 좌표 · 저장 '+Math.round(compressed.compressedBytes/1024)+'KB ('+Math.round(100*(1-compressed.compressedBytes/compressed.originalBytes))+'% 절감)';
     }catch(error){
       status.textContent=error?.name==='AbortError'?'백업 저장을 취소했어요.':
         '백업 실패 · '+msg(error);
@@ -250,8 +434,8 @@
     if(busy||!file)return;
     busy=true;button.disabled=true;
     try{
-      if(file.size>MAX_BYTES||file.size<90)throw Error('계정 백업 파일 크기를 확인해 주세요.');
-      const archive=JSON.parse(await file.text());
+      status.textContent='백업 파일 확인 및 무손실 해제 중…';
+      const archive=await parseBackupFileV61(file);
       if(archive?.format!=='riderspot-account-backup-v52'||
         !isUuid(archive.account_id)||!archive.tables||
         typeof archive.tables!=='object'||Array.isArray(archive.tables)||
@@ -346,7 +530,7 @@
     exportButton.textContent='기기에 백업';
     const importButton=doc.createElement('button');importButton.type='button';
     importButton.textContent='파일에서 복원';
-    const input=doc.createElement('input');input.type='file';input.accept='.json,application/json';
+    const input=doc.createElement('input');input.type='file';input.accept='.json,.gz,.zip,.zst,application/json,application/gzip,application/zip,application/zstd';
     input.hidden=true;input.style.display='none';
     const status=doc.createElement('div');status.className='rs-account-status';
     status.setAttribute('role','status');
@@ -370,4 +554,6 @@
   win.setInterval(mount,2000);
   // Deterministic QA entrypoints; never expose access credentials.
   win.__rsAccountBackupMathV52=Object.freeze({extractLegacyGps});
+  // Test-only, pure compression/parse entrypoints. Never expose auth tokens.
+  win.__rsAccountBackupCompressionV61=Object.freeze({compressedAccountJsonV61,parseBackupFileV61,crc32});
 })(typeof window==='undefined'?null:window);

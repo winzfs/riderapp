@@ -1,0 +1,65 @@
+name: RiderSpot v61 compressed backup Cloudflare preview acceptance
+on:
+  push:
+    branches: [fix/riderspot-compressed-account-backup-v61]
+    paths: ['.github/workflows/riderspot-v61-backup-preview.yml']
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_TEST_URL: https://account-v61-preview-rider-spot.jazzhjm.workers.dev
+      RIDER_CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci
+      - name: Check preview account compressed backup, self-hosted Zstd decoder, compatibility and CSS parity
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base=process.env.RIDER_TEST_URL;
+          async function get(path,options={}){
+            const response=await fetch(base+path,{...options,signal:AbortSignal.timeout(30000)});
+            const text=await response.text();
+            return {response,text};
+          }
+          const home=await get('/');
+          assert.equal(home.response.status,200);
+          assert.equal(home.response.headers.get('x-rs-backup-codec'),'v61');
+          assert.match(home.text,/rider-spot-account-backup-v52\.js\?rev=20261124-v61/);
+          assert.match(home.text,/assets\/rider-spot-b227b31db568\/app\.mjs/);
+          const backup=await get('/rider-spot-account-backup-v52.js?rev=20261124-v61');
+          assert.equal(backup.response.status,200);
+          for(const marker of ['compression_v61','parseBackupFileV61','__rsNativeSaveAccountBackup','decodeZstd','__rsAccountBackupCompressionV61'])
+            assert.ok(backup.text.includes(marker),'Missing '+marker);
+          assert.equal(backup.response.headers.get('x-rs-backup-codec'),'v61');
+          const decoder=await get('/rider-spot-fzstd-v61.js?rev=20261124-v61');
+          assert.equal(decoder.response.status,200);
+          assert.ok(decoder.text.length>7000 && decoder.text.includes('fzstd'));
+          const sw=await get('/sw.js');
+          assert.match(sw.text,/v61-compressed-backup/);
+          for(const css of ['design-system.css','daily-timeline.css','weather-bar.css','premium-shell.css','renewal-layout.css','curated-v9.css']){
+            const cur=await get('/assets/rider-spot-b227b31db568/'+css);
+            assert.equal(cur.response.status,200);
+            assert.ok(cur.text.length>100);
+          }
+          const old=await get('/rider-spot-native-day-v58.js');
+          assert.equal(old.response.status,200);
+          assert.ok(old.text.includes('allPointsForDay'));
+          console.log('PASS preview v61 / actual backup source / local Zstd / old native GPS / unchanged app assets');
+          NODE
+      - name: Browser smoke - map, previous timeline and performance
+        env: {RIDER_TEST_CASE: map}
+        run: |
+          test -x /usr/bin/google-chrome
+          node tests/browser.cjs
+      - name: Browser smoke - trip timeline and replay
+        env: {RIDER_TEST_CASE: timeline}
+        run: node tests/browser.cjs
