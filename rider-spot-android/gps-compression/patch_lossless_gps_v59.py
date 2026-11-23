@@ -341,14 +341,14 @@ b=bridge.read_text()
 # localStorage (and silently truncated the rest) AFTER v58 had written a small
 # summary. Native SQLite is now the source of truth: its modern reader alone
 # owns stopped-trip hydration, and legacy finalization MUST NOT overwrite it.
-old_finalizer="  async function finalizeNativeTrip(tripId) {\\n    const nativePoints = await loadAll(tripId);"
+old_finalizer="  async function finalizeNativeTrip(tripId) {\n    const nativePoints = await loadAll(tripId);"
 assert b.count(old_finalizer)==1
 b=b.replace(old_finalizer,
-    "  async function finalizeNativeTrip(tripId) {\\n"
-    "    // v59: Android SQLite is authoritative. The modern GPS reader owns\\n"
-    "    // completed-trip recovery. Never overwrite the WebView summary with\\n"
-    "    // an old 14,999-point route or duplicate coordinates in localStorage.\\n"
-    "    if (window.__rsGPS42NativeRead?.allPoints) return;\\n"
+    "  async function finalizeNativeTrip(tripId) {\n"
+    "    // v59: Android SQLite is authoritative. The modern GPS reader owns\n"
+    "    // completed-trip recovery. Never overwrite the WebView summary with\n"
+    "    // an old 14,999-point route or duplicate coordinates in localStorage.\n"
+    "    if (window.__rsGPS42NativeRead?.allPoints) return;\n"
     "    const nativePoints = await loadAll(tripId);",1)
 anchor="  window.__rsNativeGpsDiagnostics = () => send('state');"
 assert b.count(anchor)==1
