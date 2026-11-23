@@ -33,16 +33,16 @@ jobs:
           const {res,body}=await fetchPath('/');
           assert.equal(res.status,200);
           assert.equal(res.headers.get('x-rs-gps-read'),'v58');
-          assert.match(body,/\/assets\/rider-spot-b450cf5b7979\/app\.mjs/);
+          assert.match(body,/\/assets\/rider-spot-8db9ceac7179\/app\.mjs/);
           assert.match(body,/\/rider-spot-native-gps-safe-v46\.js/);
           assert.match(body,/\/rider-spot-native-day-v58\.js/);
           assert.match(body,/rider-spot-midnight-rollover-v57/);
           for(const [url,needle] of [
-            ['/assets/rider-spot-b450cf5b7979/app.mjs','gps_day_ranges'],
-            ['/assets/rider-spot-b450cf5b7979/route-worker.mjs',''],
+            ['/assets/rider-spot-8db9ceac7179/app.mjs','gps_day_ranges'],
+            ['/assets/rider-spot-8db9ceac7179/route-worker.mjs',''],
             ['/rider-spot-native-day-v58.js','allPointsForDay'],
             ['/rider-spot-native-gps-safe-v46.js','__rsGPS42NativeRead'],
-            ['/sw.js','b450cf5b7979']
+            ['/sw.js','8db9ceac7179']
           ]){
             const {res,body}=await fetchPath(url);
             assert.equal(res.status,200,url);
