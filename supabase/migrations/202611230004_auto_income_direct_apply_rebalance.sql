@@ -127,7 +127,7 @@ begin
     and gross_won>0
   order by created_at,id limit 1 for update;
   if adjustment_id is not null then
-    offset_amount := pg_catalog.least(adjustment_amount,p_amount);
+    offset_amount := least(adjustment_amount,p_amount);
     update public.rider_earnings
     set gross_won=gross_won-offset_amount,
         gross_entered=(gross_won-offset_amount)>0,
