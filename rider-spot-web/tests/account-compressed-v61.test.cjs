@@ -8,8 +8,9 @@ const {deflateRawSync,gzipSync}=require('node:zlib');
 const {TextEncoder,TextDecoder}=require('node:util');
 
 function start(){
+ const zstd=require('../vendor/fzstd-0.1.1-umd.js');
  const doc={readyState:'loading',addEventListener(){},createElement(){return {}}};
- const win={document:doc,crypto:webcrypto,CompressionStream,DecompressionStream,
+ const win={document:doc,crypto:webcrypto,CompressionStream,DecompressionStream,fzstd:zstd,
   addEventListener(){},setInterval(){},navigator:{},location:{href:'https://rider-spot.jazzhjm.workers.dev/'}};
  const globals={window:win,document:doc,Blob,Response,TextEncoder,TextDecoder,
   CompressionStream,DecompressionStream,Headers,URL,Date,Promise,btoa,atob,Event};
@@ -95,4 +96,14 @@ test('reject suspicious archives and prevent decompression bomb',async()=>{
  await assert.rejects(codec.parseBackupFileV61(fileOf(Buffer.from('not a backup'))),/크기/);
  const bigger=Buffer.alloc(8_000_000,0x30);
  await assert.rejects(codec.parseBackupFileV61(fileOf(bigger)),/크기/);
+});
+
+test('zstd19 portable backup is selectable and decoded in same app',async()=>{
+ const codec=start();
+ const sample='KLUv/QRoLQQAcggbGHCtDlAqSQE9YLcwrSIBAFJkiCjsK/0/Q7Uqdok0bK6fFNTcNFQ+RcWAGiuOeapFLYjpPBjbSfqIYJfx9XzELh1z8Hy6sGutYYMgWAusOjvyjKcDwrORLo2PnQ6FrfFOGGU75PXZJzcNk0cBCABosMPmtQDQiwQzQEwBaG7ewmyWAU/qxnM=';
+ const raw=Buffer.from(sample,'base64');
+ const decoded=await codec.parseBackupFileV61(fileOf(raw));
+ assert.equal(decoded.account_id,uuid);
+ assert.equal(decoded.format,'riderspot-account-backup-v52');
+ assert.equal(decoded.tables.trips.length,1);
 });
