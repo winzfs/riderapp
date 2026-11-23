@@ -58,6 +58,50 @@
     });
   }
 
+  // Query only the SQLite sequence interval that can contain this calendar
+  // day's samples. This reuses the existing indexed Android "points" action;
+  // no APK upgrade, file rewrite, or cloud upload is required.
+  async function allPointsForDay(id, day, range) {
+    const from = Date.parse(day + "T00:00:00+09:00");
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(day) || !Number.isFinite(from))
+      throw Error("GPS 조회 날짜가 올바르지 않아요.");
+    const until = from + 86400000;
+    const validRange = Number.isSafeInteger(range?.firstSeq) &&
+      Number.isSafeInteger(range?.lastSeq) &&
+      range.firstSeq > 0 && range.lastSeq >= range.firstSeq;
+    if (!validRange) {
+      // Pre-v58 trips have no sequence-day index. Read only this single trip,
+      // then filter it, without scanning the user's other SQLite sessions.
+      const raw = await allPoints(id);
+      return { points: raw.filter(p => p.t >= from && p.t < until),
+        readCount: raw.length, indexed: false };
+    }
+    const points = [];
+    let cursor = range.firstSeq - 1, readCount = 0;
+    while (cursor < range.lastSeq) {
+      const limit = Math.min(250, Math.max(1, range.lastSeq - cursor));
+      const response = await call("points", { tripId: id, afterSeq: cursor, limit });
+      const batch = Array.isArray(response?.points) ? response.points : [];
+      if (!batch.length) break;
+      let next = cursor, reachedEnd = false;
+      for (const p of batch) {
+        if (!Number.isSafeInteger(p?.seq) || p.seq <= next)
+          throw Error("GPS 읽기 순서를 확인해 주세요.");
+        next = p.seq;
+        if (p.seq > range.lastSeq) { reachedEnd = true; break; }
+        if (Number.isFinite(p.t) && Number.isFinite(p.lat) &&
+            Number.isFinite(p.lng) && p.t >= from && p.t < until)
+          points.push(p);
+      }
+      readCount += batch.length;
+      cursor = next;
+      if (reachedEnd || cursor >= range.lastSeq || batch.length < limit) break;
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    return { points: points.sort((a,b) => a.t - b.t),
+      readCount, indexed: true };
+  }
+
   function badge(message, warning = false) {
     const api = window.__rsRideApi;
     const tripId = api?.trip?.id;
@@ -410,7 +454,7 @@
     }
   }
 
-  window.__rsGPS42NativeRead = { call, allPoints };
+  window.__rsGPS42NativeRead = { call, allPoints, allPointsForDay };
   window.__rsGPS41Poll = poll;
   setInterval(poll, 3000);
   window.addEventListener("focus", poll);
