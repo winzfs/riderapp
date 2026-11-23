@@ -1,3 +1,4 @@
+import { createNearbyRefreshGate } from "./nearby-refresh.mjs";
 import { createTripStorage } from "./trip-storage.mjs";
 import { createTripOdometerSync } from "./odometer-sync.mjs";
 import {
@@ -60,6 +61,8 @@ export function createUseRide({
     const lastPosition = React.useRef(null);
     const lastShare = React.useRef(0);
     const shareGeneration = React.useRef(0);
+    const nearbyRefresh = React.useRef(null);
+    if (!nearbyRefresh.current) nearbyRefresh.current = createNearbyRefreshGate();
     const nextBreak = React.useRef(false);
     const stopping = React.useRef(null);
     const lastEvents = React.useRef(null);
@@ -270,9 +273,12 @@ export function createUseRide({
     }
     async function refreshRiders() {
       if (!isSharing.current) return;
-      const list = await request(client.from("locations").select("*"));
-      if (isSharing.current && sameAccount())
-        setRiders(list.filter((row) => row.user_id !== uid));
+      const generation = shareGeneration.current;
+      return nearbyRefresh.current(generation, async () => {
+        const list = await request(client.from("locations").select("*").neq("user_id", uid));
+        if (generation === shareGeneration.current && isSharing.current && sameAccount())
+          setRiders(list);
+      });
     }
     function fromGeo({ coords, timestamp }) {
       return {
