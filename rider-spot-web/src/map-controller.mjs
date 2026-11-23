@@ -100,10 +100,15 @@ export function createMapController(L, node, cameraId, fallback) {
     height = node.clientHeight;
     resizing = true;
     try {
-      // A resize must preserve the user's geographical center, not the
-      // old pixel origin. Leaflet's pan:true compensates for the dimension
-      // delta without resetting GPS or calling setView during resize.
+      // Preserve the exact committed geographical camera through Leaflet's
+      // resize pixel-origin adjustment. Suppress its move handlers while
+      // restoring the center: never follow GPS or change the chosen zoom.
+      const chosen = { lat: center.lat, lng: center.lng };
       map.invalidateSize({ pan: true, animate: false });
+      const after = map.getCenter();
+      if (Math.abs(after.lat - chosen.lat) > 1e-8 ||
+          Math.abs(after.lng - chosen.lng) > 1e-8)
+        map.panTo([chosen.lat, chosen.lng], { animate: false });
     } finally {
       resizing = false;
     }
