@@ -271,8 +271,8 @@ export function createTimeline(S, Zo, Income, client) {
     // GPS samples are not part of the calendar model. Only day-overlapping
     // trips are requested from SQLite; quick date changes cancel stale results.
     const gpsCache = S.useRef(new Map());
-    const [dayGps, setDayGps] = S.useState({ day: null, source: null, records: [], report: null });
-    const [detailGps, setDetailGps] = S.useState({ source: null, record: null });
+    const [dayGps, setDayGps] = S.useState({ day: null, source: null, owner: null, records: [], report: null });
+    const [detailGps, setDetailGps] = S.useState({ source: null, owner: null, record: null });
     const summaryRows = S.useMemo(() =>
       (ride.history || []).filter(row => overlapsKstDay(row, day))
         .map(row => ({ ...row, points: [] })),
@@ -286,7 +286,7 @@ export function createTimeline(S, Zo, Income, client) {
         owner: user?.id || "guest",
       }).then(({ records, report }) => {
         if (!active) return;
-        setDayGps({ day, source: ride.history, records, report });
+        setDayGps({ day, source: ride.history, owner: user?.id || "guest", records, report });
         window.__rsTimelineGpsMetrics = report; // Counts/timing only, never raw locations.
         console.info("[RiderSpot] timeline GPS day read", report);
       }).catch(error => {
@@ -294,7 +294,7 @@ export function createTimeline(S, Zo, Income, client) {
       });
       return () => { active = false; };
     }, [ride.history, day, user?.id]);
-    const dayReady = dayGps.day === day && dayGps.source === ride.history;
+    const dayReady = dayGps.day === day && dayGps.source === ride.history && dayGps.owner === (user?.id || "guest");
     const dayRows = dayReady ? dayGps.records : summaryRows;
     const daily = S.useMemo(() => buildDailyTimeline([
       ...dayRows,
@@ -337,13 +337,13 @@ export function createTimeline(S, Zo, Income, client) {
         cache: gpsCache.current,
         owner: user?.id || "guest",
       }).then(record => {
-        if (active) setDetailGps({ source: currentOriginal, record });
+        if (active) setDetailGps({ source: currentOriginal, owner: user?.id || "guest", record });
       }).catch(error => {
         if (active) console.warn("[RiderSpot] timeline GPS detail read", error?.message);
       });
       return () => { active = false; };
     }, [selected, currentOriginal, user?.id]);
-    const current = selected && detailGps.source === currentOriginal
+    const current = selected && detailGps.source === currentOriginal && detailGps.owner === (user?.id || "guest")
       ? detailGps.record : currentOriginal;
     const ended = Boolean(current?.ended_at);
     const isLive = Boolean(ride.trip && current?.id === ride.trip.id && !ended);
