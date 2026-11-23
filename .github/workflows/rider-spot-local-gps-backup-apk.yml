@@ -4,6 +4,7 @@ on:
     branches: [feature/riderspot-local-gps-backup-v48-20261123]
     paths:
       - 'rider-spot-android/gps-local-backup/**'
+      - 'rider-spot-web/tests/gps-local-backup-v48.test.mjs'
       - '.github/workflows/rider-spot-local-gps-backup-apk.yml'
   workflow_dispatch:
 permissions:
