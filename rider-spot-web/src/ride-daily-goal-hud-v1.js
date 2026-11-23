@@ -195,7 +195,8 @@
     if(cap.textContent!==caption)cap.textContent=caption;
     if(val.textContent!==amount)val.textContent=amount;
     if(el.dataset.complete!==(complete?'true':'false'))el.dataset.complete=complete?'true':'false';
-    el.setAttribute('aria-pressed',String(state.mode==='earnings'));
+    const pressed=String(state.mode==='earnings');
+    if(el.getAttribute('aria-pressed')!==pressed)el.setAttribute('aria-pressed',pressed);
     if(el.getAttribute('aria-label')!==description)el.setAttribute('aria-label',description);
   }
   async function fetchUser(client) {
