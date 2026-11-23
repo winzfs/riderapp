@@ -1535,3 +1535,106 @@ body.rs-map-v2-sheet-open{overflow:hidden!important}
   scroll-behavior:auto!important;transition-duration:0s!important;animation-duration:0s!important;
  }
 }
+
+
+/* Garage Service v35 — quiet status alert and unified 3x2 maintenance board.
+   Retain the existing original Neo-Flat pictogram artwork and all click actions. */
+.app.rs34-app .rs34-bike-page .rs8-service-alerts{
+  position:relative!important;display:flex!important;flex-direction:column!important;
+  gap:5px!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;
+  margin:0 0 20px!important;padding:12px 14px 12px 40px!important;
+  background:#fff!important;border:1px solid #DFE7EB!important;
+  border-left:1px solid #DFE7EB!important;border-radius:15px!important;
+  box-shadow:none!important;color:#344D60!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-service-alerts::before{
+  content:"!";position:absolute;left:14px;top:13px;display:grid;place-items:center;
+  width:17px;height:17px;box-sizing:border-box;border:1px solid #E7C8B9;
+  border-radius:50%;background:#FFF8F4;color:#AD745E;
+  font-size:11px;font-weight:780;line-height:1;
+}
+.app.rs34-app .rs34-bike-page .rs8-alerts-head{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:8px!important;min-width:0;margin:0!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alerts-head strong{
+  color:#324A5F!important;font-size:12px!important;font-weight:800!important;line-height:1.4!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alerts-head>span{
+  flex:none;color:#8597A3!important;font-size:11px!important;font-weight:700!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alerts-items{
+  display:flex!important;align-items:center!important;flex-wrap:wrap!important;
+  gap:2px 4px!important;min-width:0!important;margin:0!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alert-chip{
+  display:inline-flex!important;align-items:center!important;min-width:0!important;
+  min-height:25px!important;width:auto!important;margin:0!important;padding:2px 0!important;
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;color:#687B8B!important;font-size:11px!important;
+  font-weight:690!important;line-height:1.35!important;text-align:left!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alert-chip+.rs8-alert-chip::before{
+  content:"·";margin:0 9px 0 3px;color:#B6C3CB;font-weight:500;
+}
+.app.rs34-app .rs34-bike-page .rs8-alert-chip>span{
+  margin-left:4px;color:#A47862;font-size:10px;font-weight:720;
+}
+.app.rs34-app .rs34-bike-page .rs8-alert-chip:focus-visible{
+  outline:2px solid #567EB0!important;outline-offset:3px!important;border-radius:3px!important;
+}
+.app.rs34-app .rs34-bike-page .rs8-alert-chip:active{color:#315D8C!important}
+.app.rs34-app .rs34-bike-page .bike-consumables.rs11-service-list{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:1px!important;overflow:hidden!important;border:1px solid #DEE7EA!important;
+  border-radius:18px!important;background:#E6EDF0!important;box-shadow:none!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row,
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-overdue,
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-soon{
+  position:relative!important;display:flex!important;flex-direction:column!important;
+  justify-content:center!important;align-items:center!important;min-width:0!important;
+  min-height:120px!important;height:auto!important;margin:0!important;
+  padding:13px 4px 11px!important;gap:5px!important;border:0!important;
+  border-radius:0!important;background:#fff!important;box-shadow:none!important;
+  text-align:center!important;transform:none!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-overdue::after,
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-soon::after{
+  content:"";position:absolute;top:10px;right:10px;
+  width:5px;height:5px;border-radius:50%;background:#BC806A;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-soon::after{background:#C7A36A}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row:active{background:#F4F8FB!important}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row:focus-visible{
+  outline:2px solid #5882B6!important;outline-offset:-3px!important;z-index:1;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-copy{
+  display:flex!important;flex-direction:column!important;align-items:center!important;
+  width:100%!important;min-width:0!important;gap:5px!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-name{
+  color:#294354!important;font-size:12px!important;font-weight:800!important;
+  line-height:1.3!important;letter-spacing:-.03em!important;word-break:keep-all!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-status{
+  margin:0!important;padding:0!important;min-height:0!important;
+  color:#6C827B!important;font-size:10px!important;font-weight:690!important;
+  line-height:1.35!important;font-variant-numeric:tabular-nums!important;
+  white-space:normal!important;word-break:keep-all!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-status.bike-state-overdue{
+  color:#AD6954!important;font-weight:760!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .bike-tile-status.bike-state-soon{
+  color:#9F804D!important;font-weight:730!important;
+}
+.app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-chevron{display:none!important}
+@media(max-width:360px){
+  .app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row,
+  .app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-overdue,
+  .app.rs34-app .rs34-bike-page .rs11-service-list .rs11-part-row.rs11-soon{
+    min-height:112px!important;padding:10px 3px!important;
+  }
+  .app.rs34-app .rs34-bike-page .rs8-service-alerts{padding-right:11px!important}
+}
