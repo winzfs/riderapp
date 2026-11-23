@@ -46,7 +46,7 @@ jobs:
       - name: Web and GPS bridge regression without UI layout changes
         run: |
           set -euo pipefail
-          node --test rider-spot-web/tests/timeline-gps-read.test.mjs rider-spot-web/tests/route-playback.test.mjs rider-spot-web/tests/stop-events.test.mjs rider-spot-web/tests/gps-local-backup-v48.test.mjs
+          node --test rider-spot-web/tests/timeline-gps-read.test.mjs rider-spot-web/tests/route-playback.test.mjs rider-spot-web/tests/stop-events.test.mjs rider-spot-web/tests/gps-local-backup-v48.test.mjs rider-spot-web/tests/gps-lossless-v59.test.mjs
           node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
           node --test rider-spot-android/gps-local-backup/tests/device-autobackup-v50.test.cjs
           cd /tmp/rs-v59
