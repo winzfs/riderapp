@@ -207,6 +207,22 @@ export function createFinance(R, client) {
 
   function Finance({user,login,onBike}) {
     const [section,setSection]=R.useState("overview");
+    const [calendarRollover,setCalendarRollover]=R.useState(()=>koreanCalendarDay());
+    R.useEffect(()=>{
+      let previous=koreanCalendarDay();
+      const check=()=>{
+        const next=koreanCalendarDay();
+        if(next===previous)return;
+        previous=next;
+        setCalendarRollover(next);
+        refresh(n=>n+1);
+      };
+      const timer=window.setInterval(check,15000);
+      window.addEventListener("focus",check);
+      document.addEventListener("visibilitychange",check);
+      return()=>{window.clearInterval(timer);window.removeEventListener("focus",check);
+        document.removeEventListener("visibilitychange",check);};
+    },[]);
     const [recapDay,setRecapDay]=R.useState(null);
     const [scope,setScope]=R.useState("today");
     const [anchor,setAnchor]=R.useState(koreanWorkDay);
