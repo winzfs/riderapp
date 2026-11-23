@@ -65,6 +65,7 @@ jobs:
         env: {RIDER_TEST_CASE: map}
         run: node tests/browser.cjs
       # Route-toolbar selectors follow the current tested v58 UI.
+      # Verify 1.5px projection tolerance for full-screen course resizing.
       - name: Remote timeline GPS tests
         env: {RIDER_TEST_CASE: timeline}
         run: node tests/browser.cjs
