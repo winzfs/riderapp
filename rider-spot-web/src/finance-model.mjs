@@ -14,13 +14,9 @@ export function koreanCalendarDay(now = new Date()) {
   }).formatToParts(now).map(part=>[part.type,part.value]));
   return p.year+"-"+p.month+"-"+p.day;
 }
+/** The earnings day begins at KST 00:00, not 03:00. */
 export function koreanWorkDay(now = new Date()) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US",{
-    timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",
-    hour:"2-digit",hourCycle:"h23"
-  }).formatToParts(now).map(p=>[p.type,p.value]));
-  const day = parts.year+"-"+parts.month+"-"+parts.day;
-  return Number(parts.hour) < 3 ? plusDays(day,-1) : day;
+  return koreanCalendarDay(now);
 }
 export function financeTotals(data,from,to) {
   const pick = (items,key) => (items||[]).filter(x=>String(x[key]||"") >= from && String(x[key]||"") <= to);
