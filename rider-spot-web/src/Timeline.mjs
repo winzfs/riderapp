@@ -222,6 +222,7 @@ export function createTimeline(S, Zo, Income, client) {
     const [recapDay, setRecapDay] = S.useState(null);
     const liveDay = ride.trip ? today : today;
     const [day, setDay] = S.useState(today);
+    const gpsDayClick = S.useRef({day:today,at:null,logged:false});
     // Calendar rolls to the new day while the original native GPS track
     // remains continuous; never call stop/start at midnight.
     S.useEffect(()=>{
@@ -303,6 +304,29 @@ export function createTimeline(S, Zo, Income, client) {
       S,
       selected || ride.trip || allDays ? null : daily?.route,
     );
+    // User-tap -> route analysis + two paint frames, in addition to native
+    // GPS read timings. The real Android map/paint latency is measured on-device.
+    S.useEffect(() => {
+      const sample=gpsDayClick.current;
+      if(sample.day!==day || sample.logged || !dayReady || selected || allDays) return;
+      if(daily?.route?.points?.length && !dailyCourse?.course?.geometry)return;
+      if(!Number.isFinite(sample.at))return;
+      let cancelled=false,frame1=0,frame2=0;
+      frame1=requestAnimationFrame(()=>{
+        frame2=requestAnimationFrame(()=>{
+          if(cancelled || gpsDayClick.current!==sample)return;
+          sample.logged=true;
+          const completed=Math.round(((globalThis.performance?.now?.()??Date.now())-sample.at)*10)/10;
+          window.__rsTimelineGpsMetrics={
+            ...(dayGps.report||{}),routeReadyMs:completed,
+            routeFrameApproximation:true,
+          };
+          console.info("[RiderSpot] timeline day route frame",window.__rsTimelineGpsMetrics);
+        });
+      });
+      return ()=>{cancelled=true;cancelAnimationFrame(frame1);cancelAnimationFrame(frame2);};
+    },[day,dayReady,daily?.route?.points?.length,dailyCourse?.course?.geometry,selected,allDays]);
+
     const currentOriginal =
       ride.history.find(row => row?.id === selected) || ride.trip;
     S.useEffect(() => {
@@ -473,6 +497,7 @@ export function createTimeline(S, Zo, Income, client) {
       setRoadPreview(null);
     }
     function choose(date) {
+      gpsDayClick.current={day:date,at:globalThis.performance?.now?.()??Date.now(),logged:false};
       setDay(date);
       setWeek(rs33WeekStart(date));
       setAllDays(false);
