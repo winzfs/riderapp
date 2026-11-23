@@ -11,12 +11,39 @@ let saving=false;
 async function available(){
  const user=(await win.__rsClient?.auth.getUser().catch(()=>({})))?.data?.user?.id||null;
  const api=win.__rsRideApi, seen=new Set();
- return [...(Array.isArray(api?.history)?api.history:[]),api?.trip].filter(t=>{
+ const local=[...(Array.isArray(api?.history)?api.history:[]),api?.trip].filter(t=>{
    if(!valid(t?.id)||seen.has(t.id))return false;
    if(user){if(t.user_id&&t.user_id!==user)return false;}
    else if(t.user_id)return false;
    seen.add(t.id);return true;
- }).sort((a,b)=>String(a.started_at).localeCompare(String(b.started_at)));
+ });
+ // React can show zero trips even while a native SQLite route still exists.
+ // Discover the current/last-stopped native IDs without modifying their GPS.
+ const bridge=win.__rsGPS42NativeRead;
+ if(native()&&typeof bridge?.call==='function'){
+   try{
+     const status=await bridge.call('state');
+     for(const id of [status?.activeId,status?.lastStoppedId]){
+       if(!valid(id)||seen.has(id))continue;
+       let time=Number(status?.startedAt)||0;
+       if(!time){
+         const first=await bridge.call('points',{tripId:id,afterSeq:0,limit:1});
+         time=Number(first?.points?.[0]?.t)||0;
+       }
+       if(!Number.isFinite(time)||time<=0)continue;
+       const isStopped=id===status?.lastStoppedId && id!==status?.activeId;
+       const endMs=Number(status?.lastStoppedAt)||0;
+       local.push({id,user_id:user||null,started_at:new Date(time).toISOString(),
+         ended_at:isStopped&&endMs>time?new Date(endMs).toISOString():null,
+         distance_km:0,events:[],memo:null,points:[],native_orphan:true});
+       seen.add(id);
+     }
+   }catch(error){
+     // Existing app records remain exportable even if native state is busy.
+     console.warn('[RiderSpot GPS backup] Native state unavailable:',error?.message||error);
+   }
+ }
+ return local.sort((a,b)=>String(a.started_at).localeCompare(String(b.started_at)));
 }
 async function entry(record){
  let points=null,source='';
