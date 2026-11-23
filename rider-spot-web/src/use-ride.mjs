@@ -67,7 +67,14 @@ export function createUseRide({
     const sameAccount = () => account.current === uid;
 
     function saveActive(record) {
-      write(activeKey(uid), record);
+      // Android SQLite owns the complete active GPS track. Do not duplicate
+      // thousands of location points into quota-limited WebView localStorage.
+      // Keep full points in React memory for maps; on reload native polling
+      // rehydrates the track. Non-native sessions retain their original data.
+      const persisted = record && isNative()
+        ? { ...record, points: [] }
+        : record;
+      write(activeKey(uid), persisted);
       active.current = record;
       lastEvents.current = record?.events;
       setTrip(record);
