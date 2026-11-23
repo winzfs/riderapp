@@ -15,7 +15,7 @@
     const node=doc.createElement('style');
     node.id=ID+'-css';
     node.textContent=[
-      '#'+ID+'{margin:8px 0 15px;padding:11px 13px;border-radius:12px;background:#F4F7FA;border:1px solid #E6ECF1;display:flex;flex-direction:column;gap:4px;color:#61748B;font:600 12px/1.5 inherit}',
+      '#'+ID+'{margin:8px 0 15px;padding:11px 13px;border-radius:12px;background:#F4F7FA;border:1px solid #E6ECF1;display:flex;flex-direction:column;gap:4px;color:#61748B;font-family:inherit;font-weight:600;font-size:12px;line-height:1.5}',
       '#'+ID+' strong{color:#314E72;font-weight:800;font-size:12px;letter-spacing:-.03em}',
       '#'+ID+' .rsfit-note{font-size:11px;color:#83919F;font-weight:500}',
       '@media(max-width:360px){#'+ID+'{padding:9px 10px;font-size:11px}}'
