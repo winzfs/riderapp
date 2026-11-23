@@ -1,0 +1,69 @@
+name: RiderSpot v1.0.20 original-package official APK
+on:
+  push:
+    branches: [fix/riderspot-account-backup-v60]
+    paths:
+      - '.github/workflows/riderspot-v60-original-package-release.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtain verified regular package (not the separate test app)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run view 45257848896 -R "${GITHUB_REPOSITORY}" --json conclusion --jq '.conclusion' | grep -Fx success
+          mkdir -p /tmp/riderspot-original
+          gh run download 45257848896 -R "${GITHUB_REPOSITORY}" --name RiderSpot-v60-account-backup-android -D /tmp/riderspot-original
+          cd /tmp/riderspot-original
+          sha256sum -c SHA256SUMS.txt
+          test -s RiderSpot-1.0.20-AccountBackup-v60-DEBUG.apk
+          cp RiderSpot-1.0.20-AccountBackup-v60-DEBUG.apk RiderSpot-Android-v1.0.20.apk
+          sha256sum RiderSpot-Android-v1.0.20.apk > RiderSpot-Android-v1.0.20.apk.sha256
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose RiderSpot-Android-v1.0.20.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging RiderSpot-Android-v1.0.20.apk | grep "package: name='com.riderspot.android' .*versionCode='267'"
+          echo 'Verified original com.riderspot.android package, version 267'
+      - name: Compare signing identities with previous regular v1.0.19 build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/riderspot-original
+          gh release download riderspot-android-v1.0.19-lossless-gps-v59-20261124 \
+            -R "${GITHUB_REPOSITORY}" --pattern '*-DEBUG.apk' \
+            --dir /tmp/riderspot-original
+          previous=$(find /tmp/riderspot-original -maxdepth 1 -name '*1.0.19*DEBUG.apk' -print -quit)
+          test -s "$previous"
+          old_sha=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$previous" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1)
+          new_sha=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs RiderSpot-Android-v1.0.20.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1)
+          test -n "$old_sha"
+          test -n "$new_sha"
+          if [ "$old_sha" = "$new_sha" ]; then
+            echo '### v59 -> v60 APK signing: MATCH (upgrade signature-compatible)' >> "$GITHUB_STEP_SUMMARY"
+            echo 'APK v59/v60 certificate match'
+          else
+            echo '### v59 -> v60 APK signing: DIFFERENT (cannot overwrite installed v59)' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Previous debug signer differs. Never uninstall the original app just to update.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'APK signing does not match; an in-place upgrade is NOT possible.'
+          fi
+      - name: Publish regular-app package as official v1.0.20 download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=riderspot-android-v1.0.20-account-backup-v60-20261124
+          gh release view "$TAG" -R "${GITHUB_REPOSITORY}" --json tagName --jq '.tagName' | grep -Fx "$TAG"
+          gh release upload "$TAG" /tmp/riderspot-original/RiderSpot-Android-v1.0.20.apk \
+            /tmp/riderspot-original/RiderSpot-Android-v1.0.20.apk.sha256 \
+            -R "${GITHUB_REPOSITORY}" --clobber
+          gh release edit "$TAG" -R "${GITHUB_REPOSITORY}" --prerelease=false --latest
+          gh release view "$TAG" -R "${GITHUB_REPOSITORY}" --json url,isPrerelease,assets --jq '{url,isPrerelease,apkFiles:[.assets[].name]}'
