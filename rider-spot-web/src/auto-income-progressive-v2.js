@@ -39,6 +39,13 @@
 
   function paint() {
     if (!panel || !panel.isConnected) return;
+    // Native WebView from older APKs still shows the pre-v51 manual-review notice.
+    // The RPC now auto-applies valid captures and reallocates manual day topups.
+    for (const paragraph of panel.querySelectorAll('.rsai-desc')) {
+      if (paragraph.textContent?.includes('수동 입력과 중복되는 날짜의 수익은 자동 합산하지 않고 확인 대상으로 보관해요.')) {
+        paragraph.textContent = '완료 배달은 자동 반영해요. 기존에 입력한 실제 총수입과 겹치면 수동 보충액을 자동으로 조정합니다.';
+      }
+    }
     const rows = Array.from(panel.children).filter(node => node.classList.contains('rsai-item'));
     const shown = Math.min(rows.length, visibleCount);
     let last = null;
