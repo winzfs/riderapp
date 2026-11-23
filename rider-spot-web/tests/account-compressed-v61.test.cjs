@@ -8,7 +8,10 @@ const {deflateRawSync,gzipSync}=require('node:zlib');
 const {TextEncoder,TextDecoder}=require('node:util');
 
 function start(){
- const zstd=require('../vendor/fzstd-0.1.1-umd.js');
+ const mod={exports:{}};
+ vm.runInNewContext(fs.readFileSync('rider-spot-web/vendor/fzstd-0.1.1-umd.js','utf8'),
+  {module:mod,exports:mod.exports,Uint8Array,ArrayBuffer,DataView},{timeout:2000});
+ const zstd=mod.exports;
  const doc={readyState:'loading',addEventListener(){},createElement(){return {}}};
  const win={document:doc,crypto:webcrypto,CompressionStream,DecompressionStream,fzstd:zstd,
   addEventListener(){},setInterval(){},navigator:{},location:{href:'https://rider-spot.jazzhjm.workers.dev/'}};
