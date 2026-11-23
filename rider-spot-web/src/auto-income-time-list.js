@@ -27,7 +27,7 @@
     return Number.isFinite(date.getTime())?date:null;
   }
   function koreaWorkDay(utcMillis) {
-    const adjusted = new Date(utcMillis - 3*3600000);
+    const adjusted = new Date(utcMillis);
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
       timeZone:"Asia/Seoul", year:"numeric",month:"2-digit",day:"2-digit"
     }).formatToParts(adjusted).map(part=>[part.type,part.value]));
@@ -55,6 +55,19 @@
   function AutoIncomeTimes({React,client,userId}) {
     const h=React.createElement;
     const [day,setDay]=React.useState(()=>koreaWorkDay(Date.now()));
+    // Follow the calendar day after midnight without page navigation or remount.
+    React.useEffect(()=>{
+      const rollover=()=>{
+        const next=koreaWorkDay(Date.now());
+        setDay(previous=>previous<next?next:previous);
+      };
+      const timer=root.setInterval(rollover,15000);
+      const visible=()=>{if(!document.hidden)rollover();};
+      document.addEventListener("visibilitychange",visible);
+      root.addEventListener("focus",rollover);
+      return()=>{root.clearInterval(timer);document.removeEventListener("visibilitychange",visible);
+        root.removeEventListener("focus",rollover);};
+    },[]);
     const [visibleCount,setVisibleCount]=React.useState(12);
     const [result,setResult]=React.useState({
       forUser:null,forDay:null,rows:[],loading:true,error:"",capped:false
@@ -146,7 +159,7 @@
         h("div",null,
           h("h2",{style:{fontSize:16,fontWeight:770,letterSpacing:"-.045em",margin:0}},
             "일별 배달 수익"),
-          h("small",{style:fine},"수익 인식 시간별 · 새벽 3시 업무일 기준")),
+          h("small",{style:fine},"수익 인식 시간별 · 자정(00:00) 날짜 기준")),
         h("button",{type:"button",style:btnBase,onClick:()=>{useDay(today);refresh(x=>x+1);}},
           "오늘 보기")),
       h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10}},
