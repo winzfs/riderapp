@@ -483,7 +483,8 @@ export function createUseRide({
           if (uid === "guest") {
             throw Error("저장공간이 가득 찼어요. GPS 원본은 기기에 보관 중입니다. 로그인 후 다시 종료해 주세요.");
           }
-          const { id, started_at, ended_at, distance_km, points, events, memo } = finished;
+          const { id, started_at, ended_at, distance_km, points, events, memo } =
+            bridge ? toNativeGpsSummary(finished) : finished;
           try {
             await request(client.from("trips").upsert(
               { id, user_id: uid, started_at, ended_at, distance_km, points, events, memo },
