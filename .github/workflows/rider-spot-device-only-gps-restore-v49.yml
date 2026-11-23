@@ -1,0 +1,116 @@
+name: RiderSpot Device-only GPS Backup Restore v1.0.17 APK
+on:
+  push:
+    branches: [feature/riderspot-gps-device-only-backup-restore-v49-20261123]
+    paths:
+      - 'rider-spot-android/gps-local-backup/**'
+      - 'rider-spot-web/tests/gps-local-backup-v48.test.mjs'
+      - '.github/workflows/rider-spot-device-only-gps-restore-v49.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rider-spot-device-only-gps-v49
+  cancel-in-progress: false
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Integrate income, incremental GPS checkpoint and local backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rider-gps-local
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rider-gps-local
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/rider-gps-local/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/rider-gps-local
+          fi
+          python3 rider-spot-android/income-integration/patch-native-income.py /tmp/rider-gps-local
+          python3 rider-spot-android/checkpoint-integration/patch-checkpoints.py /tmp/rider-gps-local
+          python3 rider-spot-android/gps-local-backup/patch-local-gps-backup.py /tmp/rider-gps-local
+          python3 rider-spot-android/gps-local-backup/patch-device-only-gps-v49.py /tmp/rider-gps-local
+          node --check /tmp/rider-gps-local/app/src/main/assets/native-bridge.js
+          grep -F 'case "gps-backup-save":' /tmp/rider-gps-local/app/src/main/java/com/riderspot/android/MainActivity.java
+          grep -F '__rsNativeSaveGpsBackup' /tmp/rider-gps-local/app/src/main/assets/native-bridge.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: GPS source and Android bridge regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
+          node --test rider-spot-web/tests/trip-checkpoint-web-v47.test.mjs
+          node --test rider-spot-web/tests/gps-local-backup-v48.test.mjs
+          cd /tmp/rider-gps-local
+          node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build original package
+        working-directory: /tmp/rider-gps-local
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify and stage original debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/gps-local-out
+          APK=/tmp/rider-gps-local/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android' .*versionCode='264'"
+          cp "$APK" /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-1.0.17-DEBUG.apk
+          sha256sum /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-1.0.17-DEBUG.apk > /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-1.0.17-DEBUG.apk.sha256
+      - name: Side-by-side GPS backup test variant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/rider-gps-local/app')
+          gradle=p/'build.gradle'
+          s=gradle.read_text()
+          assert s.count('defaultConfig {')==1
+          gradle.write_text(s.replace('defaultConfig {','defaultConfig {\n        applicationIdSuffix ".devicegpsbackup"',1))
+          manifest=p/'src/main/AndroidManifest.xml'
+          m=manifest.read_text()
+          import re
+          m,n=re.subn(r'android:label="[^"]+"','android:label="라이더스팟 GPS 백업 복원 테스트"',m,count=1)
+          assert n==1
+          m=m.replace('android:scheme="riderspot-oauth"','android:scheme="riderspot-devicegpsbackup-oauth"')
+          manifest.write_text(m)
+          java=p/'src/main/java/com/riderspot/android/MainActivity.java'
+          j=java.read_text()
+          assert 'private static final String OAUTH_SCHEME = "riderspot-oauth";' in j
+          java.write_text(j.replace('private static final String OAUTH_SCHEME = "riderspot-oauth";',
+              'private static final String OAUTH_SCHEME = "riderspot-devicegpsbackup-oauth";'))
+          PY
+          cd /tmp/rider-gps-local
+          gradle --no-daemon --stacktrace :app:assembleDebug
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android.devicegpsbackup' "
+          cp "$APK" /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-TEST.apk
+          sha256sum /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-TEST.apk > /tmp/gps-local-out/RiderSpot-GPS-DeviceOnly-BackupRestore-TEST.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-GPS-DeviceOnly-v1.0.17-APKs
+          path: /tmp/gps-local-out/*
+          if-no-files-found: error
+          retention-days: 30
