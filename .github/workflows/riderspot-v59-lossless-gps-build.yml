@@ -1,0 +1,86 @@
+name: RiderSpot v59 lossless GPS Android APK and regression
+on:
+  push:
+    branches: [feature/riderspot-lossless-gps-v59]
+    paths:
+      - 'rider-spot-android/gps-compression/**'
+      - 'rider-spot-web/src/native-trip.mjs'
+      - 'rider-spot-web/src/timeline-gps-read.mjs'
+      - 'rider-spot-web/tests/**'
+      - '.github/workflows/riderspot-v59-lossless-gps-build.yml'
+permissions:
+  contents: read
+concurrency:
+  group: riderspot-v59-native-qa
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply compatible native GPS v48 -> v49 -> v50 -> v59 source migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v59
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/rs-v59
+          if ! grep -Fq 'window.__rsNativeSaveImage' /tmp/rs-v59/app/src/main/assets/native-bridge.js; then
+            python3 rider-spot-android/patch-recap-native-save.py /tmp/rs-v59
+          fi
+          python3 rider-spot-android/income-integration/patch-native-income.py /tmp/rs-v59
+          python3 rider-spot-android/checkpoint-integration/patch-checkpoints.py /tmp/rs-v59
+          python3 rider-spot-android/gps-local-backup/patch-local-gps-backup.py /tmp/rs-v59
+          python3 rider-spot-android/gps-local-backup/patch-device-only-gps-v49.py /tmp/rs-v59
+          python3 rider-spot-android/gps-local-backup/patch-device-autobackup-v50.py /tmp/rs-v59
+          python3 rider-spot-android/gps-compression/patch_lossless_gps_v59.py /tmp/rs-v59
+          mkdir -p /tmp/rs-v59/app/src/test/java/com/riderspot/android
+          cp rider-spot-android/gps-compression/RiderSpotGpsCodecV59Test.java /tmp/rs-v59/app/src/test/java/com/riderspot/android/
+          node --check /tmp/rs-v59/app/src/main/assets/native-bridge.js
+          grep -Fq 'gps_blocks_v59' /tmp/rs-v59/app/src/main/java/com/riderspot/android/TrackStore.java
+          grep -Fq 'gps-events-save' /tmp/rs-v59/app/src/main/java/com/riderspot/android/MainActivity.java
+          ! grep -Fq '>= 14_500' /tmp/rs-v59/app/src/main/java/com/riderspot/android/TrackStore.java
+          grep -Fq "versionCode 266" /tmp/rs-v59/app/build.gradle
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Web and GPS bridge regression without UI layout changes
+        run: |
+          set -euo pipefail
+          node --test rider-spot-web/tests/timeline-gps-read.test.mjs rider-spot-web/tests/route-playback.test.mjs rider-spot-web/tests/stop-events.test.mjs rider-spot-web/tests/gps-local-backup-v48.test.mjs
+          node --test rider-spot-android/checkpoint-integration/tests/*.test.cjs
+          cd /tmp/rs-v59
+          node --test tests/*.test.cjs
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)
+          test -x "$SDKMANAGER"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Run native exact-bit roundtrip tests and build original app
+        working-directory: /tmp/rs-v59
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify native APK and stage isolated installation test package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rs-v59-artifacts
+          APK=/tmp/rs-v59/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.riderspot.android' .*versionCode='266'"
+          cp "$APK" /tmp/rs-v59-artifacts/RiderSpot-1.0.19-LosslessGPS-v59-DEBUG.apk
+          sha256sum /tmp/rs-v59-artifacts/*.apk > /tmp/rs-v59-artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiderSpot-v59-lossless-android-debug-review
+          path: /tmp/rs-v59-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
