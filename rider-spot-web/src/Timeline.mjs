@@ -271,6 +271,12 @@ export function createTimeline(S, Zo, Income, client) {
     // GPS samples are not part of the calendar model. Only day-overlapping
     // trips are requested from SQLite; quick date changes cancel stale results.
     const gpsCache = S.useRef(new Map());
+    const [gpsReaderVersion, setGpsReaderVersion] = S.useState(0);
+    S.useEffect(() => {
+      const readerReady = () => setGpsReaderVersion(value => value + 1);
+      window.addEventListener("riderspot:native-gps-reader-ready", readerReady);
+      return () => window.removeEventListener("riderspot:native-gps-reader-ready", readerReady);
+    }, []);
     const [dayGps, setDayGps] = S.useState({ day: null, source: null, owner: null, records: [], report: null });
     const [detailGps, setDetailGps] = S.useState({ source: null, owner: null, record: null });
     const summaryRows = S.useMemo(() =>
@@ -293,7 +299,7 @@ export function createTimeline(S, Zo, Income, client) {
         if (active) console.warn("[RiderSpot] timeline GPS day read", error?.message);
       });
       return () => { active = false; };
-    }, [ride.history, day, user?.id]);
+    }, [ride.history, day, user?.id, gpsReaderVersion]);
     const dayReady = dayGps.day === day && dayGps.source === ride.history && dayGps.owner === (user?.id || "guest");
     const dayRows = dayReady ? dayGps.records : summaryRows;
     const daily = S.useMemo(() => buildDailyTimeline([
