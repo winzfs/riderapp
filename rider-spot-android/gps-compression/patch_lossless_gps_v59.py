@@ -340,7 +340,7 @@ g=g.replace("versionName '1.0.18-device-only-auto5m'",
     "versionName '1.0.19-lossless-gps-v59'",1)
 anchor="implementation 'com.google.android.gms:play-services-location:21.4.0'"
 assert g.count(anchor)==1
-g=g.replace(anchor,anchor+"\n    implementation 'com.github.luben:zstd-jni:1.5.7-28'",1)
+g=g.replace(anchor,anchor+"\n    implementation 'com.github.luben:zstd-jni:1.5.7-28@aar'\n    testImplementation 'com.github.luben:zstd-jni:1.5.7-28'",1)
 gradle.write_text(g)
 assert 'gps_blocks_v59' in s and 'gpsArchiveV59' in s
 assert 'getPoints(String id,long sinceSeq,int limit)' in s
