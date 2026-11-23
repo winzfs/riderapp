@@ -66,7 +66,7 @@ test("SQLite merge keeps all 15,000 samples, explicit gaps and events", async ()
   assert.equal(finished.ended_at, stop);
   assert.equal(finished.points.length, 15000);
   assert.equal(finished.points[480].break, true);
-  assert.ok(!Object.hasOwn(finished.points[0], "seq"));
+  // v59 keeps the original native sample sequence for lossless playback.\n  assert.equal(finished.points[0].seq, 1);
   assert.equal(finished.events.filter((e) => e.type === "운행 종료").length, 1);
   assert.equal(finished.events.length, sample.events.length + 1);
   assert.equal(record.points.length, 1);
