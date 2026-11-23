@@ -35,7 +35,8 @@ async function available(){
        const endMs=Number(status?.lastStoppedAt)||0;
        local.push({id,user_id:user||null,started_at:new Date(time).toISOString(),
          ended_at:isStopped&&endMs>time?new Date(endMs).toISOString():null,
-         distance_km:0,events:[],memo:null,points:[],native_orphan:true});
+         distance_km:0,events:[],memo:null,points:[],native_orphan:true,
+         native_state:isStopped?'stopped':'active'});
        seen.add(id);
      }
    }catch(error){
@@ -60,7 +61,8 @@ async function entry(record){
  // Coordinates remain exactly as supplied; no rounding, sampling or map matching.
  const value={trip_id:record.id,started_at:record.started_at,
    ended_at:record.ended_at||null,distance_km:Number(record.distance_km)||0,
-   partial:!record.ended_at,source,points:points.map(p=>({...p})),
+   partial:!record.ended_at&&record.native_state!=='stopped',
+   native_state:record.native_state||null,source,points:points.map(p=>({...p})),
    events:Array.isArray(record.events)?record.events:[],memo:record.memo||null};
  if(byteLength(JSON.stringify(value))>LIMIT)
    throw Error('너무 큰 운행 기록이 있어요. 좌표를 삭제하지 않고 백업을 중단했습니다.');
