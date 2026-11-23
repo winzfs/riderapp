@@ -278,6 +278,16 @@ function camera(page) {
     return [p.lat, p.lng, map.getZoom()];
   });
 }
+function resizeCamera(expected, actual) {
+  const zoom=expected[2], m=256*Math.pow(2,zoom)/(2*Math.PI);
+  const projection=lat=>Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
+  const pixels=Math.hypot(
+    (actual[1]-expected[1])*Math.PI/180*m,
+    (projection(actual[0])-projection(expected[0]))*m
+  );
+  assert.ok(pixels<=1.5 && Math.abs(zoom-actual[2])<0.04,
+    "unexpected map camera movement after resize: "+pixels.toFixed(2)+"px");
+}
 function sameCamera(expected, actual) {
   assert.ok(
     Math.abs(expected[0] - actual[0]) < 0.002 &&
@@ -434,13 +444,13 @@ async function mapTest() {
     sameCamera(chosen, await camera(page));
     await page.setViewportSize({ width: 447, height: 780 });
     await page.waitForTimeout(300);
-    sameCamera(chosen, await camera(page));
+    resizeCamera(chosen, await camera(page));
     for (let i = 0; i < 5; i++) {
       await tab(page, "타임라인").click();
       await page.getByRole("heading", { name: "타임라인" }).waitFor();
       await tab(page, baseline ? "지도" : "운행").click();
       await page.getByLabel(mapLabel, { exact: true }).waitFor();
-      sameCamera(chosen, await camera(page));
+      resizeCamera(chosen, await camera(page));
     }
     assert.equal(navs(), 1);
     await page.reload();
