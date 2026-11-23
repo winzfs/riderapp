@@ -1,0 +1,80 @@
+name: RiderSpot v59 Cloudflare preview acceptance
+on:
+  push:
+    branches: [feature/riderspot-lossless-gps-v59]
+    paths: ['.github/workflows/riderspot-v59-preview-qa.yml']
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    defaults:
+      run:
+        working-directory: rider-spot-web
+    env:
+      RIDER_TEST_URL: https://gps-v59-preview-rider-spot.jazzhjm.workers.dev
+      RIDER_CHROMIUM: /usr/bin/google-chrome
+      RIDER_DEBUG: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci
+      - name: Assert full preview route, old APK, and immutable production asset compatibility
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base=process.env.RIDER_TEST_URL;
+          const fetchPath=async(path,opt={})=>{
+            const res=await fetch(base+path,{...opt,signal:AbortSignal.timeout(30000)});
+            const body=await res.text();
+            return {res,body};
+          };
+          const home=await fetchPath('/');
+          assert.equal(home.res.status,200);
+          assert.equal(home.res.headers.get('x-rs-gps-read'),'v59');
+          assert.match(home.body,/\/assets\/rider-spot-b227b31db568\/app\.mjs/);
+          assert.match(home.body,/\/rider-spot-native-day-v58\.js/);
+          assert.match(home.body,/rider-spot-midnight-rollover-v57/);
+          assert.doesNotMatch(home.body,/gpsv59test/);
+          for(const [path,needle] of [
+            ['/assets/rider-spot-b227b31db568/app.mjs','gpsArchiveV59'],
+            ['/assets/rider-spot-b227b31db568/route-worker.mjs',''],
+            ['/assets/rider-spot-b227b31db568/native-gps.js','__rsGPS42NativeRead'],
+            ['/assets/rider-spot-b227b31db568/design-system.css',''],
+            ['/assets/rider-spot-33203ffb677c/app.mjs','gps_day_ranges'],
+            ['/rider-spot-native-day-v58.js','allPointsForDay'],
+            ['/rider-spot-native-gps-safe-v46.js','__rsGPS42NativeRead'],
+            ['/sw.js','b227b31db568']
+          ]){
+            const {res,body}=await fetchPath(path);
+            assert.equal(res.status,200,path+' status');
+            assert.ok(body.length>100,path+' body');
+            if(needle)assert.ok(body.includes(needle),path+' missing '+needle);
+            console.log('PASS',path,body.length);
+          }
+          const oauth=await fetchPath('/',{headers:{cookie:'rs_android_oauth='+'a'.repeat(32)}});
+          assert.equal(oauth.res.status,200);
+          assert.match(oauth.body,/riderspot-oauth:\/\/signin\/callback/);
+          const invalidWeather=await fetchPath('/api/weather?lat=0&lon=0');
+          assert.equal(invalidWeather.res.status,400);
+          const oldHead=await fetch(base+'/',{method:'HEAD'});
+          assert.equal(oldHead.status,200);
+          console.log('PASS v59 preview / OAuth / v57 & v58 routes / fallback / SW / API');
+          NODE
+      - name: Validate current map interactions and unchanged design
+        env: {RIDER_TEST_CASE: map}
+        run: |
+          test -x /usr/bin/google-chrome
+          node tests/browser.cjs
+      - name: Validate old/new timeline paths and playback
+        env: {RIDER_TEST_CASE: timeline}
+        run: node tests/browser.cjs
+      - name: Verify old Android SQLite bridge still operates in v59
+        env:
+          RIDER_TEST_CASE: native
+          RIDER_APK_BRIDGE: /tmp/rider-native-bridge.js
+        run: |
+          tar -xOf ../rider-spot-android/source.tar.xz ./app/src/main/assets/native-bridge.js > "$RIDER_APK_BRIDGE"
+          node tests/browser.cjs

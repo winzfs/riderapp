@@ -1,0 +1,48 @@
+name: RiderSpot v59 Android operational APK release
+on:
+  push:
+    branches: [feature/riderspot-lossless-gps-v59]
+    paths: ['.github/workflows/riderspot-v59-publish-apk.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download independently verified v59 native build (original + isolated test)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run view 45250484557 --repo "${GITHUB_REPOSITORY}" --json conclusion --jq '.conclusion' | grep -Fx success
+          mkdir -p /tmp/rs-v59-release
+          gh run download 45250484557 --repo "${GITHUB_REPOSITORY}" \
+            --name RiderSpot-v59-lossless-android-debug-review \
+            --dir /tmp/rs-v59-release
+          cd /tmp/rs-v59-release
+          test -s RiderSpot-1.0.19-LosslessGPS-v59-DEBUG.apk
+          test -s RiderSpot-1.0.19-LosslessGPS-v59-SideBySide-TEST.apk
+          sha256sum --check SHA256SUMS.txt
+      - name: Publish versioned Android operating APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=riderspot-android-v1.0.19-lossless-gps-v59-20261124
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Existing release verified: ${TAG}"
+            exit 0
+          fi
+          gh release create "${TAG}" /tmp/rs-v59-release/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target 52b726e65ad971dfdee139c3fb5a5c88daad5662 \
+            --title "RiderSpot Android v1.0.19 · GPS 무손실 압축 v59" \
+            --notes "운영 Android 빌드 v1.0.19 / versionCode 266. 기기 내부 SQLite의 GPS 원본을 검증 후 블록 단위 Zstd 무손실 압축하며 GPS 시간, 좌표 비트, 이벤트를 보존합니다. 기존 GPS 14,500개 제한 제거, v58 웹과 날짜별 조회 호환, 디자인 변경 없음.\n\nDEBUG.apk는 기존 패키지 com.riderspot.android용입니다. 다만 이전 설치본과 서명키가 다르면 Android 덮어쓰기가 거부됩니다. 이때는 기존 앱을 제거하기 전에 반드시 GPS 백업·복원 가능 여부를 확인하세요. 앱 삭제는 휴대폰에 저장된 GPS 원본을 삭제할 수 있습니다. SideBySide-TEST.apk는 다른 패키지이며 기존 앱 데이터를 자동으로 공유하지 않습니다.\n\n기존 운행기록/백업의 실기기 마이그레이션·저장공간 회수율은 아직 미측정입니다. 이 릴리스는 베타 운영용입니다." \
+            --latest
+          gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json url,assets \
+            --jq '{url,assets:[.assets[].name]}'

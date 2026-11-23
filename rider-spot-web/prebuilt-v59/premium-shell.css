@@ -1,0 +1,623 @@
+
+/*
+ * Rider Spot — Calm Mobility UI / v218 candidate.
+ * Presentation-only: no map DOM manipulation, GPS listeners or routing hooks.
+ * Loaded LAST after historical, timeline and weather styles to eliminate
+ * competing per-version surface/button rules without changing app behavior.
+ */
+:root {
+  --rs-primary:#087F7D;
+  --rs-primary-hover:#066E6C;
+  --rs-teal:#25C8BA;
+  --rs-soft:#E7F6F3;
+  --rs-teal-soft:#E7F6F3;
+  --rs-bg:#F4FAF9;
+  --rs-text:#173D3C;
+  --rs-muted:#637E7C;
+  --rs-line:#DFEBE9;
+  --rs-orange:#FF8B43;
+  --rs-orange-ink:#452B19;
+  --rs-shadow:0 3px 12px rgba(18,68,62,.045);
+  --rs-space:18px;
+  --signal-teal-dark:var(--rs-primary);
+  --signal-teal:#25C8BA;
+  --signal-mist:var(--rs-bg);
+  --signal-ink:var(--rs-text);
+  --signal-orange:var(--rs-orange);
+}
+.app,.app .workspace>main {background:var(--rs-bg);color:var(--rs-text)}
+.app>header {
+  background:#FFF;border-bottom:1px solid #E8F0EE;box-shadow:none;
+  padding-inline:var(--rs-space);
+}
+.app .brand {font-size:19px;font-weight:780;letter-spacing:-.06em}
+.app .header-user {color:var(--rs-primary);min-width:48px;min-height:48px}
+.app .page,.app .trip-page {padding-inline:var(--rs-space)}
+.app .page :is(h1,h2,h3),.app .trip-page :is(h1,h2,h3) {
+  color:var(--rs-text);letter-spacing:-.043em;
+}
+.app .page h1,.app .trip-page h1 {font-size:24px;line-height:1.32;font-weight:760}
+.app .page h2,.app .trip-page h2 {font-weight:740}
+.app :is(input:not([type=checkbox]):not([type=range]),select,textarea) {
+  border-color:#DCE9E7;border-radius:12px;background:#FFF;
+  color:var(--rs-text);box-shadow:none;
+}
+.app :is(input:not([type=checkbox]):not([type=range]),select,textarea):focus {
+  outline:2px solid rgba(8,127,125,.22);outline-offset:0;border-color:#0F8D88;
+}
+.app button {touch-action:manipulation}
+.app :is(.primary,.rs-primary)[type=button],
+.app :is(.primary,.rs-primary)[type=submit]{
+  border-radius:13px;background:var(--rs-primary);color:#FFF;
+  font-weight:720;box-shadow:none;
+}
+.app :is(.primary,.rs-primary):active {background:var(--rs-primary-hover)}
+.app .bottom-nav{
+  background:#FFF;border-top:1px solid #E5EEEC;
+  box-shadow:0 -3px 16px rgba(18,65,59,.028);
+}
+.app .bottom-nav button{
+  min-height:54px;gap:5px;border-radius:12px;color:#718887;
+  font-size:11px;font-weight:590;
+}
+.app .bottom-nav button svg{width:23px;height:23px;margin:0}
+.app .bottom-nav button.active{color:var(--rs-primary);font-weight:760}
+.app .bottom-nav button.active::before{
+  width:19px;height:3px;left:calc(50% - 9.5px);
+  background:var(--rs-orange);border-radius:0 0 6px 6px;
+}
+.app .bottom-nav button.active svg{
+  color:var(--rs-primary);background:var(--rs-soft);
+  border-radius:8px;box-shadow:0 0 0 7px var(--rs-soft);
+}
+.app button:focus-visible,.app a:focus-visible{
+  outline:2px solid var(--rs-primary);outline-offset:2px;
+}
+/* MAP: prioritize the map canvas and use one quiet control vocabulary. */
+.app .nearby.nearby-full .rs33-map-bar{
+  padding:10px var(--rs-space) 10px;gap:7px;background:#FFF;
+  box-shadow:none;border-bottom:1px solid #E8F0EE;
+}
+.app .nearby .rs33-map-bar-top{gap:10px}
+.app .nearby .rs33-region-toggle{
+  min-height:38px;font-size:17px;font-weight:760;
+}
+.app .nearby .rs33-map-share{
+  min-height:36px;padding:6px 10px;border-radius:12px;
+  background:#F0F7F5;color:#607D79;font-size:11px;
+}
+.app .nearby .rs33-map-filters{gap:7px;margin:0;padding:0 0 2px}
+.app .nearby .rs33-map-filters button{
+  min-height:38px;border-radius:11px;padding:8px 12px;
+  background:#F1F7F6;color:#526F6C;font-size:12px;font-weight:660;
+}
+.app .nearby .rs33-map-filters button[aria-pressed=true]{
+  background:#DDF5F0;color:#096F6B;
+}
+.app .nearby .rs-weather-hud{
+  min-height:36px;height:36px;border-radius:11px;
+  background:#F8FBFA;border:1px solid #E2ECE9;box-shadow:none;
+  padding:0 12px;color:var(--rs-text);
+}
+.app .nearby .rs-weather-temp{color:var(--rs-primary)}
+.app .nearby .map-wrap .rs-gps-state{
+  min-height:37px;padding:7px 11px;top:11px;left:12px;
+  border:1px solid #E3ECEA;border-radius:13px;
+  box-shadow:0 3px 12px rgba(17,61,58,.08);
+  background:rgba(255,255,255,.96);
+}
+.app .nearby .map-wrap #rs-presence-btn{
+  top:58px;left:12px;min-height:38px;border-radius:13px;
+  border:1px solid #E4ECE9;box-shadow:0 3px 12px rgba(17,61,58,.07);
+}
+.app .nearby .map-wrap .locate{
+  width:46px;height:46px;border-radius:14px;
+  box-shadow:0 3px 12px rgba(17,61,58,.09);
+}
+.app .nearby .leaflet-control-zoom.leaflet-bar{
+  border-color:#E3ECEA;border-radius:14px;
+  box-shadow:0 3px 12px rgba(17,61,58,.09);
+}
+.app .nearby .leaflet-control-zoom a{
+  height:44px;width:44px;line-height:44px;
+}
+.app .nearby #rs-report-legend{
+  border-radius:14px;min-height:48px;
+  border-color:#E3ECEA;box-shadow:0 2px 10px rgba(17,61,58,.065);
+}
+.app .nearby #rs-report-legend button{
+  background:var(--rs-soft);color:var(--rs-primary);border-radius:10px;
+}
+.app .nearby #rs-sos-fab{
+  border-radius:14px!important;
+  box-shadow:0 3px 14px rgba(17,61,58,.075);
+}
+.app .ride-launch button{border-radius:15px;box-shadow:none}
+.app .nearby .leaflet-control-attribution{
+  font-size:9px;line-height:1.25;color:#617974;
+  background:rgba(255,255,255,.89);box-shadow:none;
+}
+/* TIMELINE: calm date picker, one visual hierarchy for empty/live/history. */
+.app .rs33-timeline,.app .trip-page{background:transparent}
+.app .rs33-title{margin-bottom:17px}
+.app .rs33-title>.primary{
+  min-height:46px;padding:9px 16px;font-size:13px;border-radius:13px;
+}
+.app .rs33-week-head{
+  border-radius:17px 17px 0 0;border:1px solid var(--rs-line);
+  border-bottom:0;background:#FFF;
+  padding:13px 13px 4px;margin:0;gap:7px;
+}
+.app .rs33-week-head strong{font-size:16px;font-weight:740;letter-spacing:-.035em}
+.app .rs33-week-head button{border-radius:10px}
+.app .rs33-week-head .rs61-today{
+  background:var(--rs-soft);color:var(--rs-primary);border-radius:10px;
+}
+.app .rs33-week{
+  background:#FFF;border:1px solid var(--rs-line);
+  border-top:0;border-radius:0 0 17px 17px;
+  padding:4px 8px 12px;margin-bottom:18px;
+}
+.app .rs33-week button{border-radius:12px}
+.app .rs33-week button[aria-pressed=true]{
+  background:var(--rs-primary);color:#FFF;
+  box-shadow:none;border-radius:13px;
+}
+.app .rs33-list-title{margin:22px 0 11px}
+.app .rs33-list-title h2{font-size:17px}
+.app .rs33-list-title button{
+  border-radius:11px;background:#FFF;border:1px solid var(--rs-line);
+}
+.app .rs33-course-shell{
+  border-radius:17px;border-color:var(--rs-line);
+  background:#FFF;box-shadow:none;
+}
+.app .rs59-course-tools{gap:6px}
+.app .rs59-course-tools button,
+.app .rs33-course-controls button{
+  min-height:42px;border-radius:10px;padding-inline:10px;
+  background:#F1F7F6;color:#5C7674;
+}
+.app .rs59-course-tools button[aria-pressed=true],
+.app .rs33-course-controls button[aria-pressed=true]{
+  background:#DCF4EF;color:#087771;
+}
+.app .rs33-trip-summary{
+  background:#FFF;border:1px solid var(--rs-line);
+  border-radius:17px;padding:15px 16px;box-shadow:none;
+}
+.app .rs33-trip-summary>strong,.app .rs-timeline-summary-distance strong{
+  color:var(--rs-primary);font-variant-numeric:tabular-nums;
+}
+.app .rs-timeline-detail-heading{margin-bottom:14px}
+.app .rs33-state-live{background:#DDF4EF;color:#08766F}
+.app .rs-ride-control-bar{gap:10px}
+.app .rs-ride-control-bar button{
+  min-height:54px;border-radius:14px;font-weight:750;
+}
+.app .rs-ride-control-bar .rs-ride-finish{
+  background:var(--rs-primary)!important;color:#FFF!important;
+}
+.app .rs44-events{
+  margin-top:15px;border-color:var(--rs-line);border-radius:14px;
+}
+.app .rs44-event-toggle{
+  min-height:48px;border-radius:12px;color:var(--rs-text);
+}
+.app .rs-game-recap{
+  background:#FFF;border:1px solid var(--rs-line);
+  border-radius:17px;box-shadow:none;
+}
+.app .rs-game-recap .rs-game-recap-stats>div{
+  background:#F9FBFA;border:1px solid #E6EEEC;
+  border-radius:12px;
+}
+.app .rs-game-recap .rs-game-recap-stats strong{color:var(--rs-primary)}
+.app .rs-game-recap .rs-game-xp-earned{
+  background:#FFF1E5;color:#9F551D;border-radius:999px;
+}
+/* COMMUNITY: shorter real feed cards, strong title and readable metadata. */
+.app .rc-community .rc-head{margin-bottom:15px}
+.app .rc-community .rc-head h1{font-size:24px}
+.app .rc-community .rc-head .rc-write{
+  min-height:46px;padding:9px 16px;
+  background:var(--rs-primary)!important;color:#FFF!important;
+  border:0;border-radius:13px;font-weight:750;box-shadow:none;
+}
+.app .rc-community .rc-search{
+  min-height:49px;border:1px solid #E1ECE9;
+  background:#F3F9F8;border-radius:13px;
+}
+.app .rc-community .rc-categories button{
+  min-height:40px;border-radius:11px;padding:7px 12px;
+  background:#EEF6F5;color:#5C7875;font-weight:640;
+}
+.app .rc-community .rc-categories button[aria-pressed=true]{
+  background:var(--rs-primary);color:#FFF;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-wrap{
+  margin-bottom:12px;border-color:#E3ECEA;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-category-next{
+  height:40px;min-height:40px;border-radius:11px;
+  border-color:#DEEAE7;color:var(--rs-primary);
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  padding:15px 16px 12px;margin:0;
+  border:1px solid #E2ECEA;border-radius:16px;
+  background:#FFF;box-shadow:0 2px 9px rgba(14,69,60,.045);
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-main{gap:7px}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid{gap:13px}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid h2{
+  font-size:16px;line-height:1.38;font-weight:750;margin:2px 0 4px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid p{
+  font-size:13px;line-height:1.5;color:#607D7A;
+  -webkit-line-clamp:2;margin:0;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid img{
+  width:78px;height:78px;flex-basis:78px;border-radius:11px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-bottom{margin-top:10px}
+.app .rc-community.rc-home.rc-community-v32 .rc-row-meta{
+  font-size:11px;line-height:1.5;color:#728A86;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-row-like button{
+  color:#698380;min-width:44px;min-height:44px;
+}
+/* FINANCE: same app surfaces and action semantics as the other four tabs. */
+.app .finance-page .fin-page-head h1{font-size:24px;color:var(--rs-text)}
+.app .finance-page .fin-subnav{
+  background:#EBF4F2;border:1px solid #E0EBE8;
+  border-radius:14px;padding:4px;box-shadow:none;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn{
+  border-radius:11px;font-size:12px;font-weight:670;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected{
+  background:#FFF;color:var(--rs-primary);
+  box-shadow:0 1px 5px rgba(13,72,65,.07);
+}
+.app .finance-page .fin-card{
+  border-radius:16px;background:#FFF;
+  border-color:var(--rs-line);box-shadow:none;
+}
+.app .finance-page .fin-card>header h2{font-size:16px;font-weight:740}
+.app .finance-page .fin-hero{
+  border-radius:18px;
+  background:linear-gradient(125deg,#087776 0%,#0D8985 100%);
+  box-shadow:0 5px 16px rgba(7,113,107,.10);
+}
+.app .finance-page .fin-quick>button{
+  min-height:49px;border-radius:13px;
+  font-weight:700;box-shadow:none;
+}
+.app .finance-page .fin-primary{
+  background:var(--rs-primary);color:#FFF;border:0;font-weight:730;
+}
+.app .finance-page .fin-primary:active{background:var(--rs-primary-hover)}
+.app .finance-page .fin-secondary{
+  background:#FFF;color:var(--rs-text);
+  border:1px solid var(--rs-line);
+}
+.app .finance-page .fin-period-btn.selected{
+  background:var(--rs-soft);color:var(--rs-primary);border-color:#A5DCD4;
+}
+.app .finance-page .fin-filter.current{
+  background:var(--rs-primary);color:#FFF;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-track{
+  outline-color:var(--rs-primary);background:var(--rs-soft);
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-date{color:var(--rs-primary)}
+.app .finance-page .fin-record-end>strong.gain{
+  color:#176F68;
+}
+.app .fin-dialog .fin-sheet{
+  background:#FFF;border-radius:24px 24px 0 0;
+  box-shadow:0 -8px 40px rgba(16,51,46,.14);
+}
+.app .fin-dialog .fin-sheet-head{
+  padding:15px 18px 13px;border-color:#E6EEEB;
+}
+.app .fin-dialog .fin-sheet-head h2{font-size:21px;font-weight:770}
+.app .fin-dialog .fin-sheet-head small{
+  font-size:11px;color:var(--rs-primary);letter-spacing:0;
+}
+.app .fin-dialog .fin-close{
+  width:44px;height:44px;min-width:44px;min-height:44px;
+  border-radius:13px;background:#F1F7F5;
+}
+.app .fin-dialog .fin-sheet-body{padding:16px 18px 18px;gap:12px}
+.app .fin-dialog .fin-field>span{font-size:12px;color:#597673;font-weight:700}
+.app .fin-dialog .fin-field input,.app .fin-dialog .fin-field select{
+  min-height:50px;border-radius:12px;
+  border-color:#DDEAE7;background:#FFF;
+}
+.app .fin-dialog .fin-platform-choice input:checked+span{
+  background:var(--rs-soft);color:var(--rs-primary);border-color:#B5DCD5;
+}
+.app .fin-dialog .fin-category-chips .fin-chip{
+  background:#F2F7F6;border:1px solid #E2ECEA;color:#587773;
+  border-radius:10px;min-height:40px;
+}
+.app .fin-dialog .fin-sheet footer{
+  border-color:#E6EEEB;padding:12px 18px max(14px,env(safe-area-inset-bottom));
+}
+.app .fin-dialog .fin-sheet footer .fin-primary{
+  min-height:52px;border-radius:13px;
+  background:var(--rs-primary);color:#FFF;font-weight:750;
+}
+.app .fin-dialog .fin-optional summary{
+  color:var(--rs-primary);font-weight:680;
+}
+/* BIKE: retain actual alpha artwork and original neo-flat part graphics. */
+.app .bike-page{padding-top:20px}
+.app .bike-page .bike-heading:first-child{margin-bottom:14px}
+.app .bike-page .bike-heading:first-child h1{font-size:24px}
+.app .bike-page .bike-vehicle{
+  border:1px solid #D7ECE6;border-radius:17px;
+  background:#E9F7F3;box-shadow:none;
+}
+.app .bike-page .bike-vehicle h2{font-weight:760}
+.app .bike-page .bike-vehicle .bike-vehicle-art{
+  object-fit:contain;object-position:center;filter:drop-shadow(0 4px 5px rgba(20,57,53,.1));
+}
+.app .bike-page .bike-vehicle-actions{gap:9px;margin:10px 0 12px}
+.app .bike-page .bike-vehicle-actions .bike-outline-action{
+  min-height:46px;border-radius:12px;border-color:#DCE8E5;
+  background:#FFF;color:var(--rs-text);font-weight:670;
+}
+.app .bike-page .bike-model-banner{display:none}
+.app .bike-page .bike-model-note{
+  display:block;font-size:11px;color:#4E7972;margin-top:3px;
+}
+.app .bike-page .bike-actions{gap:9px;margin-bottom:23px}
+.app .bike-page .bike-actions button{
+  min-height:48px;border-radius:13px;font-weight:720;
+}
+.app .bike-page .bike-actions .record-primary{
+  background:var(--rs-primary);color:#FFF;border:0;
+}
+.app .bike-page .bike-section-head{margin:19px 0 11px}
+.app .bike-page .bike-consumables{gap:9px}
+.app .bike-page .bike-consumables .bike-tile{
+  min-height:137px;padding:12px 4px 11px;
+  border:1px solid #E2EBE9;border-radius:15px;
+  box-shadow:none;background:#FFF;
+}
+.app .bike-page .bike-tile-icon{
+  width:54px;height:49px;margin-bottom:7px;
+}
+.app .bike-page .bike-tile-name{
+  font-size:12px;font-weight:740;line-height:1.35;
+}
+.app .bike-page .bike-tile-status{
+  border-radius:9px;font-size:10px;
+  max-width:100%;text-align:center;
+}
+.app .bike-page .bike-history-head{margin-top:25px}
+.app .bike-page .bike-history-row{
+  min-height:62px;padding-block:12px;
+  border-bottom:1px solid #E3EEEB;
+}
+.app .bike-page .bike-history-row .bike-row-main b{font-weight:710}
+.app .bike-page .bike-history-row .bike-row-meta b{font-variant-numeric:tabular-nums}
+/* ALL SHEETS: consistent top corners, focus controls, buttons and safe area. */
+.app .record-surface .record-sheet{
+  border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(16,51,46,.14);
+}
+.app .record-sheet .record-heading{border-color:#E6EEEB}
+.app .record-sheet .record-grab,.app .fin-drag-handle{
+  background:#B5CECA;
+}
+.app .record-sheet .record-primary,
+.app .record-sheet .record-cycle-save,
+.app .record-mini-actions .record-cycle-save{
+  background:var(--rs-primary);color:#FFF;
+  border:0;border-radius:13px;font-weight:750;
+}
+.app .record-sheet .record-primary{min-height:51px}
+.app .record-mini-card{
+  border-radius:18px;border:1px solid #E4ECE9;background:#FFF;
+}
+/* Native HTML confirm replacement: its own top-layer modal above finance sheet. */
+dialog.rs-app-confirm{
+  position:fixed;inset:0;margin:auto;padding:0;
+  width:min(calc(100vw - 40px),370px);max-width:370px;
+  max-height:min(90dvh,460px);
+  color:var(--rs-text);background:#FFF;border:1px solid #E0EAE7;
+  border-radius:18px;box-shadow:0 14px 45px rgba(14,50,45,.19);
+  overflow:auto;z-index:9999;
+}
+dialog.rs-app-confirm::backdrop{
+  background:rgba(15,34,32,.42);backdrop-filter:blur(2px);
+}
+.rs-app-confirm-inner{padding:22px 21px 19px;display:grid;gap:12px}
+.rs-app-confirm-title{
+  margin:0;font-size:17px;line-height:1.4;font-weight:760;
+  letter-spacing:-.04em;color:#173D3C;
+}
+.rs-app-confirm-text{
+  margin:0;color:#5D7774;line-height:1.55;font-size:13px;overflow-wrap:anywhere;
+}
+.rs-app-confirm-actions{display:flex;gap:8px;margin-top:8px}
+.rs-app-confirm-actions button{
+  flex:1;min-width:0;min-height:47px;padding:10px 12px;
+  font-size:13px;font-weight:710;border-radius:12px;
+}
+.rs-app-confirm-cancel{background:#F2F7F5;color:#3F6762;border:1px solid #E5EEEA}
+.rs-app-confirm-accept{background:#087F7D;color:#FFF;border:1px solid #087F7D}
+.rs-app-confirm-accept.is-danger{background:#AF4B45;border-color:#AF4B45}
+@media(max-width:380px){
+  :root{--rs-space:14px}
+  .app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{padding:13px}
+  .app .rc-community.rc-home.rc-community-v32 .rc-card-grid img{
+    width:68px;height:68px;flex-basis:68px;
+  }
+  .app .bike-page .bike-consumables{gap:7px}
+  .app .bike-page .bike-consumables .bike-tile{padding:11px 3px 10px}
+  .app .bike-page .bike-tile-status{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .rs-app-confirm-inner,.app .page button{transition:none}
+}
+
+
+/* Rider Spot / v219 visual refinement.
+ * Scoped presentation only. No lifecycle, navigation, chart-data or map mutations.
+ * Keep this block last so old finance selected outlines cannot leak through. */
+.app .finance-page .fin-chart-point,
+.app .finance-page .fin-chart-point:focus,
+.app .finance-page .fin-chart-point.selected{
+  outline:none;
+  box-shadow:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.app .finance-page .fin-chart-point .fin-chart-track,
+.app .finance-page .fin-chart-point.selected .fin-chart-track,
+.app .finance-page .fin-chart-point:focus .fin-chart-track{
+  outline:0!important;
+  outline-offset:0;
+  box-shadow:none;
+  border:0;
+  background:#F3F6F4;
+  transition:background-color 180ms ease;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-track{
+  background:#EAF5F1;
+}
+.app .finance-page .fin-chart-point:focus-visible{
+  outline:2px solid #087F7D;
+  outline-offset:2px;
+  border-radius:9px;
+}
+.app .finance-page .fin-chart-point.selected .fin-svg-chart{
+  color:#FF8B43;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-date{
+  color:#087F7D;
+  font-weight:760;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-value{
+  color:#305854;
+  font-weight:730;
+}
+.app .finance-page .fin-chart-point.selected .fin-chart-today{
+  background:#FF8B43;
+}
+.app .finance-page .fin-chart-detail{
+  background:#F5F9F7;
+  border:1px solid #E3ECE8;
+  border-radius:12px;
+  padding:12px 13px;
+  gap:6px 12px;
+  font-variant-numeric:tabular-nums;
+}
+.app .finance-page .fin-chart-detail strong{
+  color:#173D3C;
+  font-weight:760;
+}
+.app .finance-page .fin-chart-card{overflow:hidden}
+.app .finance-page .fin-chart{min-width:0}
+.app .finance-page .fin-chart-col{min-width:0;padding:3px 0}
+.app .finance-page .fin-chart-date{font-variant-numeric:tabular-nums}
+
+/* Rhythm, geometry and hierarchy shared across existing screens. */
+.app .finance-page .fin-card,
+.app .bike-page .bike-vehicle,
+.app .rs33-course-shell,
+.app .rs-game-recap,
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  border-radius:18px;
+  border-color:#E1EBE8;
+  box-shadow:0 2px 8px rgba(19,62,58,.025);
+}
+.app .finance-page .fin-card>header,
+.app .bike-page .bike-section-head,
+.app .rs33-list-title{
+  align-items:center;
+}
+.app .finance-page .fin-quick>button,
+.app .bike-page .bike-actions button,
+.app .bike-page .bike-vehicle-actions button,
+.app .rc-community .rc-head .rc-write{
+  border-radius:12px;
+  min-height:48px;
+}
+.app .finance-page .fin-period-btn{
+  border-radius:11px;
+  min-height:42px;
+  font-weight:690;
+}
+.app .finance-page .fin-period-btn.selected{
+  background:#E3F5F0;
+  border-color:#BBDCD5;
+  box-shadow:none;
+}
+.app .finance-page .fin-subnav{
+  background:#EAF2F0;
+  border-color:#E0EAE7;
+  border-radius:13px;
+}
+.app .finance-page .fin-subnav .fin-subnav-btn.selected{
+  box-shadow:0 1px 3px rgba(20,63,55,.05);
+}
+.app .finance-page .fin-goal-track,
+.app .finance-page .fin-bar-track{overflow:hidden;border-radius:999px}
+.app .finance-page .fin-insights{
+  border-radius:15px;
+  border-color:#E2ECE9;
+}
+.app .bike-page .bike-consumables .bike-tile{
+  border-radius:15px;
+  min-height:139px;
+  padding:13px 5px 12px;
+  box-shadow:0 2px 8px rgba(19,62,58,.025);
+}
+.app .bike-page .bike-tile-icon{
+  width:56px;
+  height:52px;
+  margin-bottom:6px;
+}
+.app .bike-page .bike-tile-status{
+  line-height:1.35;
+  padding:5px 7px;
+  font-variant-numeric:tabular-nums;
+}
+.app .bike-page .bike-history-row{
+  min-height:66px;
+  border-bottom-color:#E4EDEA;
+}
+.app .rc-community .rc-search{background:#FFF}
+.app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{
+  padding:17px 16px 15px;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid h2{
+  font-size:16px;
+  line-height:1.4;
+}
+.app .rc-community.rc-home.rc-community-v32 .rc-card-grid p{
+  line-height:1.55;
+}
+.app .rs33-week-head,
+.app .rs33-week{border-color:#E1EBE8}
+.app .rs33-week button[aria-pressed=true]{
+  border-radius:12px;
+  box-shadow:none;
+}
+.app .rs59-course-tools button,
+.app .rs33-course-controls button{
+  border-radius:11px;
+}
+.app .bottom-nav button{
+  -webkit-tap-highlight-color:transparent;
+}
+@media(max-width:380px){
+  .app .rc-community.rc-home.rc-community-v32 .rc-card.rc-feed-row{padding:14px 13px 12px}
+  .app .bike-page .bike-consumables .bike-tile{padding:11px 3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .app .finance-page .fin-chart-point .fin-chart-track{transition:none}
+}

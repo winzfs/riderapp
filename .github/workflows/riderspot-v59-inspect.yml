@@ -1,0 +1,24 @@
+name: RiderSpot v59 Android source inspection
+on:
+  push:
+    branches: [feature/riderspot-lossless-gps-v59]
+    paths: ['.github/workflows/riderspot-v59-inspect.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Examine native storage, tracking, events and Android dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/riderspot-v59
+          tar -xJf rider-spot-android/source.tar.xz -C /tmp/riderspot-v59
+          for file in app/src/main/java/com/riderspot/android/TrackStore.java app/src/main/java/com/riderspot/android/TrackingService.java app/src/main/java/com/riderspot/android/MainActivity.java app/build.gradle app/src/main/assets/native-bridge.js; do
+            echo "====== START $file ======"
+            sed -n '1,1400p' "/tmp/riderspot-v59/$file"
+            echo "====== END $file ======"
+          done

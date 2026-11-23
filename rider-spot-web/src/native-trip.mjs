@@ -13,24 +13,40 @@ const pointIsValid = (p) =>
   Math.abs(Number(p.lng)) <= 180;
 
 export function mergeTripPoints(existing, source) {
+  // An Android fix has a persistent native seq. Two distinct fixes can share
+  // the same millisecond: never overwrite one merely because timestamps match.
+  const key = (p) => Number.isSafeInteger(Number(p.seq)) && Number(p.seq) > 0
+    ? "seq:" + Number(p.seq)
+    : ["time", Number(p.t), Number(p.lat), Number(p.lng)].join(":");
   const index = new Map();
   for (const point of existing || [])
-    if (pointIsValid(point)) index.set(Number(point.t), point);
+    if (pointIsValid(point)) index.set(key(point), point);
   for (const raw of source || []) {
     if (!pointIsValid(raw)) continue;
     const t = Number(raw.t);
-    const previous = index.get(t);
-    index.set(t, {
+    const identity = key(raw);
+    const seq = Number(raw.seq);
+    // The live WebView preview may contain this same fix without a native seq.
+    // Replace that preview with the canonical SQLite sample rather than
+    // counting it twice. Distinct fixes with identical timestamps still survive.
+    const previewKey = ["time", t, Number(raw.lat), Number(raw.lng)].join(":");
+    const previous = index.get(identity) || (
+      Number.isSafeInteger(seq) && seq > 0 ? index.get(previewKey) : null);
+    if (Number.isSafeInteger(seq) && seq > 0 && previewKey !== identity)
+      index.delete(previewKey);
+    index.set(identity, {
       lat: Number(raw.lat),
       lng: Number(raw.lng),
       t,
+      ...(Number.isSafeInteger(seq) && seq > 0 ? { seq } : {}),
       accuracy: Number(raw.accuracy) || 0,
       heading: Number(raw.heading) || 0,
       speed: Number(raw.speed) || 0,
       ...(previous?.break ? { break: true } : {}),
     });
   }
-  const points = [...index.values()].sort((a, b) => Number(a.t) - Number(b.t));
+  const points = [...index.values()].sort((a, b) =>
+    Number(a.t) - Number(b.t) || Number(a.seq || 0) - Number(b.seq || 0));
   for (let i = 1; i < points.length; i++) {
     if (points[i].t - points[i - 1].t > 45000 && !points[i].break)
       points[i] = { ...points[i], break: true };
@@ -95,6 +111,13 @@ export async function readStoppedTrip(bridge, trip, stopTime) {
   const ended_at = trip.ended_at || stopTime;
   if (!trip.ended_at) events.push({ type: "운행 종료", at: ended_at });
   events.sort((a, b) => (Date.parse(a?.at) || 0) - (Date.parse(b?.at) || 0));
+  if (state.gpsArchiveV59) {
+    // The Android v59 build keeps an independent, durable event copy. This is
+    // capability-gated: older installed APKs continue their unchanged flow.
+    const saved = await bridge.call("gps-events-save", { tripId: trip.id, events });
+    if (saved?.stored !== events.length)
+      throw Error("정차 이벤트 기기 저장을 확인하지 못했어요. 다시 시도해 주세요.");
+  }
   return {
     ...trip,
     ended_at,

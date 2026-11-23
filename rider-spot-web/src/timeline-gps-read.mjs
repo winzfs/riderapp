@@ -51,6 +51,28 @@ export function toNativeGpsSummary(trip) {
     gps_day_summary: days,
   };
 }
+// Native v59 keeps a durable event record independent of the WebView cache.
+// Older APKs expose no reader and retain the exact existing timeline behavior.
+export async function withNativeGpsEventsV59(row) {
+  const readEvents = globalThis.__rsNativeReadEventsV59;
+  if (!row?.gps_native || typeof readEvents !== "function") return row;
+  try {
+    const response = await readEvents(row.id);
+    const saved = Array.isArray(response?.events) ? response.events : [];
+    if (!saved.length) return row;
+    const key = event => event?.id ||
+      [event?.type || "", event?.at || "", event?.lat ?? "", event?.lng ?? ""].join("|");
+    const events = new Map((row.events || []).map(event => [key(event), event]));
+    for (const event of saved) if (event && typeof event === "object")
+      events.set(key(event), event);
+    return { ...row, events: [...events.values()].sort((a,b) =>
+      (Date.parse(a?.at) || 0) - (Date.parse(b?.at) || 0)) };
+  } catch (error) {
+    // An event read failure must not prevent GPS route playback.
+    console.warn("[RiderSpot] native event read deferred", row.id, error?.message);
+    return row;
+  }
+}
 const candidatePoints = row => Array.isArray(row?.points) && row.points.length > 0;
 const cacheKey = (owner, row, day) =>
   [owner || "guest", row.id, day, row.ended_at || "", row.gps_point_count || 0].join(":");
@@ -83,18 +105,18 @@ export async function loadCalendarGps(history, day, {
   const records = [];
   for (const row of rows) {
     if (candidatePoints(row)) {
-      records.push(row); // Legacy routes: never rewrite/delete a user's originals.
+      records.push(await withNativeGpsEventsV59(row)); // Legacy routes remain untouched.
       continue;
     }
     const key = cacheKey(owner, row, day);
     if (cache?.has(key)) {
       cacheHits++;
-      records.push({ ...row, points: cache.get(key) });
+      records.push(await withNativeGpsEventsV59({ ...row, points: cache.get(key) }));
       continue;
     }
     if (!reader?.allPointsForDay && !reader?.allPoints) {
       missing++;
-      records.push(row);
+      records.push(await withNativeGpsEventsV59(row));
       continue;
     }
     try {
@@ -107,11 +129,11 @@ export async function loadCalendarGps(history, day, {
       sqlitePoints += Number.isFinite(response?.readCount) ?
         response.readCount : raw.length;
       remember(cache, key, points);
-      records.push({ ...row, points });
+      records.push(await withNativeGpsEventsV59({ ...row, points }));
     } catch (error) {
       // Never pretend missing SQLite route is an empty recorded route.
       missing++;
-      records.push(row);
+      records.push(await withNativeGpsEventsV59(row));
       console.warn("[RiderSpot] selected-day GPS read failed", row.id, error?.message);
     }
   }
@@ -126,11 +148,11 @@ export async function loadCalendarGps(history, day, {
 export async function loadDetailGps(row, {
   reader = null, cache = null, owner = "guest",
 } = {}) {
-  if (!row || candidatePoints(row) || !reader?.allPoints) return row;
+  if (!row || candidatePoints(row) || !reader?.allPoints) return withNativeGpsEventsV59(row);
   const key = cacheKey(owner, row, "all");
-  if (cache?.has(key)) return { ...row, points: cache.get(key) };
+  if (cache?.has(key)) return withNativeGpsEventsV59({ ...row, points: cache.get(key) });
   const raw = await reader.allPoints(row.id);
   const points = mergeTripPoints([], raw);
   remember(cache, key, points);
-  return { ...row, points };
+  return withNativeGpsEventsV59({ ...row, points });
 }
