@@ -63,7 +63,7 @@
   // no APK upgrade, file rewrite, or cloud upload is required.
   async function allPointsForDay(id, day, range) {
     const from = Date.parse(day + "T00:00:00+09:00");
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(day) || !Number.isFinite(from))
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(from))
       throw Error("GPS 조회 날짜가 올바르지 않아요.");
     const until = from + 86400000;
     const validRange = Number.isSafeInteger(range?.firstSeq) &&
