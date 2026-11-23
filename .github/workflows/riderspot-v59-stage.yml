@@ -1,0 +1,61 @@
+name: RiderSpot v59 immutable frontend staging
+on:
+  push:
+    branches: [feature/riderspot-lossless-gps-v59]
+    paths:
+      - '.github/workflows/riderspot-v59-stage.yml'
+permissions:
+  contents: write
+concurrency:
+  group: riderspot-v59-stage
+  cancel-in-progress: false
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify existing web functionality and compile immutable v59 bundle
+        working-directory: rider-spot-web
+        run: |
+          set -euo pipefail
+          npm ci
+          npm test
+          npm run build
+          node --test tests/gps-lossless-v59.test.mjs tests/timeline-gps-read.test.mjs
+      - name: Stage only reviewed v59 frontend with exactly unchanged design assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd rider-spot-web
+          hash=$(node -p "require('./dist/release.json').hash")
+          test "$hash" != "$(cat prebuilt-v58/hash.txt)"
+          source="dist/assets/rider-spot-${hash}"
+          test -s "${source}/app.mjs"
+          grep -Fq 'gpsArchiveV59' "${source}/app.mjs"
+          mkdir -p prebuilt-v59
+          for f in app.mjs native-gps.js route-worker.mjs map-reports.js design-system.css workspace-tools.js tab-resume.js daily-timeline.css weather-bar.js weather-bar.css premium-shell.css renewal-layout.css curated-v9.css; do
+            test -s "${source}/${f}"
+            cp "${source}/${f}" "prebuilt-v59/${f}"
+          done
+          # The user requires NO visual or CSS changes.
+          for css in design-system.css daily-timeline.css weather-bar.css premium-shell.css renewal-layout.css curated-v9.css; do
+            cmp -s "prebuilt-v58/${css}" "prebuilt-v59/${css}" || {
+              echo "FAIL: UI design asset changed: ${css}"; exit 1;
+            }
+          done
+          cp dist/release.json prebuilt-v59/release.json
+          cp dist/index.html prebuilt-v59/index.html
+          cp dist/sw.js prebuilt-v59/sw.js
+          printf '%s\n' "${hash}" > prebuilt-v59/hash.txt
+          echo "Staged RiderSpot v59: ${hash}"
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f rider-spot-web/prebuilt-v59/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(v59): pin verified immutable app bundle without changing UI [skip ci]"
+            git push origin HEAD:feature/riderspot-lossless-gps-v59
+          fi
