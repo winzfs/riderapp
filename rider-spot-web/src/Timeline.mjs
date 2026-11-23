@@ -219,8 +219,13 @@ export function createTimeline(S, Zo, Income, client) {
     }, []);
     const [selected, setSelected] = S.useState(null);
     const [recapDay, setRecapDay] = S.useState(null);
-    const liveDay = ride.trip?.started_at ? rs33WorkDay(ride.trip.started_at) : today;
+    const liveDay = ride.trip ? today : today;
     const [day, setDay] = S.useState(today);
+    // Calendar rolls to the new day while the original native GPS track
+    // remains continuous; never call stop/start at midnight.
+    S.useEffect(()=>{
+      if(ride.trip && !ride.trip.ended_at)setDay(today);
+    },[today,ride.trip?.id]);
     const [week, setWeek] = S.useState(rs33WeekStart(today));
     const [expanded, setExpanded] = S.useState(false);
     const [focused, setFocused] = S.useState(null);
@@ -264,8 +269,11 @@ export function createTimeline(S, Zo, Income, client) {
     // Compose only a read-only projection: original run ids, coordinates and
     // on-device GPS stores remain independent.
     const daily = S.useMemo(
-      () => buildDailyTimeline(ride.history, day),
-      [ride.history, day],
+      () => buildDailyTimeline([
+        ...(ride.history||[]),
+        ...(ride.trip && !ride.trip.ended_at ? [ride.trip] : [])
+      ], day),
+      [ride.history, ride.trip, day],
     );
     const dailyCourse = useRouteAnalysis(
       S,
