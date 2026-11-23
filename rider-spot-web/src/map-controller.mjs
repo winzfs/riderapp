@@ -100,15 +100,10 @@ export function createMapController(L, node, cameraId, fallback) {
     height = node.clientHeight;
     resizing = true;
     try {
-      // With pan:false Leaflet preserves its pixel-origin rather than the
-      // geographical center on some WebView viewport changes. Restore the
-      // last committed camera while resize's move handlers are suppressed.
-      const fixed = { lat: center.lat, lng: center.lng, zoom };
-      map.invalidateSize({ pan: false, animate: false });
-      if (map.getZoom() !== fixed.zoom ||
-          Math.abs(map.getCenter().lat - fixed.lat) > 1e-8 ||
-          Math.abs(map.getCenter().lng - fixed.lng) > 1e-8)
-        map.setView([fixed.lat, fixed.lng], fixed.zoom, { animate: false });
+      // A resize must preserve the user's geographical center, not the
+      // old pixel origin. Leaflet's pan:true compensates for the dimension
+      // delta without resetting GPS or calling setView during resize.
+      map.invalidateSize({ pan: true, animate: false });
     } finally {
       resizing = false;
     }
