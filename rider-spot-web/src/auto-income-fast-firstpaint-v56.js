@@ -16,8 +16,8 @@
   const clock = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
   });
-  let pane = null, pending = false, requestSerial = 0, lastDay = '', lastUid = '';
-  let lastAttempt = 0;
+  let pane = null, pending = false, requested = false, requestSerial = 0;
+  let lastAttempt = 0, panelObserver = null;
 
   function workday(at = Date.now()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -98,8 +98,7 @@
     const count = node.querySelector('.rsaf-count');
     const list = node.querySelector('.rsaf-list');
     if (!count || !list) return;
-    const applied = rows.filter(row => row.status === 'applied');
-    count.textContent = rows.length ? applied.length + '건 확인' : '0건';
+    count.textContent = rows.length ? '최근 ' + rows.length + '건' : '0건';
     list.replaceChildren();
     if (!rows.length) {
       list.textContent = '오늘 자동 인식된 배달이 아직 없어요.';
@@ -127,7 +126,7 @@
       const uid = session?.user?.id;
       if (!uid || !isCurrent(node, serial)) return;
       const day = workday();
-      lastDay = day; lastUid = uid;
+      requested = true;
       // The two small scoped reads are independent and run in parallel,
       // without waiting for native candidate upload/ack processing.
       const earnings = client.from('rider_earnings')
@@ -137,16 +136,17 @@
         .select('captured_at,platform,gross_won,status')
         .eq('user_id', uid).eq('work_date', day)
         .order('captured_at', {ascending:false}).limit(3);
-      void Promise.resolve(earnings).then(result => {
+      const first = Promise.resolve(earnings).then(result => {
         if (result?.error) throw result.error;
-        if (Array.isArray(result?.data)) updateTotal(node, serial, result.data);
+        if (Array.isArray(result?.data) && result.data.length < 100)
+          updateTotal(node, serial, result.data);
       }).catch(() => {
         if (isCurrent(node, serial)) {
           const value = node.querySelector('.rsaf-total');
           if (value) value.textContent = '동기화 중';
         }
       });
-      void Promise.resolve(captures).then(result => {
+      const second = Promise.resolve(captures).then(result => {
         if (result?.error) throw result.error;
         if (Array.isArray(result?.data)) updateRecords(node, serial, result.data);
       }).catch(() => {
@@ -155,6 +155,7 @@
           if (value) value.textContent = '동기화 중';
         }
       });
+      await Promise.allSettled([first, second]);
     } catch {
       // App's native bridge remains authoritative; never mark a failed read as zero.
     } finally {
@@ -167,13 +168,17 @@
     // Never create a fake capture menu in ordinary mobile browsers or APKs
     // that do not expose the native auto-income bridge.
     if (!page?.isConnected || !win.__rsIncomeNative || !win.__rsNativeInstalled) {
-      if (!pane?.isConnected) { pane = null; pending = false; }
+      if (!pane?.isConnected) {
+        pane = null;pending = false;requested = false;
+        panelObserver?.disconnect();panelObserver=null;
+      }
       return;
     }
     let node = doc.getElementById(PANEL);
     if (nativeReady(node)) {
       if (node.classList.contains('rsai-fastpaint'))node.classList.remove('rsai-fastpaint');
-      if (pane === node) { ++requestSerial; pending = false; }
+      if (pane === node) { ++requestSerial; pending = false; requested = true; }
+      panelObserver?.disconnect();panelObserver=null;
       return;
     }
     if (!node) {
@@ -182,10 +187,20 @@
       page.insertBefore(node, page.firstChild);
     }
     if (node !== pane) {
-      pane = node;pending = false;++requestSerial;
+      pane = node;pending = false;requested = false;++requestSerial;
+      panelObserver?.disconnect();panelObserver=null;
       style();paintSkeleton(node);
+      if (typeof MutationObserver === 'function') {
+        panelObserver = new MutationObserver(() => {
+          if (!nativeReady(node)) return;
+          node.classList.remove('rsai-fastpaint');
+          panelObserver?.disconnect();panelObserver=null;
+          if (pane === node) { ++requestSerial;pending = false;requested = true; }
+        });
+        panelObserver.observe(node,{childList:true});
+      }
     }
-    if (!pending) {
+    if (!pending && !requested) {
       const now = Date.now();
       if (now - lastAttempt < 1500) return;
       lastAttempt = now;
