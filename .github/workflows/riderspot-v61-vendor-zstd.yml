@@ -31,6 +31,8 @@ jobs:
           git -C "$GITHUB_WORKSPACE" add -f rider-spot-web/vendor/fzstd-0.1.1-umd.js
           if ! git -C "$GITHUB_WORKSPACE" diff --cached --quiet; then
             git -C "$GITHUB_WORKSPACE" commit -m "chore(v61): vendor pinned MIT fzstd browser decoder [skip ci]"
+            git -C "$GITHUB_WORKSPACE" fetch origin fix/riderspot-compressed-account-backup-v61
+            git -C "$GITHUB_WORKSPACE" rebase origin/fix/riderspot-compressed-account-backup-v61
             git -C "$GITHUB_WORKSPACE" push origin HEAD:fix/riderspot-compressed-account-backup-v61
           fi
           echo "Zstd UMD SHA256: $(sha256sum package/umd/index.js)"
