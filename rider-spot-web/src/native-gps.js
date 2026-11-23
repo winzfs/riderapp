@@ -94,11 +94,15 @@
   let recovering = false;
   const recoveryId = "rs-gps-v42-recovery";
   const localRecord = (key) => {
-    try {
-      return JSON.parse(localStorage.getItem("rs:" + key) || "null");
-    } catch {
-      return null;
+    // Both the modern unprefixed key and the older rs: key exist across APKs.
+    // Read either without modifying or removing a prior active record.
+    for (const name of [key, "rs:" + key]) {
+      try {
+        const raw = localStorage.getItem(name);
+        if (raw != null) return JSON.parse(raw);
+      } catch { /* Leave unreadable records intact for manual recovery. */ }
     }
+    return null;
   };
   const localSave = (key, value) =>
     localStorage.setItem("rs:" + key, JSON.stringify(value));
@@ -204,14 +208,20 @@
         : localRecord("active:guest")?.id === expectedId
           ? localRecord("active:guest")
           : null;
-    const samples = await allPoints(expectedId);
-    const startedAt = Number(state.startedAt) || samples[0]?.t || Date.now();
+    // The source-of-truth points stay in Android SQLite. Fetch only the first
+    // sample when necessary for start-time recovery; the existing 3s polling
+    // rehydrates map points in memory without filling localStorage.
+    const earliest = !Number(state.startedAt) && !matched?.started_at
+      ? await call("points", {tripId:expectedId,afterSeq:0,limit:1})
+      : null;
+    const startedAt = Number(state.startedAt) ||
+      earliest?.points?.[0]?.t || Date.now();
     const restored = {
       id: expectedId,
       user_id: userId === "guest" ? null : userId,
       started_at: matched?.started_at || new Date(startedAt).toISOString(),
       ended_at: null,
-      points: matched?.points?.length ? matched.points : [],
+      points: [], // Native SQLite will replay the full route into React memory.
       distance_km: Number(matched?.distance_km) || 0,
       events: Array.isArray(matched?.events)
         ? matched.events
@@ -223,18 +233,19 @@
           ],
       memo: matched?.memo || null,
     };
-    if (samples.length) {
-      const known = new Map();
-      for (const p of restored.points)
-        if (Number.isFinite(Number(p.t))) known.set(Number(p.t), p);
-      for (const p of samples) known.set(p.t, p);
-      restored.points = [...known.values()].sort((a, b) => a.t - b.t);
-    }
-    // Commit only when all reads succeed. The native SQLite session stays active.
+    // Never write the full recovered route to localStorage. Polling and final
+    // stop already read it from SQLite; no GPS coordinates are discarded.
     const api = window.__rsRideApi;
     if (!api?.restoreActive)
       throw new Error("운행 화면이 준비되면 다시 눌러 주세요.");
-    api.restoreActive(restored);
+    window.__rsGPSRestoringNativeId = expectedId;
+    try {
+      if (api.restoreActive(restored) === false)
+        throw new Error("이미 다른 운행이 활성화돼 있어요. 운행 상태를 확인해 주세요.");
+      window.__rsGPSRestoredNativeId = expectedId;
+    } finally {
+      delete window.__rsGPSRestoringNativeId;
+    }
     removeRecoveryNotice();
   }
   window.__rsGPS42PreflightStart = async () => {
