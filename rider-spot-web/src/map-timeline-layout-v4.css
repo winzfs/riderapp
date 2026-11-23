@@ -1,0 +1,164 @@
+/* RiderSpot / map & timeline layout v4 (2026-11-23)
+   Only presentation. All map, trip, replay, save, weather and report handlers remain owned by React.
+   Scoped to known screens; avoid transforms on Leaflet nodes.
+*/
+
+/* MAIN MAP — full-width weather/region/layer command surface. */
+.app.rs34-app .nearby.nearby-full .rs34-map-stage > .rs-map-v2-header {
+  box-sizing:border-box!important;
+  left:12px!important;right:12px!important;width:auto!important;max-width:none!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs-map-v2-header .rs12-map-commandbar {
+  display:grid!important;box-sizing:border-box!important;
+  grid-template-columns:minmax(97px,118px) minmax(0,1fr) 42px!important;
+  align-items:center!important;gap:7px!important;
+  width:100%!important;min-width:0!important;max-width:none!important;
+  padding:5px 6px 5px 10px!important;
+  min-height:56px!important;
+  border:1px solid #dde7ec!important;
+  border-radius:17px!important;background:#fff!important;
+  box-shadow:0 4px 17px rgba(28,47,68,.09)!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar > .rs33-region {
+  min-width:0!important;max-width:none!important;width:100%!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs33-region-toggle {
+  max-width:100%!important;min-width:0!important;width:100%!important;justify-content:flex-start!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs-weather-slot {
+  min-width:0!important;max-width:none!important;width:100%!important;justify-self:stretch!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs-weather-hud {
+  box-sizing:border-box!important;display:flex!important;align-items:center!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  min-height:42px!important;height:42px!important;padding:4px 9px!important;
+  background:#f6f8fa!important;border:0!important;border-radius:11px!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs-map-v2-settings{
+  min-width:0!important;justify-self:stretch!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs12-map-tools-trigger {
+  width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;
+  border-radius:11px!important;
+}
+
+/* The "운행 준비" label duplicates the idle CTA. Keep active recording status intact. */
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock:not(.active) > .rs34-ride-dock-status {
+  display:none!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-ride-dock:not(.active) {
+  gap:0!important;padding-top:10px!important;
+}
+
+/* Context actions settle just above the fixed ride dock. Source information sits
+   ABOVE report, not below. Keep report/help hit targets and expandable reports. */
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .rs-map-v2-actions {
+  bottom:12px!important;
+  left:12px!important;right:12px!important;
+  align-items:center!important;gap:12px!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-trigger {
+  left:12px!important;right:auto!important;
+  bottom:81px!important;top:auto!important;
+  z-index:1030!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-popover {
+  left:12px!important;right:auto!important;
+  bottom:119px!important;top:auto!important;
+}
+.app.rs34-app .nearby.nearby-full .rs34-map-stage.rs-map-picking .rs-tl-source-trigger {
+  visibility:hidden!important;pointer-events:none!important;
+}
+
+/* TIMELINE — no redundant date/segment title strip when a route map exists. */
+.app.rs34-app .rs33-timeline .rs11-route-first:has(> .rs56-day-course) > .rs12-map-heading {
+  display:none!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first:has(> .rs56-day-course) {
+  padding-top:0!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first > .rs56-day-course:not(.rs33-course-full) {
+  border-top:0!important;border-radius:0!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course > .rs33-course-map {
+  margin-top:0!important;
+}
+/* Preserve same interaction as old header button by clicking its React-owned
+   button from a non-React proxy alongside Expand. */
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions {
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  gap:11px!important;margin:0!important;padding:0!important;min-width:0!important;
+  flex:none!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy {
+  appearance:none!important;display:inline-flex!important;gap:5px!important;
+  align-items:center!important;justify-content:center!important;
+  box-sizing:border-box!important;flex:none!important;white-space:nowrap!important;
+  min-width:56px!important;width:auto!important;
+  min-height:40px!important;height:40px!important;padding:4px 2px!important;
+  margin:0!important;
+  background:transparent!important;color:#42678e!important;
+  border:0!important;border-radius:9px!important;box-shadow:none!important;
+  font-size:12px!important;line-height:1.1!important;font-weight:730!important;
+  letter-spacing:-.02em!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy:active{
+  background:#eef3f8!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy:focus-visible{
+  outline:2px solid #416fb7!important;outline-offset:2px!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy[disabled]{
+  opacity:.4!important;pointer-events:none!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy .rs-tl-save-glyph {
+  font-size:13px!important;line-height:1!important;font-weight:650!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-tools {
+  gap:7px!important;min-height:52px!important;
+  padding:6px 13px!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-filters{
+  gap:13px!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs59-player {
+  border-bottom:0!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs59-time-row{
+  font-size:10.5px!important;color:#909fab!important;
+}
+.app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs59-elapsed{
+  font-weight:700!important;color:#50687b!important;
+}
+/* Small devices keep 4 actions on one row: event/time left, expand/save right. */
+@media(max-width:390px) {
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar{
+    grid-template-columns:minmax(88px,108px) minmax(0,1fr) 42px!important;
+    column-gap:5px!important;padding-left:7px!important;
+  }
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-tools{padding-inline:9px!important;gap:4px!important}
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-filters{gap:7px!important}
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions{gap:5px!important}
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy{
+    min-width:51px!important;font-size:11px!important;padding-inline:1px!important;
+  }
+}
+@media(max-width:350px) {
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar{
+    grid-template-columns:minmax(83px,92px) minmax(0,1fr) 40px!important;gap:4px!important;
+  }
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .rs12-map-commandbar .rs12-map-tools-trigger{
+    width:40px!important;min-width:40px!important;
+  }
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions{gap:2px!important}
+  .app.rs34-app .rs33-timeline .rs11-route-first .rs56-day-course .rs12-route-actions .rs-tl-save-proxy{min-width:46px!important}
+}
+@media(max-height:570px) {
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .rs-map-v2-actions{bottom:9px!important}
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-trigger{bottom:76px!important}
+  .app.rs34-app .nearby.nearby-full .rs34-map-stage .map.leaflet-container > .rs-tl-source-popover{bottom:111px!important}
+}
+@media(prefers-reduced-motion:reduce) {
+  .app.rs34-app .rs33-timeline .rs-tl-save-proxy{transition:none!important}
+}
