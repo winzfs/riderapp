@@ -1,0 +1,53 @@
+name: RiderSpot v58 immutable frontend staging
+on:
+  push:
+    branches: [perf/riderspot-timeline-gps-day-read-v58]
+    paths:
+      - '.github/workflows/riderspot-v58-stage.yml'
+      - 'rider-spot-web/src/**'
+      - 'rider-spot-web/scripts/**'
+      - 'rider-spot-web/tests/**'
+      - 'rider-spot-web/package*.json'
+permissions:
+  contents: write
+concurrency:
+  group: riderspot-v58-stage
+  cancel-in-progress: false
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install and verify
+        working-directory: rider-spot-web
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Retain validated immutable v58 artifacts on feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd rider-spot-web
+          mkdir -p prebuilt-v58
+          hash=$(node -p "require('./dist/release.json').hash")
+          source="dist/assets/rider-spot-${hash}"
+          for f in app.mjs native-gps.js route-worker.mjs; do
+            test -s "${source}/${f}"
+            cp "${source}/${f}" "prebuilt-v58/${f}"
+          done
+          cp dist/release.json prebuilt-v58/release.json
+          cp dist/index.html prebuilt-v58/index.html
+          cp dist/sw.js prebuilt-v58/sw.js
+          printf '%s\n' "${hash}" > prebuilt-v58/hash.txt
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f rider-spot-web/prebuilt-v58/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(v58): stage tested immutable frontend artifacts [skip ci]"
+            git push origin HEAD:perf/riderspot-timeline-gps-day-read-v58
+          fi
