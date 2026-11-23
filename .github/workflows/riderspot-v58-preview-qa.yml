@@ -35,16 +35,16 @@ jobs:
           const {res,body}=await fetchPath('/');
           assert.equal(res.status,200);
           assert.equal(res.headers.get('x-rs-gps-read'),'v58');
-          assert.match(body,/\/assets\/rider-spot-8db9ceac7179\/app\.mjs/);
+          assert.match(body,/\/assets\/rider-spot-33203ffb677c\/app\.mjs/);
           assert.match(body,/\/rider-spot-native-gps-safe-v46\.js/);
           assert.match(body,/\/rider-spot-native-day-v58\.js/);
           assert.match(body,/rider-spot-midnight-rollover-v57/);
           for(const [url,needle] of [
-            ['/assets/rider-spot-8db9ceac7179/app.mjs','gps_day_ranges'],
-            ['/assets/rider-spot-8db9ceac7179/route-worker.mjs',''],
+            ['/assets/rider-spot-33203ffb677c/app.mjs','gps_day_ranges'],
+            ['/assets/rider-spot-33203ffb677c/route-worker.mjs',''],
             ['/rider-spot-native-day-v58.js','allPointsForDay'],
             ['/rider-spot-native-gps-safe-v46.js','__rsGPS42NativeRead'],
-            ['/sw.js','8db9ceac7179']
+            ['/sw.js','33203ffb677c']
           ]){
             const {res,body}=await fetchPath(url);
             assert.equal(res.status,200,url);
@@ -61,7 +61,7 @@ jobs:
           NODE
       - run: npm run build
       - run: test -x /usr/bin/google-chrome && google-chrome --version
-      # Candidate 8db9ceac7179 passed stage map + 235 unit checks at commit 1c38d524.
+      # Candidate 33203ffb677c passed stage map + 235 unit checks at commit 1c38d524.
       - name: Remote map smoke
         env: {RIDER_TEST_CASE: map}
         run: node tests/browser.cjs
