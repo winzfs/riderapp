@@ -25,8 +25,15 @@ export function mergeTripPoints(existing, source) {
     if (!pointIsValid(raw)) continue;
     const t = Number(raw.t);
     const identity = key(raw);
-    const previous = index.get(identity);
     const seq = Number(raw.seq);
+    // The live WebView preview may contain this same fix without a native seq.
+    // Replace that preview with the canonical SQLite sample rather than
+    // counting it twice. Distinct fixes with identical timestamps still survive.
+    const previewKey = ["time", t, Number(raw.lat), Number(raw.lng)].join(":");
+    const previous = index.get(identity) || (
+      Number.isSafeInteger(seq) && seq > 0 ? index.get(previewKey) : null);
+    if (Number.isSafeInteger(seq) && seq > 0 && previewKey !== identity)
+      index.delete(previewKey);
     index.set(identity, {
       lat: Number(raw.lat),
       lng: Number(raw.lng),
