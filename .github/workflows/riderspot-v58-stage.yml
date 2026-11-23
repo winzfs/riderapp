@@ -27,6 +27,8 @@ jobs:
           npm ci
           npm test
           npm run build
+          npx playwright install --with-deps chromium
+          RIDER_TEST_CASE=map node tests/browser.cjs
       - name: Retain validated immutable v58 artifacts on feature branch
         shell: bash
         run: |
