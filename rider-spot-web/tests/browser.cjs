@@ -517,8 +517,8 @@ async function timelineTest(count) {
     const metric = await openTrip(page, trip);
     if (!baseline && !benchmark) {
       const cdp = await context.newCDPSession(page);
-      await page.getByRole("button", { name: "경로 시간 표시 숨기기" }).click();
-      await page.getByRole("button", { name: "경로 시간 표시 켜기" }).click();
+      await page.getByRole("button", { name: "시간 끄기" }).click();
+      await page.getByRole("button", { name: "시간 켜기" }).click();
       const initial = await camera(page);
       for (let i = 0; i < (count === 15000 ? 31 : 4); i++)
         await gesture(
@@ -543,13 +543,14 @@ async function timelineTest(count) {
         await page.locator(".rs44-event-list li").count(),
         trip.events.length,
       );
+      await page.locator('summary[aria-label="경로 추가 옵션"]').click();
       await page
         .getByRole("button", { name: "도로 보정", exact: true })
         .click();
       if (count === 100) {
-        await page.getByRole("button", { name: "원본 경로" }).waitFor();
+        await page.getByRole("button", { name: "원본 경로로 보기" }).waitFor();
         assert.ok(roadRequests() > 0);
-        await page.getByRole("button", { name: "원본 경로" }).click();
+        await page.getByRole("button", { name: "원본 경로로 보기" }).click();
       } else {
         await page.getByText(/최대 5개/).waitFor();
         assert.equal(roadRequests(), 0);
